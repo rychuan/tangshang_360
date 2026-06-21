@@ -1,0 +1,358 @@
+{
+  "tasks": [
+    {
+      "id": 1,
+      "type": "app_init",
+      "name": "应用初始化任务",
+      "status": "completed",
+      "subtasks": [
+        "初始化布局导航文件Layout",
+        "初始化主题文件",
+        "初始化占位页面和路由"
+      ],
+      "requirements": [],
+      "write_scope": [
+        "client/src/components/Layout.tsx",
+        "client/src/tailwind-theme.css",
+        "client/src/app.tsx"
+      ],
+      "dependencies": [],
+      "beginTime": 1780107976843,
+      "endTime": 1780108194917
+    },
+    {
+      "id": 2,
+      "name": "代码架构设计",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "读取coding-guide skill，遵循项目编码规范",
+        "规划前端页面目录结构，明确6个核心页面对应的文件位置",
+        "统一设计路由与导航结构，配置6个页面的路由规则和Layout承载方式",
+        "规划服务端5个业务模块的边界和目录划分：考核模板、员工绑定、考核发布、考核操作、统计查询",
+        "规划shared目录下前后端共享API类型定义的命名规范和分组方式",
+        "输出并行开发的修改边界，明确各模块可修改的目录范围，避免共享文件冲突",
+        "对照需求检查架构完整覆盖所有页面、路由和服务端模块",
+        "完成全局路由骨架、Layout的基础调整，后续模块仅需增量接入"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4",
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4",
+        "3.1",
+        "3.2",
+        "3.3",
+        "3.4",
+        "4.1",
+        "4.2",
+        "4.3",
+        "4.4",
+        "5.1",
+        "5.2",
+        "5.3",
+        "5.4",
+        "6.1",
+        "6.2",
+        "6.3",
+        "6.4",
+        "7.1",
+        "7.2",
+        "7.3",
+        "7.4"
+      ],
+      "write_scope": [
+        "client/src/pages/**",
+        "client/src/app.tsx",
+        "client/src/components/Layout.tsx",
+        "server/modules/**",
+        "shared/api.interface.ts"
+      ],
+      "dependencies": [
+        1
+      ],
+      "beginTime": 1780108195099,
+      "endTime": 1780108499468
+    },
+    {
+      "id": 3,
+      "name": "数据库服务创建",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "读取miaoda-sql skill，遵循数据库开发规范",
+        "执行DDL语句创建9张业务表：employee、assessment_template、assessment_dimension、assessment_indicator、employee_binding、assessment_instance、assessment_indicator_snapshot、rating_record、audit_log",
+        "插入必要的Mock测试数据：示例考核模板、示例员工、绑定关系等",
+        "编写shared/api.interface.ts中的基础数据类型定义，确保前后端类型一致"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4",
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4",
+        "3.1",
+        "3.2",
+        "3.3",
+        "3.4",
+        "4.1",
+        "4.2",
+        "4.3",
+        "4.4",
+        "5.1",
+        "5.2",
+        "5.3",
+        "5.4",
+        "6.1",
+        "6.2",
+        "6.3",
+        "6.4",
+        "7.1",
+        "7.2",
+        "7.3",
+        "7.4"
+      ],
+      "write_scope": [
+        "server/database/**",
+        "shared/api.interface.ts"
+      ],
+      "dependencies": [
+        2
+      ],
+      "beginTime": 1780108499625,
+      "endTime": 1780109200344
+    },
+    {
+      "id": 4,
+      "name": "考核模板管理模块开发（含前后端）",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "读取forms-skill、table-skill，遵循表单和表格开发规范",
+        "检查shared/api.interface.ts中模板相关的类型定义，确保前后端契约一致",
+        "编写服务端AssessmentTemplate Service层，实现模板增删改查、停用、权重和总分校验逻辑",
+        "实现服务端Template Controller层，提供REST API接口",
+        "接入前端路由/template-management，检查与Layout约束的一致性",
+        "实现前端模板列表页，使用Table组件展示模板列表，支持筛选、搜索",
+        "实现模板编辑弹窗，支持新建/编辑模板，配置维度、指标，自动校验权重总和为1、指标总分100",
+        "实现模板预览功能，可查看完整的模板结构",
+        "代码级自查：前后端类型一致、接口入参出参符合规范，无共享文件冲突"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4"
+      ],
+      "write_scope": [
+        "server/modules/assessment-template/**",
+        "client/src/pages/TemplateManagement/**",
+        "shared/api.interface.ts"
+      ],
+      "dependencies": [
+        3
+      ],
+      "beginTime": 1780109200468,
+      "endTime": 1780110152866
+    },
+    {
+      "id": 5,
+      "name": "员工模板绑定模块开发（含前后端）",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "读取table-skill、user-identity skill，遵循表格和用户组件使用规范",
+        "检查shared/api.interface.ts中绑定相关的类型定义",
+        "编写服务端EmployeeBinding Service层，实现绑定列表查询、批量绑定、解绑、历史记录查询逻辑",
+        "实现服务端Binding Controller层，提供REST API接口",
+        "接入前端路由/employee-binding，检查Layout一致性",
+        "实现前端绑定列表页，使用Table组件展示绑定信息，支持筛选",
+        "实现批量绑定操作弹窗，使用UserSelect组件选择员工，选择模板和生效月份",
+        "实现绑定历史记录查看功能",
+        "代码级自查：类型一致、接口符合规范"
+      ],
+      "requirements": [
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4"
+      ],
+      "write_scope": [
+        "server/modules/employee-binding/**",
+        "client/src/pages/EmployeeBinding/**",
+        "shared/api.interface.ts"
+      ],
+      "dependencies": [
+        3
+      ],
+      "beginTime": 1780109200468,
+      "endTime": 1780110196664
+    },
+    {
+      "id": 6,
+      "name": "考核发布管理模块开发（含前后端）",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "读取forms-skill、table-skill",
+        "检查shared/api.interface.ts中发布相关的类型定义",
+        "编写服务端AssessmentPublish Service层，实现待发布员工查询、批量发布、实例列表查询、指标调整、解锁逻辑",
+        "实现服务端Publish Controller层，提供REST API接口",
+        "接入前端路由/publish-management，检查Layout一致性",
+        "实现前端发布管理页，支持选择考核周期，展示待考核员工和实例列表",
+        "实现批量发布、调整指标、解锁等操作功能",
+        "代码级自查：类型一致、接口符合规范"
+      ],
+      "requirements": [
+        "3.1",
+        "3.2",
+        "3.3",
+        "3.4"
+      ],
+      "write_scope": [
+        "server/modules/assessment-publish/**",
+        "client/src/pages/PublishManagement/**",
+        "shared/api.interface.ts"
+      ],
+      "dependencies": [
+        3
+      ],
+      "beginTime": 1780109200468,
+      "endTime": 1780110214215
+    },
+    {
+      "id": 7,
+      "name": "考核操作模块开发（含前后端）",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "读取forms-skill、user-identity skill",
+        "检查shared/api.interface.ts中考核操作相关的类型定义",
+        "编写服务端AssessmentOperation Service层，实现考核详情查询、自评提交、上级评分提交、签名逻辑",
+        "实现服务端Operation Controller层，提供REST API接口",
+        "接入前端动态路由/assessment/:id，检查Layout一致性",
+        "实现前端考核详情页，展示基础信息、指标列表，根据状态支持自评、上级评分、签名操作",
+        "实现暂存、提交、签名等交互功能，自动计算总分和等级",
+        "代码级自查：类型一致、接口符合规范"
+      ],
+      "requirements": [
+        "4.1",
+        "4.2",
+        "4.3",
+        "4.4",
+        "5.1",
+        "5.2",
+        "5.3",
+        "5.4",
+        "6.1",
+        "6.2",
+        "6.3",
+        "6.4"
+      ],
+      "write_scope": [
+        "server/modules/assessment-operation/**",
+        "client/src/pages/AssessmentDetail/**",
+        "shared/api.interface.ts"
+      ],
+      "dependencies": [
+        3
+      ],
+      "beginTime": 1780109200468,
+      "endTime": 1780110231419
+    },
+    {
+      "id": 8,
+      "name": "考核概览与统计查询模块开发（含前后端）",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "读取charts-skill、table-skill，遵循图表和表格开发规范",
+        "检查shared/api.interface.ts中统计相关的类型定义",
+        "编写服务端AssessmentStatistics Service层，实现待办任务查询、概览数据查询、考核记录查询、统计图表数据查询、导出功能",
+        "实现服务端Statistics Controller层，提供REST API接口",
+        "接入前端路由/（首页）和/statistics，检查Layout一致性",
+        "实现首页概览页，展示待办任务、数据概览、快捷操作入口",
+        "实现统计查询页，支持多维度筛选，展示考核列表、统计图表，支持导出Excel",
+        "代码级自查：类型一致、接口符合规范"
+      ],
+      "requirements": [
+        "7.1",
+        "7.2",
+        "7.3",
+        "7.4"
+      ],
+      "write_scope": [
+        "server/modules/assessment-statistics/**",
+        "client/src/pages/Home/**",
+        "client/src/pages/Statistics/**",
+        "shared/api.interface.ts"
+      ],
+      "dependencies": [
+        3
+      ],
+      "beginTime": 1780109200468,
+      "endTime": 1780110248085
+    },
+    {
+      "id": 9,
+      "name": "验收测试",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "读取testing-guide skill",
+        "检查代码架构是否符合规划，所有模块边界清晰",
+        "逐个测试所有业务功能：模板管理、员工绑定、考核发布、自评、上级评分、签名、概览、统计查询",
+        "检查前后端接口联调正常，数据流转正确",
+        "验证所有用户故事的验收条件都满足",
+        "检查页面路由、导航、Layout一致性"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4",
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4",
+        "3.1",
+        "3.2",
+        "3.3",
+        "3.4",
+        "4.1",
+        "4.2",
+        "4.3",
+        "4.4",
+        "5.1",
+        "5.2",
+        "5.3",
+        "5.4",
+        "6.1",
+        "6.2",
+        "6.3",
+        "6.4",
+        "7.1",
+        "7.2",
+        "7.3",
+        "7.4"
+      ],
+      "write_scope": [],
+      "dependencies": [
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "beginTime": 1780110248215,
+      "endTime": 1780110422350
+    }
+  ]
+}

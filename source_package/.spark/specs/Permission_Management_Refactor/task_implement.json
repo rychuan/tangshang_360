@@ -1,0 +1,178 @@
+{
+  "tasks": [
+    {
+      "id": 1,
+      "name": "权限管理模块重构代码架构设计",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "读取authz-guide和coding-guide技能文档，明确平台RBAC能力使用规范",
+        "更新shared/api.interface.ts，新增角色管理、成员管理、权限配置相关的共享类型定义",
+        "明确服务端修改边界：在employee-management模块注入AuthorizationSDK，新增角色相关API接口",
+        "明确前端修改边界：复用现有/permissions路由，改造PermissionPage为角色维度的权限管理页",
+        "梳理全链路权限校验改造范围：列出所有需要添加权限控制的后端API和前端页面/按钮",
+        "对齐现有Layout.tsx导航权限逻辑与新权限体系，明确迁移兼容方案"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4",
+        "1.5"
+      ],
+      "write_scope": [
+        "shared/api.interface.ts"
+      ],
+      "read_scope": [
+        "shared/api.interface.ts",
+        "server/modules/employee-management/**",
+        "client/src/pages/EmployeeManagement/PermissionPage.tsx",
+        "client/src/components/Layout.tsx",
+        "client/src/app.tsx"
+      ],
+      "acceptance": "架构设计覆盖所有权限管理需求点，前后端修改边界明确无冲突，共享类型定义完整",
+      "dependencies": [],
+      "beginTime": 1781978476999,
+      "endTime": 1781978905419
+    },
+    {
+      "id": 2,
+      "name": "权限管理服务端模块开发",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "将AuthorizationSDK注入到EmployeeManagementService，完成初始化配置",
+        "实现角色列表查询、创建、编辑、删除接口，兼容现有5种内置角色",
+        "实现角色权限配置查询、更新接口，支持矩阵式权限批量保存",
+        "实现角色成员批量添加、移除接口，自动同步employee.role字段",
+        "给所有需要权限控制的业务API添加@CanRole装饰器，完成后端接口鉴权",
+        "迁移原有员工维度权限逻辑到新的角色体系，保证现有数据平滑过渡",
+        "代码级自查：接口入参出参符合类型定义，无语法错误"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4"
+      ],
+      "write_scope": [
+        "server/modules/employee-management/**",
+        "server/app.module.ts"
+      ],
+      "read_scope": [
+        "shared/api.interface.ts",
+        "server/database/schema.ts",
+        ".agent/skills/steering/nestjs-react-fullstack/authz-guide/SKILL.md"
+      ],
+      "acceptance": "所有角色管理接口开发完成，API鉴权生效，现有员工角色数据兼容",
+      "dependencies": [
+        1
+      ],
+      "beginTime": 1781978905612,
+      "endTime": 1781979354293
+    },
+    {
+      "id": 3,
+      "name": "权限管理前端页面重构",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "复用现有/permissions路由，检查与Layout约束的一致性",
+        "修复现有代码问题：替换原生select为shadcn Select，替换fetch为axiosForBackend调用",
+        "重构页面布局：左侧角色列表（展示角色名称、成员数量、操作按钮），右侧Tab切换权限配置区和成员管理区",
+        "实现角色CRUD操作、权限矩阵勾选配置、一键重置为预设权限功能",
+        "实现角色成员批量搜索添加、批量移除功能，成员权限实时生效",
+        "集成CanRole组件实现页面内按钮级权限控制",
+        "代码级自查：页面交互符合需求，调用真实后端接口无mock数据"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.5"
+      ],
+      "write_scope": [
+        "client/src/pages/EmployeeManagement/PermissionPage.tsx",
+        "client/src/api/employee-management.ts"
+      ],
+      "read_scope": [
+        "shared/api.interface.ts",
+        "client/src/api/employee-management.ts",
+        ".agent/skills/steering/nestjs-react-fullstack/authz-guide/SKILL.md"
+      ],
+      "acceptance": "角色管理页面功能完整，角色增删改、权限配置、成员管理操作均正常生效",
+      "dependencies": [
+        1,
+        2
+      ],
+      "beginTime": 1781979354470,
+      "endTime": 1781980522257
+    },
+    {
+      "id": 4,
+      "name": "全链路权限校验改造",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "改造Layout.tsx导航过滤逻辑，基于新的权限体系动态展示导航菜单",
+        "实现ProtectedRoute路由守卫，无权限用户访问页面自动跳转至403",
+        "给前端所有需要权限控制的操作按钮添加CanRole组件包裹，无权限则隐藏",
+        "在前端API层统一拦截处理403错误，给出明确提示",
+        "代码级自查：前后端权限规则完全一致，无权限绕过风险"
+      ],
+      "requirements": [
+        "1.4"
+      ],
+      "write_scope": [
+        "client/src/components/Layout.tsx",
+        "client/src/app.tsx",
+        "client/src/api/index.ts",
+        "client/src/pages/**/*.tsx"
+      ],
+      "read_scope": [
+        "shared/api.interface.ts",
+        ".agent/skills/steering/nestjs-react-fullstack/authz-guide/SKILL.md"
+      ],
+      "acceptance": "全链路权限生效：无权限用户看不到对应导航、无法访问页面、调用API返回403",
+      "dependencies": [
+        1,
+        2
+      ],
+      "beginTime": 1781979354470,
+      "endTime": 1781980522257
+    },
+    {
+      "id": 5,
+      "name": "验收测试",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "读取testing-guide技能文档",
+        "接口测试：逐个验证所有新增权限接口的返回状态和数据结构正确性",
+        "检查服务端和前端devserver日志，无错误信息",
+        "E2E测试：角色增删改、权限配置保存、成员批量管理操作全流程验证",
+        "权限校验测试：验证无权限用户的导航隐藏、页面访问拦截、API调用403效果",
+        "兼容性测试：验证现有内置角色权限保留、员工数据不受影响，原有功能正常使用"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4",
+        "1.5"
+      ],
+      "write_scope": [],
+      "read_scope": [
+        ".agent/skills/testing-guide/SKILL.md"
+      ],
+      "acceptance": "所有功能符合需求，权限全链路生效，无兼容问题和业务阻断",
+      "dependencies": [
+        2,
+        3,
+        4
+      ],
+      "beginTime": 1781980522412,
+      "endTime": 1781981410727
+    }
+  ]
+}
