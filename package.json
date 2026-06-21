@@ -153,8 +153,8 @@
     "zustand": "~5.0.8"
   },
   "engines": {
-    "node": "\u003e=22.0.0",
-    "npm": "\u003e=10.0.0"
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
   },
   "flags": {
     "customToaster": true,
@@ -166,8 +166,8 @@
     "preset": "ts-jest",
     "testEnvironment": "node",
     "testMatch": [
-      "\u003crootDir\u003e/server/**/*.spec.ts",
-      "\u003crootDir\u003e/test/unit/**/*.spec.ts"
+      "<rootDir>/server/**/*.spec.ts",
+      "<rootDir>/test/unit/**/*.spec.ts"
     ]
   },
   "name": "fullstack-nestjs-template",
@@ -178,9 +178,9 @@
   "scripts": {
     "build": "./scripts/build.sh",
     "build:client": "NODE_ENV=production vite build --config vite.config.ts",
-    "build:prod": "npm run build:server \u0026\u0026 npm run build:client",
+    "build:prod": "npm run build:server && npm run build:client",
     "build:server": "NODE_ENV=production nest build",
-    "dev": "npm run upgrade \u0026\u0026 ./scripts/dev.sh",
+    "dev": "./scripts/dev.sh",
     "dev:client": "NODE_ENV=development vite --config vite.config.ts",
     "dev:server": "NODE_ENV=development nest start --watch",
     "eslint": "eslint . --quiet",
@@ -196,7 +196,9 @@
     "type:check": "concurrently -n \"server,client\" -c \"blue,green\" \"npm run type:check:server\" \"npm run type:check:client\"",
     "type:check:client": "tsc --noEmit --project tsconfig.app.json",
     "type:check:server": "tsc --noEmit --project tsconfig.node.json",
-    "upgrade": "fullstack-cli sync --disable-gen-openapi"
+    "prepare": "chmod +x .githooks/pre-commit 2>/dev/null; git config core.hooksPath .githooks 2>/dev/null || true",
+    "precommit": "node scripts/hooks/run-precommit.js",
+    "postinstall": "fullstack-cli action-plugin init"
   },
   "version": "2.2.6"
 }
