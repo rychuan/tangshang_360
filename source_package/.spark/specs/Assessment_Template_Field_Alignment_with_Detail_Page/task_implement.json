@@ -1,0 +1,63 @@
+{
+  "tasks": [
+    {
+      "id": 1,
+      "name": "考核模板字段对齐改造（前端）",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "读取forms-skill表单开发规范",
+        "修改TemplateIndicatorFields.tsx的字段标签：将\"指标内容\"改为\"指标\"、\"指标说明\"改为\"说明\"、\"算法\"改为\"指标算法/描述\"，与考核详情页列名完全一致",
+        "重构TemplatePreviewDialog.tsx，采用与IndicatorTable完全一致的表格结构，列顺序和名称与详情页完全对齐（指标、说明、指标算法/描述、数据来源、满分）",
+        "验证模板表单字段与接口字段映射关系，确保所有字段提交、回显正常",
+        "验证模板预览页面展示结构、字段顺序与考核详情页完全一致",
+        "检查全链路字段传递逻辑：模板创建→发布考核→考核详情的字段映射是否完整，无字段丢失"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4"
+      ],
+      "write_scope": [
+        "client/src/pages/TemplateManagement/TemplateIndicatorFields.tsx",
+        "client/src/pages/TemplateManagement/TemplatePreviewDialog.tsx"
+      ],
+      "read_scope": [
+        "client/src/pages/AssessmentDetail/IndicatorTable.tsx",
+        "shared/api.interface.ts",
+        "client/src/pages/TemplateManagement/TemplateFormDialog.types.ts"
+      ],
+      "acceptance": "模板字段标签与详情页100%对齐，预览页采用表格结构与详情页完全一致，全链路字段传递完整无丢失",
+      "dependencies": [],
+      "beginTime": 1781978312401,
+      "endTime": 1781978413046
+    },
+    {
+      "id": 2,
+      "name": "验收测试",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "读取testing-guide测试规范",
+        "功能测试：新建考核模板，填写所有字段，预览确认展示与考核详情页结构、字段完全一致",
+        "流程测试：使用新建模板发布考核，查看生成的考核详情页，确认所有字段完整正确展示",
+        "验证模板编辑功能：编辑已有模板，修改字段后预览和发布流程正常，字段无丢失"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4"
+      ],
+      "write_scope": [],
+      "read_scope": [],
+      "acceptance": "模板字段全链路匹配验证通过，无字段不匹配或丢失问题",
+      "dependencies": [
+        1
+      ],
+      "beginTime": 1781978413210,
+      "endTime": 1781979625827
+    }
+  ]
+}

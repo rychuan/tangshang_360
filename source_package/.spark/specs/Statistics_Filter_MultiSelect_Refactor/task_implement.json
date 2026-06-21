@@ -1,0 +1,139 @@
+{
+  "tasks": [
+    {
+      "id": 1,
+      "name": "后端统计模块接口改造（支持多选参数）",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "读取 coding-guide skill 了解后端编码规范",
+        "修改 AssessmentStatisticsService 的 RecordsQuery、ChartsQuery、ExportQuery 类型定义，将 period、department、position、grade 字段改为数组类型",
+        "修改 buildConditions 和 buildExportConditions 方法，将单值匹配 eq 改为多值匹配 inArray，支持多个筛选值",
+        "修改 Controller 层参数解析逻辑，将逗号分隔的字符串参数转换为数组类型",
+        "代码级自查：查询逻辑正确支持多条件并集，入参出参类型符合要求"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4",
+        "1.5"
+      ],
+      "write_scope": [
+        "server/modules/assessment-statistics/**"
+      ],
+      "read_scope": [
+        "server/modules/assessment-statistics/assessment-statistics.service.ts",
+        "server/modules/assessment-statistics/assessment-statistics.controller.ts",
+        "shared/api.interface.ts"
+      ],
+      "acceptance": "后端统计接口支持periods、departments、positions、grades多选参数，返回结果为所选条件的并集",
+      "dependencies": [],
+      "beginTime": 1782018427439,
+      "endTime": 1782018567449
+    },
+    {
+      "id": 2,
+      "name": "前端多选组件开发与改造",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "读取 forms-skill 了解表单组件开发规范",
+        "改造 MonthPicker 组件为多选版本，支持选择多个考核周期，参考发布管理的交互样式",
+        "改造 DepartmentTreeSelect 组件为多选版本，支持层级选择多个部门",
+        "新增岗位多选下拉组件，从员工表动态加载所有岗位去重列表",
+        "新增等级多选下拉组件，支持选择S/A/B/C/D多个绩效等级"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4"
+      ],
+      "write_scope": [
+        "client/src/components/ui/**",
+        "client/src/pages/PublishManagement/MonthPicker.tsx"
+      ],
+      "read_scope": [
+        "client/src/components/ui/select.tsx",
+        "client/src/components/ui/department-tree-select.tsx",
+        "client/src/pages/PublishManagement/MonthPicker.tsx",
+        "client/src/api/department.ts",
+        "client/src/api/employee-management.ts"
+      ],
+      "acceptance": "多选年月选择器、多选部门树、多选岗位下拉、多选等级下拉组件功能正常，符合设计规范",
+      "dependencies": [],
+      "beginTime": 1782018567585,
+      "endTime": 1782018746114
+    },
+    {
+      "id": 3,
+      "name": "考核统计查询页筛选栏改造",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "修改 client/src/api/assessment-statistics.ts 中的参数类型，将 period、department、position、grade 改为数组类型",
+        "修改 StatisticsPage 的 FilterState 类型，将单值字段改为数组类型",
+        "替换筛选栏组件：考核周期替换为多选MonthPicker，部门替换为多选部门树，岗位替换为多选岗位下拉，等级替换为多选等级下拉",
+        "调整参数拼接逻辑，将数组参数转为逗号分隔字符串传给后端",
+        "修改导出功能的参数处理，支持多选条件导出",
+        "代码级自查：筛选参数正确传递，查询结果符合预期，已选项展示正确"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4",
+        "1.5",
+        "1.6"
+      ],
+      "write_scope": [
+        "client/src/pages/Statistics/StatisticsPage.tsx",
+        "client/src/api/assessment-statistics.ts"
+      ],
+      "read_scope": [
+        "client/src/pages/Statistics/StatisticsPage.tsx",
+        "client/src/api/assessment-statistics.ts",
+        "shared/api.interface.ts"
+      ],
+      "acceptance": "统计页所有筛选条件均支持多选操作，查询和导出功能正常，结果符合多条件并集规则",
+      "dependencies": [
+        1,
+        2
+      ],
+      "beginTime": 1782018746230,
+      "endTime": 1782018991353
+    },
+    {
+      "id": 4,
+      "name": "验收测试",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "读取 testing-guide skill",
+        "接口测试：验证统计查询和导出接口支持多选参数，返回结果正确",
+        "功能测试：验证所有筛选条件的多选功能，包括多选考核周期、多选部门、多选岗位、多选等级、多选员工",
+        "交互测试：验证多选后已选项展示正确，查询结果为所选条件的并集",
+        "导出测试：验证多选筛选条件下导出功能正常，导出数据与查询结果一致"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4",
+        "1.5",
+        "1.6"
+      ],
+      "write_scope": [],
+      "read_scope": [],
+      "acceptance": "所有筛选条件多选功能正常，查询和导出结果符合需求，页面交互流畅无bug",
+      "dependencies": [
+        1,
+        2,
+        3
+      ],
+      "beginTime": 1782018991460,
+      "endTime": 1782019392241
+    }
+  ]
+}

@@ -1,0 +1,300 @@
+{
+  "tasks": [
+    {
+      "id": 1,
+      "name": "全局样式规范基础落地",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "读取 coding-guide 与样式相关skill",
+        "检查 tailwind-theme.css 配置，补充统一规范所需通用样式类，确保圆角、间距、hover效果等全局变量符合要求",
+        "输出《UI组件使用规范》文档，明确指标卡、按钮、卡片、表单、表格等组件的标准用法",
+        "检查 Layout.tsx 全局边距配置，统一页面容器为p-6，确保与设计规范一致"
+      ],
+      "requirements": [
+        "1.1",
+        "1.4"
+      ],
+      "write_scope": [
+        "client/src/tailwind-theme.css",
+        "client/src/components/Layout.tsx",
+        "docs/UI组件使用规范.md"
+      ],
+      "read_scope": [
+        "需求技术开发文档-统一设计规范章节",
+        "client/src/tailwind-theme.css",
+        "client/src/components/Layout.tsx"
+      ],
+      "acceptance": "全局通用样式配置符合规范，Layout全局边距统一为p-6，《UI组件使用规范》文档输出完成",
+      "dependencies": [],
+      "beginTime": 1782009673978,
+      "endTime": 1782009803130
+    },
+    {
+      "id": 2,
+      "name": "首页（HomePage）UI优化",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "优化数据概览指标卡样式，完全对齐指标卡规范（布局、图标容器、文本层级统一）",
+        "统一快捷入口卡片样式，添加hover-elevate交互效果",
+        "调整图表容器padding与其他页面保持一致",
+        "检查所有按钮、图标尺寸符合规范（按钮图标size-4，指标卡图标size-5）"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "2.1"
+      ],
+      "write_scope": [
+        "client/src/pages/HomePage/**"
+      ],
+      "read_scope": [
+        "《UI组件使用规范》",
+        "client/src/pages/HomePage/HomePage.tsx"
+      ],
+      "acceptance": "首页所有组件样式符合统一规范，指标卡对齐标准，交互效果一致",
+      "dependencies": [
+        1
+      ],
+      "beginTime": 1782009803357,
+      "endTime": 1782010607380
+    },
+    {
+      "id": 3,
+      "name": "我的考核（MyAssessmentsPage）UI优化",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "优化顶部统计卡样式，对齐指标卡规范",
+        "统一筛选栏按钮大小与间距（gap-3）",
+        "调整表格操作按钮样式为variant=\"ghost\" size=\"sm\"，操作区间距gap-1",
+        "检查所有输入框高度统一为h-10"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "2.2"
+      ],
+      "write_scope": [
+        "client/src/pages/MyAssessments/**"
+      ],
+      "read_scope": [
+        "《UI组件使用规范》",
+        "client/src/pages/MyAssessments/MyAssessmentsPage.tsx"
+      ],
+      "acceptance": "我的考核页面所有组件样式符合统一规范，交互效果一致",
+      "dependencies": [
+        1
+      ],
+      "beginTime": 1782009803357,
+      "endTime": 1782010607380
+    },
+    {
+      "id": 4,
+      "name": "团队绩效（TeamPerformancePage）UI优化",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "优化顶部统计卡样式，对齐指标卡规范",
+        "统一等级分布图表容器样式与其他页面图表保持一致",
+        "调整下属列表操作按钮样式符合规范",
+        "检查卡片内边距统一为p-4"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "2.3"
+      ],
+      "write_scope": [
+        "client/src/pages/TeamPerformance/**"
+      ],
+      "read_scope": [
+        "《UI组件使用规范》",
+        "client/src/pages/TeamPerformance/TeamPerformancePage.tsx"
+      ],
+      "acceptance": "团队绩效页面所有组件样式符合统一规范，交互效果一致",
+      "dependencies": [
+        1
+      ],
+      "beginTime": 1782009803357,
+      "endTime": 1782010607380
+    },
+    {
+      "id": 5,
+      "name": "考核发布管理（PublishManagementPage）UI优化",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "优化StatisticsCards组件，完全对齐新的指标卡规范",
+        "统一MonthPicker按钮样式与其他按钮保持一致",
+        "调整表格操作栏按钮间距为gap-1",
+        "检查筛选栏元素间距统一为gap-3"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "2.4"
+      ],
+      "write_scope": [
+        "client/src/pages/PublishManagement/**"
+      ],
+      "read_scope": [
+        "《UI组件使用规范》",
+        "client/src/pages/PublishManagement/PublishManagementPage.tsx",
+        "client/src/pages/PublishManagement/StatisticsCards.tsx",
+        "client/src/pages/PublishManagement/MonthPicker.tsx"
+      ],
+      "acceptance": "考核发布管理页面所有组件样式符合统一规范，交互效果一致",
+      "dependencies": [
+        1
+      ],
+      "beginTime": 1782009803357,
+      "endTime": 1782010607380
+    },
+    {
+      "id": 6,
+      "name": "模板管理（TemplateManagementPage）UI优化",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "统一搜索栏输入框高度为h-10，与其他表单元素一致",
+        "优化操作栏按钮间距与大小，统一gap-2",
+        "调整表格行高为h-10，操作按钮为variant=\"ghost\" size=\"sm\"",
+        "检查卡片边框统一为border border-border"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "2.5"
+      ],
+      "write_scope": [
+        "client/src/pages/TemplateManagement/**"
+      ],
+      "read_scope": [
+        "《UI组件使用规范》",
+        "client/src/pages/TemplateManagement/TemplateManagementPage.tsx"
+      ],
+      "acceptance": "模板管理页面所有组件样式符合统一规范，交互效果一致",
+      "dependencies": [
+        1
+      ],
+      "beginTime": 1782009803357,
+      "endTime": 1782010607380
+    },
+    {
+      "id": 7,
+      "name": "员工管理模块UI优化",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "统一EmployeeListTab筛选栏布局与间距（gap-3）",
+        "优化EmployeeDetailPage统计卡片样式对齐指标卡规范",
+        "调整PermissionPage标签页布局与间距，操作按钮样式符合规范",
+        "检查所有弹窗内表单布局与间距，标签统一为text-xs text-muted-foreground mb-1.5"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "2.6"
+      ],
+      "write_scope": [
+        "client/src/pages/EmployeeManagement/**"
+      ],
+      "read_scope": [
+        "《UI组件使用规范》",
+        "client/src/pages/EmployeeManagement/EmployeeManagementPage.tsx",
+        "client/src/pages/EmployeeManagement/EmployeeListTab.tsx",
+        "client/src/pages/EmployeeManagement/EmployeeDetailPage.tsx",
+        "client/src/pages/EmployeeManagement/PermissionPage.tsx"
+      ],
+      "acceptance": "员工管理所有页面组件样式符合统一规范，交互效果一致",
+      "dependencies": [
+        1
+      ],
+      "beginTime": 1782009803357,
+      "endTime": 1782010607380
+    },
+    {
+      "id": 8,
+      "name": "考核详情（AssessmentDetailPage）UI优化",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "优化AssessmentHeaderCard布局与间距，统一内边距",
+        "统一底部操作栏按钮间距为gap-3，大小符合规范",
+        "调整签名弹窗样式与其他弹窗保持一致",
+        "检查所有按钮hover效果统一使用hover-elevate类"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "2.7"
+      ],
+      "write_scope": [
+        "client/src/pages/AssessmentDetail/**"
+      ],
+      "read_scope": [
+        "《UI组件使用规范》",
+        "client/src/pages/AssessmentDetail/AssessmentDetailPage.tsx",
+        "client/src/pages/AssessmentDetail/AssessmentHeaderCard.tsx"
+      ],
+      "acceptance": "考核详情页面所有组件样式符合统一规范，交互效果一致",
+      "dependencies": [
+        1
+      ],
+      "beginTime": 1782009803357,
+      "endTime": 1782010607380
+    },
+    {
+      "id": 9,
+      "name": "验收测试",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "读取 testing-guide skill",
+        "遍历所有页面，检查组件样式是否完全统一",
+        "验证交互行为（按钮点击反馈、hover效果、弹窗交互）一致性",
+        "检查所有指标卡、按钮、卡片、表单、表格是否符合规范",
+        "验证所有功能正常使用，无样式改动导致的功能异常"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4",
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4",
+        "2.5",
+        "2.6",
+        "2.7"
+      ],
+      "write_scope": [],
+      "read_scope": [
+        "《UI组件使用规范》",
+        "需求技术开发文档-统一设计规范章节"
+      ],
+      "acceptance": "所有页面样式统一，交互一致，功能正常运行，符合全部设计规范要求",
+      "dependencies": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "beginTime": 1782010608408,
+      "endTime": 1782010985788
+    }
+  ]
+}

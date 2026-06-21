@@ -1,0 +1,13 @@
+{
+  "id": "approval_feishu_definition_trigger_1",
+  "pluginKey": "@official-plugins/feishu-approval",
+  "pluginVersion": "0.0.4",
+  "name": "飞书审批",
+  "description": "支持查看飞书审批定义详情、触发审批实例",
+  "icon": "https://lf3-static.bytednsdoc.com/obj/eden-cn/LMfspH/ljhwZthlaukjlkulzlp/miao/miaoda_plugin/feishu_approval.svg",
+  "paramsSchema": {},
+  "formValue": {},
+  "createdAt": 1781974596818,
+  "updatedAt": 1781974655755,
+  "createdBy": 7546531372349587459
+}

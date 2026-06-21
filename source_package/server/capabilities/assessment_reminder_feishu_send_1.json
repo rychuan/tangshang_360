@@ -1,0 +1,42 @@
+{
+  "id": "assessment_reminder_feishu_send_1",
+  "pluginKey": "@official-plugins/send-feishu-message",
+  "pluginVersion": "1.0.27",
+  "name": "考核催办提醒飞书消息发送",
+  "description": "用于考核催办提醒场景，向动态传入的用户列表发送飞书提醒消息，支持自定义Markdown格式内容",
+  "icon": "",
+  "paramsSchema": {
+    "properties": {
+      "receiverUserList": {
+        "type": "array",
+        "description": "接收提醒的用户ID列表",
+        "items": {
+          "type": "string",
+          "description": "单个用户ID"
+        }
+      },
+      "cardContentMarkdown": {
+        "type": "string",
+        "description": "消息正文内容，支持Markdown格式"
+      }
+    },
+    "required": [
+      "receiverUserList",
+      "cardContentMarkdown"
+    ],
+    "type": "object"
+  },
+  "formValue": {
+    "buttons": [],
+    "title": {
+      "color": "blue",
+      "title": "考核催办提醒"
+    },
+    "content": "{{input.cardContentMarkdown}}",
+    "receiverUserList": "{{input.receiverUserList}}",
+    "sender": "bot"
+  },
+  "createdAt": 1780134982575,
+  "updatedAt": 1780367212488,
+  "createdBy": 7546531372349587459
+}
