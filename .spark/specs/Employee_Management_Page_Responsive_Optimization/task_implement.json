@@ -58,7 +58,7 @@
     {
       "id": 3,
       "name": "员工管理相关弹窗响应式优化",
-      "status": "in_progress",
+      "status": "completed",
       "type": "normal",
       "subtasks": [
         "读取 coding-guide skill，遵循弹窗响应式开发规范",
@@ -80,12 +80,13 @@
       ],
       "acceptance": "所有员工管理相关弹窗在小屏幕下自适应宽度，无溢出，表单可正常填写",
       "dependencies": [],
-      "beginTime": 1782125427877
+      "beginTime": 1782125427877,
+      "endTime": 1782125704847
     },
     {
       "id": 4,
       "name": "员工详情页响应式优化",
-      "status": "in_progress",
+      "status": "completed",
       "type": "normal",
       "subtasks": [
         "读取 coding-guide skill，遵循卡片响应式开发规范",
@@ -105,12 +106,13 @@
       ],
       "acceptance": "员工详情页在小屏幕下布局切换为适配样式，所有信息完整可读，无溢出",
       "dependencies": [],
-      "beginTime": 1782125427877
+      "beginTime": 1782125427877,
+      "endTime": 1782125704847
     },
     {
       "id": 5,
       "name": "部门管理Tab与全局边距优化",
-      "status": "in_progress",
+      "status": "completed",
       "type": "normal",
       "subtasks": [
         "优化 DepartmentManagementTab.tsx 中新建部门弹窗的 DialogContent 宽度为 `w-[95vw] sm:max-w-[500px]`",
@@ -131,12 +133,13 @@
       ],
       "acceptance": "部门管理页面所有元素符合响应式规范，小屏幕下操作流畅，无布局错乱",
       "dependencies": [],
-      "beginTime": 1782125427877
+      "beginTime": 1782125427877,
+      "endTime": 1782125704847
     },
     {
       "id": 6,
       "name": "响应式适配验收测试",
-      "status": "pending",
+      "status": "in_progress",
       "type": "normal",
       "subtasks": [
         "读取 testing-guide skill，遵循测试规范",
@@ -165,7 +168,8 @@
         3,
         4,
         5
-      ]
+      ],
+      "beginTime": 1782125705225
     }
   ]
 }

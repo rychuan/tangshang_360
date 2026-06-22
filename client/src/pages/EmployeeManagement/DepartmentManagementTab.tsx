@@ -228,7 +228,7 @@ const DepartmentManagementTab: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div />
         <Dialog
           open={dialogOpen}
@@ -253,7 +253,7 @@ const DepartmentManagementTab: React.FC = () => {
               新建部门
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="w-[95vw] sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>
                 {editingDept ? '编辑部门' : '新建部门'}

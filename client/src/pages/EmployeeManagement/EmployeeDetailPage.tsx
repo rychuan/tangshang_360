@@ -48,11 +48,11 @@ const EmployeeDetailPage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate('/employees')}>
           <ArrowLeft className="size-5" />
         </Button>
-        <h1 className="text-2xl font-semibold tracking-tight">{emp.name}</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">{emp.name}</h1>
         <Badge className={emp.status === 'active' ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}>
           {emp.status === 'active' ? '在职' : '已禁用'}
         </Badge>
@@ -61,7 +61,7 @@ const EmployeeDetailPage: React.FC = () => {
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><User className="size-5" />基本信息</CardTitle></CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { label: '姓名', value: emp.name },
               { label: '员工编号', value: emp.employeeNo || '-' },
@@ -85,7 +85,7 @@ const EmployeeDetailPage: React.FC = () => {
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><Star className="size-5" />考核统计</CardTitle></CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
             {[
               { label: '历史考核', value: String(emp.stats.totalAssessments), icon: ClipboardList },
               { label: '已完成', value: String(emp.stats.completedAssessments), icon: Star },

@@ -6,7 +6,7 @@ import DepartmentManagementTab from './DepartmentManagementTab';
 const EmployeeManagementPage: React.FC = () => {
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">员工管理</h1>
+      <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">员工管理</h1>
       <Tabs defaultValue="employees">
         <TabsList className="bg-[#dbdbdb]">
           <TabsTrigger value="employees">员工列表</TabsTrigger>

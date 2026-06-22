@@ -486,7 +486,7 @@ const EmployeeListTab: React.FC = () => {
         loading={historyLoading}
       />
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent className="max-w-sm">
+        <AlertDialogContent className="w-[95vw] max-w-sm">
           <AlertDialogHeader>
             <AlertDialogTitle>确认删除员工</AlertDialogTitle>
             <AlertDialogDescription>
