@@ -300,7 +300,7 @@ const EmployeeListTab: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="text-sm text-muted-foreground">
           共 {total} 条
           {selectedRowKeys.length > 0 && (
@@ -338,11 +338,11 @@ const EmployeeListTab: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[200px]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="relative min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
-            className="pl-9"
+            className="w-full pl-9"
             placeholder="搜索姓名 / 编号..."
             value={keyword}
             onChange={(e) => {
@@ -351,7 +351,7 @@ const EmployeeListTab: React.FC = () => {
             }}
           />
         </div>
-        <div className="w-[200px]">
+        <div className="w-full">
           <DepartmentTreeSelect
             value={departmentFilter}
             onChange={(name) => {
@@ -368,7 +368,7 @@ const EmployeeListTab: React.FC = () => {
             setPositionFilter(v);
             setPage(1);
           }}
-          className="w-[220px]"
+          className="w-full"
         />
         <Select
           value={roleFilter || 'all'}
@@ -377,7 +377,7 @@ const EmployeeListTab: React.FC = () => {
             setPage(1);
           }}
         >
-          <SelectTrigger className="w-[130px]">
+          <SelectTrigger className="w-full">
             <SelectValue placeholder="角色" />
           </SelectTrigger>
           <SelectContent>
@@ -396,7 +396,7 @@ const EmployeeListTab: React.FC = () => {
             setPage(1);
           }}
         >
-          <SelectTrigger className="w-[130px]">
+          <SelectTrigger className="w-full">
             <SelectValue placeholder="状态" />
           </SelectTrigger>
           <SelectContent>
