@@ -255,8 +255,8 @@ export interface AdjustIndicatorInput {
   algorithm: string;
   dataSource: string;
   weight: number;
-  dimensionName?: string;
-  dimensionWeight?: number;
+  dimensionName: string;
+  dimensionWeight: number;
 }
 export interface AdjustRequest {
   indicators: AdjustIndicatorInput[];
