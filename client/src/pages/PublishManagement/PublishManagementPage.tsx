@@ -226,7 +226,10 @@ const PublishManagementPage: React.FC = () => {
   const handleAdjustSubmit = async (
     indicators: AdjustIndicatorInput[],
   ): Promise<void> => {
-    if (!adjustingEmployee) return;
+    if (!adjustingEmployee) {
+      toast.error('调整失败：员工信息丢失');
+      return;
+    }
     setAdjustLoading(true);
     try {
       await adjustEmployeeSnapshot(adjustingEmployee.employeeId, { indicators });

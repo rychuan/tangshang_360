@@ -69,11 +69,11 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
   }, []);
 
   useEffect(() => {
-    if (open && employee) {
+    if (open && employee?.employeeId) {
       setPreviewMode(false);
       loadIndicators(employee.employeeId);
     }
-  }, [open, employee, loadIndicators]);
+  }, [open, employee?.employeeId, loadIndicators]);
 
   const handleAddIndicator = (): void => {
     setIndicators((prev: AdjustIndicatorInput[]) => [...prev, { ...EMPTY_INDICATOR }]);
