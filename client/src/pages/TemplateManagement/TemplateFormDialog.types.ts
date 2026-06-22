@@ -10,7 +10,7 @@ export const indicatorSchema = z.object({
 
 export const dimensionSchema = z.object({
   name: z.string().min(1, '维度名称不能为空'),
-  weight: z.coerce.number().min(0, '权重不能为负').max(1, '权重不能超过1'),
+  weight: z.coerce.number().min(0, '权重不能为负').max(100, '权重不能超过100'),
   indicators: z.array(indicatorSchema).min(1, '至少需要一个指标'),
 });
 

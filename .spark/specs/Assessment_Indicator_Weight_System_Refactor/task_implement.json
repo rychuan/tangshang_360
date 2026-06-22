@@ -100,7 +100,7 @@
     {
       "id": 4,
       "name": "考核发布模块后端逻辑修改：适配权重快照生成",
-      "status": "in_progress",
+      "status": "completed",
       "type": "normal",
       "subtasks": [
         "读取assessment-publish.service.ts现有实现",
@@ -126,12 +126,13 @@
         2,
         3
       ],
-      "beginTime": 1782092710686
+      "beginTime": 1782092710686,
+      "endTime": 1782093387306
     },
     {
       "id": 5,
       "name": "考核操作模块后端逻辑修改：简化总分计算",
-      "status": "pending",
+      "status": "in_progress",
       "type": "normal",
       "subtasks": [
         "读取assessment-operation.service.ts现有实现",
@@ -157,7 +158,8 @@
         1,
         2,
         4
-      ]
+      ],
+      "beginTime": 1782093387447
     },
     {
       "id": 6,

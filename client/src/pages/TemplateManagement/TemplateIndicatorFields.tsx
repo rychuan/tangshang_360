@@ -140,12 +140,12 @@ const IndicatorsFieldArray: React.FC<IndicatorsFieldArrayProps> = ({
               name={`dimensions.${dimIdx}.indicators.${indIdx}.weight`}
               render={({ field }) => (
                 <FormItem className="w-[100px]">
-                  <FormLabel>满分</FormLabel>
+                  <FormLabel>权重(%)</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
-                      min="1"
-                      placeholder="25"
+                      min="0"
+                      placeholder="30"
                       {...field}
                       onChange={(e) =>
                         field.onChange(parseInt(e.target.value, 10) || 0)
