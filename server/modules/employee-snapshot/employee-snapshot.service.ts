@@ -1,4 +1,4 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger, BadRequestException } from '@nestjs/common';
 import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@lark-apaas/fullstack-nestjs-core';
 import { eq, asc, and } from 'drizzle-orm';
 import {
@@ -186,6 +186,23 @@ export class EmployeeSnapshotService {
     this.logger.log(
       `adjustSnapshot employeeId=${employeeId} templateId=${templateId}`,
     );
+
+    const dimWeightMap: Map<string, number> = new Map();
+    for (const ind of indicators) {
+      const key: string = ind.dimensionName || '未分组';
+      if (!dimWeightMap.has(key)) {
+        dimWeightMap.set(key, ind.dimensionWeight ?? 0);
+      }
+    }
+    const dimWeightSum: number = Array.from(dimWeightMap.values()).reduce(
+      (sum: number, w) => sum + w,
+      0,
+    );
+    if (Math.abs(dimWeightSum - 100) > 0.01) {
+      throw new BadRequestException(
+        `维度权重之和必须等于 100，当前为 ${dimWeightSum}`,
+      );
+    }
 
     const dimRows = await this.db
       .select()

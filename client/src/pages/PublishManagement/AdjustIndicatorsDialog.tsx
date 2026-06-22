@@ -194,6 +194,12 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
   };
 
   const handleSubmit = (): void => {
+    if (!dimensionWeightValidation.isValid) {
+      toast.error(
+        `维度权重之和必须等于 100%，当前为 ${dimensionWeightValidation.totalWeight}%`,
+      );
+      return;
+    }
     onSubmit(indicators);
   };
 
@@ -531,7 +537,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
               <Button
                 data-ai-section-type="button"
                 onClick={handleSubmit}
-                disabled={loading || previewMode}
+                disabled={loading || previewMode || !dimensionWeightValidation.isValid}
               >
                 {loading ? '调整中...' : '确认调整'}
               </Button>
