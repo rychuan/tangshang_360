@@ -86,7 +86,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                 {group.dimensionName}
               </h3>
               <span className="inline-flex items-center px-3 py-1 rounded-md bg-primary/10 text-primary text-sm font-bold border border-primary/20">
-                权重 {Math.round(group.dimensionWeight * 100)}%
+                权重 {group.dimensionWeight}%
               </span>
             </div>
           </CardHeader>
@@ -108,7 +108,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                       数据来源
                     </th>
                     <th className="text-center py-3 px-2 font-medium text-muted-foreground w-16">
-                      满分
+                      权重(分)
                     </th>
                     <th className="text-center py-3 px-2 font-medium text-muted-foreground w-28">
                       自评

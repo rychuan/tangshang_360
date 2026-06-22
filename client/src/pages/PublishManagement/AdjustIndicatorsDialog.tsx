@@ -151,7 +151,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
                         <span className="ml-2 text-xs text-muted-foreground">
                           ({ind.dimensionName}
                           {ind.dimensionWeight != null
-                            ? ` · 权重${Math.round(ind.dimensionWeight * 100)}%`
+                            ? ` · 权重${ind.dimensionWeight}%`
                             : ''}
                           )
                         </span>

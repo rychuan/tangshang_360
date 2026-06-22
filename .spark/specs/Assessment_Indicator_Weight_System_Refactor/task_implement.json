@@ -199,7 +199,7 @@
     {
       "id": 7,
       "name": "考核评分页前端适配：展示权重作为满分",
-      "status": "in_progress",
+      "status": "completed",
       "type": "normal",
       "subtasks": [
         "读取现有考核评分页代码",
@@ -223,12 +223,13 @@
         2,
         5
       ],
-      "beginTime": 1782093416230
+      "beginTime": 1782093416230,
+      "endTime": 1782093570884
     },
     {
       "id": 8,
       "name": "全流程验收测试",
-      "status": "pending",
+      "status": "in_progress",
       "type": "normal",
       "subtasks": [
         "读取testing-guide skill了解测试规范",
@@ -257,7 +258,8 @@
         5,
         6,
         7
-      ]
+      ],
+      "beginTime": 1782093571037
     }
   ]
 }
