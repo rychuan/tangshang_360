@@ -61,7 +61,7 @@ const DepartmentMembersDialog: React.FC<DepartmentMembersDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="w-[95vw] max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>
             「{departmentName}」部门成员（共 {total} 人）
@@ -75,7 +75,7 @@ const DepartmentMembersDialog: React.FC<DepartmentMembersDialogProps> = ({
               该部门暂无成员
             </p>
           ) : (
-            <div className="border rounded-lg">
+            <div className="border rounded-lg overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/30">

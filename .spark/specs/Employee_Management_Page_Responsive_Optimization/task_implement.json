@@ -139,7 +139,7 @@
     {
       "id": 6,
       "name": "响应式适配验收测试",
-      "status": "in_progress",
+      "status": "completed",
       "type": "normal",
       "subtasks": [
         "读取 testing-guide skill，遵循测试规范",
@@ -169,7 +169,8 @@
         4,
         5
       ],
-      "beginTime": 1782125705225
+      "beginTime": 1782125705225,
+      "endTime": 1782126391632
     }
   ]
 }
