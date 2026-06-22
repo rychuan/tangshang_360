@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Eye, Pencil, Copy, Trash2, Plus } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Eye, Pencil, Copy, Trash2, Plus, AlertTriangle } from 'lucide-react';
 import { getEmployeeSnapshot } from '@/api/assessment-publish';
 import type { AdjustIndicatorInput, InstanceIndicatorItem } from '@shared/api.interface';
 
@@ -100,6 +101,17 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
     });
     return Object.values(groups);
   }, [indicators]);
+
+  const dimensionWeightValidation = useMemo(() => {
+    const totalWeight: number = dimensionGroups.reduce(
+      (sum: number, g) => sum + g.dimensionWeight,
+      0,
+    );
+    return {
+      totalWeight,
+      isValid: Math.abs(totalWeight - 100) < 0.01,
+    };
+  }, [dimensionGroups]);
 
   const handleAddIndicator = (dimensionName: string, dimensionWeight: number): void => {
     setIndicators((prev: AdjustIndicatorInput[]) => [
@@ -337,6 +349,14 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
           </div>
         ) : (
           <div className="flex flex-col gap-4">
+            {!dimensionWeightValidation.isValid && (
+              <Alert variant="destructive">
+                <AlertTriangle className="size-4" />
+                <AlertDescription>
+                  维度权重之和应为 100%，当前为 {dimensionWeightValidation.totalWeight}%，请检查模板配置
+                </AlertDescription>
+              </Alert>
+            )}
             {dimensionGroups.map((group: DimensionGroup, groupIdx: number) =>
               previewMode
                 ? renderPreviewGroup(group, groupIdx)
