@@ -65,7 +65,7 @@
     {
       "id": 3,
       "name": "考核模板模块后端逻辑修改：调整权重校验与存储",
-      "status": "in_progress",
+      "status": "completed",
       "type": "normal",
       "subtasks": [
         "读取assessment-template.service.ts现有实现",
@@ -94,12 +94,13 @@
         1,
         2
       ],
-      "beginTime": 1782092619749
+      "beginTime": 1782092619749,
+      "endTime": 1782092710500
     },
     {
       "id": 4,
       "name": "考核发布模块后端逻辑修改：适配权重快照生成",
-      "status": "pending",
+      "status": "in_progress",
       "type": "normal",
       "subtasks": [
         "读取assessment-publish.service.ts现有实现",
@@ -124,7 +125,8 @@
         1,
         2,
         3
-      ]
+      ],
+      "beginTime": 1782092710686
     },
     {
       "id": 5,
@@ -160,7 +162,7 @@
     {
       "id": 6,
       "name": "考核模板管理页前端改造：新增权重实时校验",
-      "status": "pending",
+      "status": "in_progress",
       "type": "normal",
       "subtasks": [
         "读取现有考核模板管理页代码",
@@ -187,7 +189,8 @@
       "dependencies": [
         2,
         3
-      ]
+      ],
+      "beginTime": 1782092710686
     },
     {
       "id": 7,
