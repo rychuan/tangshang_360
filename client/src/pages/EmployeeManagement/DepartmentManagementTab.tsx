@@ -41,6 +41,7 @@ import {
   Users,
 } from 'lucide-react';
 import { showConfirm } from '@lark-apaas/client-toolkit';
+import DepartmentMembersDialog from './DepartmentMembersDialog';
 
 interface DeptFormData {
   name: string;
@@ -64,6 +65,9 @@ const DepartmentManagementTab: React.FC = () => {
   });
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const [membersDialogOpen, setMembersDialogOpen] = useState(false);
+  const [membersDeptName, setMembersDeptName] = useState('');
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -184,10 +188,16 @@ const DepartmentManagementTab: React.FC = () => {
             {node.headName || '-'}
           </td>
           <td className="py-3 px-4 align-middle whitespace-nowrap">
-            <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+            <button
+              className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+              onClick={() => {
+                setMembersDeptName(node.name);
+                setMembersDialogOpen(true);
+              }}
+            >
               <Users className="h-3.5 w-3.5" />
               {node.memberCount}
-            </span>
+            </button>
           </td>
           <td className="py-3 px-4 align-middle whitespace-nowrap">{node.sortOrder}</td>
           <td className="py-3 px-4 align-middle whitespace-nowrap">
@@ -340,7 +350,7 @@ const DepartmentManagementTab: React.FC = () => {
                     <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">部门名称</th>
                     <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">上级部门</th>
                     <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">负责人</th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">人数</th>
+                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">成员</th>
                     <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">排序</th>
                     <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap w-[100px]">操作</th>
                   </tr>
@@ -353,6 +363,11 @@ const DepartmentManagementTab: React.FC = () => {
           )}
         </CardContent>
       </Card>
+      <DepartmentMembersDialog
+        open={membersDialogOpen}
+        onOpenChange={setMembersDialogOpen}
+        departmentName={membersDeptName}
+      />
     </div>
   );
 };
