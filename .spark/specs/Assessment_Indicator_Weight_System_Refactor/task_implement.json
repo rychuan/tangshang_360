@@ -33,7 +33,7 @@
     {
       "id": 2,
       "name": "共享类型定义更新：替换maxScore为weight字段",
-      "status": "in_progress",
+      "status": "completed",
       "type": "normal",
       "subtasks": [
         "读取shared/api.interface.ts现有类型定义",
@@ -59,12 +59,13 @@
       "dependencies": [
         1
       ],
-      "beginTime": 1782092557844
+      "beginTime": 1782092557844,
+      "endTime": 1782092619624
     },
     {
       "id": 3,
       "name": "考核模板模块后端逻辑修改：调整权重校验与存储",
-      "status": "pending",
+      "status": "in_progress",
       "type": "normal",
       "subtasks": [
         "读取assessment-template.service.ts现有实现",
@@ -92,7 +93,8 @@
       "dependencies": [
         1,
         2
-      ]
+      ],
+      "beginTime": 1782092619749
     },
     {
       "id": 4,
