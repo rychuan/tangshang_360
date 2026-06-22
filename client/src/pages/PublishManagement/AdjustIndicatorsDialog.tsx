@@ -4,6 +4,7 @@ import { logger } from '@lark-apaas/client-toolkit/logger';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -315,23 +316,25 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
               </div>
               <div className="flex flex-col gap-2">
                 <Label className="text-xs">描述</Label>
-                <Input
+                <Textarea
                   value={ind.description}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                     handleIndicatorChange(flatIndex, 'description', e.target.value)
                   }
                   placeholder="指标描述"
+                  rows={2}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-2">
                   <Label className="text-xs">算法</Label>
-                  <Input
+                  <Textarea
                     value={ind.algorithm}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                       handleIndicatorChange(flatIndex, 'algorithm', e.target.value)
                     }
                     placeholder="评分算法"
+                    rows={2}
                   />
                 </div>
                 <div className="flex flex-col gap-2">

@@ -116,7 +116,7 @@ const IndicatorsFieldArray: React.FC<IndicatorsFieldArrayProps> = ({
                 <FormItem className="flex-1">
                   <FormLabel>指标算法/描述</FormLabel>
                   <FormControl>
-                    <Input placeholder="如：完成率*满分" {...field} />
+                    <Textarea placeholder="如：完成率*满分" rows={2} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
