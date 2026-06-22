@@ -157,7 +157,7 @@ const DepartmentManagementTab: React.FC = () => {
     const hasChildren = node.children && node.children.length > 0;
     return (
       <React.Fragment key={node.id}>
-        <tr className="border-b hover:bg-muted/50 transition-colors">
+        <tr className="border-b hover:bg-muted/50 transition-colors group">
           <td className="py-3 px-4 align-middle whitespace-nowrap">
             <div
               className="flex items-center gap-2"
@@ -200,8 +200,8 @@ const DepartmentManagementTab: React.FC = () => {
             </button>
           </td>
           <td className="py-3 px-4 align-middle whitespace-nowrap">{node.sortOrder}</td>
-          <td className="py-3 px-4 align-middle whitespace-nowrap">
-            <div className="flex items-center gap-1">
+          <td className="py-3 px-4 align-middle whitespace-nowrap sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
+            <div className="flex items-center gap-1.5">
               <Button
                 variant="ghost"
                 size="icon"
@@ -343,7 +343,7 @@ const DepartmentManagementTab: React.FC = () => {
               暂无部门数据，点击「新建部门」开始
             </p>
           ) : (
-            <div className="border rounded-lg overflow-auto">
+            <div className="border rounded-lg overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b hover:bg-muted/50 transition-colors">
@@ -352,7 +352,7 @@ const DepartmentManagementTab: React.FC = () => {
                     <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">负责人</th>
                     <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">成员</th>
                     <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">排序</th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap w-[100px]">操作</th>
+                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap w-[100px] sticky right-0 bg-background z-20 border-l">操作</th>
                   </tr>
                 </thead>
                 <tbody>

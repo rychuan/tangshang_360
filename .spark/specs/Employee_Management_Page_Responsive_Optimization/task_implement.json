@@ -30,7 +30,7 @@
     {
       "id": 2,
       "name": "员工表格与部门表格响应式优化",
-      "status": "in_progress",
+      "status": "completed",
       "type": "normal",
       "subtasks": [
         "读取 coding-guide skill，遵循表格响应式开发规范",
@@ -52,7 +52,8 @@
       ],
       "acceptance": "员工表格和部门表格在小屏幕下支持横向滚动，操作列固定停靠，所有操作按钮可正常点击",
       "dependencies": [],
-      "beginTime": 1782125427877
+      "beginTime": 1782125427877,
+      "endTime": 1782125624659
     },
     {
       "id": 3,

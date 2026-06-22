@@ -83,7 +83,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
               <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">角色</th>
               <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">当前绑定模板</th>
               <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">状态</th>
-              <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap w-[220px] sticky right-0 bg-background z-20 border-l">操作</th>
+              <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap w-[260px] sticky right-0 bg-background z-20 border-l">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -147,7 +147,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
                     )}
                   </td>
                   <td className="py-3 px-4 align-middle whitespace-nowrap sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                       <CanRole roles={['admin']}>
                         <Button
                           variant="ghost"
