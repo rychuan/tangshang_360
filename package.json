@@ -200,5 +200,8 @@
     "precommit": "node scripts/hooks/run-precommit.js",
     "postinstall": "fullstack-cli action-plugin init"
   },
-  "version": "2.2.6"
+  "version": "2.2.6",
+  "actionPlugins": {
+    "@official-plugins/send-feishu-message": "1.0.29"
+  }
 }

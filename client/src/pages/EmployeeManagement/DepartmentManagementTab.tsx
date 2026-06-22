@@ -289,8 +289,8 @@ const DepartmentManagementTab: React.FC = () => {
                 <Label>部门负责人</Label>
                 <UserSelect
                   value={formData.headId ? [formData.headId] : []}
-                  onChange={(v: string[]) =>
-                    setFormData({ ...formData, headId: v[0] || '' })
+                  onChange={(v: string[] | null) =>
+                    setFormData({ ...formData, headId: v?.[0] || '' })
                   }
                   placeholder="请选择负责人"
                 />
