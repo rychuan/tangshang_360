@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Eye, Pencil, Copy, Trash2, Plus, AlertTriangle } from 'lucide-react';
+import { Eye, Pencil, Copy, Trash2, Plus, AlertTriangle, FolderPlus, X, Check } from 'lucide-react';
 import { getEmployeeSnapshot } from '@/api/assessment-publish';
 import type { AdjustIndicatorInput, InstanceIndicatorItem } from '@shared/api.interface';
 
@@ -48,6 +48,9 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
   const [indicators, setIndicators] = useState<AdjustIndicatorInput[]>([]);
   const [previewMode, setPreviewMode] = useState<boolean>(false);
   const [loadingIndicators, setLoadingIndicators] = useState<boolean>(false);
+  const [addingDimension, setAddingDimension] = useState<boolean>(false);
+  const [newDimName, setNewDimName] = useState<string>('');
+  const [newDimWeight, setNewDimWeight] = useState<string>('');
 
   const loadIndicators = useCallback(async (employeeId: string): Promise<void> => {
     setLoadingIndicators(true);
@@ -80,6 +83,9 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
   useEffect(() => {
     if (open && employee?.employeeId) {
       setPreviewMode(false);
+      setAddingDimension(false);
+      setNewDimName('');
+      setNewDimWeight('');
       loadIndicators(employee.employeeId);
     }
   }, [open, employee?.employeeId, loadIndicators]);
@@ -132,6 +138,53 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
       next[flatIndex] = { ...next[flatIndex], [field]: value };
       return next;
     });
+  };
+
+  const handleDimensionChange = (
+    group: DimensionGroup,
+    field: 'dimensionName' | 'dimensionWeight',
+    value: string | number,
+  ): void => {
+    setIndicators((prev: AdjustIndicatorInput[]) => {
+      const next: AdjustIndicatorInput[] = [...prev];
+      for (const idx of group.flatIndices) {
+        next[idx] = { ...next[idx], [field]: value };
+      }
+      return next;
+    });
+  };
+
+  const handleRemoveDimension = (group: DimensionGroup): void => {
+    const removeSet: Set<number> = new Set(group.flatIndices);
+    setIndicators((prev: AdjustIndicatorInput[]) =>
+      prev.filter((_: AdjustIndicatorInput, i: number) => !removeSet.has(i)),
+    );
+  };
+
+  const handleConfirmAddDimension = (): void => {
+    const name: string = newDimName.trim();
+    const weight: number = Number(newDimWeight);
+    if (!name) {
+      toast.error('请输入维度名称');
+      return;
+    }
+    if (isNaN(weight) || weight < 0) {
+      toast.error('请输入有效的维度权重');
+      return;
+    }
+    setIndicators((prev: AdjustIndicatorInput[]) => [
+      ...prev,
+      { ...EMPTY_INDICATOR, dimensionName: name, dimensionWeight: weight },
+    ]);
+    setAddingDimension(false);
+    setNewDimName('');
+    setNewDimWeight('');
+  };
+
+  const handleCancelAddDimension = (): void => {
+    setAddingDimension(false);
+    setNewDimName('');
+    setNewDimWeight('');
   };
 
   const handleCopyTemplate = (): void => {
@@ -192,13 +245,38 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
   const renderEditGroup = (group: DimensionGroup, groupIdx: number): React.ReactNode => (
     <Card key={groupIdx}>
       <CardHeader>
-        <div className="flex items-center gap-3">
-          <h3 className="text-lg font-semibold">
-            {group.dimensionName || '未分组'}
-          </h3>
-          <span className="inline-flex items-center px-3 py-1 rounded-md bg-primary/10 text-primary text-sm font-bold border border-primary/20">
-            权重 {group.dimensionWeight}%
-          </span>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 flex-1">
+            <Input
+              value={group.dimensionName}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                handleDimensionChange(group, 'dimensionName', e.target.value)
+              }
+              className="text-lg font-semibold h-9 max-w-[200px] border-none px-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+              placeholder="维度名称"
+            />
+            <div className="flex items-center gap-2">
+              <Label className="text-xs text-muted-foreground whitespace-nowrap">权重</Label>
+              <Input
+                type="number"
+                value={group.dimensionWeight}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  handleDimensionChange(group, 'dimensionWeight', Number(e.target.value))
+                }
+                className="w-20 h-8"
+              />
+              <span className="text-sm text-muted-foreground">%</span>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleRemoveDimension(group)}
+            className="text-destructive hover:text-destructive"
+          >
+            <Trash2 className="size-3.5 mr-1" />
+            删除维度
+          </Button>
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -288,6 +366,56 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
     </Card>
   );
 
+  const renderAddDimensionForm = (): React.ReactNode => (
+    <Card className="border-dashed">
+      <CardContent className="pt-6">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <FolderPlus className="size-4 text-muted-foreground" />
+            <span className="text-sm font-medium">新增维度</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs">维度名称</Label>
+              <Input
+                value={newDimName}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewDimName(e.target.value)}
+                placeholder="请输入维度名称"
+                autoFocus
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs">维度权重 (%)</Label>
+              <Input
+                type="number"
+                value={newDimWeight}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewDimWeight(e.target.value)}
+                placeholder="0"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCancelAddDimension}
+            >
+              <X className="size-3.5 mr-1" />
+              取消
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleConfirmAddDimension}
+            >
+              <Check className="size-3.5 mr-1" />
+              确认
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
@@ -343,24 +471,53 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
           <div className="flex items-center justify-center py-12 text-muted-foreground">
             加载中...
           </div>
-        ) : indicators.length === 0 ? (
-          <div className="flex items-center justify-center py-12 text-muted-foreground">
-            暂无指标数据
-          </div>
         ) : (
           <div className="flex flex-col gap-4">
-            {!dimensionWeightValidation.isValid && (
+            {!dimensionWeightValidation.isValid && dimensionGroups.length > 0 && (
               <Alert variant="destructive">
                 <AlertTriangle className="size-4" />
                 <AlertDescription>
-                  维度权重之和应为 100%，当前为 {dimensionWeightValidation.totalWeight}%，请检查模板配置
+                  维度权重之和应为 100%，当前为 {dimensionWeightValidation.totalWeight}%，请检查维度权重配置
                 </AlertDescription>
               </Alert>
             )}
-            {dimensionGroups.map((group: DimensionGroup, groupIdx: number) =>
-              previewMode
-                ? renderPreviewGroup(group, groupIdx)
-                : renderEditGroup(group, groupIdx),
+
+            {dimensionGroups.length === 0 && !addingDimension ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-4">
+                <span className="text-muted-foreground">暂无指标数据</span>
+                {!previewMode && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setAddingDimension(true)}
+                  >
+                    <FolderPlus className="size-4 mr-2" />
+                    添加维度
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <>
+                {dimensionGroups.map((group: DimensionGroup, groupIdx: number) =>
+                  previewMode
+                    ? renderPreviewGroup(group, groupIdx)
+                    : renderEditGroup(group, groupIdx),
+                )}
+
+                {!previewMode && (
+                  addingDimension ? (
+                    renderAddDimensionForm()
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="w-full border-dashed"
+                      onClick={() => setAddingDimension(true)}
+                    >
+                      <FolderPlus className="size-4 mr-2" />
+                      添加维度
+                    </Button>
+                  )
+                )}
+              </>
             )}
 
             <div className="flex justify-end gap-3 pt-2">
