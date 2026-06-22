@@ -20,7 +20,7 @@ export interface AssessmentIndicatorDef {
   description: string;
   algorithm: string;
   dataSource: string;
-  maxScore: number;
+  weight: number;
 }
 export interface AssessmentDimensionDef {
   id: string;
@@ -48,7 +48,7 @@ export interface CreateTemplateRequest {
       description: string;
       algorithm: string;
       dataSource: string;
-      maxScore: number;
+      weight: number;
     }>;
   }>;
 }
@@ -124,7 +124,7 @@ export interface PublishRequest {
       description: string;
       algorithm: string;
       dataSource: string;
-      maxScore: number;
+      weight: number;
       dimensionName?: string;
       dimensionWeight?: number;
     }>;
@@ -167,7 +167,7 @@ export interface AssessmentIndicatorDetail {
   description: string;
   algorithm: string;
   dataSource: string;
-  maxScore: number;
+  weight: number;
   selfScore?: number;
   selfComment?: string;
   supervisorScore?: number;
@@ -266,7 +266,7 @@ export interface AdjustIndicatorInput {
   description: string;
   algorithm: string;
   dataSource: string;
-  maxScore: number;
+  weight: number;
   dimensionName?: string;
   dimensionWeight?: number;
 }
@@ -307,7 +307,7 @@ export interface InstanceIndicatorItem {
   description: string;
   algorithm: string;
   dataSource: string;
-  maxScore: number;
+  weight: number;
   dimensionName?: string;
   dimensionWeight?: number;
 }

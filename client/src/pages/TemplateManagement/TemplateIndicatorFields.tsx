@@ -45,7 +45,7 @@ const IndicatorsFieldArray: React.FC<IndicatorsFieldArrayProps> = ({
               description: '',
               algorithm: '',
               dataSource: '',
-              maxScore: 0,
+              weight: 0,
             })
           }
         >
@@ -137,7 +137,7 @@ const IndicatorsFieldArray: React.FC<IndicatorsFieldArrayProps> = ({
             />
             <FormField
               control={control}
-              name={`dimensions.${dimIdx}.indicators.${indIdx}.maxScore`}
+              name={`dimensions.${dimIdx}.indicators.${indIdx}.weight`}
               render={({ field }) => (
                 <FormItem className="w-[100px]">
                   <FormLabel>满分</FormLabel>

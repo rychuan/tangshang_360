@@ -66,7 +66,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
             description: ind.description,
             algorithm: ind.algorithm,
             dataSource: ind.dataSource,
-            maxScore: ind.maxScore,
+            weight: ind.weight,
           })),
         })),
       };
@@ -85,7 +85,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
               description: '',
               algorithm: '',
               dataSource: '',
-              maxScore: 0,
+              weight: 0,
             },
           ],
         },
@@ -123,7 +123,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
     let totalMaxScore = 0;
     for (const dim of data.dimensions) {
       for (const ind of dim.indicators) {
-        totalMaxScore += ind.maxScore;
+        totalMaxScore += ind.weight;
       }
     }
     if (totalMaxScore !== 100) {
@@ -145,7 +145,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
             description: ind.description,
             algorithm: ind.algorithm,
             dataSource: ind.dataSource,
-            maxScore: ind.maxScore,
+            weight: ind.weight,
           })),
         })),
       };
@@ -258,7 +258,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                           description: '',
                           algorithm: '',
                           dataSource: '',
-                          maxScore: 0,
+                          weight: 0,
                         },
                       ],
                     })
@@ -367,8 +367,8 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                             {' | '}
                             指标满分合计：
                             {dimData.indicators?.reduce(
-                              (sum: number, i: { maxScore: number }) =>
-                                sum + (i.maxScore || 0),
+              (sum: number, i: { weight: number }) =>
+                sum + (i.weight || 0),
                               0,
                             ) || 0}
                           </div>

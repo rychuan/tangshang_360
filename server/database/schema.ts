@@ -200,7 +200,7 @@ export const assessmentIndicatorSnapshot = pgTable("assessment_indicator_snapsho
   description: text("description"),
   algorithm: text("algorithm"),
   dataSource: varchar("data_source", { length: 255 }),
-  maxScore: numeric("max_score").notNull().default('0'),
+  weight: numeric("weight").notNull().default('0'),
   isAdjusted: boolean("is_adjusted").notNull().default(false),
   adjustedBy: userProfile("adjusted_by"),
   adjustedAt: customTimestamptz("adjusted_at", { precision: 6 }),
@@ -294,7 +294,7 @@ export const assessmentIndicator = pgTable("assessment_indicator", {
   description: text("description"),
   algorithm: text("algorithm"),
   dataSource: varchar("data_source", { length: 255 }),
-  maxScore: numeric("max_score").notNull().default('0'),
+  weight: numeric("weight").notNull().default('0'),
   sortOrder: integer("sort_order").notNull().default(0),
   // System field: Creation time (auto-filled, do not modify)
   createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),

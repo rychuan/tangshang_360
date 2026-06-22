@@ -38,7 +38,7 @@ export function calculatePreviewScore(
     for (const ind of group.indicators) {
       const score = ratings[ind.id]?.score ?? 0;
       dimScoreSum += score;
-      dimMaxSum += ind.maxScore;
+      dimMaxSum += ind.weight;
       if (score > 0) hasAnyScore = true;
     }
     if (dimMaxSum > 0 && group.dimensionWeight > 0) {

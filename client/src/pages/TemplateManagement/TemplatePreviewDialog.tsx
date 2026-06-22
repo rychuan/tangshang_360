@@ -101,7 +101,7 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
                                 {ind.dataSource || '-'}
                               </td>
                               <td className="py-3 px-2 text-center">
-                                {ind.maxScore}
+                                {ind.weight}
                               </td>
                             </tr>
                           ),

@@ -86,13 +86,13 @@ const HomePage: React.FC = () => {
     );
   }
 
-  const gradeData = overview?.stats.gradeDistribution
+  const gradeData = overview?.stats?.gradeDistribution
     ? Object.entries(overview.stats.gradeDistribution)
         .sort((a, b) => a[0].localeCompare(b[0]))
         .map(([grade, count]) => ({ grade, count }))
     : [];
 
-  const trendData = overview?.stats.trend || [];
+  const trendData = overview?.stats?.trend || [];
 
   const chartConfig = {
     count: { label: '人数', color: 'hsl(var(--chart-1))' },
@@ -112,7 +112,7 @@ const HomePage: React.FC = () => {
             </div>
             <div>
               <p className="text-3xl font-bold text-foreground">
-                {overview?.stats.pendingCount ?? 0}
+                {overview?.stats?.pendingCount ?? 0}
               </p>
               <p className="text-sm text-muted-foreground">待处理</p>
             </div>
@@ -125,7 +125,7 @@ const HomePage: React.FC = () => {
             </div>
             <div>
               <p className="text-3xl font-bold text-foreground">
-                {overview?.stats.completedCount ?? 0}
+                {overview?.stats?.completedCount ?? 0}
               </p>
               <p className="text-sm text-muted-foreground">已完成</p>
             </div>
@@ -138,7 +138,7 @@ const HomePage: React.FC = () => {
             </div>
             <div>
               <p className="text-3xl font-bold text-foreground">
-                {overview?.stats.avgScore ?? '-'}
+                {overview?.stats?.avgScore ?? '-'}
               </p>
               <p className="text-sm text-muted-foreground">平均分</p>
             </div>
@@ -280,7 +280,7 @@ const HomePage: React.FC = () => {
       </div>
 
       {/* Shortcuts */}
-      {overview && overview.shortcuts.length > 0 && (
+      {overview?.shortcuts?.length ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {overview.shortcuts.map((s) => (
             <Link key={s.path} to={s.path} className="block">
@@ -292,7 +292,7 @@ const HomePage: React.FC = () => {
             </Link>
           ))}
         </div>
-      )}
+      ) : null}
     </div>
   );
 };

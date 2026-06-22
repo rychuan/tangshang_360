@@ -17,7 +17,7 @@ interface AdjustIndicatorsDialogProps {
   loading: boolean;
 }
 
-const EMPTY_INDICATOR: AdjustIndicatorInput = { content: '', description: '', algorithm: '', dataSource: '', maxScore: 100 };
+const EMPTY_INDICATOR: AdjustIndicatorInput = { content: '', description: '', algorithm: '', dataSource: '', weight: 100 };
 
 const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
   open,
@@ -41,7 +41,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
             description: ind.description,
             algorithm: ind.algorithm,
             dataSource: ind.dataSource,
-            maxScore: ind.maxScore,
+            weight: ind.weight,
             dimensionName: ind.dimensionName,
             dimensionWeight: ind.dimensionWeight,
           })),
@@ -188,7 +188,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
                       </div>
                       <div>
                         <span className="text-muted-foreground">最高分：</span>
-                        <span className="font-medium">{ind.maxScore}</span>
+                        <span className="font-medium">{ind.weight}</span>
                       </div>
                     </div>
                   ) : (
@@ -239,11 +239,11 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
                         <Label className="text-xs">最高分</Label>
                         <Input
                           type="number"
-                          value={ind.maxScore}
+                          value={ind.weight}
                           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                             handleIndicatorChange(
                               index,
-                              'maxScore',
+                              'weight',
                               Number(e.target.value),
                             )
                           }

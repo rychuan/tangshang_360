@@ -1,0 +1,253 @@
+{
+  "tasks": [
+    {
+      "id": 1,
+      "name": "数据库结构变更：调整考核指标权重字段",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "读取 miaoda-skill 了解数据库修改规范",
+        "执行SQL将assessment_indicator表max_score字段重命名为weight",
+        "执行SQL将assessment_indicator_snapshot表max_score字段重命名为weight",
+        "执行SQL更新assessment_dimension表weight字段存储逻辑为百分比整数（原值*100）",
+        "重新生成server/database/schema.ts文件",
+        "插入必要的兼容数据"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3"
+      ],
+      "write_scope": [
+        "server/database/schema.ts"
+      ],
+      "read_scope": [
+        "server/database/schema.ts",
+        ".agent/skills/steering/nestjs-react-fullstack/coding-guide/SKILL.md"
+      ],
+      "acceptance": "数据库表字段重命名完成，schema.ts生成正确，字段类型与约束符合要求",
+      "dependencies": [],
+      "beginTime": 1782092126182,
+      "endTime": 1782092557723
+    },
+    {
+      "id": 2,
+      "name": "共享类型定义更新：替换maxScore为weight字段",
+      "status": "in_progress",
+      "type": "normal",
+      "subtasks": [
+        "读取shared/api.interface.ts现有类型定义",
+        "替换AssessmentIndicatorDef接口中maxScore为weight",
+        "替换CreateTemplateRequest/UpdateTemplateRequest中指标maxScore为weight",
+        "替换AssessmentIndicatorDetail接口中maxScore为weight",
+        "替换AdjustIndicatorInput接口中maxScore为weight",
+        "替换InstanceIndicatorItem接口中maxScore为weight",
+        "校验所有类型定义前后端兼容"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3"
+      ],
+      "write_scope": [
+        "shared/api.interface.ts"
+      ],
+      "read_scope": [
+        "shared/api.interface.ts"
+      ],
+      "acceptance": "所有涉及指标分数的类型定义均已将maxScore替换为weight，编译无错误",
+      "dependencies": [
+        1
+      ],
+      "beginTime": 1782092557844
+    },
+    {
+      "id": 3,
+      "name": "考核模板模块后端逻辑修改：调整权重校验与存储",
+      "status": "pending",
+      "type": "normal",
+      "subtasks": [
+        "读取assessment-template.service.ts现有实现",
+        "修改validateWeights方法：维度权重总和校验为100（原总和为1）",
+        "新增校验规则：每个维度下指标权重总和等于该维度权重",
+        "修改create方法：存储指标weight替代原maxScore",
+        "修改update方法：存储指标weight替代原maxScore",
+        "修改detail接口返回：指标weight替代原maxScore",
+        "校验模板创建/更新流程校验逻辑正确"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.4"
+      ],
+      "write_scope": [
+        "server/modules/assessment-template/**/*.ts"
+      ],
+      "read_scope": [
+        "server/modules/assessment-template/assessment-template.service.ts",
+        "shared/api.interface.ts",
+        "server/database/schema.ts"
+      ],
+      "acceptance": "模板创建/更新时自动校验维度权重总和为100%，每个维度下指标权重总和等于维度权重，数据存储正确",
+      "dependencies": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": 4,
+      "name": "考核发布模块后端逻辑修改：适配权重快照生成",
+      "status": "pending",
+      "type": "normal",
+      "subtasks": [
+        "读取assessment-publish.service.ts现有实现",
+        "修改publish方法：快照存储指标weight替代原maxScore",
+        "修改调整指标接口：保存指标weight替代原maxScore",
+        "修改实例指标查询接口：返回weight替代原maxScore",
+        "校验考核发布后指标快照数据正确"
+      ],
+      "requirements": [
+        "1.3"
+      ],
+      "write_scope": [
+        "server/modules/assessment-publish/**/*.ts"
+      ],
+      "read_scope": [
+        "server/modules/assessment-publish/assessment-publish.service.ts",
+        "shared/api.interface.ts",
+        "server/database/schema.ts"
+      ],
+      "acceptance": "考核发布时指标权重正确写入快照表，调整指标功能正常",
+      "dependencies": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "id": 5,
+      "name": "考核操作模块后端逻辑修改：简化总分计算",
+      "status": "pending",
+      "type": "normal",
+      "subtasks": [
+        "读取assessment-operation.service.ts现有实现",
+        "修改detail接口返回：指标weight替代原maxScore",
+        "修改评分校验逻辑：评分上限校验改为指标weight值",
+        "修改上级评分提交逻辑：总分计算改为所有指标得分直接求和（原加权计算）",
+        "校验总分计算结果正确，满分100分"
+      ],
+      "requirements": [
+        "1.4",
+        "1.5"
+      ],
+      "write_scope": [
+        "server/modules/assessment-operation/**/*.ts"
+      ],
+      "read_scope": [
+        "server/modules/assessment-operation/assessment-operation.service.ts",
+        "shared/api.interface.ts",
+        "server/database/schema.ts"
+      ],
+      "acceptance": "上级评分提交后自动计算总分为所有指标得分之和，满分100分，评分不超过指标权重值",
+      "dependencies": [
+        1,
+        2,
+        4
+      ]
+    },
+    {
+      "id": 6,
+      "name": "考核模板管理页前端改造：新增权重实时校验",
+      "status": "pending",
+      "type": "normal",
+      "subtasks": [
+        "读取现有考核模板管理页代码",
+        "修改维度权重输入框，实时显示所有维度总权重",
+        "修改每个维度下指标权重输入框，实时显示当前维度下指标总权重",
+        "新增实时校验逻辑：维度总权重不为100时给出错误提示",
+        "新增实时校验逻辑：维度下指标总权重不等于维度权重时给出错误提示",
+        "修改提交按钮状态：校验不通过时禁用提交",
+        "适配接口字段：将原maxScore字段替换为weight提交"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.5"
+      ],
+      "write_scope": [
+        "client/pages/TemplateManagement/**/*.tsx"
+      ],
+      "read_scope": [
+        "client/pages/TemplateManagement/TemplateManagement.tsx",
+        "shared/api.interface.ts"
+      ],
+      "acceptance": "模板编辑页实时显示维度与指标权重总和，校验不通过时明确提示错误并禁止提交",
+      "dependencies": [
+        2,
+        3
+      ]
+    },
+    {
+      "id": 7,
+      "name": "考核评分页前端适配：展示权重作为满分",
+      "status": "pending",
+      "type": "normal",
+      "subtasks": [
+        "读取现有考核评分页代码",
+        "修改指标展示逻辑：将原maxScore替换为weight作为满分显示",
+        "修改评分输入上限：最大可输入值等于指标weight值",
+        "修改总分展示逻辑：实时显示当前所有指标得分之和"
+      ],
+      "requirements": [
+        "1.3",
+        "1.4"
+      ],
+      "write_scope": [
+        "client/pages/AssessmentDetail/**/*.tsx"
+      ],
+      "read_scope": [
+        "client/pages/AssessmentDetail/AssessmentDetail.tsx",
+        "shared/api.interface.ts"
+      ],
+      "acceptance": "评分页指标展示权重为满分，评分不超过权重值，总分实时计算正确",
+      "dependencies": [
+        2,
+        5
+      ]
+    },
+    {
+      "id": 8,
+      "name": "全流程验收测试",
+      "status": "pending",
+      "type": "normal",
+      "subtasks": [
+        "读取testing-guide skill了解测试规范",
+        "接口测试：验证模板创建/更新接口权重校验逻辑正确",
+        "接口测试：验证考核发布接口快照生成正确",
+        "接口测试：验证评分提交总分计算正确",
+        "页面测试：验证模板编辑页实时校验功能正常",
+        "页面测试：验证评分页权重展示与总分计算正确",
+        "全流程走测：模板创建→发布→自评→上级评分→结果查看完整流程正常"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4",
+        "1.5"
+      ],
+      "write_scope": [],
+      "read_scope": [
+        ".agent/skills/testing-guide/SKILL.md"
+      ],
+      "acceptance": "所有功能符合需求，全流程测试通过无错误",
+      "dependencies": [
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    }
+  ]
+}

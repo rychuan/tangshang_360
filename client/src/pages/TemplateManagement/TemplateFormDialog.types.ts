@@ -5,7 +5,7 @@ export const indicatorSchema = z.object({
   description: z.string().default(''),
   algorithm: z.string().default(''),
   dataSource: z.string().default(''),
-  maxScore: z.coerce.number().min(1, '满分至少为1'),
+  weight: z.coerce.number().min(1, '权重至少为1'),
 });
 
 export const dimensionSchema = z.object({

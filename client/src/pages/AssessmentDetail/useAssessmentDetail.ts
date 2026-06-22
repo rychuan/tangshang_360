@@ -115,7 +115,7 @@ export function useAssessmentDetail(
       indicatorId: string,
       field: 'score' | 'comment',
       value: string,
-      maxScore?: number,
+      weight?: number,
     ) => {
       setRatings((prev) => ({
         ...prev,
@@ -123,7 +123,7 @@ export function useAssessmentDetail(
           ...prev[indicatorId],
           [field]:
             field === 'score'
-              ? Math.min(Number(value) || 0, maxScore ?? Infinity)
+              ? Math.min(Number(value) || 0, weight ?? Infinity)
               : value,
         },
       }));
