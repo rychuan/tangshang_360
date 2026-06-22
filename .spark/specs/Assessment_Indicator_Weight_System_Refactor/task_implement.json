@@ -229,7 +229,7 @@
     {
       "id": 8,
       "name": "全流程验收测试",
-      "status": "in_progress",
+      "status": "completed",
       "type": "normal",
       "subtasks": [
         "读取testing-guide skill了解测试规范",
@@ -259,7 +259,8 @@
         6,
         7
       ],
-      "beginTime": 1782093571037
+      "beginTime": 1782093571037,
+      "endTime": 1782094094923
     }
   ]
 }
