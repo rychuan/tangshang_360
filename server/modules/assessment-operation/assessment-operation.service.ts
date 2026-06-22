@@ -17,6 +17,7 @@ import {
   ratingRecord,
   auditLog,
   employee,
+  department,
 } from '@server/database/schema';
 import { PerformanceGradeService } from '../performance-grade/performance-grade.service';
 import type {
@@ -277,9 +278,9 @@ export class AssessmentOperationService {
 
     const instance = rows[0];
 
-    // P0: 校验当前用户是否是该员工的上级
+    // P0: 校验当前用户是否是该员工的上级或部门负责人
     const empRows = await this.db
-      .select({ supervisorId: employee.supervisorId })
+      .select({ supervisorId: employee.supervisorId, empDepartment: employee.department })
       .from(employee)
       .where(and(sql`(${employee.id}).user_id = ${instance.employeeId}`, isNull(employee.deletedAt)))
       .limit(1);
@@ -288,8 +289,22 @@ export class AssessmentOperationService {
       throw new NotFoundException('员工信息不存在');
     }
 
-    if (empRows[0].supervisorId !== userId) {
-      throw new ForbiddenException('您不是该员工的上级，无法评分');
+    const isSupervisor: boolean = empRows[0].supervisorId === userId;
+    let isDeptHead: boolean = false;
+    if (!isSupervisor) {
+      const deptRows = await this.db
+        .select({ id: department.id })
+        .from(department)
+        .where(and(
+          eq(department.name, empRows[0].empDepartment),
+          sql`(${department.headId}).user_id = ${userId}`,
+        ))
+        .limit(1);
+      isDeptHead = deptRows.length > 0;
+    }
+
+    if (!isSupervisor && !isDeptHead) {
+      throw new ForbiddenException('您不是该员工的上级或部门负责人，无法评分');
     }
 
     const allSnapshots = await this.db
@@ -433,13 +448,31 @@ export class AssessmentOperationService {
       }
     } else if (body.signType === 'supervisor') {
       const supRows = await this.db
-        .select({ supervisorId: employee.supervisorId })
+        .select({ supervisorId: employee.supervisorId, empDepartment: employee.department })
         .from(employee)
         .where(and(sql`(${employee.id}).user_id = ${instance.employeeId}`, isNull(employee.deletedAt)))
         .limit(1);
 
-      if (supRows.length === 0 || supRows[0].supervisorId !== userId) {
-        throw new ForbiddenException('您不是该员工的上级，无法签署上级签名');
+      if (supRows.length === 0) {
+        throw new ForbiddenException('员工信息不存在，无法签署上级签名');
+      }
+
+      const isSup: boolean = supRows[0].supervisorId === userId;
+      let isHead: boolean = false;
+      if (!isSup) {
+        const deptRows = await this.db
+          .select({ id: department.id })
+          .from(department)
+          .where(and(
+            eq(department.name, supRows[0].empDepartment),
+            sql`(${department.headId}).user_id = ${userId}`,
+          ))
+          .limit(1);
+        isHead = deptRows.length > 0;
+      }
+
+      if (!isSup && !isHead) {
+        throw new ForbiddenException('您不是该员工的上级或部门负责人，无法签署上级签名');
       }
     }
 
