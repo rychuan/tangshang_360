@@ -117,18 +117,6 @@ export interface PublishEmployeeListParams {
 export interface PublishRequest {
   period: string;
   employeeIds?: string[];
-  adjustments?: Array<{
-    employeeId: string;
-    indicators: Array<{
-      content: string;
-      description: string;
-      algorithm: string;
-      dataSource: string;
-      weight: number;
-      dimensionName?: string;
-      dimensionWeight?: number;
-    }>;
-  }>;
 }
 export interface AssessmentInstanceItem {
   id: string;
@@ -313,6 +301,12 @@ export interface InstanceIndicatorItem {
 }
 export interface InstanceIndicatorsResponse {
   indicators: InstanceIndicatorItem[];
+}
+export interface EmployeeSnapshotResponse {
+  indicators: InstanceIndicatorItem[];
+  hasSnapshot: boolean;
+  templateId: string;
+  templateName: string;
 }
 export interface EmployeeCurrentBinding {
   bindingId: string;

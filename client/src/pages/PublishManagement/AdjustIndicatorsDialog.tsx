@@ -5,35 +5,45 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Eye, Pencil, Copy } from 'lucide-react';
-import { getInstanceIndicators } from '@/api/assessment-publish';
-import type { AssessmentInstanceItem, AdjustIndicatorInput, InstanceIndicatorItem } from '@shared/api.interface';
+import { Eye, Pencil, Copy, Trash2 } from 'lucide-react';
+import { getEmployeeSnapshot } from '@/api/assessment-publish';
+import type { AdjustIndicatorInput, InstanceIndicatorItem } from '@shared/api.interface';
 
 interface AdjustIndicatorsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  instance: AssessmentInstanceItem | null;
+  employee: { employeeId: string; employeeName: string; templateName: string } | null;
   onSubmit: (indicators: AdjustIndicatorInput[]) => void;
+  onDeleteSnapshot: () => void;
   loading: boolean;
 }
 
-const EMPTY_INDICATOR: AdjustIndicatorInput = { content: '', description: '', algorithm: '', dataSource: '', weight: 100 };
+const EMPTY_INDICATOR: AdjustIndicatorInput = {
+  content: '',
+  description: '',
+  algorithm: '',
+  dataSource: '',
+  weight: 100,
+  dimensionName: '',
+  dimensionWeight: 0,
+};
 
 const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
   open,
   onOpenChange,
-  instance,
+  employee,
   onSubmit,
+  onDeleteSnapshot,
   loading,
 }) => {
   const [indicators, setIndicators] = useState<AdjustIndicatorInput[]>([]);
   const [previewMode, setPreviewMode] = useState<boolean>(false);
   const [loadingIndicators, setLoadingIndicators] = useState<boolean>(false);
 
-  const loadIndicators = useCallback(async (instanceId: string): Promise<void> => {
+  const loadIndicators = useCallback(async (employeeId: string): Promise<void> => {
     setLoadingIndicators(true);
     try {
-      const res = await getInstanceIndicators(instanceId);
+      const res = await getEmployeeSnapshot(employeeId);
       if (res.indicators.length > 0) {
         setIndicators(
           res.indicators.map((ind: InstanceIndicatorItem) => ({
@@ -51,7 +61,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
       }
     } catch (err: unknown) {
       logger.error('loadIndicators failed', err);
-      toast.error('加载现有指标失败');
+      toast.error('加载指标快照失败');
       setIndicators([{ ...EMPTY_INDICATOR }]);
     } finally {
       setLoadingIndicators(false);
@@ -59,11 +69,11 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
   }, []);
 
   useEffect(() => {
-    if (open && instance) {
+    if (open && employee) {
       setPreviewMode(false);
-      loadIndicators(instance.id);
+      loadIndicators(employee.employeeId);
     }
-  }, [open, instance, loadIndicators]);
+  }, [open, employee, loadIndicators]);
 
   const handleAddIndicator = (): void => {
     setIndicators((prev: AdjustIndicatorInput[]) => [...prev, { ...EMPTY_INDICATOR }]);
@@ -84,8 +94,8 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
   };
 
   const handleCopyTemplate = (): void => {
-    if (!instance) return;
-    loadIndicators(instance.id);
+    if (!employee) return;
+    loadIndicators(employee.employeeId);
     toast.success('已重新加载考核指标');
   };
 
@@ -93,11 +103,22 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
     onSubmit(indicators);
   };
 
+  const handleDeleteSnapshot = (): void => {
+    onDeleteSnapshot();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>调整考核指标</DialogTitle>
+          <DialogTitle>
+            调整考核指标
+            {employee && (
+              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                {employee.employeeName} · {employee.templateName}
+              </span>
+            )}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="flex items-center gap-2">
@@ -126,6 +147,15 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
             <Copy className="size-3.5" />
             重新加载指标
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleDeleteSnapshot}
+            className="text-destructive"
+          >
+            <Trash2 className="size-3.5" />
+            删除快照
+          </Button>
         </div>
 
         {loadingIndicators ? (
@@ -147,15 +177,6 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">
                       指标 {index + 1}
-                      {ind.dimensionName && (
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          ({ind.dimensionName}
-                          {ind.dimensionWeight != null
-                            ? ` · 权重${ind.dimensionWeight}%`
-                            : ''}
-                          )
-                        </span>
-                      )}
                     </span>
                     {!previewMode && indicators.length > 1 && (
                       <Button
@@ -170,6 +191,15 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
 
                   {previewMode ? (
                     <div className="flex flex-col gap-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">维度：</span>
+                        <span>{ind.dimensionName || '-'}</span>
+                        {ind.dimensionWeight != null && ind.dimensionName && (
+                          <span className="text-muted-foreground">
+                            （权重 {ind.dimensionWeight}%）
+                          </span>
+                        )}
+                      </div>
                       <div>
                         <span className="text-muted-foreground">指标内容：</span>
                         <span>{ind.content || '-'}</span>
@@ -193,6 +223,29 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
                     </div>
                   ) : (
                     <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="flex flex-col gap-2">
+                          <Label className="text-xs">维度名称</Label>
+                          <Input
+                            value={ind.dimensionName || ''}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                              handleIndicatorChange(index, 'dimensionName', e.target.value)
+                            }
+                            placeholder="维度名称"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <Label className="text-xs">维度权重</Label>
+                          <Input
+                            type="number"
+                            value={ind.dimensionWeight ?? 0}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                              handleIndicatorChange(index, 'dimensionWeight', Number(e.target.value))
+                            }
+                            placeholder="0"
+                          />
+                        </div>
+                      </div>
                       <div className="flex flex-col gap-2">
                         <Label className="text-xs">指标内容</Label>
                         <Input

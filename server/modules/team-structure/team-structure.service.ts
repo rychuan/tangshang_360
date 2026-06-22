@@ -11,6 +11,7 @@ import {
   assessmentTemplate,
   auditLog,
 } from '@server/database/schema';
+import { EmployeeSnapshotService } from '../employee-snapshot/employee-snapshot.service';
 
 @Injectable()
 export class TeamStructureService {
@@ -18,6 +19,7 @@ export class TeamStructureService {
 
   constructor(
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
+    private readonly employeeSnapshotService: EmployeeSnapshotService,
   ) {}
 
   async list(query: {
@@ -141,7 +143,7 @@ export class TeamStructureService {
 
     for (const eId of body.employeeIds) {
       const existing = await this.db
-        .select({ id: employeeBinding.id })
+        .select({ id: employeeBinding.id, templateId: employeeBinding.templateId })
         .from(employeeBinding)
         .where(
           and(
@@ -185,6 +187,17 @@ export class TeamStructureService {
         },
         reason: '员工模板绑定',
       });
+
+      const oldTemplateId: string | null = existing.length > 0 ? existing[0].templateId : null;
+      if (oldTemplateId !== body.templateId) {
+        await this.employeeSnapshotService.deleteSnapshot(eId);
+        await this.employeeSnapshotService.generateFromTemplate(eId, body.templateId, operatorId);
+      } else {
+        const hasSnap: boolean = await this.employeeSnapshotService.hasSnapshot(eId);
+        if (!hasSnap) {
+          await this.employeeSnapshotService.generateFromTemplate(eId, body.templateId, operatorId);
+        }
+      }
     }
 
     this.logger.log(

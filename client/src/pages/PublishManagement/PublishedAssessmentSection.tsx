@@ -32,7 +32,6 @@ interface PublishedAssessmentSectionProps {
   onGradeFilterChange: (value: string) => void;
   selectedInstanceIds: Set<string>;
   onSelectedInstancesChange: (ids: Set<string>) => void;
-  onAdjust: (instance: AssessmentInstanceItem) => void;
   onUnlock: (instance: AssessmentInstanceItem) => void;
   onHistory: (instance: AssessmentInstanceItem) => void;
   onBatchUnlock: () => void;
@@ -58,7 +57,6 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
   onGradeFilterChange,
   selectedInstanceIds,
   onSelectedInstancesChange,
-  onAdjust,
   onUnlock,
   onHistory,
   onBatchUnlock,
@@ -266,11 +264,6 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
                     </td>
                     <td className="py-3 pr-4">
                       <div className="flex items-center gap-2">
-                        {(record.status === 'self_review' || record.status === 'draft') && (
-                          <CanRole roles={['admin', 'hrd']}>
-                            <Button variant="outline" size="sm" onClick={() => onAdjust(record)}>调整</Button>
-                          </CanRole>
-                        )}
                         {['completed', 'pending_sign', 'supervisor_review'].includes(record.status) && (
                           <CanRole roles={['admin', 'hrd']}>
                             <Button variant="outline" size="sm" onClick={() => onUnlock(record)}>解锁</Button>

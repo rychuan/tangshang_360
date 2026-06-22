@@ -15,6 +15,7 @@ import { DepartmentModule } from './modules/department/department.module';
 import { EmployeeManagementModule } from './modules/employee-management/employee-management.module';
 import { RoleManagerModule } from './modules/role-manager/role-manager.module';
 import { PerformanceGradeModule } from './modules/performance-grade/performance-grade.module';
+import { EmployeeSnapshotModule } from './modules/employee-snapshot/employee-snapshot.module';
 import { ViewModule } from './modules/view/view.module';
 
 @Module({
@@ -34,6 +35,7 @@ import { ViewModule } from './modules/view/view.module';
     EmployeeManagementModule,
     RoleManagerModule,
     PerformanceGradeModule,
+    EmployeeSnapshotModule,
     // ====== @route-section: business-modules END ======
 
     // ⚠️ @route-order: last

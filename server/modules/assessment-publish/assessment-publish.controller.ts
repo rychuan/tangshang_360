@@ -1,7 +1,7 @@
-import { Controller, Get, Post, Patch, Param, Query, Body, Req } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Query, Body, Req } from '@nestjs/common';
 import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
 import { AssessmentPublishService } from './assessment-publish.service';
-import type { PublishRequest, AdjustRequest, UnlockRequest, BatchUnlockRequest, BatchNotifyRequest } from '@shared/api.interface';
+import type { PublishRequest, AdjustRequest, UnlockRequest, BatchUnlockRequest, BatchNotifyRequest, EmployeeSnapshotResponse } from '@shared/api.interface';
 
 @Controller('api')
 export class AssessmentPublishController {
@@ -60,18 +60,32 @@ export class AssessmentPublishController {
 
   @CanRole(['admin', 'hrd'])
   @NeedLogin()
-  @Patch('assessment-instances/:id/adjust')
-  async adjust(@Req() req: any, @Param('id') id: string, @Body() body: AdjustRequest) {
-    const { userId } = req.userContext;
-    return this.service.adjust(id, body, userId);
-  }
-
-  @CanRole(['admin', 'hrd'])
-  @NeedLogin()
   @Patch('assessment-instances/:id/unlock')
   async unlock(@Req() req: any, @Param('id') id: string, @Body() body: UnlockRequest) {
     const { userId } = req.userContext;
     return this.service.unlock(id, body, userId);
+  }
+
+  @CanRole(['admin', 'hrd'])
+  @NeedLogin()
+  @Get('publish/employees/:employeeId/indicators')
+  async getEmployeeSnapshot(@Param('employeeId') employeeId: string): Promise<EmployeeSnapshotResponse> {
+    return this.service.getEmployeeSnapshot(employeeId);
+  }
+
+  @CanRole(['admin', 'hrd'])
+  @NeedLogin()
+  @Patch('publish/employees/:employeeId/indicators')
+  async adjustEmployeeSnapshot(@Req() req: any, @Param('employeeId') employeeId: string, @Body() body: AdjustRequest) {
+    const { userId } = req.userContext;
+    return this.service.adjustEmployeeSnapshot(employeeId, body, userId);
+  }
+
+  @CanRole(['admin', 'hrd'])
+  @NeedLogin()
+  @Delete('publish/employees/:employeeId/indicators')
+  async deleteEmployeeSnapshot(@Param('employeeId') employeeId: string) {
+    return this.service.deleteEmployeeSnapshot(employeeId);
   }
 
   @CanRole(['admin', 'hrd'])

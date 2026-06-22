@@ -9,7 +9,8 @@ import {
   listEmployees,
   publish,
   listInstances,
-  adjust,
+  adjustEmployeeSnapshot,
+  deleteEmployeeSnapshot,
   batchUnlock,
   batchResendNotification,
   getPeriodStatistics,
@@ -61,8 +62,8 @@ const PublishManagementPage: React.FC = () => {
   const [batchNotifyLoading, setBatchNotifyLoading] = useState<boolean>(false);
 
   const [adjustOpen, setAdjustOpen] = useState<boolean>(false);
-  const [adjustingInstance, setAdjustingInstance] =
-    useState<AssessmentInstanceItem | null>(null);
+  const [adjustingEmployee, setAdjustingEmployee] =
+    useState<PublishEmployeeItem | null>(null);
   const [adjustLoading, setAdjustLoading] = useState<boolean>(false);
 
   const [unlockOpen, setUnlockOpen] = useState<boolean>(false);
@@ -217,26 +218,39 @@ const PublishManagementPage: React.FC = () => {
     }
   };
 
-  const handleOpenAdjust = (inst: AssessmentInstanceItem): void => {
-    setAdjustingInstance(inst);
+  const handleOpenAdjust = (emp: PublishEmployeeItem): void => {
+    setAdjustingEmployee(emp);
     setAdjustOpen(true);
   };
 
   const handleAdjustSubmit = async (
     indicators: AdjustIndicatorInput[],
   ): Promise<void> => {
-    if (!adjustingInstance) return;
+    if (!adjustingEmployee) return;
     setAdjustLoading(true);
     try {
-      await adjust(adjustingInstance.id, { indicators });
+      await adjustEmployeeSnapshot(adjustingEmployee.employeeId, { indicators });
       toast.success('调整成功');
       setAdjustOpen(false);
-      fetchInstances();
+      fetchEmployees(period, pendingDeptFilter, pendingTplFilter);
     } catch (err: unknown) {
       logger.error('adjust failed', err);
       handleApiError(err);
     } finally {
       setAdjustLoading(false);
+    }
+  };
+
+  const handleDeleteSnapshot = async (
+    emp: PublishEmployeeItem,
+  ): Promise<void> => {
+    try {
+      await deleteEmployeeSnapshot(emp.employeeId);
+      toast.success('快照已删除');
+      fetchEmployees(period, pendingDeptFilter, pendingTplFilter);
+    } catch (err: unknown) {
+      logger.error('deleteSnapshot failed', err);
+      handleApiError(err);
     }
   };
 
@@ -397,6 +411,8 @@ const PublishManagementPage: React.FC = () => {
             onTemplateFilterChange={setPendingTplFilter}
             departments={departments}
             templates={templates}
+            onAdjust={handleOpenAdjust}
+            onDeleteSnapshot={handleDeleteSnapshot}
           />
 
           <PublishedAssessmentSection
@@ -423,7 +439,6 @@ const PublishManagementPage: React.FC = () => {
             }}
             selectedInstanceIds={selectedInstanceIds}
             onSelectedInstancesChange={setSelectedInstanceIds}
-            onAdjust={handleOpenAdjust}
             onUnlock={handleOpenSingleUnlock}
             onHistory={handleOpenHistory}
             onBatchUnlock={handleOpenBatchUnlock}
@@ -437,8 +452,18 @@ const PublishManagementPage: React.FC = () => {
           <AdjustIndicatorsDialog
             open={adjustOpen}
             onOpenChange={setAdjustOpen}
-            instance={adjustingInstance}
+            employee={adjustingEmployee ? {
+              employeeId: adjustingEmployee.employeeId,
+              employeeName: adjustingEmployee.employeeName,
+              templateName: adjustingEmployee.templateName,
+            } : null}
             onSubmit={handleAdjustSubmit}
+            onDeleteSnapshot={() => {
+              if (adjustingEmployee) {
+                handleDeleteSnapshot(adjustingEmployee);
+                setAdjustOpen(false);
+              }
+            }}
             loading={adjustLoading}
           />
 

@@ -117,6 +117,36 @@ export const fileAttachmentArray = customType<{
   },
 });
 
+export const employeeIndicatorSnapshot = pgTable("employee_indicator_snapshot", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  employeeId: userProfile("employee_id").notNull(),
+  templateId: uuid("template_id").notNull(),
+  dimensionName: varchar("dimension_name", { length: 255 }).notNull(),
+  dimensionWeight: numeric("dimension_weight").notNull().default('0'),
+  content: varchar("content", { length: 255 }).notNull(),
+  description: text("description"),
+  algorithm: text("algorithm"),
+  dataSource: varchar("data_source", { length: 255 }),
+  weight: numeric("weight").notNull().default('0'),
+  isAdjusted: boolean("is_adjusted").notNull().default(false),
+  adjustedBy: userProfile("adjusted_by"),
+  adjustedAt: customTimestamptz("adjusted_at", { precision: 6 }),
+  sortOrder: integer("sort_order").notNull().default(0),
+  // System field: Creation time (auto-filled, do not modify)
+  createdAt: customTimestamptz("_created_at", { precision: 3 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Creator (auto-filled, do not modify)
+  createdBy: userProfile("_created_by").default(sql`CASE
+    WHEN (current_setting('app.user_id'::text, true) = ''::text) THEN NULL`),
+  // System field: Update time (auto-filled, do not modify)
+  updatedAt: customTimestamptz("_updated_at", { precision: 3 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Updater (auto-filled, do not modify)
+  updatedBy: userProfile("_updated_by").default(sql`CASE
+    WHEN (current_setting('app.user_id'::text, true) = ''::text) THEN NULL`),
+}, (table) => [
+  // Complex index: CREATE INDEX idx_emp_snapshot_employee ON employee_indicator_snapshot USING btree (((employee_id).user_id)),
+  index("idx_emp_snapshot_template").on(table.templateId),
+]);
+
 export const performanceGrade = pgTable("performance_grade", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
@@ -380,6 +410,7 @@ export const auditLogTable = auditLog;
 export const departmentTable = department;
 export const employeeTable = employee;
 export const employeeBindingTable = employeeBinding;
+export const employeeIndicatorSnapshotTable = employeeIndicatorSnapshot;
 export const performanceGradeTable = performanceGrade;
 export const ratingRecordTable = ratingRecord;
 export const rolePermissionConfigTable = rolePermissionConfig;

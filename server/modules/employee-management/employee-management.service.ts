@@ -11,6 +11,7 @@ import {
   assessmentTemplate,
   auditLog,
 } from '@server/database/schema';
+import { EmployeeSnapshotService } from '../employee-snapshot/employee-snapshot.service';
 import type {
   EmployeeItem,
   EmployeeDetail,
@@ -30,6 +31,7 @@ export class EmployeeManagementService {
 
   constructor(
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
+    private readonly employeeSnapshotService: EmployeeSnapshotService,
   ) {}
 
   async list(query: {
@@ -524,7 +526,7 @@ export class EmployeeManagementService {
   ): Promise<{ success: boolean }> {
     for (const eId of body.employeeIds) {
       const existing = await this.db
-        .select({ id: employeeBinding.id })
+        .select({ id: employeeBinding.id, templateId: employeeBinding.templateId })
         .from(employeeBinding)
         .where(
           and(
@@ -566,6 +568,17 @@ export class EmployeeManagementService {
         },
         reason: '员工模板绑定',
       });
+
+      const oldTemplateId: string | null = existing.length > 0 ? existing[0].templateId : null;
+      if (oldTemplateId !== body.templateId) {
+        await this.employeeSnapshotService.deleteSnapshot(eId);
+        await this.employeeSnapshotService.generateFromTemplate(eId, body.templateId, userId);
+      } else {
+        const hasSnap: boolean = await this.employeeSnapshotService.hasSnapshot(eId);
+        if (!hasSnap) {
+          await this.employeeSnapshotService.generateFromTemplate(eId, body.templateId, userId);
+        }
+      }
     }
 
     this.logger.log(

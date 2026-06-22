@@ -9,6 +9,7 @@ import type {
   UnlockRequest,
   PeriodStatisticsResponse,
   InstanceIndicatorsResponse,
+  EmployeeSnapshotResponse,
   BatchUnlockRequest,
   BatchNotifyRequest,
   BatchOperationResponse,
@@ -69,14 +70,34 @@ export async function listInstances(
   return res.data;
 }
 
-export async function adjust(
-  id: string,
+export async function getEmployeeSnapshot(
+  employeeId: string,
+): Promise<EmployeeSnapshotResponse> {
+  const res = await axiosForBackend({
+    url: `/api/publish/employees/${employeeId}/indicators`,
+    method: 'GET',
+  });
+  return res.data;
+}
+
+export async function adjustEmployeeSnapshot(
+  employeeId: string,
   data: AdjustRequest,
 ): Promise<{ success: boolean }> {
   const res = await axiosForBackend({
-    url: `/api/assessment-instances/${id}/adjust`,
+    url: `/api/publish/employees/${employeeId}/indicators`,
     method: 'PATCH',
     data,
+  });
+  return res.data;
+}
+
+export async function deleteEmployeeSnapshot(
+  employeeId: string,
+): Promise<{ success: boolean }> {
+  const res = await axiosForBackend({
+    url: `/api/publish/employees/${employeeId}/indicators`,
+    method: 'DELETE',
   });
   return res.data;
 }

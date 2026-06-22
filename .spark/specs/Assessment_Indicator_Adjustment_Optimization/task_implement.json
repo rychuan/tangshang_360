@@ -1,0 +1,59 @@
+{
+  "tasks": [
+    {
+      "id": 1,
+      "name": "调整考核指标弹窗维度编辑功能开发",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "读取forms-skill、coding-guide技能，遵守前端开发规范",
+        "在AdjustIndicatorsDialog.tsx编辑模式下，新增维度名称输入框，支持修改dimensionName字段",
+        "在AdjustIndicatorsDialog.tsx编辑模式下，新增维度权重输入框（数字类型），支持修改dimensionWeight字段",
+        "验证维度字段与现有状态逻辑的绑定正确性，handleIndicatorChange可正常处理维度字段修改",
+        "检查预览模式下维度名称和权重信息展示正常",
+        "验证提交调整时维度字段可正确传递到后端接口"
+      ],
+      "requirements": [
+        "1.1"
+      ],
+      "write_scope": [
+        "client/src/pages/PublishManagement/AdjustIndicatorsDialog.tsx"
+      ],
+      "read_scope": [
+        "client/src/pages/PublishManagement/AdjustIndicatorsDialog.tsx",
+        "shared/api.interface.ts",
+        "server/modules/assessment-publish/assessment-publish.service.ts"
+      ],
+      "acceptance": "编辑模式下每个指标卡片显示维度名称、维度权重输入框，修改后提交成功保存到数据库，预览模式可正常展示维度信息",
+      "dependencies": [],
+      "beginTime": 1782101068160,
+      "endTime": 1782101999418
+    },
+    {
+      "id": 2,
+      "name": "验收测试",
+      "status": "in_progress",
+      "type": "normal",
+      "subtasks": [
+        "读取testing-guide技能",
+        "接口测试：验证调整接口POST /api/assessment-publish/:instanceId/adjust可正确接收和保存维度字段",
+        "验证调整后数据存储在assessment_indicator_snapshot表，isAdjusted=true，包含调整人、调整时间字段",
+        "验证下月发布同员工考核时，使用员工绑定的考核模板原始指标，不复用调整后的内容",
+        "前端流程测试：打开调整弹窗→修改维度信息→提交→查看调整结果正确，弹窗自动关闭，列表刷新"
+      ],
+      "requirements": [
+        "1.2",
+        "2.1",
+        "2.2",
+        "3.1"
+      ],
+      "write_scope": [],
+      "read_scope": [],
+      "acceptance": "调整流程全链路验证通过，维度编辑功能正常，数据存储规则和生效范围符合需求",
+      "dependencies": [
+        1
+      ],
+      "beginTime": 1782101999541
+    }
+  ]
+}
