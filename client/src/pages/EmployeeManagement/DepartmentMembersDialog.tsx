@@ -43,7 +43,7 @@ const DepartmentMembersDialog: React.FC<DepartmentMembersDialogProps> = ({
         page: 1,
         pageSize: 100,
       });
-      setMembers(res.items);
+      setMembers(res?.items ?? []);
       setTotal(res.total);
     } catch {
       setMembers([]);

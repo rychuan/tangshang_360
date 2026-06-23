@@ -111,7 +111,7 @@ const TeamPerformancePage: React.FC = () => {
     setLoadingList(true);
     try {
       const result = await teamPerformanceApi.getSubordinates({ page, pageSize: PAGE_SIZE, status: statusFilter || undefined });
-      setSubordinates(result.items);
+      setSubordinates(result?.items ?? []);
       setTotal(result.total);
     } catch (err: unknown) {
       logger.error(`Failed to load subordinates: ${JSON.stringify(err)}`);

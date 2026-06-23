@@ -161,7 +161,7 @@ export const UserSelect: React.FC<UserSelectProps> = (props) => {
       if (convertedMap.size === 0) return result;
       return {
         ...result,
-        items: result.items.map((item) => convertedMap.get(item.id) ?? item),
+        items: (result?.items ?? []).map((item) => convertedMap.get(item.id) ?? item),
       };
     },
     [baseFetchFn, convertedMap],

@@ -106,7 +106,7 @@ const EmployeeListTab: React.FC = () => {
         role: roleFilter || undefined,
         status: statusFilter || undefined,
       });
-      setEmployees(res.items);
+      setEmployees(res?.items ?? []);
       setTotal(res.total);
       setSelectedRowKeys([]);
     } catch (err: unknown) {
@@ -128,7 +128,7 @@ const EmployeeListTab: React.FC = () => {
   const fetchTemplates = useCallback(async () => {
     try {
       const res = await templateApi.list({ page: 1, pageSize: 200 });
-      setTemplates(res.items);
+      setTemplates(res?.items ?? []);
     } catch (err: unknown) {
       handleApiError(err);
     }
@@ -253,7 +253,7 @@ const EmployeeListTab: React.FC = () => {
     setHistoryLoading(true);
     try {
       const res = await employeeManagement.bindingHistory(emp.id);
-      setHistoryItems(res.items);
+      setHistoryItems(res?.items ?? []);
     } catch (err: unknown) {
       handleApiError(err);
     } finally {

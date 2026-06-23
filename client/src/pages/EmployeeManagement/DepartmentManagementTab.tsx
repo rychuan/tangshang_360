@@ -73,7 +73,7 @@ const DepartmentManagementTab: React.FC = () => {
     setLoading(true);
     try {
       const res = await departmentApi.list();
-      setItems(res.items);
+      setItems(res?.items ?? []);
       setTree(res.tree);
       setExpanded(new Set(res.tree.map((n: DepartmentTreeNode) => n.id)));
     } catch {
