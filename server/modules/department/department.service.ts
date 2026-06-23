@@ -3,7 +3,7 @@ import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { eq, asc, count, sql, isNull } from 'drizzle-orm';
+import { eq, and, asc, count, sql, isNull } from 'drizzle-orm';
 import {
   department,
   employee,
@@ -165,7 +165,11 @@ export class DepartmentService {
 
   async update(id: string, body: CreateDepartmentRequest, userId: string): Promise<{ success: boolean }> {
     const rows = await this.db
-      .select({ id: department.id })
+      .select({
+        id: department.id,
+        oldHeadId: department.headId,
+        oldName: department.name,
+      })
       .from(department)
       .where(eq(department.id, id))
       .limit(1);
@@ -187,6 +191,19 @@ export class DepartmentService {
         sortOrder: body.sortOrder ?? 0,
       })
       .where(eq(department.id, id));
+
+    const oldHeadId = rows[0].oldHeadId;
+    const newHeadId = body.headId || null;
+    if (newHeadId && newHeadId !== oldHeadId) {
+      await this.db
+        .update(employee)
+        .set({ supervisorId: newHeadId })
+        .where(and(
+          eq(employee.department, body.name),
+          isNull(employee.deletedAt),
+        ));
+      this.logger.log(`Synced supervisorId for employees in department "${body.name}" to new head: ${newHeadId}`);
+    }
 
     await this.db.insert(auditLog).values({
       operatorId: userId,

@@ -10,6 +10,7 @@ import {
   assessmentInstance,
   assessmentTemplate,
   auditLog,
+  department,
 } from '@server/database/schema';
 import { EmployeeSnapshotService } from '../employee-snapshot/employee-snapshot.service';
 import type {
@@ -315,6 +316,16 @@ export class EmployeeManagementService {
       throw new ConflictException('该用户已绑定员工档案');
     }
 
+    let autoSupervisorId: string | null = null;
+    if (body.department) {
+      const deptRows = await this.db
+        .select({ headId: department.headId })
+        .from(department)
+        .where(eq(department.name, body.department))
+        .limit(1);
+      autoSupervisorId = deptRows[0]?.headId || null;
+    }
+
     const values = {
       id: body.id,
       name: body.name,
@@ -322,7 +333,7 @@ export class EmployeeManagementService {
       title: body.title || null,
       role: body.role || 'employee',
       department: body.department || '',
-      supervisorId: body.supervisorId || null,
+      supervisorId: autoSupervisorId,
       phone: body.phone || null,
       hireDate: body.hireDate ? new Date(body.hireDate) : null,
       probationMonths: body.probationMonths ?? 3,
@@ -362,13 +373,23 @@ export class EmployeeManagementService {
       throw new NotFoundException('员工不存在');
     }
 
+    let autoSupervisorId: string | null = null;
+    if (body.department) {
+      const deptRows = await this.db
+        .select({ headId: department.headId })
+        .from(department)
+        .where(eq(department.name, body.department))
+        .limit(1);
+      autoSupervisorId = deptRows[0]?.headId || null;
+    }
+
     const values = {
       name: body.name,
       position: body.position,
       title: body.title || null,
       role: body.role || 'employee',
       department: body.department || '',
-      supervisorId: body.supervisorId || null,
+      supervisorId: autoSupervisorId,
       phone: body.phone || null,
       hireDate: body.hireDate ? new Date(body.hireDate) : null,
       probationMonths: body.probationMonths ?? 3,
