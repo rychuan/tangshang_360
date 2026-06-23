@@ -97,7 +97,7 @@ const PublishManagementPage: React.FC = () => {
           department: dept || undefined,
           templateId: tpl || undefined,
         });
-        setEmployees(res.items);
+        setEmployees(res?.items ?? []);
         setSelectedEmployeeIds(new Set());
       } catch (err: unknown) {
         logger.error('fetchEmployees failed', err);
@@ -122,7 +122,7 @@ const PublishManagementPage: React.FC = () => {
         department: deptFilter || undefined,
         grade: gradeFilter || undefined,
       });
-      setInstances(res.items);
+      setInstances(res?.items ?? []);
       setInstancesTotal(res.total);
     } catch (err: unknown) {
       logger.error('fetchInstances failed', err);

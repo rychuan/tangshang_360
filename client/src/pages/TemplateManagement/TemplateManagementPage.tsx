@@ -77,7 +77,7 @@ const TemplateManagementPage: React.FC = () => {
         position: filterPosition || undefined,
         status: filterStatus || undefined,
       });
-      setItems(res.items);
+      setItems(res?.items ?? []);
       setTotal(res.total);
     } catch (err: unknown) {
       const msg =

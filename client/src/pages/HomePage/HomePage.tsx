@@ -57,8 +57,8 @@ const HomePage: React.FC = () => {
           getTodos(),
           getOverview(),
         ]);
-        setTodos(todosRes.items);
-        setOverview(overviewRes);
+        setTodos(todosRes?.items ?? []);
+        setOverview(overviewRes ?? null);
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : '加载失败';
         logger.error(`Dashboard load error: ${msg}`);
@@ -237,7 +237,7 @@ const HomePage: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {todos.length === 0 ? (
+            {(todos ?? []).length === 0 ? (
               <div className="flex items-center justify-center h-[250px] text-sm text-muted-foreground">
                 暂无待办任务 🎉
               </div>

@@ -98,7 +98,7 @@ const StatisticsPage: React.FC = () => {
     try {
       setLoading(true);
       const res = await getRecords(buildParams(page));
-      setRecords(res.items);
+      setRecords(res?.items ?? []);
       setTotal(res.total);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '加载失败';

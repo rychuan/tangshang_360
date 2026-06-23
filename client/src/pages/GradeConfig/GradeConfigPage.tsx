@@ -123,7 +123,7 @@ const GradeConfigPage: React.FC = () => {
     setLoading(true);
     try {
       const res = await performanceGradeApi.list();
-      setItems(res.items);
+      setItems(res?.items ?? []);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '加载失败';
       logger.error('fetchGradeList error:', msg);

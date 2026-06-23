@@ -66,7 +66,7 @@ const MyAssessmentsPage: React.FC = () => {
     setLoading(true);
     try {
       const result = await myAssessmentApi.getRecords({ page, pageSize, status: statusFilter || undefined, periodStart: `${yearFilter}-01`, periodEnd: `${yearFilter}-12` });
-      setRecords(result.items);
+      setRecords(result?.items ?? []);
       setTotal(result.total);
     } catch (err: unknown) {
       logger.error(`Failed to fetch my assessment records: ${JSON.stringify(err)}`);
@@ -78,7 +78,7 @@ const MyAssessmentsPage: React.FC = () => {
     setTrendLoading(true);
     try {
       const result = await myAssessmentApi.getTrend(yearFilter);
-      setTrendItems(result.items);
+      setTrendItems(result?.items ?? []);
     } catch (err: unknown) {
       logger.error(`Failed to fetch my assessment trend: ${JSON.stringify(err)}`); setTrendItems([]);
     } finally { setTrendLoading(false); }
