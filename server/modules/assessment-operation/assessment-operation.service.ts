@@ -17,6 +17,7 @@ import {
   ratingRecord,
   auditLog,
   employee,
+  department,
 } from '@server/database/schema';
 import { PerformanceGradeService } from '../performance-grade/performance-grade.service';
 import type {
@@ -106,7 +107,7 @@ export class AssessmentOperationService {
           description: snap.description || '',
           algorithm: snap.algorithm || '',
           dataSource: snap.dataSource || '',
-          maxScore: Number(snap.maxScore),
+          weight: Number(snap.weight),
           selfScore: selfRating?.score,
           selfComment: selfRating?.comment || undefined,
           supervisorScore: supervisorRating?.score,
@@ -188,9 +189,9 @@ export class AssessmentOperationService {
           `指标快照不属于该考核实例: ${rating.indicatorSnapshotId}`,
         );
       }
-      if (rating.score > Number(snapshot.maxScore)) {
+      if (rating.score > Number(snapshot.weight)) {
         throw new BadRequestException(
-          `评分不能超过最高分 ${snapshot.maxScore}`,
+          `评分不能超过指标权重分 ${snapshot.weight}`,
         );
       }
     }
@@ -277,9 +278,9 @@ export class AssessmentOperationService {
 
     const instance = rows[0];
 
-    // P0: 校验当前用户是否是该员工的上级
+    // P0: 校验当前用户是否是该员工的上级或部门负责人
     const empRows = await this.db
-      .select({ supervisorId: employee.supervisorId })
+      .select({ supervisorId: employee.supervisorId, empDepartment: employee.department })
       .from(employee)
       .where(and(sql`(${employee.id}).user_id = ${instance.employeeId}`, isNull(employee.deletedAt)))
       .limit(1);
@@ -288,8 +289,22 @@ export class AssessmentOperationService {
       throw new NotFoundException('员工信息不存在');
     }
 
-    if (empRows[0].supervisorId !== userId) {
-      throw new ForbiddenException('您不是该员工的上级，无法评分');
+    const isSupervisor: boolean = empRows[0].supervisorId === userId;
+    let isDeptHead: boolean = false;
+    if (!isSupervisor) {
+      const deptRows = await this.db
+        .select({ id: department.id })
+        .from(department)
+        .where(and(
+          eq(department.name, empRows[0].empDepartment),
+          sql`(${department.headId}).user_id = ${userId}`,
+        ))
+        .limit(1);
+      isDeptHead = deptRows.length > 0;
+    }
+
+    if (!isSupervisor && !isDeptHead) {
+      throw new ForbiddenException('您不是该员工的上级或部门负责人，无法评分');
     }
 
     const allSnapshots = await this.db
@@ -308,9 +323,9 @@ export class AssessmentOperationService {
           `指标快照不属于该考核实例: ${rating.indicatorSnapshotId}`,
         );
       }
-      if (rating.score > Number(snapshot.maxScore)) {
+      if (rating.score > Number(snapshot.weight)) {
         throw new BadRequestException(
-          `评分不能超过最高分 ${snapshot.maxScore}`,
+          `评分不能超过指标权重分 ${snapshot.weight}`,
         );
       }
     }
@@ -361,45 +376,16 @@ export class AssessmentOperationService {
     let grade: string = 'D';
 
     if (!body.isDraft) {
-      // ★ P0: 维度加权平均计算总分
-      // 1. 按 dimensionName 分组
-      const dimMap = new Map<string, typeof allSnapshots>();
-      for (const snap of allSnapshots) {
-        if (!dimMap.has(snap.dimensionName)) {
-          dimMap.set(snap.dimensionName, []);
-        }
-        dimMap.get(snap.dimensionName)!.push(snap);
-      }
-
-      // 2. 建立评分查询映射
       const ratingBySnapId = new Map<string, number>();
       for (const r of body.ratings) {
         ratingBySnapId.set(r.indicatorSnapshotId, r.score);
       }
 
-      // 3. 对每个维度计算加权分数
-      let totalWeightedScore = 0;
-      for (const [, snaps] of dimMap) {
-        let dimScoreSum = 0;
-        let dimMaxSum = 0;
-        const dimWeight = snaps.length > 0 ? Number(snaps[0].dimensionWeight) : 0;
-
-        for (const snap of snaps) {
-          const score = ratingBySnapId.get(snap.id) ?? 0;
-          dimScoreSum += score;
-          dimMaxSum += Number(snap.maxScore);
-        }
-
-        // 维度加权分 = (维度实际得分 / 维度满分) × 维度权重 × 100
-        if (dimMaxSum > 0 && dimWeight > 0) {
-          totalWeightedScore += (dimScoreSum / dimMaxSum) * dimWeight * 100;
-        } else if (dimMaxSum > 0) {
-          // 权重为 0 时直接累加得分（兼容调整项等无权重指标）
-          totalWeightedScore += dimScoreSum;
-        }
+      for (const snap of allSnapshots) {
+        totalScore += ratingBySnapId.get(snap.id) ?? 0;
       }
 
-      totalScore = Math.round(totalWeightedScore * 100) / 100;
+      totalScore = Math.round(totalScore * 100) / 100;
 
       grade = await this.performanceGradeService.matchGrade(totalScore);
 
@@ -462,13 +448,31 @@ export class AssessmentOperationService {
       }
     } else if (body.signType === 'supervisor') {
       const supRows = await this.db
-        .select({ supervisorId: employee.supervisorId })
+        .select({ supervisorId: employee.supervisorId, empDepartment: employee.department })
         .from(employee)
         .where(and(sql`(${employee.id}).user_id = ${instance.employeeId}`, isNull(employee.deletedAt)))
         .limit(1);
 
-      if (supRows.length === 0 || supRows[0].supervisorId !== userId) {
-        throw new ForbiddenException('您不是该员工的上级，无法签署上级签名');
+      if (supRows.length === 0) {
+        throw new ForbiddenException('员工信息不存在，无法签署上级签名');
+      }
+
+      const isSup: boolean = supRows[0].supervisorId === userId;
+      let isHead: boolean = false;
+      if (!isSup) {
+        const deptRows = await this.db
+          .select({ id: department.id })
+          .from(department)
+          .where(and(
+            eq(department.name, supRows[0].empDepartment),
+            sql`(${department.headId}).user_id = ${userId}`,
+          ))
+          .limit(1);
+        isHead = deptRows.length > 0;
+      }
+
+      if (!isSup && !isHead) {
+        throw new ForbiddenException('您不是该员工的上级或部门负责人，无法签署上级签名');
       }
     }
 

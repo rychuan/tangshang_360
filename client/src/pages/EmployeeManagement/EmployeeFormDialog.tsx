@@ -112,7 +112,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="w-[95vw] sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
             {editingEmployee ? '编辑员工' : '新建员工'}
@@ -135,7 +135,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
               />
             )}
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label className="text-xs text-muted-foreground mb-1.5">姓名 *</Label>
               <Input
@@ -155,7 +155,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label className="text-xs text-muted-foreground mb-1.5">员工编号</Label>
               <Input
@@ -176,7 +176,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label className="text-xs text-muted-foreground mb-1.5">角色</Label>
               <Select
@@ -208,7 +208,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label className="text-xs text-muted-foreground mb-1.5">手机号</Label>
               <Input

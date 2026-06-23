@@ -45,7 +45,7 @@ const IndicatorsFieldArray: React.FC<IndicatorsFieldArrayProps> = ({
               description: '',
               algorithm: '',
               dataSource: '',
-              maxScore: 0,
+              weight: 0,
             })
           }
         >
@@ -116,7 +116,7 @@ const IndicatorsFieldArray: React.FC<IndicatorsFieldArrayProps> = ({
                 <FormItem className="flex-1">
                   <FormLabel>指标算法/描述</FormLabel>
                   <FormControl>
-                    <Input placeholder="如：完成率*满分" {...field} />
+                    <Textarea placeholder="如：完成率*满分" rows={2} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -137,15 +137,15 @@ const IndicatorsFieldArray: React.FC<IndicatorsFieldArrayProps> = ({
             />
             <FormField
               control={control}
-              name={`dimensions.${dimIdx}.indicators.${indIdx}.maxScore`}
+              name={`dimensions.${dimIdx}.indicators.${indIdx}.weight`}
               render={({ field }) => (
                 <FormItem className="w-[100px]">
-                  <FormLabel>满分</FormLabel>
+                  <FormLabel>权重(%)</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
-                      min="1"
-                      placeholder="25"
+                      min="0"
+                      placeholder="30"
                       {...field}
                       onChange={(e) =>
                         field.onChange(parseInt(e.target.value, 10) || 0)

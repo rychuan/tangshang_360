@@ -29,29 +29,20 @@ export function calculatePreviewScore(
   ratings: RatingsState,
   groups: DimensionGroup[],
 ): { score: number; grade: string } | null {
-  let totalWeightedScore = 0;
+  let totalScore = 0;
   let hasAnyScore = false;
 
   for (const group of groups) {
-    let dimScoreSum = 0;
-    let dimMaxSum = 0;
     for (const ind of group.indicators) {
       const score = ratings[ind.id]?.score ?? 0;
-      dimScoreSum += score;
-      dimMaxSum += ind.maxScore;
+      totalScore += score;
       if (score > 0) hasAnyScore = true;
-    }
-    if (dimMaxSum > 0 && group.dimensionWeight > 0) {
-      totalWeightedScore +=
-        (dimScoreSum / dimMaxSum) * group.dimensionWeight * 100;
-    } else if (dimMaxSum > 0) {
-      totalWeightedScore += dimScoreSum;
     }
   }
 
   if (!hasAnyScore) return null;
 
-  const score = Math.round(totalWeightedScore * 100) / 100;
+  const score = Math.round(totalScore * 100) / 100;
   let grade: string;
   if (score >= 90) grade = 'S';
   else if (score >= 80) grade = 'A';

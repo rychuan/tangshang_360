@@ -28,6 +28,8 @@ interface PendingPublishSectionProps {
   onTemplateFilterChange: (value: string) => void;
   departments: string[];
   templates: Array<{ id: string; name: string }>;
+  onAdjust: (emp: PublishEmployeeItem) => void;
+  onDeleteSnapshot: (emp: PublishEmployeeItem) => void;
 }
 
 const LAST_PERIOD_STATUS_LABELS: Record<string, string> = {
@@ -52,6 +54,8 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
   onTemplateFilterChange,
   departments,
   templates,
+  onAdjust,
+  onDeleteSnapshot,
 }) => {
   const allSelected: boolean =
     employees.length > 0 && selectedIds.size === employees.length;
@@ -143,6 +147,7 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
                 <th className="py-3 pr-4 font-medium">岗位</th>
                 <th className="py-3 pr-4 font-medium">考核模板</th>
                 <th className="py-3 pr-4 font-medium">上月考核</th>
+                <th className="py-3 pr-4 font-medium">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -171,6 +176,27 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
                     ) : (
                       <span className="text-muted-foreground">-</span>
                     )}
+                  </td>
+                  <td className="py-3 pr-4">
+                    <div className="flex items-center gap-1">
+                      <CanRole roles={['admin', 'hrd']}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onAdjust(emp)}
+                        >
+                          调整
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive"
+                          onClick={() => onDeleteSnapshot(emp)}
+                        >
+                          删除快照
+                        </Button>
+                      </CanRole>
+                    </div>
                   </td>
                 </tr>
               ))}

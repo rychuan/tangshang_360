@@ -252,7 +252,7 @@ const TemplateManagementPage: React.FC = () => {
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-lg border">
+      <div className="overflow-hidden rounded-lg border p-[0px_12px_0px_12px]">
         {loading ? (
           <div className="flex items-center justify-center h-32 text-muted-foreground">加载中...</div>
         ) : items.length === 0 ? (

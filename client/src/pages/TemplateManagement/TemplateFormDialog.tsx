@@ -66,7 +66,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
             description: ind.description,
             algorithm: ind.algorithm,
             dataSource: ind.dataSource,
-            maxScore: ind.maxScore,
+            weight: ind.weight,
           })),
         })),
       };
@@ -85,7 +85,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
               description: '',
               algorithm: '',
               dataSource: '',
-              maxScore: 0,
+              weight: 0,
             },
           ],
         },
@@ -115,20 +115,20 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
       (sum: number, d) => sum + d.weight,
       0,
     );
-    if (Math.abs(weightSum - 1) > 0.001) {
-      toast.error(`维度权重之和必须等于 1，当前为 ${weightSum.toFixed(2)}`);
+    if (Math.abs(weightSum - 100) > 0.01) {
+      toast.error(`维度权重之和必须等于 100，当前为 ${weightSum}`);
       return;
     }
 
-    let totalMaxScore = 0;
     for (const dim of data.dimensions) {
-      for (const ind of dim.indicators) {
-        totalMaxScore += ind.maxScore;
+      const indicatorWeightSum: number = dim.indicators.reduce(
+        (sum: number, ind) => sum + ind.weight,
+        0,
+      );
+      if (Math.abs(indicatorWeightSum - dim.weight) > 0.01) {
+        toast.error(`维度「${dim.name}」的指标权重之和必须等于维度权重 ${dim.weight}，当前为 ${indicatorWeightSum}`);
+        return;
       }
-    }
-    if (totalMaxScore !== 100) {
-      toast.error(`所有指标满分之和必须为 100，当前为 ${totalMaxScore}`);
-      return;
     }
 
     setSubmitting(true);
@@ -145,7 +145,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
             description: ind.description,
             algorithm: ind.algorithm,
             dataSource: ind.dataSource,
-            maxScore: ind.maxScore,
+            weight: ind.weight,
           })),
         })),
       };
@@ -161,6 +161,25 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
   };
 
   const watchedDims = form.watch('dimensions');
+
+  const totalDimWeight: number =
+    watchedDims?.reduce(
+      (sum: number, d) => sum + (d?.weight || 0),
+      0,
+    ) || 0;
+  const dimWeightValid: boolean = Math.abs(totalDimWeight - 100) < 0.01;
+
+  const indicatorWeightsValid: boolean =
+    watchedDims?.every((dim) => {
+      const indSum: number =
+        dim?.indicators?.reduce(
+          (sum: number, ind) => sum + (ind?.weight || 0),
+          0,
+        ) || 0;
+      return Math.abs(indSum - (dim?.weight || 0)) < 0.01;
+    }) ?? false;
+
+  const canSubmit: boolean = dimWeightValid && indicatorWeightsValid;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -242,8 +261,16 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
             <Separator />
 
             <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-medium">考核维度</h3>
+                <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-base font-medium">考核维度</h3>
+                  <span
+                    className={`text-sm font-medium ${dimWeightValid ? 'text-green-600' : 'text-destructive'}`}
+                  >
+                    维度权重总和：{totalDimWeight} / 100
+                    {!dimWeightValid && ' （必须等于100）'}
+                  </span>
+                </div>
                 <Button
                   type="button"
                   variant="outline"
@@ -258,7 +285,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                           description: '',
                           algorithm: '',
                           dataSource: '',
-                          maxScore: 0,
+                          weight: 0,
                         },
                       ],
                     })
@@ -334,18 +361,18 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                             name={`dimensions.${dimIdx}.weight`}
                             render={({ field }) => (
                               <FormItem className="w-[120px]">
-                                <FormLabel>权重 (0-1)</FormLabel>
+                                <FormLabel>权重 (%)</FormLabel>
                                 <FormControl>
                                   <Input
                                     type="number"
-                                    step="0.01"
+                                    step="1"
                                     min="0"
-                                    max="1"
-                                    placeholder="0.3"
+                                    max="100"
+                                    placeholder="60"
                                     {...field}
                                     onChange={(e) =>
                                       field.onChange(
-                                        parseFloat(e.target.value) || 0,
+                                        parseInt(e.target.value, 10) || 0,
                                       )
                                     }
                                   />
@@ -361,18 +388,24 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                           dimIdx={dimIdx}
                         />
 
-                        {dimData && (
-                          <div className="text-xs text-muted-foreground">
-                            维度权重：{dimData.weight || 0}
-                            {' | '}
-                            指标满分合计：
-                            {dimData.indicators?.reduce(
-                              (sum: number, i: { maxScore: number }) =>
-                                sum + (i.maxScore || 0),
+                        {dimData && (() => {
+                          const indSum: number =
+                            dimData.indicators?.reduce(
+                              (sum: number, i: { weight: number }) =>
+                                sum + (i.weight || 0),
                               0,
-                            ) || 0}
-                          </div>
-                        )}
+                            ) || 0;
+                          const indValid: boolean =
+                            Math.abs(indSum - (dimData.weight || 0)) < 0.01;
+                          return (
+                            <div
+                              className={`text-xs font-medium ${indValid ? 'text-green-600' : 'text-destructive'}`}
+                            >
+                              指标权重总和：{indSum} / {dimData.weight || 0}
+                              {!indValid && ' （必须等于维度权重）'}
+                            </div>
+                          );
+                        })()}
                       </>
                     )}
                   </div>
@@ -388,7 +421,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
               >
                 取消
               </Button>
-              <Button type="submit" disabled={submitting}>
+              <Button type="submit" disabled={submitting || !canSubmit}>
                 {submitting ? '保存中...' : '保存'}
               </Button>
             </div>

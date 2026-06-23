@@ -6,13 +6,12 @@ import {
   employee,
   employeeBinding,
   assessmentTemplate,
-  assessmentDimension,
-  assessmentIndicator,
   assessmentInstance,
   assessmentIndicatorSnapshot,
   ratingRecord,
   auditLog,
 } from '@server/database/schema';
+import { EmployeeSnapshotService } from '../employee-snapshot/employee-snapshot.service';
 import type {
   PublishEmployeeItem,
   PublishRequest,
@@ -25,6 +24,7 @@ import type {
   PeriodStatisticsResponse,
   InstanceIndicatorsResponse,
   InstanceIndicatorItem,
+  EmployeeSnapshotResponse,
   BatchOperationResponse,
   UnlockHistoryItem,
 } from '@shared/api.interface';
@@ -37,6 +37,7 @@ export class AssessmentPublishService {
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
     @Inject(CapabilityService)
     private readonly capabilityService: CapabilityService,
+    private readonly employeeSnapshotService: EmployeeSnapshotService,
   ) {}
 
   async listEmployees(
@@ -87,7 +88,7 @@ export class AssessmentPublishService {
   }
 
   async publish(body: PublishRequest, userId: string): Promise<PublishResponse> {
-    const { period, employeeIds, adjustments } = body;
+    const { period, employeeIds } = body;
     this.logger.log(`publish period=${period} employeeIds=${JSON.stringify(employeeIds)}`);
 
     const targetEmployeeIds: string[] = employeeIds && employeeIds.length > 0
@@ -166,27 +167,6 @@ export class AssessmentPublishService {
       const empPosition: string = empRecord.position;
       const empSupervisorId: string | null = empRecord.supervisorId;
 
-      const dimensionRows = await this.db
-        .select()
-        .from(assessmentDimension)
-        .where(eq(assessmentDimension.templateId, templateId))
-        .orderBy(asc(assessmentDimension.sortOrder));
-
-      const dimensionMap: Map<string, { name: string; weight: number }> = new Map();
-      for (const d of dimensionRows) {
-        dimensionMap.set(d.id, { name: d.name, weight: Number(d.weight) });
-      }
-
-      const indicatorsForTemplate = await this.db
-        .select()
-        .from(assessmentIndicator)
-        .innerJoin(
-          assessmentDimension,
-          eq(assessmentIndicator.dimensionId, assessmentDimension.id),
-        )
-        .where(eq(assessmentDimension.templateId, templateId))
-        .orderBy(asc(assessmentDimension.sortOrder), asc(assessmentIndicator.sortOrder));
-
       const [instance] = await this.db
         .insert(assessmentInstance)
         .values({
@@ -203,49 +183,12 @@ export class AssessmentPublishService {
 
       const instanceId: string = instance.id;
 
-      // 查找该员工的调整配置
-      const adjustmentsForEmp = adjustments?.find(
-        (a: PublishRequest['adjustments'][number]) => a.employeeId === empId,
-      );
-
-      if (adjustmentsForEmp) {
-        for (let i: number = 0; i < adjustmentsForEmp.indicators.length; i++) {
-          const ind = adjustmentsForEmp.indicators[i];
-          // 调整指标优先级：传入的 dimensionName/dimensionWeight > 模板第一个维度 > 默认值
-          const dimName = ind.dimensionName || (dimensionRows.length > 0 ? dimensionRows[0].name : '调整项');
-          const dimWeight = ind.dimensionWeight ?? (dimensionRows.length > 0 ? Number(dimensionRows[0].weight) : 0);
-          await this.db.insert(assessmentIndicatorSnapshot).values({
-            instanceId,
-            dimensionName: dimName,
-            dimensionWeight: String(dimWeight),
-            content: ind.content,
-            description: ind.description,
-            algorithm: ind.algorithm,
-            dataSource: ind.dataSource,
-            maxScore: String(ind.maxScore),
-            isAdjusted: true,
-            adjustedBy: userId,
-            adjustedAt: publishedAt,
-            sortOrder: i,
-          });
-        }
+      const hasSnap: boolean = await this.employeeSnapshotService.hasSnapshot(empId);
+      if (hasSnap) {
+        await this.employeeSnapshotService.copyToInstance(empId, instanceId);
       } else {
-        for (let i: number = 0; i < indicatorsForTemplate.length; i++) {
-          const ind = indicatorsForTemplate[i];
-          const dim = dimensionMap.get(ind.assessment_indicator.dimensionId);
-          await this.db.insert(assessmentIndicatorSnapshot).values({
-            instanceId,
-            dimensionName: dim?.name ?? '',
-            dimensionWeight: String(dim?.weight ?? 0),
-            content: ind.assessment_indicator.content,
-            description: ind.assessment_indicator.description,
-            algorithm: ind.assessment_indicator.algorithm,
-            dataSource: ind.assessment_indicator.dataSource,
-            maxScore: ind.assessment_indicator.maxScore,
-            isAdjusted: false,
-            sortOrder: i,
-          });
-        }
+        await this.employeeSnapshotService.generateFromTemplate(empId, templateId, userId);
+        await this.employeeSnapshotService.copyToInstance(empId, instanceId);
       }
 
       await this.db.insert(auditLog).values({
@@ -367,73 +310,46 @@ export class AssessmentPublishService {
     return { items, total };
   }
 
-  async adjust(
-    instanceId: string,
+  async getEmployeeSnapshot(
+    employeeId: string,
+  ): Promise<EmployeeSnapshotResponse> {
+    return this.employeeSnapshotService.getSnapshot(employeeId);
+  }
+
+  async adjustEmployeeSnapshot(
+    employeeId: string,
     body: AdjustRequest,
     userId: string,
   ): Promise<{ success: boolean }> {
-    this.logger.log(`adjust instanceId=${instanceId} userId=${userId}`);
+    this.logger.log(`adjustEmployeeSnapshot employeeId=${employeeId}`);
 
-    const instanceRows = await this.db
-      .select()
-      .from(assessmentInstance)
-      .where(eq(assessmentInstance.id, instanceId))
+    const bindingRows = await this.db
+      .select({ templateId: employeeBinding.templateId })
+      .from(employeeBinding)
+      .where(
+        and(
+          eq(employeeBinding.employeeId, employeeId),
+          eq(employeeBinding.status, 'active'),
+        ),
+      )
       .limit(1);
 
-    if (instanceRows.length === 0) {
-      throw new NotFoundException('考核实例不存在');
+    if (bindingRows.length === 0) {
+      throw new NotFoundException('未找到员工的活跃绑定');
     }
 
-    const instance = instanceRows[0];
-    const allowedStatuses: string[] = ['draft', 'self_review'];
-    if (!allowedStatuses.includes(instance.status)) {
-      throw new BadRequestException(
-        `当前状态 ${instance.status} 不允许调整，仅 draft/self_review 可调整`,
-      );
-    }
+    return this.employeeSnapshotService.adjustSnapshot(
+      employeeId,
+      bindingRows[0].templateId,
+      body.indicators,
+      userId,
+    );
+  }
 
-    // 获取模板维度信息，用于兜底默认维度名称/权重
-    const dimRows = await this.db
-      .select()
-      .from(assessmentDimension)
-      .where(eq(assessmentDimension.templateId, instance.templateId))
-      .orderBy(asc(assessmentDimension.sortOrder));
-
-    await this.db
-      .delete(assessmentIndicatorSnapshot)
-      .where(eq(assessmentIndicatorSnapshot.instanceId, instanceId));
-
-    const now: Date = new Date();
-    for (let i: number = 0; i < body.indicators.length; i++) {
-      const ind = body.indicators[i];
-      // P0: 保留维度归属 — 优先使用传入的维度信息，否则取模板第一维度
-      const dimName = ind.dimensionName || (dimRows.length > 0 ? dimRows[0].name : '调整项');
-      const dimWeight = ind.dimensionWeight ?? (dimRows.length > 0 ? Number(dimRows[0].weight) : 0);
-      await this.db.insert(assessmentIndicatorSnapshot).values({
-        instanceId,
-        dimensionName: dimName,
-        dimensionWeight: String(dimWeight),
-        content: ind.content,
-        description: ind.description,
-        algorithm: ind.algorithm,
-        dataSource: ind.dataSource,
-        maxScore: String(ind.maxScore),
-        isAdjusted: true,
-        adjustedBy: userId,
-        adjustedAt: now,
-        sortOrder: i,
-      });
-    }
-
-    await this.db.insert(auditLog).values({
-      operatorId: userId,
-      action: 'adjust',
-      targetType: 'assessment_instance',
-      targetId: instanceId,
-      changes: { indicators: body.indicators },
-    });
-
-    return { success: true };
+  async deleteEmployeeSnapshot(
+    employeeId: string,
+  ): Promise<{ success: boolean }> {
+    return this.employeeSnapshotService.deleteSnapshot(employeeId);
   }
 
   async unlock(
@@ -627,7 +543,7 @@ export class AssessmentPublishService {
         description: assessmentIndicatorSnapshot.description,
         algorithm: assessmentIndicatorSnapshot.algorithm,
         dataSource: assessmentIndicatorSnapshot.dataSource,
-        maxScore: assessmentIndicatorSnapshot.maxScore,
+        weight: assessmentIndicatorSnapshot.weight,
         dimensionName: assessmentIndicatorSnapshot.dimensionName,
         dimensionWeight: assessmentIndicatorSnapshot.dimensionWeight,
         sortOrder: assessmentIndicatorSnapshot.sortOrder,
@@ -641,7 +557,7 @@ export class AssessmentPublishService {
       description: row.description ?? '',
       algorithm: row.algorithm ?? '',
       dataSource: row.dataSource ?? '',
-      maxScore: Number(row.maxScore),
+      weight: Number(row.weight),
       dimensionName: row.dimensionName,
       dimensionWeight: Number(row.dimensionWeight),
     }));

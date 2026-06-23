@@ -20,7 +20,7 @@ export interface AssessmentIndicatorDef {
   description: string;
   algorithm: string;
   dataSource: string;
-  maxScore: number;
+  weight: number;
 }
 export interface AssessmentDimensionDef {
   id: string;
@@ -48,7 +48,7 @@ export interface CreateTemplateRequest {
       description: string;
       algorithm: string;
       dataSource: string;
-      maxScore: number;
+      weight: number;
     }>;
   }>;
 }
@@ -117,18 +117,6 @@ export interface PublishEmployeeListParams {
 export interface PublishRequest {
   period: string;
   employeeIds?: string[];
-  adjustments?: Array<{
-    employeeId: string;
-    indicators: Array<{
-      content: string;
-      description: string;
-      algorithm: string;
-      dataSource: string;
-      maxScore: number;
-      dimensionName?: string;
-      dimensionWeight?: number;
-    }>;
-  }>;
 }
 export interface AssessmentInstanceItem {
   id: string;
@@ -167,7 +155,7 @@ export interface AssessmentIndicatorDetail {
   description: string;
   algorithm: string;
   dataSource: string;
-  maxScore: number;
+  weight: number;
   selfScore?: number;
   selfComment?: string;
   supervisorScore?: number;
@@ -266,9 +254,9 @@ export interface AdjustIndicatorInput {
   description: string;
   algorithm: string;
   dataSource: string;
-  maxScore: number;
-  dimensionName?: string;
-  dimensionWeight?: number;
+  weight: number;
+  dimensionName: string;
+  dimensionWeight: number;
 }
 export interface AdjustRequest {
   indicators: AdjustIndicatorInput[];
@@ -307,12 +295,18 @@ export interface InstanceIndicatorItem {
   description: string;
   algorithm: string;
   dataSource: string;
-  maxScore: number;
+  weight: number;
   dimensionName?: string;
   dimensionWeight?: number;
 }
 export interface InstanceIndicatorsResponse {
   indicators: InstanceIndicatorItem[];
+}
+export interface EmployeeSnapshotResponse {
+  indicators: InstanceIndicatorItem[];
+  hasSnapshot: boolean;
+  templateId: string;
+  templateName: string;
 }
 export interface EmployeeCurrentBinding {
   bindingId: string;

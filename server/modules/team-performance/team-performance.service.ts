@@ -5,7 +5,7 @@ import {
 } from '@lark-apaas/fullstack-nestjs-core';
 import { CapabilityService } from '@lark-apaas/fullstack-nestjs-core';
 import { eq, and, sql, count, desc, isNull } from 'drizzle-orm';
-import { employee, assessmentInstance } from '../../database/schema';
+import { employee, assessmentInstance, department } from '../../database/schema';
 import type {
   TeamOverviewResponse,
   SubordinateRecord,
@@ -38,7 +38,13 @@ export class TeamPerformanceService {
     const subRows = await this.db
       .select({ userId: sql<string>`(${employee.id}).user_id` })
       .from(employee)
-      .where(and(sql`(${employee.supervisorId}).user_id = ${userId}`, isNull(employee.deletedAt)));
+      .where(and(
+        sql`(
+          (${employee.supervisorId}).user_id = ${userId}
+          OR ${employee.department} IN (SELECT ${department.name} FROM ${department} WHERE (${department.headId}).user_id = ${userId})
+        )`,
+        isNull(employee.deletedAt),
+      ));
     const subordinateIds: string[] = subRows.map(
       (r: { userId: string }) => r.userId,
     );
@@ -116,7 +122,13 @@ export class TeamPerformanceService {
     const subRows = await this.db
       .select({ userId: sql<string>`(${employee.id}).user_id` })
       .from(employee)
-      .where(and(sql`(${employee.supervisorId}).user_id = ${userId}`, isNull(employee.deletedAt)));
+      .where(and(
+        sql`(
+          (${employee.supervisorId}).user_id = ${userId}
+          OR ${employee.department} IN (SELECT ${department.name} FROM ${department} WHERE (${department.headId}).user_id = ${userId})
+        )`,
+        isNull(employee.deletedAt),
+      ));
     const subordinateIds: string[] = subRows.map(
       (r: { userId: string }) => r.userId,
     );
@@ -205,7 +217,16 @@ export class TeamPerformanceService {
         .where(
           and(
             eq(assessmentInstance.id, instanceId),
-            sql`(${assessmentInstance.supervisorId}).user_id = ${userId}`,
+            sql`(
+              (${assessmentInstance.supervisorId}).user_id = ${userId}
+              OR (${assessmentInstance.employeeId}).user_id IN (
+                SELECT (${employee.id}).user_id FROM ${employee}
+                WHERE ${employee.department} IN (
+                  SELECT ${department.name} FROM ${department} WHERE (${department.headId}).user_id = ${userId}
+                )
+                AND ${employee.deletedAt} IS NULL
+              )
+            )`,
           ),
         )
         .limit(1);

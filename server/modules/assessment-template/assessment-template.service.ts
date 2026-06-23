@@ -166,7 +166,7 @@ export class AssessmentTemplateService {
               description: ind.description || '',
               algorithm: ind.algorithm || '',
               dataSource: ind.dataSource || '',
-              maxScore: Number(ind.maxScore),
+              weight: Number(ind.weight),
             }),
           ),
         }),
@@ -212,7 +212,7 @@ export class AssessmentTemplateService {
           description: ind.description,
           algorithm: ind.algorithm,
           dataSource: ind.dataSource,
-          maxScore: String(ind.maxScore),
+          weight: String(ind.weight),
           sortOrder: j,
         });
       }
@@ -287,7 +287,7 @@ export class AssessmentTemplateService {
             description: ind.description,
             algorithm: ind.algorithm,
             dataSource: ind.dataSource,
-            maxScore: String(ind.maxScore),
+            weight: String(ind.weight),
             sortOrder: j,
           });
         }
@@ -348,23 +348,23 @@ export class AssessmentTemplateService {
       0,
     );
 
-    if (Math.abs(weightSum - 1) > 0.001) {
+    if (Math.abs(weightSum - 100) > 0.01) {
       throw new BadRequestException(
-        `维度权重之和必须等于 1，当前为 ${weightSum}`,
+        `维度权重之和必须等于 100，当前为 ${weightSum}`,
       );
     }
 
-    let totalMaxScore = 0;
     for (const dim of dimensions) {
-      for (const ind of dim.indicators) {
-        totalMaxScore += ind.maxScore;
-      }
-    }
-
-    if (totalMaxScore !== 100) {
-      throw new BadRequestException(
-        `所有指标满分之和必须为 100，当前为 ${totalMaxScore}`,
+      const indicatorWeightSum: number = dim.indicators.reduce(
+        (sum: number, ind) => sum + ind.weight,
+        0,
       );
+
+      if (Math.abs(indicatorWeightSum - dim.weight) > 0.01) {
+        throw new BadRequestException(
+          `维度「${dim.name}」的指标权重之和必须等于维度权重 ${dim.weight}，当前为 ${indicatorWeightSum}`,
+        );
+      }
     }
   }
 }

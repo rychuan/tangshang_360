@@ -5,12 +5,12 @@ export const indicatorSchema = z.object({
   description: z.string().default(''),
   algorithm: z.string().default(''),
   dataSource: z.string().default(''),
-  maxScore: z.coerce.number().min(1, '满分至少为1'),
+  weight: z.coerce.number().min(1, '权重至少为1'),
 });
 
 export const dimensionSchema = z.object({
   name: z.string().min(1, '维度名称不能为空'),
-  weight: z.coerce.number().min(0, '权重不能为负').max(1, '权重不能超过1'),
+  weight: z.coerce.number().min(0, '权重不能为负').max(100, '权重不能超过100'),
   indicators: z.array(indicatorSchema).min(1, '至少需要一个指标'),
 });
 

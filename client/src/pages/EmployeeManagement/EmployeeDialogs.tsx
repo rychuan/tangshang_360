@@ -82,7 +82,7 @@ const BindDialog: React.FC<BindDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-[95vw] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>绑定考核模板</DialogTitle>
           <DialogDescription>
@@ -161,7 +161,7 @@ const UnbindDialog: React.FC<UnbindDialogProps> = ({
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="w-[95vw] sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>确认解绑</DialogTitle>
           <DialogDescription>
@@ -198,7 +198,7 @@ const HistoryDialog: React.FC<HistoryDialogProps> = ({
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-[95vw] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>绑定历史</DialogTitle>
           <DialogDescription>

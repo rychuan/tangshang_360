@@ -52,7 +52,7 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
                   <div className="flex items-center gap-2">
                     <h3 className="text-lg font-semibold">{dim.name}</h3>
                     <Badge variant="secondary">
-                      权重 {Math.round(dim.weight * 100)}%
+                      权重 {dim.weight}%
                     </Badge>
                   </div>
                 </CardHeader>
@@ -74,7 +74,7 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
                             数据来源
                           </th>
                           <th className="text-center py-3 px-2 font-medium text-muted-foreground w-20">
-                            满分
+                            权重(分)
                           </th>
                         </tr>
                       </thead>
@@ -101,7 +101,7 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
                                 {ind.dataSource || '-'}
                               </td>
                               <td className="py-3 px-2 text-center">
-                                {ind.maxScore}
+                                {ind.weight}
                               </td>
                             </tr>
                           ),

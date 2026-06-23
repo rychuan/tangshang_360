@@ -18,7 +18,7 @@ interface IndicatorTableProps {
     id: string,
     field: 'score' | 'comment',
     value: string,
-    maxScore?: number,
+    weight?: number,
   ) => void;
 }
 
@@ -50,7 +50,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           <Input
             type="number"
             min={0}
-            max={indicator.maxScore}
+            max={indicator.weight}
             className="w-20 mx-auto text-center"
             value={currentScore}
             onChange={(
@@ -60,12 +60,12 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                 indicator.id,
                 'score',
                 e.target.value,
-                indicator.maxScore,
+                indicator.weight,
               )
             }
           />
           <span className="text-xs text-muted-foreground">
-            {currentScore}/{indicator.maxScore}
+            {currentScore}/{indicator.weight}
           </span>
         </div>
       );
@@ -86,7 +86,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                 {group.dimensionName}
               </h3>
               <span className="inline-flex items-center px-3 py-1 rounded-md bg-primary/10 text-primary text-sm font-bold border border-primary/20">
-                权重 {Math.round(group.dimensionWeight * 100)}%
+                权重 {group.dimensionWeight}%
               </span>
             </div>
           </CardHeader>
@@ -108,7 +108,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                       数据来源
                     </th>
                     <th className="text-center py-3 px-2 font-medium text-muted-foreground w-16">
-                      满分
+                      权重(分)
                     </th>
                     <th className="text-center py-3 px-2 font-medium text-muted-foreground w-28">
                       自评
@@ -140,7 +140,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                         {indicator.dataSource || '-'}
                       </td>
                       <td className="py-2 px-2 text-center">
-                        {indicator.maxScore}
+                        {indicator.weight}
                       </td>
                       <td className="py-2 px-2 text-center">
                         {renderScoreCell(indicator, 'self')}

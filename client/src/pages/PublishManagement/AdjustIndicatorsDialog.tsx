@@ -1,39 +1,62 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Eye, Pencil, Copy } from 'lucide-react';
-import { getInstanceIndicators } from '@/api/assessment-publish';
-import type { AssessmentInstanceItem, AdjustIndicatorInput, InstanceIndicatorItem } from '@shared/api.interface';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Eye, Pencil, Copy, Trash2, Plus, AlertTriangle, FolderPlus, X, Check } from 'lucide-react';
+import { getEmployeeSnapshot } from '@/api/assessment-publish';
+import type { AdjustIndicatorInput, InstanceIndicatorItem } from '@shared/api.interface';
 
 interface AdjustIndicatorsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  instance: AssessmentInstanceItem | null;
+  employee: { employeeId: string; employeeName: string; templateName: string } | null;
   onSubmit: (indicators: AdjustIndicatorInput[]) => void;
+  onDeleteSnapshot: () => void;
   loading: boolean;
 }
 
-const EMPTY_INDICATOR: AdjustIndicatorInput = { content: '', description: '', algorithm: '', dataSource: '', maxScore: 100 };
+interface DimensionGroup {
+  dimensionName: string;
+  dimensionWeight: number;
+  indicators: AdjustIndicatorInput[];
+  flatIndices: number[];
+}
+
+const EMPTY_INDICATOR: AdjustIndicatorInput = {
+  content: '',
+  description: '',
+  algorithm: '',
+  dataSource: '',
+  weight: 100,
+  dimensionName: '',
+  dimensionWeight: 0,
+};
 
 const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
   open,
   onOpenChange,
-  instance,
+  employee,
   onSubmit,
+  onDeleteSnapshot,
   loading,
 }) => {
   const [indicators, setIndicators] = useState<AdjustIndicatorInput[]>([]);
   const [previewMode, setPreviewMode] = useState<boolean>(false);
   const [loadingIndicators, setLoadingIndicators] = useState<boolean>(false);
+  const [addingDimension, setAddingDimension] = useState<boolean>(false);
+  const [newDimName, setNewDimName] = useState<string>('');
+  const [newDimWeight, setNewDimWeight] = useState<string>('');
 
-  const loadIndicators = useCallback(async (instanceId: string): Promise<void> => {
+  const loadIndicators = useCallback(async (employeeId: string): Promise<void> => {
     setLoadingIndicators(true);
     try {
-      const res = await getInstanceIndicators(instanceId);
+      const res = await getEmployeeSnapshot(employeeId);
       if (res.indicators.length > 0) {
         setIndicators(
           res.indicators.map((ind: InstanceIndicatorItem) => ({
@@ -41,63 +64,379 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
             description: ind.description,
             algorithm: ind.algorithm,
             dataSource: ind.dataSource,
-            maxScore: ind.maxScore,
+            weight: ind.weight,
             dimensionName: ind.dimensionName,
             dimensionWeight: ind.dimensionWeight,
           })),
         );
       } else {
-        setIndicators([{ ...EMPTY_INDICATOR }]);
+        setIndicators([]);
       }
     } catch (err: unknown) {
       logger.error('loadIndicators failed', err);
-      toast.error('加载现有指标失败');
-      setIndicators([{ ...EMPTY_INDICATOR }]);
+      toast.error('加载指标快照失败');
+      setIndicators([]);
     } finally {
       setLoadingIndicators(false);
     }
   }, []);
 
   useEffect(() => {
-    if (open && instance) {
+    if (open && employee?.employeeId) {
       setPreviewMode(false);
-      loadIndicators(instance.id);
+      setAddingDimension(false);
+      setNewDimName('');
+      setNewDimWeight('');
+      loadIndicators(employee.employeeId);
     }
-  }, [open, instance, loadIndicators]);
+  }, [open, employee?.employeeId, loadIndicators]);
 
-  const handleAddIndicator = (): void => {
-    setIndicators((prev: AdjustIndicatorInput[]) => [...prev, { ...EMPTY_INDICATOR }]);
+  const dimensionGroups: DimensionGroup[] = useMemo(() => {
+    const groups: Record<string, DimensionGroup> = {};
+    indicators.forEach((ind: AdjustIndicatorInput, i: number) => {
+      const key = ind.dimensionName || '未分组';
+      if (!groups[key]) {
+        groups[key] = {
+          dimensionName: ind.dimensionName,
+          dimensionWeight: ind.dimensionWeight,
+          indicators: [],
+          flatIndices: [],
+        };
+      }
+      groups[key].indicators.push(ind);
+      groups[key].flatIndices.push(i);
+    });
+    return Object.values(groups);
+  }, [indicators]);
+
+  const dimensionWeightValidation = useMemo(() => {
+    const totalWeight: number = dimensionGroups.reduce(
+      (sum: number, g) => sum + g.dimensionWeight,
+      0,
+    );
+    return {
+      totalWeight,
+      isValid: Math.abs(totalWeight - 100) < 0.01,
+    };
+  }, [dimensionGroups]);
+
+  const handleAddIndicator = (dimensionName: string, dimensionWeight: number): void => {
+    setIndicators((prev: AdjustIndicatorInput[]) => [
+      ...prev,
+      { ...EMPTY_INDICATOR, dimensionName, dimensionWeight },
+    ]);
   };
 
-  const handleRemoveIndicator = (index: number): void => {
+  const handleRemoveIndicator = (flatIndex: number): void => {
     setIndicators((prev: AdjustIndicatorInput[]) =>
-      prev.filter((_: AdjustIndicatorInput, i: number) => i !== index),
+      prev.filter((_: AdjustIndicatorInput, i: number) => i !== flatIndex),
     );
   };
 
-  const handleIndicatorChange = (index: number, field: keyof AdjustIndicatorInput, value: string | number): void => {
+  const handleIndicatorChange = (flatIndex: number, field: keyof AdjustIndicatorInput, value: string | number): void => {
     setIndicators((prev: AdjustIndicatorInput[]) => {
       const next: AdjustIndicatorInput[] = [...prev];
-      next[index] = { ...next[index], [field]: value };
+      next[flatIndex] = { ...next[flatIndex], [field]: value };
       return next;
     });
   };
 
+  const handleDimensionChange = (
+    group: DimensionGroup,
+    field: 'dimensionName' | 'dimensionWeight',
+    value: string | number,
+  ): void => {
+    setIndicators((prev: AdjustIndicatorInput[]) => {
+      const next: AdjustIndicatorInput[] = [...prev];
+      for (const idx of group.flatIndices) {
+        next[idx] = { ...next[idx], [field]: value };
+      }
+      return next;
+    });
+  };
+
+  const handleRemoveDimension = (group: DimensionGroup): void => {
+    const removeSet: Set<number> = new Set(group.flatIndices);
+    setIndicators((prev: AdjustIndicatorInput[]) =>
+      prev.filter((_: AdjustIndicatorInput, i: number) => !removeSet.has(i)),
+    );
+  };
+
+  const handleConfirmAddDimension = (): void => {
+    const name: string = newDimName.trim();
+    const weight: number = Number(newDimWeight);
+    if (!name) {
+      toast.error('请输入维度名称');
+      return;
+    }
+    if (isNaN(weight) || weight < 0) {
+      toast.error('请输入有效的维度权重');
+      return;
+    }
+    setIndicators((prev: AdjustIndicatorInput[]) => [
+      ...prev,
+      { ...EMPTY_INDICATOR, dimensionName: name, dimensionWeight: weight },
+    ]);
+    setAddingDimension(false);
+    setNewDimName('');
+    setNewDimWeight('');
+  };
+
+  const handleCancelAddDimension = (): void => {
+    setAddingDimension(false);
+    setNewDimName('');
+    setNewDimWeight('');
+  };
+
   const handleCopyTemplate = (): void => {
-    if (!instance) return;
-    loadIndicators(instance.id);
+    if (!employee) return;
+    loadIndicators(employee.employeeId);
     toast.success('已重新加载考核指标');
   };
 
   const handleSubmit = (): void => {
+    if (!dimensionWeightValidation.isValid) {
+      toast.error(
+        `维度权重之和必须等于 100%，当前为 ${dimensionWeightValidation.totalWeight}%`,
+      );
+      return;
+    }
     onSubmit(indicators);
   };
+
+  const handleDeleteSnapshot = (): void => {
+    onDeleteSnapshot();
+  };
+
+  const renderPreviewGroup = (group: DimensionGroup, groupIdx: number): React.ReactNode => (
+    <Card key={groupIdx}>
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-semibold">
+            {group.dimensionName || '未分组'}
+          </h3>
+          <span className="inline-flex items-center px-3 py-1 rounded-md bg-primary/10 text-primary text-sm font-bold border border-primary/20">
+            权重 {group.dimensionWeight}%
+          </span>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-muted-foreground">
+                <th className="text-left py-3 px-2 font-medium whitespace-nowrap">指标</th>
+                <th className="text-left py-3 px-2 font-medium whitespace-nowrap max-w-[120px]">说明</th>
+                <th className="text-left py-3 px-2 font-medium whitespace-nowrap max-w-[120px]">指标算法/描述</th>
+                <th className="text-left py-3 px-2 font-medium whitespace-nowrap max-w-[120px]">数据来源</th>
+                <th className="text-center py-3 px-2 font-medium w-16">权重(分)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {group.indicators.map((ind: AdjustIndicatorInput, idx: number) => (
+                <tr key={idx} className="border-b last:border-0">
+                  <td className="py-2 px-2 font-medium whitespace-nowrap">{ind.content || '-'}</td>
+                  <td className="py-2 px-2 text-muted-foreground max-w-[120px] break-words">{ind.description || '-'}</td>
+                  <td className="py-2 px-2 text-muted-foreground max-w-[120px] break-words">{ind.algorithm || '-'}</td>
+                  <td className="py-2 px-2 text-muted-foreground max-w-[120px] break-words">{ind.dataSource || '-'}</td>
+                  <td className="py-2 px-2 text-center">{ind.weight}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderEditGroup = (group: DimensionGroup, groupIdx: number): React.ReactNode => (
+    <Card key={groupIdx}>
+      <CardHeader>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 flex-1">
+            <Input
+              value={group.dimensionName}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                handleDimensionChange(group, 'dimensionName', e.target.value)
+              }
+              className="text-lg font-semibold h-9 max-w-[200px] border-none px-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+              placeholder="维度名称"
+            />
+            <div className="flex items-center gap-2">
+              <Label className="text-xs text-muted-foreground whitespace-nowrap">权重</Label>
+              <Input
+                type="number"
+                value={group.dimensionWeight}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  handleDimensionChange(group, 'dimensionWeight', Number(e.target.value))
+                }
+                className="w-20 h-8"
+              />
+              <span className="text-sm text-muted-foreground">%</span>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleRemoveDimension(group)}
+            className="text-destructive hover:text-destructive"
+          >
+            <Trash2 className="size-3.5 mr-1" />
+            删除维度
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {group.indicators.map((ind: AdjustIndicatorInput, idx: number) => {
+          const flatIndex: number = group.flatIndices[idx];
+          return (
+            <div key={flatIndex} className="rounded-md border p-4 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">
+                  指标 {idx + 1}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleRemoveIndicator(flatIndex)}
+                >
+                  <Trash2 className="size-3.5 mr-1" />
+                  删除
+                </Button>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label className="text-xs">指标内容</Label>
+                <Input
+                  value={ind.content}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    handleIndicatorChange(flatIndex, 'content', e.target.value)
+                  }
+                  placeholder="指标内容"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label className="text-xs">描述</Label>
+                <Textarea
+                  value={ind.description}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                    handleIndicatorChange(flatIndex, 'description', e.target.value)
+                  }
+                  placeholder="指标描述"
+                  rows={2}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-2">
+                  <Label className="text-xs">算法</Label>
+                  <Textarea
+                    value={ind.algorithm}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                      handleIndicatorChange(flatIndex, 'algorithm', e.target.value)
+                    }
+                    placeholder="评分算法"
+                    rows={2}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label className="text-xs">数据来源</Label>
+                  <Input
+                    value={ind.dataSource}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      handleIndicatorChange(flatIndex, 'dataSource', e.target.value)
+                    }
+                    placeholder="数据来源"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label className="text-xs">最高分</Label>
+                <Input
+                  type="number"
+                  value={ind.weight}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    handleIndicatorChange(flatIndex, 'weight', Number(e.target.value))
+                  }
+                  placeholder="100"
+                />
+              </div>
+            </div>
+          );
+        })}
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={() => handleAddIndicator(group.dimensionName, group.dimensionWeight)}
+        >
+          <Plus className="size-3.5 mr-1" />
+          添加指标
+        </Button>
+      </CardContent>
+    </Card>
+  );
+
+  const renderAddDimensionForm = (): React.ReactNode => (
+    <Card className="border-dashed">
+      <CardContent className="pt-6">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <FolderPlus className="size-4 text-muted-foreground" />
+            <span className="text-sm font-medium">新增维度</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs">维度名称</Label>
+              <Input
+                value={newDimName}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewDimName(e.target.value)}
+                placeholder="请输入维度名称"
+                autoFocus
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs">维度权重 (%)</Label>
+              <Input
+                type="number"
+                value={newDimWeight}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewDimWeight(e.target.value)}
+                placeholder="0"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCancelAddDimension}
+            >
+              <X className="size-3.5 mr-1" />
+              取消
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleConfirmAddDimension}
+            >
+              <Check className="size-3.5 mr-1" />
+              确认
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>调整考核指标</DialogTitle>
+          <DialogTitle>
+            调整考核指标
+            {employee && (
+              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                {employee.employeeName} · {employee.templateName}
+              </span>
+            )}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="flex items-center gap-2">
@@ -126,144 +465,68 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
             <Copy className="size-3.5" />
             重新加载指标
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleDeleteSnapshot}
+            className="text-destructive"
+          >
+            <Trash2 className="size-3.5" />
+            删除快照
+          </Button>
         </div>
 
         {loadingIndicators ? (
           <div className="flex items-center justify-center py-12 text-muted-foreground">
             加载中...
           </div>
-        ) : indicators.length === 0 ? (
-          <div className="flex items-center justify-center py-12 text-muted-foreground">
-            暂无指标数据
-          </div>
         ) : (
           <div className="flex flex-col gap-4">
-            {indicators.map(
-              (ind: AdjustIndicatorInput, index: number) => (
-                <div
-                  key={index}
-                  className="rounded-md border p-4 flex flex-col gap-3"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">
-                      指标 {index + 1}
-                      {ind.dimensionName && (
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          ({ind.dimensionName}
-                          {ind.dimensionWeight != null
-                            ? ` · 权重${Math.round(ind.dimensionWeight * 100)}%`
-                            : ''}
-                          )
-                        </span>
-                      )}
-                    </span>
-                    {!previewMode && indicators.length > 1 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveIndicator(index)}
-                      >
-                        删除
-                      </Button>
-                    )}
-                  </div>
-
-                  {previewMode ? (
-                    <div className="flex flex-col gap-2 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">指标内容：</span>
-                        <span>{ind.content || '-'}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">描述：</span>
-                        <span>{ind.description || '-'}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">算法：</span>
-                        <span>{ind.algorithm || '-'}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">数据来源：</span>
-                        <span>{ind.dataSource || '-'}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">最高分：</span>
-                        <span className="font-medium">{ind.maxScore}</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex flex-col gap-2">
-                        <Label className="text-xs">指标内容</Label>
-                        <Input
-                          value={ind.content}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                            handleIndicatorChange(index, 'content', e.target.value)
-                          }
-                          placeholder="指标内容"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <Label className="text-xs">描述</Label>
-                        <Input
-                          value={ind.description}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                            handleIndicatorChange(index, 'description', e.target.value)
-                          }
-                          placeholder="指标描述"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="flex flex-col gap-2">
-                          <Label className="text-xs">算法</Label>
-                          <Input
-                            value={ind.algorithm}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                              handleIndicatorChange(index, 'algorithm', e.target.value)
-                            }
-                            placeholder="评分算法"
-                          />
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <Label className="text-xs">数据来源</Label>
-                          <Input
-                            value={ind.dataSource}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                              handleIndicatorChange(index, 'dataSource', e.target.value)
-                            }
-                            placeholder="数据来源"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <Label className="text-xs">最高分</Label>
-                        <Input
-                          type="number"
-                          value={ind.maxScore}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                            handleIndicatorChange(
-                              index,
-                              'maxScore',
-                              Number(e.target.value),
-                            )
-                          }
-                          placeholder="100"
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-              ),
+            {!dimensionWeightValidation.isValid && dimensionGroups.length > 0 && (
+              <Alert variant="destructive">
+                <AlertTriangle className="size-4" />
+                <AlertDescription>
+                  维度权重之和应为 100%，当前为 {dimensionWeightValidation.totalWeight}%，请检查维度权重配置
+                </AlertDescription>
+              </Alert>
             )}
 
-            {!previewMode && (
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={handleAddIndicator}
-              >
-                添加指标
-              </Button>
+            {dimensionGroups.length === 0 && !addingDimension ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-4">
+                <span className="text-muted-foreground">暂无指标数据</span>
+                {!previewMode && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setAddingDimension(true)}
+                  >
+                    <FolderPlus className="size-4 mr-2" />
+                    添加维度
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <>
+                {dimensionGroups.map((group: DimensionGroup, groupIdx: number) =>
+                  previewMode
+                    ? renderPreviewGroup(group, groupIdx)
+                    : renderEditGroup(group, groupIdx),
+                )}
+
+                {!previewMode && (
+                  addingDimension ? (
+                    renderAddDimensionForm()
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="w-full border-dashed"
+                      onClick={() => setAddingDimension(true)}
+                    >
+                      <FolderPlus className="size-4 mr-2" />
+                      添加维度
+                    </Button>
+                  )
+                )}
+              </>
             )}
 
             <div className="flex justify-end gap-3 pt-2">
@@ -277,7 +540,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
               <Button
                 data-ai-section-type="button"
                 onClick={handleSubmit}
-                disabled={loading || previewMode}
+                disabled={loading || previewMode || !dimensionWeightValidation.isValid}
               >
                 {loading ? '调整中...' : '确认调整'}
               </Button>

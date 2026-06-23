@@ -41,6 +41,7 @@ import {
   Users,
 } from 'lucide-react';
 import { showConfirm } from '@lark-apaas/client-toolkit';
+import DepartmentMembersDialog from './DepartmentMembersDialog';
 
 interface DeptFormData {
   name: string;
@@ -64,6 +65,9 @@ const DepartmentManagementTab: React.FC = () => {
   });
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const [membersDialogOpen, setMembersDialogOpen] = useState(false);
+  const [membersDeptName, setMembersDeptName] = useState('');
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -153,7 +157,7 @@ const DepartmentManagementTab: React.FC = () => {
     const hasChildren = node.children && node.children.length > 0;
     return (
       <React.Fragment key={node.id}>
-        <tr className="border-b hover:bg-muted/50 transition-colors">
+        <tr className="border-b hover:bg-muted/50 transition-colors group">
           <td className="py-3 px-4 align-middle whitespace-nowrap">
             <div
               className="flex items-center gap-2"
@@ -184,14 +188,20 @@ const DepartmentManagementTab: React.FC = () => {
             {node.headName || '-'}
           </td>
           <td className="py-3 px-4 align-middle whitespace-nowrap">
-            <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+            <button
+              className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+              onClick={() => {
+                setMembersDeptName(node.name);
+                setMembersDialogOpen(true);
+              }}
+            >
               <Users className="h-3.5 w-3.5" />
               {node.memberCount}
-            </span>
+            </button>
           </td>
           <td className="py-3 px-4 align-middle whitespace-nowrap">{node.sortOrder}</td>
-          <td className="py-3 px-4 align-middle whitespace-nowrap">
-            <div className="flex items-center gap-1">
+          <td className="py-3 px-4 align-middle whitespace-nowrap sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
+            <div className="flex items-center gap-1.5">
               <Button
                 variant="ghost"
                 size="icon"
@@ -218,7 +228,7 @@ const DepartmentManagementTab: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div />
         <Dialog
           open={dialogOpen}
@@ -243,7 +253,7 @@ const DepartmentManagementTab: React.FC = () => {
               新建部门
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="w-[95vw] sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>
                 {editingDept ? '编辑部门' : '新建部门'}
@@ -288,9 +298,9 @@ const DepartmentManagementTab: React.FC = () => {
               <div>
                 <Label>部门负责人</Label>
                 <UserSelect
-                  value={formData.headId ? [formData.headId] : []}
-                  onChange={(v: string[] | null) =>
-                    setFormData({ ...formData, headId: v?.[0] || '' })
+                  value={formData.headId || null}
+                  onChange={(v: string | null) =>
+                    setFormData({ ...formData, headId: v || '' })
                   }
                   placeholder="请选择负责人"
                 />
@@ -333,16 +343,16 @@ const DepartmentManagementTab: React.FC = () => {
               暂无部门数据，点击「新建部门」开始
             </p>
           ) : (
-            <div className="border rounded-lg overflow-auto">
+            <div className="border rounded-lg overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b hover:bg-muted/50 transition-colors">
                     <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">部门名称</th>
                     <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">上级部门</th>
                     <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">负责人</th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">人数</th>
+                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">成员</th>
                     <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">排序</th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap w-[100px]">操作</th>
+                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap w-[100px] sticky right-0 bg-background z-20 border-l">操作</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -353,6 +363,11 @@ const DepartmentManagementTab: React.FC = () => {
           )}
         </CardContent>
       </Card>
+      <DepartmentMembersDialog
+        open={membersDialogOpen}
+        onOpenChange={setMembersDialogOpen}
+        departmentName={membersDeptName}
+      />
     </div>
   );
 };

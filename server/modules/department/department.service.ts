@@ -3,7 +3,7 @@ import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { eq, asc, count, sql } from 'drizzle-orm';
+import { eq, asc, count, sql, isNull } from 'drizzle-orm';
 import {
   department,
   employee,
@@ -36,10 +36,11 @@ export class DepartmentService {
         createdAt: department.createdAt,
         headName: sql`COALESCE((SELECT e.name FROM employee e WHERE (e.id).user_id = (${department.headId}).user_id AND e.deleted_at IS NULL LIMIT 1), '')`,
         parentName: sql`COALESCE((SELECT d2.name FROM department d2 WHERE d2.id = ${department.parentId} LIMIT 1), '')`,
-        memberCount: sql`(SELECT COUNT(*)::int FROM employee e WHERE e.department = ${department.name} AND e.status = 'active' AND e.deleted_at IS NULL)`,
       })
       .from(department)
       .orderBy(asc(department.sortOrder), asc(department.name));
+
+    const memberCountMap = await this.getMemberCountMap();
 
     const items: DepartmentItem[] = rows.map((r) => ({
       id: r.id,
@@ -48,7 +49,7 @@ export class DepartmentService {
       parentName: String(r.parentName || ''),
       headId: r.headId || '',
       headName: String(r.headName || ''),
-      memberCount: Number(r.memberCount),
+      memberCount: memberCountMap.get(r.name) || 0,
       sortOrder: Number(r.sortOrder),
       isActive: Boolean(r.isActive),
       createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
@@ -71,7 +72,6 @@ export class DepartmentService {
         createdAt: department.createdAt,
         headName: sql`COALESCE((SELECT e.name FROM employee e WHERE (e.id).user_id = (${department.headId}).user_id AND e.deleted_at IS NULL LIMIT 1), '')`,
         parentName: sql`COALESCE((SELECT d2.name FROM department d2 WHERE d2.id = ${department.parentId} LIMIT 1), '')`,
-        memberCount: sql`(SELECT COUNT(*)::int FROM employee e WHERE e.department = ${department.name} AND e.status = 'active' AND e.deleted_at IS NULL)`,
       })
       .from(department)
       .where(eq(department.id, id))
@@ -81,6 +81,8 @@ export class DepartmentService {
       throw new NotFoundException('部门不存在');
     }
 
+    const memberCountMap = await this.getMemberCountMap();
+
     const r = rows[0];
     const item: DepartmentItem = {
       id: r.id,
@@ -89,7 +91,7 @@ export class DepartmentService {
       parentName: String(r.parentName || ''),
       headId: r.headId || '',
       headName: String(r.headName || ''),
-      memberCount: Number(r.memberCount),
+      memberCount: memberCountMap.get(r.name) || 0,
       sortOrder: Number(r.sortOrder),
       isActive: Boolean(r.isActive),
       createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
@@ -106,7 +108,6 @@ export class DepartmentService {
         createdAt: department.createdAt,
         headName: sql`COALESCE((SELECT e.name FROM employee e WHERE (e.id).user_id = (${department.headId}).user_id AND e.deleted_at IS NULL LIMIT 1), '')`,
         parentName: sql`''`,
-        memberCount: sql`(SELECT COUNT(*)::int FROM employee e WHERE e.department = ${department.name} AND e.status = 'active' AND e.deleted_at IS NULL)`,
       })
       .from(department)
       .where(eq(department.parentId, id))
@@ -119,7 +120,7 @@ export class DepartmentService {
       parentName: String(c.parentName || ''),
       headId: c.headId || '',
       headName: String(c.headName || ''),
-      memberCount: Number(c.memberCount),
+      memberCount: memberCountMap.get(c.name) || 0,
       sortOrder: Number(c.sortOrder),
       isActive: Boolean(c.isActive),
       createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : String(c.createdAt),
@@ -244,12 +245,13 @@ export class DepartmentService {
         isActive: department.isActive,
         createdAt: department.createdAt,
         parentName: sql`COALESCE((SELECT d2.name FROM department d2 WHERE d2.id = ${department.parentId} LIMIT 1), '')`,
-        memberCount: sql`(SELECT COUNT(*)::int FROM employee e WHERE e.department = ${department.name} AND e.status = 'active' AND e.deleted_at IS NULL)`,
         headName: sql`COALESCE((SELECT e.name FROM employee e WHERE (e.id).user_id = (${department.headId}).user_id AND e.deleted_at IS NULL LIMIT 1), '')`,
       })
       .from(department)
       .where(eq(department.isActive, true))
       .orderBy(asc(department.sortOrder), asc(department.name));
+
+    const memberCountMap = await this.getMemberCountMap();
 
     return rows.map((r) => ({
       id: r.id,
@@ -258,13 +260,24 @@ export class DepartmentService {
       parentName: String(r.parentName || ''),
       headId: r.headId || '',
       headName: String(r.headName || ''),
-      memberCount: Number(r.memberCount),
+      memberCount: memberCountMap.get(r.name) || 0,
       sortOrder: Number(r.sortOrder),
       isActive: Boolean(r.isActive),
       createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
     }));
   }
 
+
+  private async getMemberCountMap(): Promise<Map<string, number>> {
+    const countRows = await this.db
+      .select({ dept: employee.department, cnt: count() })
+      .from(employee)
+      .where(isNull(employee.deletedAt))
+      .groupBy(employee.department);
+    return new Map<string, number>(
+      countRows.map((r) => [r.dept, Number(r.cnt)]),
+    );
+  }
 
   private buildTree(items: DepartmentItem[]): DepartmentTreeNode[] {
     const map = new Map<string, DepartmentTreeNode>();
