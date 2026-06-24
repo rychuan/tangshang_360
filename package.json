@@ -27,7 +27,7 @@
     "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^5.2.2",
-    "@lark-apaas/client-toolkit": "^1.2.31",
+    "@lark-apaas/client-toolkit": "^1.2.53",
     "@lark-apaas/fullstack-presets": "^1.1.0",
     "@lark-apaas/fullstack-vite-preset": "^1.0.1",
     "@nestjs/cli": "^10.4.9",
