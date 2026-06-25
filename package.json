@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@lark-apaas/fullstack-nestjs-core": "^1.1.22",
+    "@lark-apaas/fullstack-nestjs-core": "^1.1.54",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/common": "^10.4.20",
     "@nestjs/config": "^3.3.0",
@@ -27,7 +27,7 @@
     "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^5.2.2",
-    "@lark-apaas/client-toolkit": "^1.2.53",
+    "@lark-apaas/client-toolkit": "^1.2.55",
     "@lark-apaas/fullstack-presets": "^1.1.0",
     "@lark-apaas/fullstack-vite-preset": "^1.0.29",
     "@nestjs/cli": "^10.4.9",
