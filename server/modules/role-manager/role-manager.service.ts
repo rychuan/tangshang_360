@@ -55,6 +55,25 @@ export class RoleManagerService {
     }
     return roles;
   }
+  /**
+   * 将用户添加到 'employee' 角色（新建员工时自动调用）
+   */
+  async addUserToEmployeeRole(userId: string): Promise<void> {
+    try {
+      const roles = await this.getUserRoles(userId);
+      if (roles.includes('employee')) {
+        this.logger.log(`User ${userId} already in 'employee' role, skipping`);
+        return;
+      }
+      await this.authzSDK.members.add('employee', {
+        members: { userList: [{ userID: userId }] },
+      });
+      this.logger.log(`Added user ${userId} to 'employee' role`);
+    } catch (err) {
+      this.logger.error(`Failed to add user ${userId} to 'employee' role: ${err instanceof Error ? err.message : String(err)}`);
+      throw err;
+    }
+  }
 
   async getPermissionConfig(
     roleBizId: string,

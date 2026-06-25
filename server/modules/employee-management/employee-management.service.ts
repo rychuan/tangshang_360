@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, Logger, Inject, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
@@ -24,7 +24,9 @@ import type {
   EmployeeCurrentBinding,
   BindingHistoryItem,
 } from '@shared/api.interface';
+import { RoleManagerService } from '../role-manager/role-manager.service';
 import { DEFAULT_PERMISSIONS } from '@shared/api.interface';
+import { RoleManagerService } from '../role-manager/role-manager.service';
 
 @Injectable()
 export class EmployeeManagementService {
@@ -184,6 +186,12 @@ export class EmployeeManagementService {
 
     const emp = rows[0];
 
+    // P0-2: 防止删除最后一个管理员
+    const adminCount = await this.validateAdminsExist();
+    if (String(emp.role || 'employee') === 'admin' && adminCount <= 1) {
+      throw new BadRequestException('系统中至少保留一个系统管理员，无法删除');
+    }
+
     await this.db
       .update(employee)
       .set({ deletedAt: new Date() })
@@ -333,7 +341,7 @@ export class EmployeeManagementService {
       title: body.title || null,
       role: body.role || 'employee',
       department: body.department || '',
-      supervisorId: autoSupervisorId,
+      supervisorId: await this.resolveSupervisor(body.supervisorId, body.department),
       phone: body.phone || null,
       hireDate: body.hireDate ? new Date(body.hireDate) : null,
       probationMonths: body.probationMonths ?? 3,
@@ -354,6 +362,14 @@ export class EmployeeManagementService {
     });
 
     this.logger.log(`Employee created: ${body.name} (${inserted.id})`);
+
+    // P1-4: 新建员工自动加入 AuthorizationSDK 'employee' 角色
+    try {
+      await this.roleManagerService.addUserToEmployeeRole(body.id);
+      this.logger.log(`Added user ${body.id} to 'employee' role`);
+    } catch (err) {
+      this.logger.warn(`Failed to add user ${body.id} to 'employee' role: ${err}`);
+    }
 
     return { id: String(inserted.id) };
   }
@@ -389,7 +405,7 @@ export class EmployeeManagementService {
       title: body.title || null,
       role: body.role || 'employee',
       department: body.department || '',
-      supervisorId: autoSupervisorId,
+      supervisorId: await this.resolveSupervisor(body.supervisorId, body.department),
       phone: body.phone || null,
       hireDate: body.hireDate ? new Date(body.hireDate) : null,
       probationMonths: body.probationMonths ?? 3,
@@ -406,7 +422,7 @@ export class EmployeeManagementService {
       action: 'update_employee',
       targetType: 'employee',
       targetId: id,
-      changes: { after: values },
+      changes: { before: beforeValues, after: values },
     });
 
     this.logger.log(`Employee updated: ${id}`);
@@ -450,6 +466,12 @@ export class EmployeeManagementService {
     if (rows.length === 0) {
       throw new NotFoundException('员工不存在');
     }
+
+    // P1-1: 停用员工时联动停用其所有活跃绑定
+    await this.db
+      .update(employeeBinding)
+      .set({ status: 'inactive' })
+      .where(and(eq(employeeBinding.employeeId, id), eq(employeeBinding.status, 'active')));
 
     await this.db
       .update(employee)
@@ -540,12 +562,51 @@ export class EmployeeManagementService {
       );
     return Number(rows[0]?.cnt || 0);
   }
+  /**
+   * 解析上级：优先使用指定的 supervisorId，否则根据部门查找部门负责人
+   */
+  private async resolveSupervisor(supervisorId?: string, departmentName?: string): Promise<string | null> {
+    if (supervisorId) return supervisorId;
+    if (departmentName) {
+      const deptRows = await this.db
+        .select({ headId: department.headId })
+        .from(department)
+        .where(and(eq(department.name, departmentName), eq(department.isActive, true)))
+        .limit(1);
+      if (deptRows.length > 0 && deptRows[0].headId) {
+        this.logger.log(`Auto-resolved supervisor from department "${departmentName}" head`);
+        return deptRows[0].headId;
+      }
+    }
+    return null;
+  }
+
 
   async bind(
     body: CreateBindingRequest,
     userId: string,
   ): Promise<{ success: boolean }> {
+    // P1-2: 绑定前校验模板是否存在
+    const tplRows = await this.db
+      .select({ id: assessmentTemplate.id })
+      .from(assessmentTemplate)
+      .where(eq(assessmentTemplate.id, body.templateId))
+      .limit(1);
+    if (tplRows.length === 0) {
+      throw new NotFoundException(`考核模板 ${body.templateId} 不存在`);
+    }
+
     for (const eId of body.employeeIds) {
+      // P1-2: 校验员工是否存在
+      const empRows = await this.db
+        .select({ id: employee.id })
+        .from(employee)
+        .where(and(eq(employee.id, eId), isNull(employee.deletedAt)))
+        .limit(1);
+      if (empRows.length === 0) {
+        throw new NotFoundException(`员工 ${eId} 不存在`);
+      }
+
       const existing = await this.db
         .select({ id: employeeBinding.id, templateId: employeeBinding.templateId })
         .from(employeeBinding)

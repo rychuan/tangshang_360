@@ -179,23 +179,15 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label className="text-xs text-muted-foreground mb-1.5">角色</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(v) =>
-                  setFormData({ ...formData, role: v })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="employee">员工</SelectItem>
-                  <SelectItem value="supervisor">上级</SelectItem>
-                  <SelectItem value="dept_head">部门负责人</SelectItem>
-                  <SelectItem value="hrd">HRD</SelectItem>
-                  <SelectItem value="admin">管理员</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex h-10 items-center rounded-md border border-input bg-muted px-3">
+                <span className="text-sm">
+                  {formData.role === 'admin' ? '管理员' :
+                   formData.role === 'hrd' ? 'HRD' :
+                   formData.role === 'dept_head' ? '部门负责人' :
+                   formData.role === 'supervisor' ? '上级' : '员工'}
+                </span>
+                <span className="ml-2 text-xs text-muted-foreground">（根据角色自动分配）</span>
+              </div>
             </div>
             <div>
               <Label className="text-xs text-muted-foreground mb-1.5">部门</Label>
@@ -209,6 +201,16 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1.5">上级</Label>
+              <UserSelect
+                value={formData.supervisorId || null}
+                onChange={(v) =>
+                  setFormData({ ...formData, supervisorId: v ?? '' })
+                }
+                placeholder="不指定则由部门负责人自动填充"
+              />
+            </div>
             <div>
               <Label className="text-xs text-muted-foreground mb-1.5">手机号</Label>
               <Input

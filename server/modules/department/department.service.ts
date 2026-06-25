@@ -8,6 +8,7 @@ import {
   department,
   employee,
   auditLog,
+  employeeBinding,
 } from '@server/database/schema';
 import type {
   DepartmentItem,
@@ -147,7 +148,7 @@ export class DepartmentService {
       .values({
         name: body.name,
         parentId: body.parentId || null,
-        headId: body.headId || null,
+        headId: newHeadId,
         sortOrder: body.sortOrder ?? 0,
       })
       .returning({ id: department.id });
@@ -182,12 +183,16 @@ export class DepartmentService {
       throw new BadRequestException('部门不能将自己设为上级');
     }
 
+    const oldDept = rows[0];
+    const oldHeadId = oldDept.headId || null;
+    const newHeadId = body.headId || null;
+
     await this.db
       .update(department)
       .set({
         name: body.name,
         parentId: body.parentId || null,
-        headId: body.headId || null,
+        headId: newHeadId,
         sortOrder: body.sortOrder ?? 0,
       })
       .where(eq(department.id, id));
@@ -212,6 +217,22 @@ export class DepartmentService {
       targetId: id,
       changes: { after: body },
     });
+
+    // 部门负责人变更时，同步该部门下未手动指定上级的员工
+    if (newHeadId !== oldHeadId && newHeadId) {
+      const deptName = oldDept.name;
+      await this.db
+        .update(employee)
+        .set({ supervisorId: newHeadId })
+        .where(
+          and(
+            eq(employee.department, deptName),
+            isNull(employee.deletedAt),
+            sql`(((${employee.supervisorId}) IS NULL) OR ((${employee.supervisorId}).user_id = ${oldHeadId}))`,
+          ),
+        );
+      this.logger.log(`Department "${deptName}" head changed, synced employees supervisor to new head`);
+    }
 
     return { success: true };
   }

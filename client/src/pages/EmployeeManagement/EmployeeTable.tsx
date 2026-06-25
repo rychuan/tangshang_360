@@ -80,6 +80,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
               <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">编号</th>
               <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">岗位</th>
               <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">部门</th>
+              <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">上级</th>
               <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">角色</th>
               <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">当前绑定模板</th>
               <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">状态</th>
@@ -89,14 +90,14 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
           <tbody>
             {loading ? (
               <tr className="border-b hover:bg-muted/50 transition-colors">
-                <td colSpan={9} className="py-3 px-4 align-middle whitespace-nowrap text-center py-8">
+                <td colSpan={10} className="py-3 px-4 align-middle whitespace-nowrap text-center py-8">
                   加载中...
                 </td>
               </tr>
             ) : employees.length === 0 ? (
               <tr className="border-b hover:bg-muted/50 transition-colors">
                 <td
-                  colSpan={9}
+                  colSpan={10}
                   className="py-3 px-4 align-middle whitespace-nowrap text-center py-8 text-muted-foreground"
                 >
                   暂无员工数据
@@ -121,6 +122,13 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
                   <td className="py-3 px-4 align-middle whitespace-nowrap">{emp.employeeNo || '-'}</td>
                   <td className="py-3 px-4 align-middle whitespace-nowrap">{emp.position}</td>
                   <td className="py-3 px-4 align-middle whitespace-nowrap">{emp.department || '-'}</td>
+                  <td className="py-3 px-4 align-middle whitespace-nowrap">
+                    {emp.supervisorId ? (
+                      <UserDisplay userId={emp.supervisorId} size="small" />
+                    ) : (
+                      <span className="text-sm text-muted-foreground">-</span>
+                    )}
+                  </td>
                   <td className="py-3 px-4 align-middle whitespace-nowrap">
                     <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                       {roleLabels[emp.role] || emp.role}

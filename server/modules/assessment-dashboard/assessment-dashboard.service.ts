@@ -4,6 +4,7 @@ import {
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
 import { assessmentInstance, employee } from '@server/database/schema';
+import { RoleManagerService } from '../role-manager/role-manager.service';
 import { eq, and, or, desc, count, avg, sql, isNull } from 'drizzle-orm';
 import type {
   DashboardTodosResponse,
@@ -16,6 +17,7 @@ export class AssessmentDashboardService {
 
   constructor(
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
+    private readonly roleManagerService: RoleManagerService,
   ) {}
 
   async todos(userId: string): Promise<DashboardTodosResponse> {
@@ -295,17 +297,6 @@ export class AssessmentDashboardService {
   }
 
   private async getUserRole(userId: string): Promise<{ role: 'employee' | 'supervisor' | 'hrd'; hasSubordinates: boolean }> {
-    // 优先使用显式 role 字段判定
-    const empRows = await this.db
-      .select({ role: employee.role })
-      .from(employee)
-      .where(and(sql`(${employee.id}).user_id = ${userId}`, isNull(employee.deletedAt)))
-      .limit(1);
-
-    if (empRows.length === 0) {
-      return { role: 'employee', hasSubordinates: false };
-    }
-
     // 查是否有其他人以其为上级
     const subResult = await this.db
       .select({ cnt: count() })
@@ -313,13 +304,19 @@ export class AssessmentDashboardService {
       .where(and(sql`(${employee.supervisorId}).user_id = ${userId}`, isNull(employee.deletedAt)));
     const hasSubordinates = Number(subResult[0].cnt) > 0;
 
-    const role = (empRows[0].role as string) || 'employee';
-    if (role === 'admin' || role === 'hrd' || role === 'dept_head') {
-      return { role: 'hrd', hasSubordinates };
+    try {
+      const roles = await this.roleManagerService.getUserRoles(userId);
+      if (roles.includes('admin') || roles.includes('hrd') || roles.includes('dept_head')) {
+        return { role: 'hrd', hasSubordinates };
+      }
+      if (roles.includes('supervisor') || hasSubordinates) {
+        return { role: 'supervisor', hasSubordinates };
+      }
+    } catch (err) {
+      this.logger.warn(`Failed to get roles from AuthorizationSDK for ${userId}`);
     }
-    if (role === 'supervisor' || hasSubordinates) {
-      return { role: 'supervisor', hasSubordinates };
-    }
+
+    if (hasSubordinates) return { role: 'supervisor', hasSubordinates: true };
     return { role: 'employee', hasSubordinates: false };
   }
 
