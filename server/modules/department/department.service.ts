@@ -184,7 +184,7 @@ export class DepartmentService {
     }
 
     const oldDept = rows[0];
-    const oldHeadId = oldDept.oldHeadId || null;
+    const oldHeadId = oldDept.headId || null;
     const newHeadId = body.headId || null;
 
     await this.db
@@ -206,7 +206,7 @@ export class DepartmentService {
     });
 
     if (newHeadId !== oldHeadId && newHeadId) {
-      const deptName = oldDept.oldName;
+      const deptName = oldDept.name;
       await this.db
         .update(employee)
         .set({ supervisorId: newHeadId })

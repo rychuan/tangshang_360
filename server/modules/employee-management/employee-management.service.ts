@@ -422,7 +422,7 @@ export class EmployeeManagementService {
       action: 'update_employee',
       targetType: 'employee',
       targetId: id,
-      changes: { after: values },
+      changes: { before: beforeValues, after: values },
     });
 
     this.logger.log(`Employee updated: ${id}`);
