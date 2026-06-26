@@ -2,10 +2,7 @@ import { Controller, Get, Post, Param, Body, Req } from '@nestjs/common';
 import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
 import type { Request } from 'express';
 import { AssessmentOperationService } from './assessment-operation.service';
-import type {
-  RatingSubmitRequest,
-  SignRequest,
-} from '@shared/api.interface';
+import type { RatingSubmitRequest, SignRequest } from '@shared/api.interface';
 
 @Controller('api/assessment-instances')
 export class AssessmentOperationController {
@@ -13,8 +10,9 @@ export class AssessmentOperationController {
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
   @Get(':id')
-  async detail(@Param('id') id: string) {
-    return this.service.detail(id);
+  async detail(@Req() req: Request, @Param('id') id: string) {
+    const { userId } = req.userContext as { userId: string };
+    return this.service.detail(id, userId);
   }
 
   @CanRole(['admin', 'supervisor', 'employee'])

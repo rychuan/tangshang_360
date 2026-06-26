@@ -15,13 +15,11 @@ export interface DimensionGroup {
 
 export function buildRatingPayload(ratings: RatingsState) {
   return {
-    ratings: Object.entries(ratings).map(
-      ([indicatorSnapshotId, r]) => ({
-        indicatorSnapshotId,
-        score: r.score,
-        comment: r.comment || undefined,
-      }),
-    ),
+    ratings: Object.entries(ratings).map(([indicatorSnapshotId, r]) => ({
+      indicatorSnapshotId,
+      score: r.score,
+      comment: r.comment || undefined,
+    })),
   };
 }
 
@@ -30,17 +28,21 @@ export function calculatePreviewScore(
   groups: DimensionGroup[],
 ): { score: number; grade: string } | null {
   let totalScore = 0;
-  let hasAnyScore = false;
+  let hasAnyEdit = false;
 
   for (const group of groups) {
     for (const ind of group.indicators) {
-      const score = ratings[ind.id]?.score ?? 0;
+      const rating = ratings[ind.id];
+      const score = rating?.score ?? 0;
       totalScore += score;
-      if (score > 0) hasAnyScore = true;
+      // 使用 !== undefined 区分「评了 0 分」和「未评分」
+      if (rating?.score !== undefined && rating.score !== null) {
+        hasAnyEdit = true;
+      }
     }
   }
 
-  if (!hasAnyScore) return null;
+  if (!hasAnyEdit) return null;
 
   const score = Math.round(totalScore * 100) / 100;
   let grade: string;

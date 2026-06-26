@@ -5,7 +5,11 @@ import {
 } from '@lark-apaas/fullstack-nestjs-core';
 import { CapabilityService } from '@lark-apaas/fullstack-nestjs-core';
 import { eq, and, sql, count, desc, isNull } from 'drizzle-orm';
-import { employee, assessmentInstance, department } from '../../database/schema';
+import {
+  employee,
+  assessmentInstance,
+  department,
+} from '../../database/schema';
 import type {
   TeamOverviewResponse,
   SubordinateRecord,
@@ -38,13 +42,15 @@ export class TeamPerformanceService {
     const subRows = await this.db
       .select({ userId: sql<string>`(${employee.id}).user_id` })
       .from(employee)
-      .where(and(
-        sql`(
+      .where(
+        and(
+          sql`(
           (${employee.supervisorId}).user_id = ${userId}
           OR ${employee.department} IN (SELECT ${department.name} FROM ${department} WHERE (${department.headId}).user_id = ${userId})
         )`,
-        isNull(employee.deletedAt),
-      ));
+          isNull(employee.deletedAt),
+        ),
+      );
     const subordinateIds: string[] = subRows.map(
       (r: { userId: string }) => r.userId,
     );
@@ -68,7 +74,9 @@ export class TeamPerformanceService {
         selfReviewCount: sql<number>`COUNT(*) FILTER (WHERE ${assessmentInstance.status} = 'self_review')::int`,
         supervisorReviewCount: sql<number>`COUNT(*) FILTER (WHERE ${assessmentInstance.status} = 'supervisor_review')::int`,
         completedCount: sql<number>`COUNT(*) FILTER (WHERE ${assessmentInstance.status} = 'completed')::int`,
-        avgScore: sql<number | null>`AVG(${assessmentInstance.totalScore}) FILTER (WHERE ${assessmentInstance.status} = 'completed' AND ${assessmentInstance.totalScore} IS NOT NULL)`,
+        avgScore: sql<
+          number | null
+        >`AVG(${assessmentInstance.totalScore}) FILTER (WHERE ${assessmentInstance.status} = 'completed' AND ${assessmentInstance.totalScore} IS NOT NULL)`,
       })
       .from(assessmentInstance)
       .where(empInCond);
@@ -122,13 +130,15 @@ export class TeamPerformanceService {
     const subRows = await this.db
       .select({ userId: sql<string>`(${employee.id}).user_id` })
       .from(employee)
-      .where(and(
-        sql`(
+      .where(
+        and(
+          sql`(
           (${employee.supervisorId}).user_id = ${userId}
           OR ${employee.department} IN (SELECT ${department.name} FROM ${department} WHERE (${department.headId}).user_id = ${userId})
         )`,
-        isNull(employee.deletedAt),
-      ));
+          isNull(employee.deletedAt),
+        ),
+      );
     const subordinateIds: string[] = subRows.map(
       (r: { userId: string }) => r.userId,
     );
@@ -200,40 +210,88 @@ export class TeamPerformanceService {
     return { items, total, page, pageSize };
   }
 
-  async remind(
-    userId: string,
-    body: RemindRequest,
-  ): Promise<RemindResponse> {
+  async remind(userId: string, body: RemindRequest): Promise<RemindResponse> {
     const results: RemindResult[] = [];
 
     for (const instanceId of body.instanceIds) {
       const rows = await this.db
         .select({
           period: assessmentInstance.period,
+          status: assessmentInstance.status,
           employeeUserId: sql<string>`(${assessmentInstance.employeeId}).user_id`,
           employeeName: sql<string>`(SELECT name FROM employee emp WHERE (emp.id).user_id = (${assessmentInstance.employeeId}).user_id AND emp.deleted_at IS NULL LIMIT 1)`,
         })
         .from(assessmentInstance)
+        .where(eq(assessmentInstance.id, instanceId))
+        .limit(1);
+
+      if (rows.length === 0) {
+        this.logger.warn(`Instance ${instanceId} not found`);
+        results.push({
+          instanceId,
+          status: 'failed',
+          reason: '考核实例不存在',
+        });
+        continue;
+      }
+
+      const row = rows[0];
+
+      // P0: 状态校验 — 仅 self_review 状态允许催办
+      if (row.status !== 'self_review') {
+        results.push({
+          instanceId,
+          status: 'failed',
+          reason: '当前考核状态不允许催办',
+        });
+        continue;
+      }
+
+      const employeeUserId: string = row.employeeUserId;
+
+      // 权限校验：使用 employee.supervisorId（当前上级）而非 assessmentInstance.supervisorId（发布时快照）
+      const empRows = await this.db
+        .select({
+          supervisorId: employee.supervisorId,
+          empDepartment: employee.department,
+        })
+        .from(employee)
         .where(
           and(
-            eq(assessmentInstance.id, instanceId),
-            sql`(
-              (${assessmentInstance.supervisorId}).user_id = ${userId}
-              OR (${assessmentInstance.employeeId}).user_id IN (
-                SELECT (${employee.id}).user_id FROM ${employee}
-                WHERE ${employee.department} IN (
-                  SELECT ${department.name} FROM ${department} WHERE (${department.headId}).user_id = ${userId}
-                )
-                AND ${employee.deletedAt} IS NULL
-              )
-            )`,
+            sql`(${employee.id}).user_id = ${employeeUserId}`,
+            isNull(employee.deletedAt),
           ),
         )
         .limit(1);
 
-      if (rows.length === 0) {
+      if (empRows.length === 0) {
+        results.push({
+          instanceId,
+          status: 'failed',
+          reason: '员工信息不存在或无权操作',
+        });
+        continue;
+      }
+
+      const isSupervisor = empRows[0].supervisorId === userId;
+      let isDeptHead = false;
+      if (!isSupervisor) {
+        const deptRows = await this.db
+          .select({ id: department.id })
+          .from(department)
+          .where(
+            and(
+              eq(department.name, empRows[0].empDepartment),
+              sql`(${department.headId}).user_id = ${userId}`,
+            ),
+          )
+          .limit(1);
+        isDeptHead = deptRows.length > 0;
+      }
+
+      if (!isSupervisor && !isDeptHead) {
         this.logger.warn(
-          `Instance ${instanceId} not found or not owned by supervisor ${userId}`,
+          `Instance ${instanceId} not authorized for user ${userId}`,
         );
         results.push({
           instanceId,
@@ -243,10 +301,8 @@ export class TeamPerformanceService {
         continue;
       }
 
-      const row = rows[0];
       const employeeName: string = row.employeeName || '';
       const period: string = row.period;
-      const employeeUserId: string = row.employeeUserId;
 
       const message = `**考核催办提醒**\n\n[${period}] ${employeeName} 您好，您的考核尚未完成自评，请及时登录系统处理。`;
 

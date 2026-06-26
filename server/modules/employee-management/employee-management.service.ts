@@ -1,4 +1,11 @@
-import { Injectable, Logger, Inject, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  Inject,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
@@ -13,6 +20,7 @@ import {
   department,
 } from '@server/database/schema';
 import { EmployeeSnapshotService } from '../employee-snapshot/employee-snapshot.service';
+import { EmployeeBindingService } from './employee-binding.service';
 import type {
   EmployeeItem,
   EmployeeDetail,
@@ -35,6 +43,7 @@ export class EmployeeManagementService {
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
     private readonly employeeSnapshotService: EmployeeSnapshotService,
     private readonly roleManagerService: RoleManagerService,
+    private readonly bindingService: EmployeeBindingService,
   ) {}
 
   async list(query: {
@@ -92,10 +101,7 @@ export class EmployeeManagementService {
         .orderBy(desc(employee.createdAt))
         .limit(query.pageSize)
         .offset(offset),
-      this.db
-        .select({ count: count() })
-        .from(employee)
-        .where(whereClause),
+      this.db.select({ count: count() }).from(employee).where(whereClause),
     ]);
 
     const total = Number(totalResult[0]?.count || 0);
@@ -112,35 +118,37 @@ export class EmployeeManagementService {
       supervisorName: String(item.supervisorName || ''),
       status: item.status as 'active' | 'inactive',
       phone: item.phone || '',
-      hireDate: item.hireDate instanceof Date
-        ? item.hireDate.toISOString()
-        : item.hireDate || '',
+      hireDate:
+        item.hireDate instanceof Date
+          ? item.hireDate.toISOString()
+          : item.hireDate || '',
     }));
 
     const employeeIds: string[] = mapped.map((m: EmployeeItem) => m.id);
 
-    const bindingRows = employeeIds.length > 0
-      ? await this.db
-          .select({
-            employeeId: employeeBinding.employeeId,
-            bindingId: employeeBinding.id,
-            templateId: employeeBinding.templateId,
-            templateName: assessmentTemplate.name,
-            effectiveFrom: employeeBinding.effectiveFrom,
-            status: employeeBinding.status,
-          })
-          .from(employeeBinding)
-          .innerJoin(
-            assessmentTemplate,
-            eq(employeeBinding.templateId, assessmentTemplate.id),
-          )
-          .where(
-            and(
-              inArray(employeeBinding.employeeId, employeeIds),
-              eq(employeeBinding.status, 'active'),
-            ),
-          )
-      : [];
+    const bindingRows =
+      employeeIds.length > 0
+        ? await this.db
+            .select({
+              employeeId: employeeBinding.employeeId,
+              bindingId: employeeBinding.id,
+              templateId: employeeBinding.templateId,
+              templateName: assessmentTemplate.name,
+              effectiveFrom: employeeBinding.effectiveFrom,
+              status: employeeBinding.status,
+            })
+            .from(employeeBinding)
+            .innerJoin(
+              assessmentTemplate,
+              eq(employeeBinding.templateId, assessmentTemplate.id),
+            )
+            .where(
+              and(
+                inArray(employeeBinding.employeeId, employeeIds),
+                eq(employeeBinding.status, 'active'),
+              ),
+            )
+        : [];
 
     const bindingMap = new Map<string, EmployeeCurrentBinding>();
     for (const row of bindingRows) {
@@ -202,7 +210,13 @@ export class EmployeeManagementService {
       action: 'delete_employee',
       targetType: 'employee',
       targetId: id,
-      changes: { before: { name: emp.name, position: emp.position, department: emp.department } },
+      changes: {
+        before: {
+          name: emp.name,
+          position: emp.position,
+          department: emp.department,
+        },
+      },
     });
 
     this.logger.log(`Employee deleted: ${emp.name} (${id})`);
@@ -228,12 +242,23 @@ export class EmployeeManagementService {
       const supRows = await this.db
         .select({ name: employee.name })
         .from(employee)
-        .where(and(sql`(${employee.id}).user_id = ${emp.supervisorId}`, isNull(employee.deletedAt)))
+        .where(
+          and(
+            sql`(${employee.id}).user_id = ${emp.supervisorId}`,
+            isNull(employee.deletedAt),
+          ),
+        )
         .limit(1);
       supervisorName = supRows.length > 0 ? supRows[0].name : '';
     }
 
-    const [activeBindingRows, assessCountRows, completedRows, avgRows, latestGradeRows] = await Promise.all([
+    const [
+      activeBindingRows,
+      assessCountRows,
+      completedRows,
+      avgRows,
+      latestGradeRows,
+    ] = await Promise.all([
       this.db
         .select({ cnt: count() })
         .from(employeeBinding)
@@ -257,7 +282,9 @@ export class EmployeeManagementService {
           ),
         ),
       this.db
-        .select({ avgVal: sql`AVG(CAST(${assessmentInstance.totalScore} AS NUMERIC))` })
+        .select({
+          avgVal: sql`AVG(CAST(${assessmentInstance.totalScore} AS NUMERIC))`,
+        })
         .from(assessmentInstance)
         .where(
           and(
@@ -291,20 +318,23 @@ export class EmployeeManagementService {
       supervisorName,
       status: emp.status as 'active' | 'inactive',
       phone: emp.phone || '',
-      hireDate: emp.hireDate instanceof Date
-        ? emp.hireDate.toISOString()
-        : emp.hireDate || '',
+      hireDate:
+        emp.hireDate instanceof Date
+          ? emp.hireDate.toISOString()
+          : emp.hireDate || '',
       probationMonths: emp.probationMonths || 3,
-      createdAt: emp.createdAt instanceof Date
-        ? emp.createdAt.toISOString()
-        : String(emp.createdAt),
+      createdAt:
+        emp.createdAt instanceof Date
+          ? emp.createdAt.toISOString()
+          : String(emp.createdAt),
       stats: {
         activeBindings: Number(activeBindingRows[0]?.cnt || 0),
         totalAssessments: Number(assessCountRows[0]?.cnt || 0),
         completedAssessments: Number(completedRows[0]?.cnt || 0),
-        avgScore: avgRows[0]?.avgVal != null
-          ? Math.round(Number(avgRows[0].avgVal) * 100) / 100
-          : undefined,
+        avgScore:
+          avgRows[0]?.avgVal != null
+            ? Math.round(Number(avgRows[0].avgVal) * 100) / 100
+            : undefined,
         latestGrade: latestGradeRows[0]?.grade || undefined,
       },
     };
@@ -341,7 +371,10 @@ export class EmployeeManagementService {
       title: body.title || null,
       role: body.role || 'employee',
       department: body.department || '',
-      supervisorId: await this.resolveSupervisor(body.supervisorId, body.department),
+      supervisorId: await this.resolveSupervisor(
+        body.supervisorId,
+        body.department,
+      ),
       phone: body.phone || null,
       hireDate: body.hireDate ? new Date(body.hireDate) : null,
       probationMonths: body.probationMonths ?? 3,
@@ -368,7 +401,9 @@ export class EmployeeManagementService {
       await this.roleManagerService.addUserToEmployeeRole(body.id);
       this.logger.log(`Added user ${body.id} to 'employee' role`);
     } catch (err) {
-      this.logger.warn(`Failed to add user ${body.id} to 'employee' role: ${err}`);
+      this.logger.warn(
+        `Failed to add user ${body.id} to 'employee' role: ${err}`,
+      );
     }
 
     return { id: String(inserted.id) };
@@ -405,17 +440,17 @@ export class EmployeeManagementService {
       title: body.title || null,
       role: body.role || 'employee',
       department: body.department || '',
-      supervisorId: await this.resolveSupervisor(body.supervisorId, body.department),
+      supervisorId: await this.resolveSupervisor(
+        body.supervisorId,
+        body.department,
+      ),
       phone: body.phone || null,
       hireDate: body.hireDate ? new Date(body.hireDate) : null,
       probationMonths: body.probationMonths ?? 3,
       employeeNo: body.employeeNo || null,
     };
 
-    await this.db
-      .update(employee)
-      .set(values)
-      .where(eq(employee.id, id));
+    await this.db.update(employee).set(values).where(eq(employee.id, id));
 
     await this.db.insert(auditLog).values({
       operatorId: userId,
@@ -471,7 +506,12 @@ export class EmployeeManagementService {
     await this.db
       .update(employeeBinding)
       .set({ status: 'inactive' })
-      .where(and(eq(employeeBinding.employeeId, id), eq(employeeBinding.status, 'active')));
+      .where(
+        and(
+          eq(employeeBinding.employeeId, id),
+          eq(employeeBinding.status, 'active'),
+        ),
+      );
 
     await this.db
       .update(employee)
@@ -492,7 +532,12 @@ export class EmployeeManagementService {
     const rows = await this.db
       .select({ role: employee.role, permissions: employee.permissions })
       .from(employee)
-      .where(and(sql`(${employee.id}).user_id = ${userId}`, isNull(employee.deletedAt)))
+      .where(
+        and(
+          sql`(${employee.id}).user_id = ${userId}`,
+          isNull(employee.deletedAt),
+        ),
+      )
       .limit(1);
 
     if (rows.length === 0) {
@@ -505,7 +550,8 @@ export class EmployeeManagementService {
     if (!emp.permissions) {
       return {
         role,
-        permissions: (DEFAULT_PERMISSIONS as Record<string, unknown[]>)[role] || [],
+        permissions:
+          (DEFAULT_PERMISSIONS as Record<string, unknown[]>)[role] || [],
       };
     }
 
@@ -565,108 +611,42 @@ export class EmployeeManagementService {
   /**
    * 解析上级：优先使用指定的 supervisorId，否则根据部门查找部门负责人
    */
-  private async resolveSupervisor(supervisorId?: string, departmentName?: string): Promise<string | null> {
+  private async resolveSupervisor(
+    supervisorId?: string,
+    departmentName?: string,
+  ): Promise<string | null> {
     if (supervisorId) return supervisorId;
     if (departmentName) {
       const deptRows = await this.db
         .select({ headId: department.headId })
         .from(department)
-        .where(and(eq(department.name, departmentName), eq(department.isActive, true)))
+        .where(
+          and(
+            eq(department.name, departmentName),
+            eq(department.isActive, true),
+          ),
+        )
         .limit(1);
       if (deptRows.length > 0 && deptRows[0].headId) {
-        this.logger.log(`Auto-resolved supervisor from department "${departmentName}" head`);
+        this.logger.log(
+          `Auto-resolved supervisor from department "${departmentName}" head`,
+        );
         return deptRows[0].headId;
       }
     }
     return null;
   }
 
-
   async bind(
     body: CreateBindingRequest,
     userId: string,
   ): Promise<{ success: boolean }> {
-    // P1-2: 绑定前校验模板是否存在
-    const tplRows = await this.db
-      .select({ id: assessmentTemplate.id })
-      .from(assessmentTemplate)
-      .where(eq(assessmentTemplate.id, body.templateId))
-      .limit(1);
-    if (tplRows.length === 0) {
-      throw new NotFoundException(`考核模板 ${body.templateId} 不存在`);
-    }
-
-    for (const eId of body.employeeIds) {
-      // P1-2: 校验员工是否存在
-      const empRows = await this.db
-        .select({ id: employee.id })
-        .from(employee)
-        .where(and(eq(employee.id, eId), isNull(employee.deletedAt)))
-        .limit(1);
-      if (empRows.length === 0) {
-        throw new NotFoundException(`员工 ${eId} 不存在`);
-      }
-
-      const existing = await this.db
-        .select({ id: employeeBinding.id, templateId: employeeBinding.templateId })
-        .from(employeeBinding)
-        .where(
-          and(
-            eq(employeeBinding.employeeId, eId),
-            eq(employeeBinding.status, 'active'),
-          ),
-        );
-
-      if (existing.length > 0) {
-        await this.db
-          .update(employeeBinding)
-          .set({ status: 'inactive' })
-          .where(eq(employeeBinding.employeeId, eId));
-        this.logger.log(
-          `Deactivated existing bindings for employee: ${eId}`,
-        );
-      }
-
-      const [newBinding] = await this.db
-        .insert(employeeBinding)
-        .values({
-          employeeId: eId,
-          templateId: body.templateId,
-          effectiveFrom: body.effectiveFrom,
-          status: 'active',
-        })
-        .returning();
-
-      await this.db.insert(auditLog).values({
-        operatorId: userId,
-        action: 'bind',
-        targetType: 'employee_binding',
-        targetId: String(newBinding.id),
-        changes: {
-          after: {
-            templateId: body.templateId,
-            effectiveFrom: body.effectiveFrom,
-          },
-        },
-        reason: '员工模板绑定',
-      });
-
-      const oldTemplateId: string | null = existing.length > 0 ? existing[0].templateId : null;
-      if (oldTemplateId !== body.templateId) {
-        await this.employeeSnapshotService.deleteSnapshot(eId);
-        await this.employeeSnapshotService.generateFromTemplate(eId, body.templateId, userId);
-      } else {
-        const hasSnap: boolean = await this.employeeSnapshotService.hasSnapshot(eId);
-        if (!hasSnap) {
-          await this.employeeSnapshotService.generateFromTemplate(eId, body.templateId, userId);
-        }
-      }
-    }
-
-    this.logger.log(
-      `Created ${body.employeeIds.length} bindings for employees: ${body.employeeIds.join(', ')}`,
+    await this.bindingService.batchBind(
+      body.employeeIds,
+      body.templateId,
+      body.effectiveFrom,
+      userId,
     );
-
     return { success: true };
   }
 
@@ -674,82 +654,12 @@ export class EmployeeManagementService {
     employeeId: string,
     userId: string,
   ): Promise<{ success: boolean }> {
-    const existing = await this.db
-      .select({
-        id: employeeBinding.id,
-        status: employeeBinding.status,
-      })
-      .from(employeeBinding)
-      .where(
-        and(
-          eq(employeeBinding.employeeId, employeeId),
-          eq(employeeBinding.status, 'active'),
-        ),
-      );
-
-    if (existing.length === 0) {
-      this.logger.log(`No active binding found for employee: ${employeeId}`);
-      return { success: true };
-    }
-
-    for (const binding of existing) {
-      await this.db
-        .update(employeeBinding)
-        .set({ status: 'inactive' })
-        .where(eq(employeeBinding.id, String(binding.id)));
-
-      await this.db.insert(auditLog).values({
-        operatorId: userId,
-        action: 'unbind',
-        targetType: 'employee_binding',
-        targetId: String(binding.id),
-        changes: {
-          before: { status: binding.status },
-          after: { status: 'inactive' },
-        },
-        reason: '员工解绑',
-      });
-    }
-
-    this.logger.log(`Deactivated bindings for employee: ${employeeId}`);
-
-    return { success: true };
+    return this.bindingService.unbind(employeeId, userId);
   }
 
   async bindingHistory(
     employeeId: string,
   ): Promise<EmployeeBindingHistoryResponse> {
-    const items = await this.db
-      .select({
-        templateName: assessmentTemplate.name,
-        effectiveFrom: employeeBinding.effectiveFrom,
-        status: employeeBinding.status,
-        operatedByName: employee.name,
-        operatedAt: employeeBinding.createdAt,
-      })
-      .from(employeeBinding)
-      .innerJoin(
-        assessmentTemplate,
-        eq(employeeBinding.templateId, assessmentTemplate.id),
-      )
-      .leftJoin(
-        employee,
-        sql`(${employeeBinding.createdBy}).user_id = (${employee.id}).user_id`,
-      )
-      .where(eq(employeeBinding.employeeId, employeeId))
-      .orderBy(desc(employeeBinding.createdAt));
-
-    const mappedItems: BindingHistoryItem[] = items.map((item) => ({
-      templateName: item.templateName,
-      effectiveFrom: item.effectiveFrom,
-      status: item.status,
-      operatedBy: item.operatedByName || '',
-      operatedAt:
-        item.operatedAt instanceof Date
-          ? item.operatedAt.toISOString()
-          : String(item.operatedAt),
-    }));
-
-    return { items: mappedItems };
+    return this.bindingService.history(employeeId);
   }
 }

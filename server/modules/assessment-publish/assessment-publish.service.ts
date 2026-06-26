@@ -1,13 +1,35 @@
-import { Injectable, Inject, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
-import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@lark-apaas/fullstack-nestjs-core';
+import {
+  Injectable,
+  Inject,
+  Logger,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  DRIZZLE_DATABASE,
+  type PostgresJsDatabase,
+} from '@lark-apaas/fullstack-nestjs-core';
 import { CapabilityService } from '@lark-apaas/fullstack-nestjs-core';
-import { and, eq, lte, ne, count, desc, asc, sql, isNull, type SQL } from 'drizzle-orm';
+import {
+  and,
+  eq,
+  lte,
+  ne,
+  count,
+  desc,
+  asc,
+  sql,
+  isNull,
+  type SQL,
+} from 'drizzle-orm';
 import {
   employee,
   employeeBinding,
   assessmentTemplate,
   assessmentInstance,
   assessmentIndicatorSnapshot,
+  assessmentIndicator,
+  assessmentDimension,
   ratingRecord,
   auditLog,
 } from '@server/database/schema';
@@ -45,7 +67,9 @@ export class AssessmentPublishService {
     department: string,
     templateId: string,
   ): Promise<{ items: PublishEmployeeItem[] }> {
-    this.logger.log(`listEmployees period=${period} department=${department} templateId=${templateId}`);
+    this.logger.log(
+      `listEmployees period=${period} department=${department} templateId=${templateId}`,
+    );
     if (!period) {
       return { items: [] };
     }
@@ -53,6 +77,8 @@ export class AssessmentPublishService {
       eq(employeeBinding.status, 'active'),
       lte(employeeBinding.effectiveFrom, period),
       isNull(employee.deletedAt),
+      eq(employee.status, 'active'),
+      eq(assessmentTemplate.isActive, true),
       sql`NOT EXISTS (SELECT 1 FROM ${assessmentInstance} WHERE (${assessmentInstance.employeeId}).user_id = (${employeeBinding.employeeId}).user_id AND ${assessmentInstance.period} = ${period})`,
     ];
     if (department) {
@@ -72,28 +98,39 @@ export class AssessmentPublishService {
       })
       .from(employeeBinding)
       .innerJoin(employee, eq(employeeBinding.employeeId, employee.id))
-      .innerJoin(assessmentTemplate, eq(employeeBinding.templateId, assessmentTemplate.id))
+      .innerJoin(
+        assessmentTemplate,
+        eq(employeeBinding.templateId, assessmentTemplate.id),
+      )
       .where(and(...conditions));
 
-    const items: PublishEmployeeItem[] = rows.map((row: typeof rows[number]) => ({
-      employeeId: row.employeeId,
-      employeeName: row.employeeName,
-      position: row.position,
-      department: row.department,
-      templateId: row.templateId,
-      templateName: row.templateName,
-    }));
+    const items: PublishEmployeeItem[] = rows.map(
+      (row: (typeof rows)[number]) => ({
+        employeeId: row.employeeId,
+        employeeName: row.employeeName,
+        position: row.position,
+        department: row.department,
+        templateId: row.templateId,
+        templateName: row.templateName,
+      }),
+    );
 
     return { items };
   }
 
-  async publish(body: PublishRequest, userId: string): Promise<PublishResponse> {
+  async publish(
+    body: PublishRequest,
+    userId: string,
+  ): Promise<PublishResponse> {
     const { period, employeeIds } = body;
-    this.logger.log(`publish period=${period} employeeIds=${JSON.stringify(employeeIds)}`);
+    this.logger.log(
+      `publish period=${period} employeeIds=${JSON.stringify(employeeIds)}`,
+    );
 
-    const targetEmployeeIds: string[] = employeeIds && employeeIds.length > 0
-      ? employeeIds
-      : await this.getEmployeeIdsForPeriod(period);
+    const targetEmployeeIds: string[] =
+      employeeIds && employeeIds.length > 0
+        ? employeeIds
+        : await this.getEmployeeIdsForPeriod(period);
 
     if (targetEmployeeIds.length === 0) {
       throw new BadRequestException('没有符合条件的员工可发布');
@@ -101,7 +138,12 @@ export class AssessmentPublishService {
 
     const publishedAt: Date = new Date();
     let publishedCount: number = 0;
-    const publishedInstances: Array<{ employeeId: string; instanceId: string; employeeName: string; period: string }> = [];
+    const publishedInstances: Array<{
+      employeeId: string;
+      instanceId: string;
+      employeeName: string;
+      period: string;
+    }> = [];
 
     for (const empId of targetEmployeeIds) {
       // === P0: 防止重复发布（同员工同月份） ===
@@ -117,7 +159,9 @@ export class AssessmentPublishService {
         .limit(1);
 
       if (existingInstances.length > 0) {
-        this.logger.log(`skip employee ${empId}: already has instance for period ${period}`);
+        this.logger.log(
+          `skip employee ${empId}: already has instance for period ${period}`,
+        );
         continue;
       }
 
@@ -134,7 +178,9 @@ export class AssessmentPublishService {
         .limit(1);
 
       if (bindingRows.length === 0) {
-        this.logger.log(`skip employee ${empId}: no active binding for period ${period}`);
+        this.logger.log(
+          `skip employee ${empId}: no active binding for period ${period}`,
+        );
         continue;
       }
 
@@ -142,13 +188,25 @@ export class AssessmentPublishService {
       const templateId: string = binding.templateId;
 
       const templateRows = await this.db
-        .select()
+        .select({
+          id: assessmentTemplate.id,
+          isActive: assessmentTemplate.isActive,
+        })
         .from(assessmentTemplate)
         .where(eq(assessmentTemplate.id, templateId))
         .limit(1);
 
       if (templateRows.length === 0) {
-        this.logger.log(`skip employee ${empId}: template ${templateId} not found`);
+        this.logger.log(
+          `skip employee ${empId}: template ${templateId} not found`,
+        );
+        continue;
+      }
+
+      if (!templateRows[0].isActive) {
+        this.logger.warn(
+          `skip employee ${empId}: template ${templateId} is inactive`,
+        );
         continue;
       }
 
@@ -164,39 +222,89 @@ export class AssessmentPublishService {
       }
 
       const empRecord = empRows[0];
+
+      if (empRecord.status !== 'active') {
+        this.logger.warn(
+          `skip employee ${empId}: employee status is '${empRecord.status}'`,
+        );
+        continue;
+      }
+
+      if (!empRecord.supervisorId) {
+        this.logger.warn(
+          `employee ${empId} has no supervisor — supervisor review will be blocked`,
+        );
+      }
+
+      // 检查模板是否有指标
+      const indicatorCountResult = await this.db
+        .select({ cnt: sql<number>`count(*)::int` })
+        .from(assessmentIndicator)
+        .innerJoin(
+          assessmentDimension,
+          eq(assessmentIndicator.dimensionId, assessmentDimension.id),
+        )
+        .where(eq(assessmentDimension.templateId, templateId));
+
+      if (Number(indicatorCountResult[0]?.cnt ?? 0) === 0) {
+        this.logger.warn(
+          `employee ${empId}: template ${templateId} has no indicators`,
+        );
+      }
       const empPosition: string = empRecord.position;
       const empSupervisorId: string | null = empRecord.supervisorId;
 
-      const [instance] = await this.db
-        .insert(assessmentInstance)
-        .values({
-          period,
-          employeeId: empId,
-          supervisorId: empSupervisorId,
-          position: empPosition,
-          templateId,
-          status: 'self_review',
-          publishedBy: userId,
-          publishedAt,
-        })
-        .returning({ id: assessmentInstance.id });
+      // 每员工事务：确保 instance + snapshot + auditLog 原子性
+      const instanceId = await this.db.transaction(async (tx) => {
+        const [instance] = await tx
+          .insert(assessmentInstance)
+          .values({
+            period,
+            employeeId: empId,
+            supervisorId: empSupervisorId,
+            position: empPosition,
+            templateId,
+            status: 'self_review',
+            publishedBy: userId,
+            publishedAt,
+          })
+          .returning({ id: assessmentInstance.id });
 
-      const instanceId: string = instance.id;
+        const iid: string = instance.id;
 
-      const hasSnap: boolean = await this.employeeSnapshotService.hasSnapshot(empId);
-      if (hasSnap) {
-        await this.employeeSnapshotService.copyToInstance(empId, instanceId);
-      } else {
-        await this.employeeSnapshotService.generateFromTemplate(empId, templateId, userId);
-        await this.employeeSnapshotService.copyToInstance(empId, instanceId);
-      }
+        const hasSnap: boolean = await this.employeeSnapshotService.hasSnapshot(
+          empId,
+          tx as any,
+        );
+        if (hasSnap) {
+          await this.employeeSnapshotService.copyToInstance(
+            empId,
+            iid,
+            tx as any,
+          );
+        } else {
+          await this.employeeSnapshotService.generateFromTemplate(
+            empId,
+            templateId,
+            userId,
+            tx as any,
+          );
+          await this.employeeSnapshotService.copyToInstance(
+            empId,
+            iid,
+            tx as any,
+          );
+        }
 
-      await this.db.insert(auditLog).values({
-        operatorId: userId,
-        action: 'publish',
-        targetType: 'assessment_instance',
-        targetId: instanceId,
-        changes: { period, employeeId: empId, templateId },
+        await tx.insert(auditLog).values({
+          operatorId: userId,
+          action: 'publish',
+          targetType: 'assessment_instance',
+          targetId: iid,
+          changes: { period, employeeId: empId, templateId },
+        });
+
+        return iid;
       });
 
       publishedCount++;
@@ -219,9 +327,13 @@ export class AssessmentPublishService {
               receiverUserList: [pi.employeeId],
               cardContentMarkdown: message,
             });
-          this.logger.log(`Published notification sent to ${pi.employeeName} (${pi.employeeId})`);
+          this.logger.log(
+            `Published notification sent to ${pi.employeeName} (${pi.employeeId})`,
+          );
         } catch (err) {
-          this.logger.warn(`Failed to send notification to ${pi.employeeName}: ${err}`);
+          this.logger.warn(
+            `Failed to send notification to ${pi.employeeName}: ${err}`,
+          );
         }
       }
     }
@@ -244,7 +356,10 @@ export class AssessmentPublishService {
     if (!period) {
       return { items: [], total: 0 };
     }
-    const conditions: SQL[] = [eq(assessmentInstance.period, period), isNull(employee.deletedAt)];
+    const conditions: SQL[] = [
+      eq(assessmentInstance.period, period),
+      isNull(employee.deletedAt),
+    ];
     if (status) {
       conditions.push(eq(assessmentInstance.status, status));
     }
@@ -289,23 +404,25 @@ export class AssessmentPublishService {
       .limit(ps)
       .offset(offset);
 
-    const items: AssessmentInstanceItem[] = rows.map((row: typeof rows[number]) => ({
-      id: row.id,
-      employeeId: row.employeeId,
-      employeeName: row.employeeName,
-      department: row.department,
-      position: row.position,
-      supervisorId: row.supervisorId ?? undefined,
-      supervisorName: row.supervisorName,
-      status: row.status,
-      totalScore: row.totalScore ? Number(row.totalScore) : undefined,
-      grade: row.grade ?? undefined,
-      publishedAt: row.publishedAt ? String(row.publishedAt) : '',
-      publishedById: row.publishedById ?? undefined,
-      publishedByName: row.publishedByName,
-      selfReviewCompleted: row.selfReviewSubmitted,
-      supervisorReviewCompleted: row.supervisorReviewSubmitted,
-    }));
+    const items: AssessmentInstanceItem[] = rows.map(
+      (row: (typeof rows)[number]) => ({
+        id: row.id,
+        employeeId: row.employeeId,
+        employeeName: row.employeeName,
+        department: row.department,
+        position: row.position,
+        supervisorId: row.supervisorId ?? undefined,
+        supervisorName: row.supervisorName,
+        status: row.status,
+        totalScore: row.totalScore ? Number(row.totalScore) : undefined,
+        grade: row.grade ?? undefined,
+        publishedAt: row.publishedAt ? String(row.publishedAt) : '',
+        publishedById: row.publishedById ?? undefined,
+        publishedByName: row.publishedByName,
+        selfReviewCompleted: row.selfReviewSubmitted,
+        supervisorReviewCompleted: row.supervisorReviewSubmitted,
+      }),
+    );
 
     return { items, total };
   }
@@ -357,7 +474,9 @@ export class AssessmentPublishService {
     body: UnlockRequest,
     userId: string,
   ): Promise<{ success: boolean }> {
-    this.logger.log(`unlock instanceId=${instanceId} reason=${body.reason} userId=${userId}`);
+    this.logger.log(
+      `unlock instanceId=${instanceId} reason=${body.reason} userId=${userId}`,
+    );
 
     const instanceRows = await this.db
       .select()
@@ -370,17 +489,22 @@ export class AssessmentPublishService {
     }
 
     const instance = instanceRows[0];
-    const statusMap: Record<string, { newStatus: string; resetRatingType?: string; clearSigns?: 'all' }> = {
+    const statusMap: Record<
+      string,
+      { newStatus: string; resetRatingType?: string; clearSigns?: 'all' }
+    > = {
       completed: { newStatus: 'pending_sign', clearSigns: 'all' },
-      pending_sign: { newStatus: 'supervisor_review', resetRatingType: 'supervisor', clearSigns: 'all' },
+      pending_sign: {
+        newStatus: 'supervisor_review',
+        resetRatingType: 'supervisor',
+        clearSigns: 'all',
+      },
       supervisor_review: { newStatus: 'self_review', resetRatingType: 'self' },
     };
 
     const mapped = statusMap[instance.status];
     if (!mapped) {
-      throw new BadRequestException(
-        `当前状态 ${instance.status} 不允许解锁`,
-      );
+      throw new BadRequestException(`当前状态 ${instance.status} 不允许解锁`);
     }
 
     // P1: 解锁时重置对应评分的草稿状态
@@ -399,7 +523,15 @@ export class AssessmentPublishService {
         );
     }
 
-    const updateData: { status: string; selfSignName?: null; selfSignAt?: null; selfSignImage?: null; supervisorSignName?: null; supervisorSignAt?: null; supervisorSignImage?: null } = {
+    const updateData: {
+      status: string;
+      selfSignName?: null;
+      selfSignAt?: null;
+      selfSignImage?: null;
+      supervisorSignName?: null;
+      supervisorSignAt?: null;
+      supervisorSignImage?: null;
+    } = {
       status: mapped.newStatus,
     };
     if (mapped.clearSigns === 'all') {
@@ -442,32 +574,36 @@ export class AssessmentPublishService {
         operatorName: employee.name,
       })
       .from(auditLog)
-      .leftJoin(employee, sql`(${auditLog.operatorId}).user_id = (${employee.id}).user_id`)
-      .where(and(
-        eq(auditLog.targetId, instanceId),
-        eq(auditLog.action, 'unlock'),
-      ))
+      .leftJoin(
+        employee,
+        sql`(${auditLog.operatorId}).user_id = (${employee.id}).user_id`,
+      )
+      .where(
+        and(eq(auditLog.targetId, instanceId), eq(auditLog.action, 'unlock')),
+      )
       .orderBy(desc(auditLog.createdAt));
 
-    return rows.map((row: {
-      id: string;
-      operatorId: string;
-      action: string;
-      changes: unknown;
-      reason: string | null;
-      createdAt: Date;
-      operatorName: string | null;
-    }): UnlockHistoryItem => {
-      const changes = (row.changes as { from?: string; to?: string }) ?? {};
-      return {
-        id: row.id,
-        operatorName: row.operatorName ?? '未知',
-        fromStatus: changes.from ?? '',
-        toStatus: changes.to ?? '',
-        reason: row.reason ?? '',
-        createdAt: row.createdAt.toISOString(),
-      };
-    });
+    return rows.map(
+      (row: {
+        id: string;
+        operatorId: string;
+        action: string;
+        changes: unknown;
+        reason: string | null;
+        createdAt: Date;
+        operatorName: string | null;
+      }): UnlockHistoryItem => {
+        const changes = (row.changes as { from?: string; to?: string }) ?? {};
+        return {
+          id: row.id,
+          operatorName: row.operatorName ?? '未知',
+          fromStatus: changes.from ?? '',
+          toStatus: changes.to ?? '',
+          reason: row.reason ?? '',
+          createdAt: row.createdAt.toISOString(),
+        };
+      },
+    );
   }
 
   async getPeriodStatistics(period: string): Promise<PeriodStatisticsResponse> {
@@ -491,13 +627,19 @@ export class AssessmentPublishService {
           lte(employeeBinding.effectiveFrom, period),
         ),
       );
-    const bindingCount: number = parseInt(String(bindingCountResult[0]?.count ?? '0'), 10);
+    const bindingCount: number = parseInt(
+      String(bindingCountResult[0]?.count ?? '0'),
+      10,
+    );
 
     const publishedCountResult = await this.db
       .select({ count: count() })
       .from(assessmentInstance)
       .where(eq(assessmentInstance.period, period));
-    const publishedCount: number = parseInt(String(publishedCountResult[0]?.count ?? '0'), 10);
+    const publishedCount: number = parseInt(
+      String(publishedCountResult[0]?.count ?? '0'),
+      10,
+    );
 
     const toPublishCount: number = Math.max(0, bindingCount - publishedCount);
 
@@ -512,8 +654,13 @@ export class AssessmentPublishService {
             sql`(${assessmentInstance.status} NOT IN ('self_review', 'draft') OR EXISTS(SELECT 1 FROM ${ratingRecord} WHERE ${ratingRecord.instanceId} = ${assessmentInstance.id} AND ${ratingRecord.ratingType} = 'self' AND ${ratingRecord.isDraft} = false))`,
           ),
         );
-      const selfReviewCompleted: number = parseInt(String(selfReviewCompletedResult[0]?.count ?? '0'), 10);
-      selfReviewCompletedRate = Math.round((selfReviewCompleted / publishedCount) * 100);
+      const selfReviewCompleted: number = parseInt(
+        String(selfReviewCompletedResult[0]?.count ?? '0'),
+        10,
+      );
+      selfReviewCompletedRate = Math.round(
+        (selfReviewCompleted / publishedCount) * 100,
+      );
     }
 
     const pendingCountResult = await this.db
@@ -525,7 +672,10 @@ export class AssessmentPublishService {
           ne(assessmentInstance.status, 'completed'),
         ),
       );
-    const pendingCount: number = parseInt(String(pendingCountResult[0]?.count ?? '0'), 10);
+    const pendingCount: number = parseInt(
+      String(pendingCountResult[0]?.count ?? '0'),
+      10,
+    );
 
     return {
       toPublishCount,
@@ -535,7 +685,9 @@ export class AssessmentPublishService {
     };
   }
 
-  async getInstanceIndicators(instanceId: string): Promise<InstanceIndicatorsResponse> {
+  async getInstanceIndicators(
+    instanceId: string,
+  ): Promise<InstanceIndicatorsResponse> {
     this.logger.log(`getInstanceIndicators instanceId=${instanceId}`);
     const rows = await this.db
       .select({
@@ -552,15 +704,17 @@ export class AssessmentPublishService {
       .where(eq(assessmentIndicatorSnapshot.instanceId, instanceId))
       .orderBy(asc(assessmentIndicatorSnapshot.sortOrder));
 
-    const indicators: InstanceIndicatorItem[] = rows.map((row: typeof rows[number]) => ({
-      content: row.content,
-      description: row.description ?? '',
-      algorithm: row.algorithm ?? '',
-      dataSource: row.dataSource ?? '',
-      weight: Number(row.weight),
-      dimensionName: row.dimensionName,
-      dimensionWeight: Number(row.dimensionWeight),
-    }));
+    const indicators: InstanceIndicatorItem[] = rows.map(
+      (row: (typeof rows)[number]) => ({
+        content: row.content,
+        description: row.description ?? '',
+        algorithm: row.algorithm ?? '',
+        dataSource: row.dataSource ?? '',
+        weight: Number(row.weight),
+        dimensionName: row.dimensionName,
+        dimensionWeight: Number(row.dimensionWeight),
+      }),
+    );
 
     return { indicators };
   }
@@ -570,7 +724,9 @@ export class AssessmentPublishService {
     reason: string,
     userId: string,
   ): Promise<BatchOperationResponse> {
-    this.logger.log(`batchUnlock instanceIds=${JSON.stringify(instanceIds)} reason=${reason} userId=${userId}`);
+    this.logger.log(
+      `batchUnlock instanceIds=${JSON.stringify(instanceIds)} reason=${reason} userId=${userId}`,
+    );
 
     let successCount: number = 0;
     let failedCount: number = 0;
@@ -590,15 +746,27 @@ export class AssessmentPublishService {
         }
 
         const instance = instanceRows[0];
-        const statusMap: Record<string, { newStatus: string; resetRatingType?: string; clearSigns?: 'all' }> = {
+        const statusMap: Record<
+          string,
+          { newStatus: string; resetRatingType?: string; clearSigns?: 'all' }
+        > = {
           completed: { newStatus: 'pending_sign', clearSigns: 'all' },
-          pending_sign: { newStatus: 'supervisor_review', resetRatingType: 'supervisor', clearSigns: 'all' },
-          supervisor_review: { newStatus: 'self_review', resetRatingType: 'self' },
+          pending_sign: {
+            newStatus: 'supervisor_review',
+            resetRatingType: 'supervisor',
+            clearSigns: 'all',
+          },
+          supervisor_review: {
+            newStatus: 'self_review',
+            resetRatingType: 'self',
+          },
         };
 
         const mapped = statusMap[instance.status];
         if (!mapped) {
-          this.logger.warn(`batchUnlock: instance ${instanceId} status ${instance.status} not unlockable`);
+          this.logger.warn(
+            `batchUnlock: instance ${instanceId} status ${instance.status} not unlockable`,
+          );
           failedCount++;
           continue;
         }
@@ -618,7 +786,15 @@ export class AssessmentPublishService {
             );
         }
 
-        const batchUpdateData: { status: string; selfSignName?: null; selfSignAt?: null; selfSignImage?: null; supervisorSignName?: null; supervisorSignAt?: null; supervisorSignImage?: null } = {
+        const batchUpdateData: {
+          status: string;
+          selfSignName?: null;
+          selfSignAt?: null;
+          selfSignImage?: null;
+          supervisorSignName?: null;
+          supervisorSignAt?: null;
+          supervisorSignImage?: null;
+        } = {
           status: mapped.newStatus,
         };
         if (mapped.clearSigns === 'all') {
@@ -646,7 +822,9 @@ export class AssessmentPublishService {
 
         successCount++;
       } catch (err) {
-        this.logger.warn(`batchUnlock: failed for instance ${instanceId}: ${err}`);
+        this.logger.warn(
+          `batchUnlock: failed for instance ${instanceId}: ${err}`,
+        );
         failedCount++;
       }
     }
@@ -662,7 +840,9 @@ export class AssessmentPublishService {
     instanceIds: string[],
     userId: string,
   ): Promise<BatchOperationResponse> {
-    this.logger.log(`batchResendNotification instanceIds=${JSON.stringify(instanceIds)} userId=${userId}`);
+    this.logger.log(
+      `batchResendNotification instanceIds=${JSON.stringify(instanceIds)} userId=${userId}`,
+    );
 
     let successCount: number = 0;
     let failedCount: number = 0;
@@ -679,7 +859,9 @@ export class AssessmentPublishService {
           .limit(1);
 
         if (instanceRows.length === 0) {
-          this.logger.warn(`batchResendNotification: instance ${instanceId} not found`);
+          this.logger.warn(
+            `batchResendNotification: instance ${instanceId} not found`,
+          );
           failedCount++;
           continue;
         }
@@ -695,10 +877,14 @@ export class AssessmentPublishService {
             cardContentMarkdown: `**考核提醒通知**\n\n${period} 月度考核正在进行中，请尽快完成。`,
           });
 
-        this.logger.log(`batchResendNotification: sent for instance ${instanceId} to employee ${empId}`);
+        this.logger.log(
+          `batchResendNotification: sent for instance ${instanceId} to employee ${empId}`,
+        );
         successCount++;
       } catch (err) {
-        this.logger.warn(`batchResendNotification: failed for instance ${instanceId}: ${err}`);
+        this.logger.warn(
+          `batchResendNotification: failed for instance ${instanceId}: ${err}`,
+        );
         failedCount++;
       }
     }
@@ -720,9 +906,10 @@ export class AssessmentPublishService {
           eq(employeeBinding.status, 'active'),
           lte(employeeBinding.effectiveFrom, period),
           isNull(employee.deletedAt),
+          eq(employee.status, 'active'),
         ),
       );
 
-    return rows.map((r: typeof rows[number]) => r.employeeId);
+    return rows.map((r: (typeof rows)[number]) => r.employeeId);
   }
 }

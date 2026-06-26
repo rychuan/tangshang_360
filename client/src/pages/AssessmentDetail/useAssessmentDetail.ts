@@ -15,8 +15,7 @@ export function useAssessmentDetail(
   isSupervisorView: boolean,
   currentUserId: string | undefined,
 ) {
-  const [detail, setDetail] =
-    useState<AssessmentInstanceDetail | null>(null);
+  const [detail, setDetail] = useState<AssessmentInstanceDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -51,8 +50,7 @@ export function useAssessmentDetail(
       }
       setRatings(initial);
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : '加载失败';
+      const msg = err instanceof Error ? err.message : '加载失败';
       logger.error('Failed to fetch detail:', msg);
       setError(msg);
     } finally {
@@ -64,25 +62,23 @@ export function useAssessmentDetail(
     fetchDetail();
   }, [fetchDetail]);
 
-  const isEmployee: boolean =
-    !isSupervisorView &&
-    !!currentUserId &&
-    !!detail &&
-    currentUserId === detail.employeeId;
-  const isSupervisor: boolean =
-    !!currentUserId &&
-    !!detail &&
-    currentUserId === detail.supervisorId &&
-    (isSupervisorView || !isEmployee);
+  const isEmployeeCandidate =
+    !!currentUserId && !!detail && currentUserId === detail.employeeId;
+  const isSupervisorCandidate =
+    !!currentUserId && !!detail && currentUserId === detail.supervisorId;
 
-  const canEditSelf: boolean =
-    detail?.status === 'self_review' && isEmployee;
+  // 员工身份仅基于 identity 匹配，不受 ?view 参数影响
+  const isEmployee: boolean = isEmployeeCandidate;
+  // 上级身份：是上级 AND (显式要求上级视角 OR 不是被考核人本人)
+  // 这样当员工本人误加 ?view=supervisor 时不会锁死入口
+  const isSupervisor: boolean =
+    isSupervisorCandidate && (isSupervisorView || !isEmployeeCandidate);
+
+  const canEditSelf: boolean = detail?.status === 'self_review' && isEmployee;
   const canEditSupervisor: boolean =
     detail?.status === 'supervisor_review' && isSupervisor;
   const canSignSelf: boolean =
-    detail?.status === 'pending_sign' &&
-    isEmployee &&
-    !detail.selfSignName;
+    detail?.status === 'pending_sign' && isEmployee && !detail.selfSignName;
   const canSignSupervisor: boolean =
     detail?.status === 'pending_sign' &&
     isSupervisor &&
@@ -123,7 +119,7 @@ export function useAssessmentDetail(
           ...prev[indicatorId],
           [field]:
             field === 'score'
-              ? Math.min(Number(value) || 0, weight ?? Infinity)
+              ? Math.min(Number(value) || 0, weight ?? 100)
               : value,
         },
       }));
@@ -143,8 +139,7 @@ export function useAssessmentDetail(
       }
       toast.success('草稿已保存');
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : '保存失败';
+      const msg = err instanceof Error ? err.message : '保存失败';
       logger.error('Save draft failed:', msg);
       toast.error(msg);
     } finally {
@@ -161,16 +156,17 @@ export function useAssessmentDetail(
         await assessmentOperation.submitSelfRating(id, body);
         toast.success('自评已提交');
       } else if (detail.status === 'supervisor_review') {
-        const result =
-          await assessmentOperation.submitSupervisorRating(id, body);
+        const result = await assessmentOperation.submitSupervisorRating(
+          id,
+          body,
+        );
         toast.success(
           `评分已提交，总分 ${result.totalScore}，等级 ${result.grade}`,
         );
       }
       await fetchDetail();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : '提交失败';
+      const msg = err instanceof Error ? err.message : '提交失败';
       logger.error('Submit failed:', msg);
       toast.error(msg);
     } finally {
