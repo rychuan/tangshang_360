@@ -4,7 +4,7 @@ import {
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
 import { eq, isNull, count, and } from 'drizzle-orm';
-import { sql, type SQL } from 'drizzle-orm';
+import { sql, type SQL, type Column } from 'drizzle-orm';
 import { employee } from '@server/database/schema';
 
 /**
@@ -105,7 +105,7 @@ export class EmployeeRepository {
    * 生成员工名称解析子查询。
    * 消除 8+ 处重复的 `(SELECT name FROM employee sup WHERE (sup.id).user_id = ...)` 模式。
    */
-  nameSubquery(refColumn: SQL): SQL {
+  nameSubquery(refColumn: Column | SQL): SQL {
     return sql<string>`(SELECT e.name FROM ${employee} e
       WHERE (e.id).user_id = (${refColumn}).user_id
         AND e.${employee.deletedAt} IS NULL
@@ -116,7 +116,7 @@ export class EmployeeRepository {
    * 生成 userProfile 复合类型的 JOIN 条件。
    * 消除散布各处的 `(${left}).user_id = (${right}).user_id` 模式。
    */
-  joinOnUserId(leftCol: SQL, rightCol: SQL): SQL {
+  joinOnUserId(leftCol: Column | SQL, rightCol: Column | SQL): SQL {
     return sql`(${leftCol}).user_id = (${rightCol}).user_id`;
   }
 }

@@ -59,63 +59,63 @@ const chartConfig = {
   score: { label: '考核均分', color: 'hsl(var(--chart-2))' },
 };
 
-const myAssessmentColumns: PageTableColumn<MyAssessmentRecordItem>[] = [
-  { key: 'period', header: '考核周期', render: (item) => item.period },
-  { key: 'position', header: '岗位', render: (item) => item.position },
-  {
-    key: 'totalScore',
-    header: '总分',
-    align: 'right',
-    render: (item) => (item.totalScore != null ? item.totalScore : '-'),
-  },
-  {
-    key: 'grade',
-    header: '等级',
-    align: 'center',
-    render: (item) => (item.grade ? <GradeBadge grade={item.grade} /> : '-'),
-  },
-  {
-    key: 'status',
-    header: '状态',
-    render: (item) => <StatusBadge status={item.status} />,
-  },
-  {
-    key: 'signStatus',
-    header: '签名状态',
-    render: (item) => (
-      <div className="flex items-center gap-1">
-        {signBadge('自评', item.selfSignAt)}
-        {signBadge('上级', item.supervisorSignAt)}
-      </div>
-    ),
-  },
-  {
-    key: 'completedAt',
-    header: '完成时间',
-    render: (item) =>
-      item.completedAt
-        ? new Date(item.completedAt).toLocaleString('zh-CN')
-        : '-',
-  },
-  {
-    key: 'actions',
-    header: '操作',
-    render: (item) => (
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => navigate(`/assessment/${item.id}`)}
-      >
-        <Eye className="size-4 mr-2" />
-        查看详情
-      </Button>
-    ),
-  },
-];
-
 const MyAssessmentsPage: React.FC = () => {
   const userInfo = useCurrentUserProfile();
   const navigate = useNavigate();
+
+  const myAssessmentColumns: PageTableColumn<MyAssessmentRecordItem>[] = [
+    { key: 'period', header: '考核周期', render: (item) => item.period },
+    { key: 'position', header: '岗位', render: (item) => item.position },
+    {
+      key: 'totalScore',
+      header: '总分',
+      align: 'right',
+      render: (item) => (item.totalScore != null ? item.totalScore : '-'),
+    },
+    {
+      key: 'grade',
+      header: '等级',
+      align: 'center',
+      render: (item) => (item.grade ? <GradeBadge grade={item.grade} /> : '-'),
+    },
+    {
+      key: 'status',
+      header: '状态',
+      render: (item) => <StatusBadge status={item.status} />,
+    },
+    {
+      key: 'signStatus',
+      header: '签名状态',
+      render: (item) => (
+        <div className="flex items-center gap-1">
+          {signBadge('自评', item.selfSignAt)}
+          {signBadge('上级', item.supervisorSignAt)}
+        </div>
+      ),
+    },
+    {
+      key: 'completedAt',
+      header: '完成时间',
+      render: (item) =>
+        item.completedAt
+          ? new Date(item.completedAt).toLocaleString('zh-CN')
+          : '-',
+    },
+    {
+      key: 'actions',
+      header: '操作',
+      render: (item) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate(`/assessment/${item.id}`)}
+        >
+          <Eye className="size-4 mr-2" />
+          查看详情
+        </Button>
+      ),
+    },
+  ];
 
   const [records, setRecords] = useState<MyAssessmentRecordItem[]>([]);
   const [total, setTotal] = useState<number>(0);

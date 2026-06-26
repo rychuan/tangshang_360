@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type Dispatch, type SetStateAction } from 'react';
 import { employeeManagement } from '@/api';
 import { assessmentTemplate as templateApi } from '@/api';
 import type {
@@ -17,7 +17,7 @@ interface UseEmployeeListReturn {
   positions: string[];
   templates: AssessmentTemplateItem[];
   selectedRowKeys: string[];
-  setSelectedRowKeys: (keys: string[]) => void;
+  setSelectedRowKeys: Dispatch<SetStateAction<string[]>>;
   refetch: () => void;
 }
 

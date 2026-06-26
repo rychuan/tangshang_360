@@ -29,7 +29,7 @@ import {
   FilterBar,
   FilterBarActions,
 } from '@/components/business-ui/filter-bar';
-import { PageTable } from '@/components/business-ui/page-table';
+import { PageTable, PageTableColumn } from '@/components/business-ui/page-table';
 import TemplateFormDialog from './TemplateFormDialog';
 import TemplatePreviewDialog from './TemplatePreviewDialog';
 import * as assessmentTemplateApi from '@client/src/api/assessment-template';

@@ -56,7 +56,7 @@ const ALIGN_CLASSES: Record<string, string> = {
   right: 'text-right',
 };
 
-function PageTable<T extends Record<string, unknown>>({
+function PageTable<T>({
   columns,
   data,
   loading = false,
