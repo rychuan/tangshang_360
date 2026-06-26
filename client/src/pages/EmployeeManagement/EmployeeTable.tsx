@@ -67,7 +67,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="w-full text-sm table-fixed">
         <thead>
           <tr className="border-b bg-muted/30">
             <th className="h-10 px-3 sm:px-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap w-[40px]">
@@ -76,15 +76,15 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
                 onCheckedChange={toggleAll}
               />
             </th>
-            <th className="h-10 px-3 sm:px-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">姓名</th>
-            <th className="h-10 px-3 sm:px-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap hidden sm:table-cell">编号</th>
-            <th className="h-10 px-3 sm:px-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap hidden md:table-cell">岗位</th>
-            <th className="h-10 px-3 sm:px-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap hidden lg:table-cell">部门</th>
-            <th className="h-10 px-3 sm:px-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap hidden lg:table-cell">上级</th>
-            <th className="h-10 px-3 sm:px-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap hidden md:table-cell">角色</th>
-            <th className="h-10 px-3 sm:px-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap hidden lg:table-cell">模板</th>
-            <th className="h-10 px-3 sm:px-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">状态</th>
-            <th className="h-10 px-3 sm:px-4 text-right align-middle font-medium text-muted-foreground whitespace-nowrap">操作</th>
+            <th className="h-10 px-3 sm:px-4 text-left align-middle font-medium text-muted-foreground">姓名</th>
+            <th className="h-10 px-3 sm:px-4 text-left align-middle font-medium text-muted-foreground hidden sm:table-cell w-[80px]">编号</th>
+            <th className="h-10 px-3 sm:px-4 text-left align-middle font-medium text-muted-foreground hidden md:table-cell">岗位</th>
+            <th className="h-10 px-3 sm:px-4 text-left align-middle font-medium text-muted-foreground hidden lg:table-cell">部门</th>
+            <th className="h-10 px-3 sm:px-4 text-left align-middle font-medium text-muted-foreground hidden lg:table-cell">上级</th>
+            <th className="h-10 px-3 sm:px-4 text-left align-middle font-medium text-muted-foreground hidden md:table-cell w-[90px]">角色</th>
+            <th className="h-10 px-3 sm:px-4 text-left align-middle font-medium text-muted-foreground hidden lg:table-cell">模板</th>
+            <th className="h-10 px-3 sm:px-4 text-left align-middle font-medium text-muted-foreground w-[70px]">状态</th>
+            <th className="h-10 px-3 sm:px-4 text-right align-middle font-medium text-muted-foreground w-[140px]">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -127,8 +127,8 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
                   <UserDisplay userId={emp.id} size="small" />
                 </td>
                 <td className="py-2.5 px-3 sm:px-4 text-muted-foreground hidden sm:table-cell">{emp.employeeNo || '-'}</td>
-                <td className="py-2.5 px-3 sm:px-4 hidden md:table-cell">{emp.position}</td>
-                <td className="py-2.5 px-3 sm:px-4 text-muted-foreground hidden lg:table-cell">{emp.department || '-'}</td>
+                <td className="py-2.5 px-3 sm:px-4 hidden md:table-cell truncate">{emp.position}</td>
+                <td className="py-2.5 px-3 sm:px-4 text-muted-foreground hidden lg:table-cell truncate">{emp.department || '-'}</td>
                 <td className="py-2.5 px-3 sm:px-4 hidden lg:table-cell">
                   {emp.supervisorId ? (
                     <UserDisplay userId={emp.supervisorId} size="small" />
