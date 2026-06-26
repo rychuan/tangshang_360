@@ -232,18 +232,26 @@ const MyAssessmentsPage: React.FC = () => {
       title: '考核总数',
       value: summary ? String(summary.totalCount) : '-',
       icon: ClipboardList,
+      colorClass: 'bg-primary/10 text-primary',
     },
     {
       title: '已完成',
       value: summary ? String(summary.completedCount) : '-',
       icon: CheckCircle2,
+      colorClass: 'bg-success/10 text-success',
     },
     {
       title: '平均得分',
       value: summary?.avgScore != null ? summary.avgScore.toFixed(1) : '-',
       icon: BarChart3,
+      colorClass: 'bg-info/10 text-info',
     },
-    { title: '最新等级', value: summary?.latestGrade ?? '-', icon: Award },
+    {
+      title: '最新等级',
+      value: summary?.latestGrade ?? '-',
+      icon: Award,
+      colorClass: 'bg-warning/10 text-warning',
+    },
   ];
 
   return (
@@ -288,7 +296,9 @@ const MyAssessmentsPage: React.FC = () => {
           return (
             <Card key={card.title} className="rounded-xl">
               <CardContent className="flex items-center gap-4 p-6">
-                <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <div
+                  className={`flex size-12 items-center justify-center rounded-lg ${card.colorClass}`}
+                >
                   <Icon className="size-6" />
                 </div>
                 <div>
@@ -390,7 +400,7 @@ const MyAssessmentsPage: React.FC = () => {
 
       {/* Filter */}
       <Card className="rounded-xl">
-        <CardContent className="flex flex-wrap items-center gap-3 pt-6">
+        <CardContent className="flex flex-wrap items-center gap-3 p-4">
           <span className="text-sm text-muted-foreground">筛选：</span>
           <NativeSelect
             value={statusFilter}

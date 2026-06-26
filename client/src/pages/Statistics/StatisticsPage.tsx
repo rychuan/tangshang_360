@@ -471,27 +471,27 @@ const StatisticsPage: React.FC = () => {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-muted-foreground">
-                      <th className="text-left py-3 pr-4 font-medium">
+                      <th className="text-left py-3 px-4 font-medium">
                         考核周期
                       </th>
-                      <th className="text-left py-3 pr-4 font-medium">员工</th>
-                      <th className="text-left py-3 pr-4 font-medium hidden sm:table-cell">
+                      <th className="text-left py-3 px-4 font-medium">员工</th>
+                      <th className="text-left py-3 px-4 font-medium hidden sm:table-cell">
                         部门
                       </th>
-                      <th className="text-left py-3 pr-4 font-medium hidden md:table-cell">
+                      <th className="text-left py-3 px-4 font-medium hidden md:table-cell">
                         岗位
                       </th>
-                      <th className="text-left py-3 pr-4 font-medium hidden md:table-cell">
+                      <th className="text-left py-3 px-4 font-medium hidden md:table-cell">
                         上级
                       </th>
-                      <th className="text-right py-3 pr-4 font-medium">总分</th>
-                      <th className="text-center py-3 pr-4 font-medium hidden sm:table-cell">
+                      <th className="text-right py-3 px-4 font-medium">总分</th>
+                      <th className="text-center py-3 px-4 font-medium hidden sm:table-cell">
                         等级
                       </th>
-                      <th className="text-center py-3 pr-4 font-medium">
+                      <th className="text-center py-3 px-4 font-medium">
                         状态
                       </th>
-                      <th className="text-left py-3 pr-4 font-medium hidden lg:table-cell">
+                      <th className="text-left py-3 px-4 font-medium hidden lg:table-cell">
                         完成时间
                       </th>
                     </tr>
@@ -499,29 +499,29 @@ const StatisticsPage: React.FC = () => {
                   <tbody>
                     {records.map((r: StatisticsRecordItem) => (
                       <tr key={r.id} className="border-b hover:bg-muted/50">
-                        <td className="py-3 pr-4">{r.period}</td>
-                        <td className="py-3 pr-4 font-medium">
+                        <td className="py-3 px-4">{r.period}</td>
+                        <td className="py-3 px-4 font-medium">
                           {r.employeeName}
                         </td>
-                        <td className="py-3 pr-4 hidden sm:table-cell text-muted-foreground">
+                        <td className="py-3 px-4 hidden sm:table-cell text-muted-foreground">
                           {r.department}
                         </td>
-                        <td className="py-3 pr-4 hidden md:table-cell text-muted-foreground">
+                        <td className="py-3 px-4 hidden md:table-cell text-muted-foreground">
                           {r.position}
                         </td>
-                        <td className="py-3 pr-4 hidden md:table-cell text-muted-foreground">
+                        <td className="py-3 px-4 hidden md:table-cell text-muted-foreground">
                           {r.supervisorName}
                         </td>
-                        <td className="py-3 pr-4 text-right font-mono">
+                        <td className="py-3 px-4 text-right font-mono">
                           {r.totalScore}
                         </td>
-                        <td className="py-3 pr-4 text-center hidden sm:table-cell">
+                        <td className="py-3 px-4 text-center hidden sm:table-cell">
                           <GradeBadge grade={r.grade} />
                         </td>
-                        <td className="py-3 pr-4 text-center">
+                        <td className="py-3 px-4 text-center">
                           <StatusBadge status={r.status} />
                         </td>
-                        <td className="py-3 pr-4 hidden lg:table-cell text-muted-foreground">
+                        <td className="py-3 px-4 hidden lg:table-cell text-muted-foreground">
                           {r.completedAt
                             ? new Date(r.completedAt).toLocaleDateString(
                                 'zh-CN',

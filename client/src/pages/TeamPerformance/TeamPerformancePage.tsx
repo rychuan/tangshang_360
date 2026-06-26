@@ -246,13 +246,13 @@ const TeamPerformancePage: React.FC = () => {
               <Card key={def.key} className="rounded-xl">
                 <CardContent className="flex items-center gap-4 p-6">
                   <div
-                    className={`flex items-center justify-center size-14 rounded-lg ${def.iconBgClass}`}
+                    className={`flex items-center justify-center size-12 rounded-lg ${def.iconBgClass}`}
                   >
-                    <Icon className="size-7" />
+                    <Icon className="size-6" />
                   </div>
                   <div>
-                    <p className="text-xl text-muted-foreground">{def.label}</p>
-                    <p className="text-8xl font-bold text-foreground">
+                    <p className="text-sm text-muted-foreground">{def.label}</p>
+                    <p className="text-3xl font-bold text-foreground">
                       {def.getValue(overview)}
                     </p>
                   </div>

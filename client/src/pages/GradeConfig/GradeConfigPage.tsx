@@ -229,7 +229,7 @@ const GradeConfigPage: React.FC = () => {
       />
 
       <div
-        className={`flex items-start gap-3 rounded-md border px-4 py-3 ${
+        className={`flex items-start gap-3 rounded-lg border px-4 py-3 ${
           coverage.covered
             ? 'border-emerald-200 bg-emerald-50'
             : 'border-amber-200 bg-amber-50'
@@ -271,29 +271,29 @@ const GradeConfigPage: React.FC = () => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-muted-foreground">
-                  <th className="py-3 pr-4 font-medium text-left">等级名称</th>
-                  <th className="py-3 pr-4 font-medium text-left">分数区间</th>
-                  <th className="py-3 pr-4 font-medium text-left">排序值</th>
-                  <th className="py-3 pr-4 font-medium text-left">启用状态</th>
-                  <th className="py-3 pr-4 font-medium text-left">操作</th>
+                  <th className="py-3 px-4 font-medium text-left">等级名称</th>
+                  <th className="py-3 px-4 font-medium text-left">分数区间</th>
+                  <th className="py-3 px-4 font-medium text-left">排序值</th>
+                  <th className="py-3 px-4 font-medium text-left">启用状态</th>
+                  <th className="py-3 px-4 font-medium text-left">操作</th>
                 </tr>
               </thead>
               <tbody>
                 {sortedItems.map((item: PerformanceGradeItem) => (
                   <tr key={item.id} className="border-b hover:bg-muted/50">
-                    <td className="py-3 pr-4">{item.name}</td>
-                    <td className="py-3 pr-4">
+                    <td className="py-3 px-4">{item.name}</td>
+                    <td className="py-3 px-4">
                       {item.minScore} ~ {item.maxScore}
                     </td>
-                    <td className="py-3 pr-4">{item.sortOrder}</td>
-                    <td className="py-3 pr-4">
+                    <td className="py-3 px-4">{item.sortOrder}</td>
+                    <td className="py-3 px-4">
                       {item.isActive ? (
                         <Badge variant="default">启用</Badge>
                       ) : (
                         <Badge variant="secondary">停用</Badge>
                       )}
                     </td>
-                    <td className="py-3 pr-4">
+                    <td className="py-3 px-4">
                       <div className="flex items-center gap-1">
                         <CanRole roles={['admin', 'hrd']}>
                           <Button

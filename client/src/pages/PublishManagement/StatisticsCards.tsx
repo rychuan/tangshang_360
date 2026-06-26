@@ -15,7 +15,10 @@ interface CardConfig {
   iconBgClass: string;
 }
 
-const StatisticsCards: React.FC<StatisticsCardsProps> = ({ statistics, loading }) => {
+const StatisticsCards: React.FC<StatisticsCardsProps> = ({
+  statistics,
+  loading,
+}) => {
   const cards: CardConfig[] = [
     {
       label: '待发布人数',
@@ -44,20 +47,23 @@ const StatisticsCards: React.FC<StatisticsCardsProps> = ({ statistics, loading }
   ];
 
   return (
-    <div data-ai-section-type="card-stat" className="grid grid-cols-2 gap-4 md:grid-cols-4">
+    <div
+      data-ai-section-type="card-stat"
+      className="grid grid-cols-2 gap-4 md:grid-cols-4"
+    >
       {cards.map((card: CardConfig) => {
         const Icon: React.ComponentType<{ className?: string }> = card.icon;
         return (
-          <Card key={card.label}>
-            <CardContent className="flex items-center gap-3 p-4">
+          <Card key={card.label} className="rounded-xl">
+            <CardContent className="flex items-center gap-4 p-6">
               <div
-                className={`flex items-center justify-center size-10 rounded-lg ${card.iconBgClass}`}
+                className={`flex items-center justify-center size-12 rounded-lg ${card.iconBgClass}`}
               >
-                <Icon className="size-5" />
+                <Icon className="size-6" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">{card.label}</p>
-                <p className="text-2xl font-semibold text-foreground tabular-nums">
+                <p className="text-3xl font-bold text-foreground tabular-nums">
                   {loading ? '-' : card.value}
                 </p>
               </div>

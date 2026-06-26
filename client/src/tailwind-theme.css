@@ -1,11 +1,11 @@
 :root {
-  --button-outline: rgba(0,0,0, .10);
-  --badge-outline: rgba(0,0,0, .05);
+  --button-outline: rgba(0, 0, 0, 0.1);
+  --badge-outline: rgba(0, 0, 0, 0.05);
 
   --opaque-button-border-intensity: -8;
 
-  --elevate-1: rgba(0,0,0, .03);
-  --elevate-2: rgba(0,0,0, .06);
+  --elevate-1: rgba(0, 0, 0, 0.03);
+  --elevate-2: rgba(0, 0, 0, 0.06);
 
   --background: hsl(220 12% 97%);
   --foreground: hsl(220 16% 12%);
@@ -46,11 +46,21 @@
   --sidebar-border: hsl(220 12% 88%);
   --sidebar-ring: hsl(217 75% 42%);
 
-  --primary-border: hsl(from hsl(217 70% 42%) h s calc(l + var(--opaque-button-border-intensity)));
-  --secondary-border: hsl(from hsl(220 12% 94%) h s calc(l + var(--opaque-button-border-intensity)));
-  --destructive-border: hsl(from hsl(2 78% 58%) h s calc(l + var(--opaque-button-border-intensity)));
-  --accent-border: hsl(from hsl(217 30% 95%) h s calc(l + var(--opaque-button-border-intensity)));
-  --muted-border: hsl(from hsl(220 10% 95%) h s calc(l + var(--opaque-button-border-intensity)));
+  --primary-border: hsl(
+    from hsl(217 70% 42%) h s calc(l + var(--opaque-button-border-intensity))
+  );
+  --secondary-border: hsl(
+    from hsl(220 12% 94%) h s calc(l + var(--opaque-button-border-intensity))
+  );
+  --destructive-border: hsl(
+    from hsl(2 78% 58%) h s calc(l + var(--opaque-button-border-intensity))
+  );
+  --accent-border: hsl(
+    from hsl(217 30% 95%) h s calc(l + var(--opaque-button-border-intensity))
+  );
+  --muted-border: hsl(
+    from hsl(220 10% 95%) h s calc(l + var(--opaque-button-border-intensity))
+  );
   --font-sans:
     'PingFang SC', 'LarkHackSafariFont', 'LarkEmojiFont', 'LarkChineseQuote',
     -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Tahoma',
@@ -60,7 +70,7 @@
     'Geist', 'Geist Fallback', ui-serif, Georgia, Cambria, 'Times New Roman',
     Times, serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', 'Source Code Pro', Menlo, monospace;
-  --radius: 0.125rem;
+  --radius: 0.25rem;
   --shadow-x: 0px;
   --shadow-y: 0px;
   --shadow-blur: 0px;
@@ -139,7 +149,7 @@
 }
 
 @layer utilities {
-  input[type="search"]::-webkit-search-cancel-button {
+  input[type='search']::-webkit-search-cancel-button {
     @apply hidden;
   }
 
@@ -149,12 +159,14 @@
     pointer-events: none;
   }
 
-  .no-default-hover-elevate {}
-  .no-default-active-elevate {}
+  .no-default-hover-elevate {
+  }
+  .no-default-active-elevate {
+  }
 
   .toggle-elevate::before,
   .toggle-elevate-2::before {
-    content: "";
+    content: '';
     pointer-events: none;
     position: absolute;
     inset: 0px;
@@ -182,7 +194,7 @@
   .active-elevate:not(.no-default-active-elevate)::after,
   .hover-elevate-2:not(.no-default-hover-elevate)::after,
   .active-elevate-2:not(.no-default-active-elevate)::after {
-    content: "";
+    content: '';
     pointer-events: none;
     position: absolute;
     inset: 0px;
