@@ -148,7 +148,7 @@ export class DepartmentService {
       .values({
         name: body.name,
         parentId: body.parentId || null,
-        headId: newHeadId,
+        headId: body.headId || null,
         sortOrder: body.sortOrder ?? 0,
       })
       .returning({ id: department.id });
@@ -184,7 +184,7 @@ export class DepartmentService {
     }
 
     const oldDept = rows[0];
-    const oldHeadId = oldDept.headId || null;
+    const oldHeadId = oldDept.oldHeadId || null;
     const newHeadId = body.headId || null;
 
     await this.db
@@ -197,19 +197,6 @@ export class DepartmentService {
       })
       .where(eq(department.id, id));
 
-    const oldHeadId = rows[0].oldHeadId;
-    const newHeadId = body.headId || null;
-    if (newHeadId && newHeadId !== oldHeadId) {
-      await this.db
-        .update(employee)
-        .set({ supervisorId: newHeadId })
-        .where(and(
-          eq(employee.department, body.name),
-          isNull(employee.deletedAt),
-        ));
-      this.logger.log(`Synced supervisorId for employees in department "${body.name}" to new head: ${newHeadId}`);
-    }
-
     await this.db.insert(auditLog).values({
       operatorId: userId,
       action: 'update_department',
@@ -218,9 +205,8 @@ export class DepartmentService {
       changes: { after: body },
     });
 
-    // 部门负责人变更时，同步该部门下未手动指定上级的员工
     if (newHeadId !== oldHeadId && newHeadId) {
-      const deptName = oldDept.name;
+      const deptName = oldDept.oldName;
       await this.db
         .update(employee)
         .set({ supervisorId: newHeadId })

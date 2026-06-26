@@ -26,7 +26,6 @@ import type {
 } from '@shared/api.interface';
 import { RoleManagerService } from '../role-manager/role-manager.service';
 import { DEFAULT_PERMISSIONS } from '@shared/api.interface';
-import { RoleManagerService } from '../role-manager/role-manager.service';
 
 @Injectable()
 export class EmployeeManagementService {
@@ -35,6 +34,7 @@ export class EmployeeManagementService {
   constructor(
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
     private readonly employeeSnapshotService: EmployeeSnapshotService,
+    private readonly roleManagerService: RoleManagerService,
   ) {}
 
   async list(query: {
@@ -422,7 +422,7 @@ export class EmployeeManagementService {
       action: 'update_employee',
       targetType: 'employee',
       targetId: id,
-      changes: { before: beforeValues, after: values },
+      changes: { after: values },
     });
 
     this.logger.log(`Employee updated: ${id}`);
