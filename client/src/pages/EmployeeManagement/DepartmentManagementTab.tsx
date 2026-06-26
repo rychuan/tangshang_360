@@ -25,13 +25,14 @@ import {
   DialogTrigger,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 import {
   Plus,
   Pencil,
@@ -112,7 +113,9 @@ const DepartmentManagementTab: React.FC = () => {
       setFormData({ name: '', parentId: '', headId: '', sortOrder: 0 });
       loadData();
     } catch (err) {
-      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+      const msg = (
+        err as { response?: { data?: { error?: { message?: string } } } }
+      )?.response?.data?.error?.message;
       toast.error(msg || '操作失败');
     }
   };
@@ -129,14 +132,18 @@ const DepartmentManagementTab: React.FC = () => {
   };
 
   const handleDelete = async (dept: DepartmentItem): Promise<void> => {
-    const ok = await showConfirm(`确定删除「${dept.name}」？有子部门或员工时无法删除。`);
+    const ok = await showConfirm(
+      `确定删除「${dept.name}」？有子部门或员工时无法删除。`,
+    );
     if (!ok) return;
     try {
       await departmentApi.remove(dept.id);
       toast.success('部门已删除');
       loadData();
     } catch (err) {
-      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+      const msg = (
+        err as { response?: { data?: { error?: { message?: string } } } }
+      )?.response?.data?.error?.message;
       toast.error(msg || '删除失败');
     }
   };
@@ -200,7 +207,9 @@ const DepartmentManagementTab: React.FC = () => {
               {node.memberCount}
             </button>
           </td>
-          <td className="py-3 px-4 align-middle whitespace-nowrap">{node.sortOrder}</td>
+          <td className="py-3 px-4 align-middle whitespace-nowrap">
+            {node.sortOrder}
+          </td>
           <td className="py-3 px-4 align-middle whitespace-nowrap sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
             <div className="flex items-center gap-1.5">
               <Button
@@ -215,7 +224,7 @@ const DepartmentManagementTab: React.FC = () => {
                 size="icon"
                 onClick={() => handleDelete(node)}
               >
-                <Trash2 className="size-4 text-red-500" />
+                <Trash2 className="size-4 text-destructive" />
               </Button>
             </div>
           </td>
@@ -256,9 +265,7 @@ const DepartmentManagementTab: React.FC = () => {
           </DialogTrigger>
           <DialogContent className="w-[95vw] sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>
-                {editingDept ? '编辑部门' : '新建部门'}
-              </DialogTitle>
+              <DialogTitle>{editingDept ? '编辑部门' : '新建部门'}</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div>
@@ -343,25 +350,42 @@ const DepartmentManagementTab: React.FC = () => {
           {loading ? (
             <p className="py-8 text-center text-muted-foreground">加载中...</p>
           ) : tree.length === 0 ? (
-            <p className="py-8 text-center text-muted-foreground">
-              暂无部门数据，点击「新建部门」开始
-            </p>
+            <div className="py-12">
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <Building2 className="size-6" />
+                  </EmptyMedia>
+                  <EmptyTitle>暂无部门数据</EmptyTitle>
+                </EmptyHeader>
+              </Empty>
+            </div>
           ) : (
             <div className="border rounded-lg overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b hover:bg-muted/50 transition-colors">
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">部门名称</th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">上级部门</th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">负责人</th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">成员</th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">排序</th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap w-[100px] sticky right-0 bg-background z-20 border-l">操作</th>
+                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
+                      部门名称
+                    </th>
+                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
+                      上级部门
+                    </th>
+                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
+                      负责人
+                    </th>
+                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
+                      成员
+                    </th>
+                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
+                      排序
+                    </th>
+                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap w-[100px] sticky right-0 bg-background z-20 border-l">
+                      操作
+                    </th>
                   </tr>
                 </thead>
-                <tbody>
-                  {tree.map((node) => renderTreeNode(node))}
-                </tbody>
+                <tbody>{tree.map((node) => renderTreeNode(node))}</tbody>
               </table>
             </div>
           )}

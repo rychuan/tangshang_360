@@ -18,8 +18,7 @@ const AssessmentDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const isSupervisorView = searchParams.get('view') === 'supervisor';
   const currentUser = useCurrentUserProfile();
-  const currentUserId: string | undefined =
-    currentUser?.user_id;
+  const currentUserId: string | undefined = currentUser?.user_id;
 
   const {
     detail,
@@ -41,11 +40,8 @@ const AssessmentDetailPage: React.FC = () => {
     handleSubmit,
   } = useAssessmentDetail(id, isSupervisorView, currentUserId);
 
-  const [signDialogOpen, setSignDialogOpen] =
-    useState<boolean>(false);
-  const [signType, setSignType] = useState<'self' | 'supervisor'>(
-    'self',
-  );
+  const [signDialogOpen, setSignDialogOpen] = useState<boolean>(false);
+  const [signType, setSignType] = useState<'self' | 'supervisor'>('self');
   const [signImage, setSignImage] = useState<string | null>(null);
   const [signing, setSigning] = useState<boolean>(false);
 
@@ -63,20 +59,17 @@ const AssessmentDetailPage: React.FC = () => {
         signType,
         signName:
           signType === 'self'
-            ? (detail?.employeeName || '')
-            : (detail?.supervisorName || ''),
+            ? detail?.employeeName || ''
+            : detail?.supervisorName || '',
         signImage: signImage ?? undefined,
       });
       toast.success(
-        result.status === 'completed'
-          ? '双方已签名，考核完成'
-          : '签名成功',
+        result.status === 'completed' ? '双方已签名，考核完成' : '签名成功',
       );
       setSignDialogOpen(false);
       await fetchDetail();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : '签名失败';
+      const msg = err instanceof Error ? err.message : '签名失败';
       logger.error('Sign failed:', msg);
       toast.error(msg);
     } finally {
@@ -95,13 +88,8 @@ const AssessmentDetailPage: React.FC = () => {
   if (error || !detail) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <p className="text-muted-foreground">
-          {error || '考核记录不存在'}
-        </p>
-        <Button
-          variant="outline"
-          onClick={() => navigate('/')}
-        >
+        <p className="text-muted-foreground">{error || '考核记录不存在'}</p>
+        <Button variant="outline" onClick={() => navigate('/')}>
           返回首页
         </Button>
       </div>
@@ -133,7 +121,7 @@ const AssessmentDetailPage: React.FC = () => {
         updateRating={updateRating}
       />
 
-      <div className="flex items-center justify-end gap-3 pb-8">
+      <div className="flex flex-wrap items-center justify-end gap-3 pb-8">
         {canEditSelf && (
           <>
             <Button
@@ -144,10 +132,7 @@ const AssessmentDetailPage: React.FC = () => {
               <Save className="size-4 mr-2" />
               保存草稿
             </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={submitting}
-            >
+            <Button onClick={handleSubmit} disabled={submitting}>
               <Send className="size-4 mr-2" />
               提交自评
             </Button>
@@ -163,10 +148,7 @@ const AssessmentDetailPage: React.FC = () => {
               <Save className="size-4 mr-2" />
               保存草稿
             </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={submitting}
-            >
+            <Button onClick={handleSubmit} disabled={submitting}>
               <Send className="size-4 mr-2" />
               提交评分
             </Button>
@@ -191,9 +173,7 @@ const AssessmentDetailPage: React.FC = () => {
           </Button>
         )}
         {isCompleted && (
-          <p className="text-muted-foreground text-sm">
-            考核已完成，档案只读
-          </p>
+          <p className="text-muted-foreground text-sm">考核已完成，档案只读</p>
         )}
       </div>
 

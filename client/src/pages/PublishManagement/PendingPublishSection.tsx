@@ -69,12 +69,17 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
   };
 
   return (
-    <div data-ai-section-type="card-list" className="rounded-lg border bg-card p-6">
+    <div
+      data-ai-section-type="card-list"
+      className="rounded-lg border bg-card p-6"
+    >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">待发布员工</h2>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <Label className="shrink-0 text-sm text-muted-foreground">部门</Label>
+            <Label className="shrink-0 text-sm text-muted-foreground">
+              部门
+            </Label>
             <Select
               value={departmentFilter || '__all__'}
               onValueChange={handleDeptChange}
@@ -93,7 +98,9 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
             </Select>
           </div>
           <div className="flex items-center gap-2">
-            <Label className="shrink-0 text-sm text-muted-foreground">模板</Label>
+            <Label className="shrink-0 text-sm text-muted-foreground">
+              模板
+            </Label>
             <Select
               value={templateFilter || '__all__'}
               onValueChange={handleTplChange}
@@ -143,10 +150,18 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
                   />
                 </th>
                 <th className="py-3 pr-4 font-medium">员工</th>
-                <th className="py-3 pr-4 font-medium">部门</th>
-                <th className="py-3 pr-4 font-medium">岗位</th>
-                <th className="py-3 pr-4 font-medium">考核模板</th>
-                <th className="py-3 pr-4 font-medium">上月考核</th>
+                <th className="py-3 pr-4 font-medium hidden sm:table-cell">
+                  部门
+                </th>
+                <th className="py-3 pr-4 font-medium hidden sm:table-cell">
+                  岗位
+                </th>
+                <th className="py-3 pr-4 font-medium hidden md:table-cell">
+                  考核模板
+                </th>
+                <th className="py-3 pr-4 font-medium hidden md:table-cell">
+                  上月考核
+                </th>
                 <th className="py-3 pr-4 font-medium">操作</th>
               </tr>
             </thead>
@@ -164,10 +179,16 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
                   <td className="py-3 pr-4">
                     <UserDisplay value={[emp.employeeId]} size="small" />
                   </td>
-                  <td className="py-3 pr-4">{emp.department || '-'}</td>
-                  <td className="py-3 pr-4">{emp.position}</td>
-                  <td className="py-3 pr-4">{emp.templateName}</td>
-                  <td className="py-3 pr-4">
+                  <td className="py-3 pr-4 hidden sm:table-cell">
+                    {emp.department || '-'}
+                  </td>
+                  <td className="py-3 pr-4 hidden sm:table-cell">
+                    {emp.position}
+                  </td>
+                  <td className="py-3 pr-4 hidden md:table-cell">
+                    {emp.templateName}
+                  </td>
+                  <td className="py-3 pr-4 hidden md:table-cell">
                     {emp.lastPeriodStatus ? (
                       <Badge variant="outline">
                         {LAST_PERIOD_STATUS_LABELS[emp.lastPeriodStatus] ||
@@ -188,9 +209,8 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
                           调整
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="destructive"
                           size="sm"
-                          className="text-destructive"
                           onClick={() => onDeleteSnapshot(emp)}
                         >
                           删除快照

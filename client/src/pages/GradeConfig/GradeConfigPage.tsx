@@ -3,12 +3,19 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  CheckCircle2,
+  AlertTriangle,
+} from 'lucide-react';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { Button } from '@client/src/components/ui/button';
 import { Input } from '@client/src/components/ui/input';
 import { Badge } from '@client/src/components/ui/badge';
+import { PageHeader } from '@/components/business-ui/page-header';
 import {
   Select,
   SelectContent,
@@ -208,20 +215,18 @@ const GradeConfigPage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">绩效等级配置</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            管理考核分数对应的绩效等级规则
-          </p>
-        </div>
-        <CanRole roles={['admin', 'hrd']}>
-          <Button onClick={handleOpenCreate}>
-            <Plus className="size-4 mr-2" />
-            新建等级
-          </Button>
-        </CanRole>
-      </div>
+      <PageHeader
+        title="绩效等级配置"
+        description="管理考核分数对应的绩效等级规则"
+        actions={
+          <CanRole roles={['admin', 'hrd']}>
+            <Button onClick={handleOpenCreate}>
+              <Plus className="size-4 mr-2" />
+              新建等级
+            </Button>
+          </CanRole>
+        }
+      />
 
       <div
         className={`flex items-start gap-3 rounded-md border px-4 py-3 ${
@@ -245,9 +250,7 @@ const GradeConfigPage: React.FC = () => {
             {coverage.covered ? '配置覆盖正常' : '配置覆盖异常'}
           </p>
           <p
-            className={
-              coverage.covered ? 'text-emerald-700' : 'text-amber-700'
-            }
+            className={coverage.covered ? 'text-emerald-700' : 'text-amber-700'}
           >
             {coverage.message}
           </p>
@@ -256,9 +259,13 @@ const GradeConfigPage: React.FC = () => {
 
       <div className="overflow-hidden rounded-lg border">
         {loading ? (
-          <div className="flex items-center justify-center h-32 text-muted-foreground">加载中...</div>
+          <div className="flex items-center justify-center h-32 text-muted-foreground">
+            加载中...
+          </div>
         ) : sortedItems.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-muted-foreground">暂无数据</div>
+          <div className="flex items-center justify-center h-32 text-muted-foreground">
+            暂无数据
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -275,21 +282,38 @@ const GradeConfigPage: React.FC = () => {
                 {sortedItems.map((item: PerformanceGradeItem) => (
                   <tr key={item.id} className="border-b hover:bg-muted/50">
                     <td className="py-3 pr-4">{item.name}</td>
-                    <td className="py-3 pr-4">{item.minScore} ~ {item.maxScore}</td>
+                    <td className="py-3 pr-4">
+                      {item.minScore} ~ {item.maxScore}
+                    </td>
                     <td className="py-3 pr-4">{item.sortOrder}</td>
                     <td className="py-3 pr-4">
-                      {item.isActive ? <Badge variant="default">启用</Badge> : <Badge variant="secondary">停用</Badge>}
+                      {item.isActive ? (
+                        <Badge variant="default">启用</Badge>
+                      ) : (
+                        <Badge variant="secondary">停用</Badge>
+                      )}
                     </td>
                     <td className="py-3 pr-4">
                       <div className="flex items-center gap-1">
                         <CanRole roles={['admin', 'hrd']}>
-                          <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(item)}>
-                            <Pencil className="size-4 mr-1" />编辑
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenEdit(item)}
+                          >
+                            <Pencil className="size-4 mr-1" />
+                            编辑
                           </Button>
                         </CanRole>
                         <CanRole roles={['admin', 'hrd']}>
-                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setDeleteId(item.id)}>
-                            <Trash2 className="size-4 mr-1" />删除
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive"
+                            onClick={() => setDeleteId(item.id)}
+                          >
+                            <Trash2 className="size-4 mr-1" />
+                            删除
                           </Button>
                         </CanRole>
                       </div>
@@ -308,9 +332,7 @@ const GradeConfigPage: React.FC = () => {
           className="max-w-md"
         >
           <DialogHeader>
-            <DialogTitle>
-              {editingGrade ? '编辑等级' : '新建等级'}
-            </DialogTitle>
+            <DialogTitle>{editingGrade ? '编辑等级' : '新建等级'}</DialogTitle>
           </DialogHeader>
           <Form {...form}>
             <form
@@ -325,10 +347,7 @@ const GradeConfigPage: React.FC = () => {
                   <FormItem>
                     <FormLabel>等级名称</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="如：优秀"
-                        {...field}
-                      />
+                      <Input placeholder="如：优秀" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -342,12 +361,7 @@ const GradeConfigPage: React.FC = () => {
                     <FormItem>
                       <FormLabel>最低分</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={100}
-                          {...field}
-                        />
+                        <Input type="number" min={0} max={100} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -360,12 +374,7 @@ const GradeConfigPage: React.FC = () => {
                     <FormItem>
                       <FormLabel>最高分</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={101}
-                          {...field}
-                        />
+                        <Input type="number" min={1} max={101} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -422,11 +431,7 @@ const GradeConfigPage: React.FC = () => {
             >
               取消
             </Button>
-            <Button
-              type="submit"
-              form="grade-form"
-              disabled={submitting}
-            >
+            <Button type="submit" form="grade-form" disabled={submitting}>
               {submitting ? '保存中...' : '保存'}
             </Button>
           </DialogFooter>
