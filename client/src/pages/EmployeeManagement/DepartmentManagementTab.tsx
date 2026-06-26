@@ -6,6 +6,7 @@ import type {
   CreateDepartmentRequest,
 } from '@shared/api.interface';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { UserSelect } from '@/components/business-ui/user-select';
@@ -332,10 +333,13 @@ const DepartmentManagementTab: React.FC = () => {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>组织架构</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+            <Building2 className="size-4 sm:size-5 text-muted-foreground" />
+            组织架构
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 sm:p-4">
           {loading ? (
             <p className="py-8 text-center text-muted-foreground">加载中...</p>
           ) : tree.length === 0 ? (

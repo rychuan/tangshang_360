@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
 import { handleApiError } from '@/utils/api-error';
-import { ArrowLeft, User, Building2, Star, TrendingUp, ClipboardList } from 'lucide-react';
+import { ArrowLeft, User, Building2, Star, TrendingUp, ClipboardList, CheckCircle2, Award } from 'lucide-react';
 
 const roleLabels: Record<string, string> = {
   admin: '系统管理员',

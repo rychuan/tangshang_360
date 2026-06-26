@@ -7,6 +7,7 @@ import type {
   BindingHistoryItem,
 } from '@shared/api.interface';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -38,7 +39,7 @@ import {
   HistoryDialog,
 } from './EmployeeDialogs';
 import { toast } from 'sonner';
-import { Plus, Search, Link2 } from 'lucide-react';
+import { Plus, Search, Link2, Filter, Users, UserCog } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -300,16 +301,17 @@ const EmployeeListTab: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="text-sm text-muted-foreground">
-          共 {total} 条
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Users className="size-4" />
+          共 <span className="font-semibold text-foreground">{total}</span> 条
           {selectedRowKeys.length > 0 && (
-            <span className="ml-2 text-primary">
-              已选 {selectedRowKeys.length} 项
+            <span className="ml-1 text-primary font-medium">
+              · 已选 {selectedRowKeys.length} 项
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {selectedRowKeys.length > 0 && (
             <CanRole roles={['admin', 'hrd']}>
               <Button
@@ -317,7 +319,7 @@ const EmployeeListTab: React.FC = () => {
                 size="sm"
                 onClick={() => openBindDialog(selectedRowKeys)}
               >
-                <Link2 className="mr-1 size-4" />
+                <Link2 className="mr-1 size-3.5 sm:size-4" />
                 批量绑定
               </Button>
             </CanRole>
@@ -331,125 +333,141 @@ const EmployeeListTab: React.FC = () => {
                 setDialogOpen(true);
               }}
             >
-              <Plus className="mr-2 size-4" />
+              <Plus className="mr-1.5 size-3.5 sm:size-4" />
               新建员工
             </Button>
           </CanRole>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="relative min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            className="w-full pl-9"
-            placeholder="搜索姓名 / 编号..."
-            value={keyword}
-            onChange={(e) => {
-              setKeyword(e.target.value);
-              setPage(1);
-            }}
-          />
-        </div>
-        <div className="w-full">
-          <DepartmentTreeSelect
-            value={departmentFilter}
-            onChange={(name) => {
-              setDepartmentFilter(name);
-              setPage(1);
-            }}
-            placeholder="全部部门"
-          />
-        </div>
-        <PositionMultiSelect
-          positions={positions}
-          value={positionFilter}
-          onChange={(v) => {
-            setPositionFilter(v);
-            setPage(1);
-          }}
-          className="w-full"
-        />
-        <Select
-          value={roleFilter || 'all'}
-          onValueChange={(v) => {
-            setRoleFilter(v === 'all' ? '' : v);
-            setPage(1);
-          }}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="角色" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">全部角色</SelectItem>
-            <SelectItem value="admin">管理员</SelectItem>
-            <SelectItem value="hrd">HRD</SelectItem>
-            <SelectItem value="dept_head">部门负责人</SelectItem>
-            <SelectItem value="supervisor">上级</SelectItem>
-            <SelectItem value="employee">员工</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select
-          value={statusFilter || 'all'}
-          onValueChange={(v) => {
-            setStatusFilter(v === 'all' ? '' : v);
-            setPage(1);
-          }}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="状态" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">全部状态</SelectItem>
-            <SelectItem value="active">已启用</SelectItem>
-            <SelectItem value="inactive">已禁用</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <Card>
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex items-center gap-2 mb-3 text-xs text-muted-foreground">
+            <Filter className="size-3.5" />
+            筛选条件
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2 sm:gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 sm:size-4 text-muted-foreground" />
+              <Input
+                className="w-full pl-9 h-9 text-sm"
+                placeholder="搜索姓名 / 编号..."
+                value={keyword}
+                onChange={(e) => {
+                  setKeyword(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
+            <DepartmentTreeSelect
+              value={departmentFilter}
+              onChange={(name) => {
+                setDepartmentFilter(name);
+                setPage(1);
+              }}
+              placeholder="全部部门"
+            />
+            <PositionMultiSelect
+              positions={positions}
+              value={positionFilter}
+              onChange={(v) => {
+                setPositionFilter(v);
+                setPage(1);
+              }}
+              className="w-full"
+            />
+            <Select
+              value={roleFilter || 'all'}
+              onValueChange={(v) => {
+                setRoleFilter(v === 'all' ? '' : v);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-full h-9 text-sm">
+                <SelectValue placeholder="角色" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部角色</SelectItem>
+                <SelectItem value="admin">管理员</SelectItem>
+                <SelectItem value="hrd">HRD</SelectItem>
+                <SelectItem value="dept_head">部门负责人</SelectItem>
+                <SelectItem value="supervisor">上级</SelectItem>
+                <SelectItem value="employee">员工</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={statusFilter || 'all'}
+              onValueChange={(v) => {
+                setStatusFilter(v === 'all' ? '' : v);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-full h-9 text-sm">
+                <SelectValue placeholder="状态" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部状态</SelectItem>
+                <SelectItem value="active">已启用</SelectItem>
+                <SelectItem value="inactive">已禁用</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
-      <EmployeeTable
-        employees={employees}
-        loading={loading}
-        selectedRowKeys={selectedRowKeys}
-        onToggleAll={toggleAll}
-        onToggleRow={toggleRow}
-        onEdit={handleEdit}
-        onBind={handleBind}
-        onUnbind={handleUnbind}
-        onHistory={handleHistory}
-        onToggleStatus={handleToggleStatus}
-        onDelete={handleDelete}
-      />
+      <Card>
+        <CardContent className="p-0">
+          <EmployeeTable
+            employees={employees}
+            loading={loading}
+            selectedRowKeys={selectedRowKeys}
+            onToggleAll={toggleAll}
+            onToggleRow={toggleRow}
+            onEdit={handleEdit}
+            onBind={handleBind}
+            onUnbind={handleUnbind}
+            onHistory={handleHistory}
+            onToggleStatus={handleToggleStatus}
+            onDelete={handleDelete}
+          />
+        </CardContent>
+      </Card>
 
       {totalPages > 1 && (
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                onClick={() => setPage(Math.max(1, page - 1))}
-              />
-            </PaginationItem>
-            {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
-              const p = i + Math.max(1, page - 3);
-              if (p > totalPages) return null;
-              return (
-                <PaginationItem key={p}>
-                  <PaginationLink
-                    isActive={p === page}
-                    onClick={() => setPage(p)}
-                  >
-                    {p}
-                  </PaginationLink>
-                </PaginationItem>
-              );
-            })}
-            <PaginationItem>
-              <PaginationNext
-                onClick={() => setPage(Math.min(totalPages, page + 1))}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
+        <div className="flex items-center justify-center">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => setPage(Math.max(1, page - 1))}
+                  className="h-8 sm:h-9 text-xs sm:text-sm"
+                />
+              </PaginationItem>
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                const start = Math.max(1, Math.min(page - 2, totalPages - 4));
+                const p = start + i;
+                if (p > totalPages) return null;
+                return (
+                  <PaginationItem key={p}>
+                    <PaginationLink
+                      isActive={p === page}
+                      onClick={() => setPage(p)}
+                      className="h-8 w-8 sm:h-9 sm:w-9 text-xs sm:text-sm"
+                    >
+                      {p}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              })}
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => setPage(Math.min(totalPages, page + 1))}
+                  className="h-8 sm:h-9 text-xs sm:text-sm"
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
       )}
 
       <EmployeeFormDialog
