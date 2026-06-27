@@ -454,7 +454,7 @@ const StatisticsPage: React.FC = () => {
       {/* Records Table */}
       <Card className="rounded-xl">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base"绩效记录（共 {total} 条）</CardTitle>
+          <CardTitle className="text-base">绩效记录（共 {total} 条）</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (

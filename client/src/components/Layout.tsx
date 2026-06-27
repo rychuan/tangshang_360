@@ -3,7 +3,7 @@ import { useLocation, Link, Outlet } from 'react-router-dom';
 import { useCurrentUserProfile } from '@lark-apaas/client-toolkit/hooks/useCurrentUserProfile';
 import { useAppInfo } from '@lark-apaas/client-toolkit/hooks/useAppInfo';
 import { useAuth, ROLE_SUBJECT } from '@lark-apaas/client-toolkit/auth';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { SidebarProvider, SidebarInset, SidebarGroupLabel } from '@/components/ui/sidebar';
 import {
   Sidebar,
   SidebarContent,
