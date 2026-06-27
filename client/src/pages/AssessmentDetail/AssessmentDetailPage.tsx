@@ -179,93 +179,87 @@ const AssessmentDetailPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Left column: info + actions */}
         <div className="flex flex-col gap-4">
-          {/* Employee & supervisor info */}
+          {/* Status overview card */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">基本信息</CardTitle>
+              <CardTitle className="text-base">绩效状态</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              <div className="flex items-start gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <User className="size-4" />
+              {/* Employee + Supervisor row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-start gap-2.5">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <User className="size-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">员工</p>
+                    <UserDisplay userId={detail.employeeId} size="small" />
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {detail.position}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">员工</p>
-                  <UserDisplay userId={detail.employeeId} size="medium" />
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {detail.position}
-                  </p>
+                <div className="flex items-start gap-2.5">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-info/10 text-info">
+                    <Users2 className="size-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">上级</p>
+                    {detail.supervisorId ? (
+                      <UserDisplay userId={detail.supervisorId} size="small" />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">-</p>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-info/10 text-info">
-                  <Users2 className="size-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">上级</p>
-                  {detail.supervisorId ? (
-                    <UserDisplay userId={detail.supervisorId} size="medium" />
+              {/* Sign status */}
+              <div className="border-t pt-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <PenTool className="size-3.5 text-muted-foreground" />
+                    <span className="text-sm">本人签名</span>
+                  </div>
+                  {detail.selfSignName ? (
+                    <Badge className="bg-success/10 text-success border-transparent text-xs">
+                      已签
+                    </Badge>
                   ) : (
-                    <p className="text-sm text-muted-foreground">-</p>
+                    <Badge variant="secondary" className="text-xs">
+                      未签
+                    </Badge>
                   )}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Sign status */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <PenTool className="size-4 text-muted-foreground" />
-                签名状态
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">本人签名</span>
-                {detail.selfSignName ? (
-                  <Badge
-                    variant="default"
-                    className="bg-success/10 text-success border-transparent text-xs"
-                  >
-                    已签
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary" className="text-xs">
-                    未签
-                  </Badge>
+                {detail.selfSignImage && (
+                  <img
+                    src={detail.selfSignImage}
+                    alt="本人签名"
+                    className="max-h-10 border rounded w-full object-contain"
+                  />
+                )}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <PenTool className="size-3.5 text-muted-foreground" />
+                    <span className="text-sm">上级签名</span>
+                  </div>
+                  {detail.supervisorSignName ? (
+                    <Badge className="bg-success/10 text-success border-transparent text-xs">
+                      已签
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="text-xs">
+                      未签
+                    </Badge>
+                  )}
+                </div>
+                {detail.supervisorSignImage && (
+                  <img
+                    src={detail.supervisorSignImage}
+                    alt="上级签名"
+                    className="max-h-10 border rounded w-full object-contain"
+                  />
                 )}
               </div>
-              {detail.selfSignImage && (
-                <img
-                  src={detail.selfSignImage}
-                  alt="本人签名"
-                  className="max-h-12 border rounded"
-                />
-              )}
-              <div className="flex items-center justify-between">
-                <span className="text-sm">上级签名</span>
-                {detail.supervisorSignName ? (
-                  <Badge
-                    variant="default"
-                    className="bg-success/10 text-success border-transparent text-xs"
-                  >
-                    已签
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary" className="text-xs">
-                    未签
-                  </Badge>
-                )}
-              </div>
-              {detail.supervisorSignImage && (
-                <img
-                  src={detail.supervisorSignImage}
-                  alt="上级签名"
-                  className="max-h-12 border rounded"
-                />
-              )}
             </CardContent>
           </Card>
 
