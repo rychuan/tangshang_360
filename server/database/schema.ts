@@ -392,7 +392,7 @@ export const assessmentTemplate = pgTable("assessment_template", {
 });
 
 export const employee = pgTable("employee", {
-  id: userProfile("id").notNull(),
+  id: userProfile("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   position: varchar("position", { length: 255 }).notNull(),
   department: varchar("department", { length: 255 }).notNull(),
