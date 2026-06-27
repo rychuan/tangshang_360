@@ -1,18 +1,7 @@
 /* eslint-disable */
 /** auto generated, do not edit */
 import { sql } from 'drizzle-orm';
-import {
-  boolean,
-  index,
-  integer,
-  jsonb,
-  numeric,
-  pgTable,
-  text,
-  uuid,
-  varchar,
-  customType,
-} from 'drizzle-orm/pg-core';
+import { boolean, index, integer, jsonb, numeric, pgTable, text, uuid, varchar, customType } from "drizzle-orm/pg-core"
 
 export const customTimestamptz = customType<{
   data: Date;
@@ -20,8 +9,9 @@ export const customTimestamptz = customType<{
   config: { precision?: number };
 }>({
   dataType(config) {
-    const precision =
-      typeof config?.precision !== 'undefined' ? ` (${config.precision})` : '';
+    const precision = typeof config?.precision !== 'undefined'
+      ? ` (${config.precision})`
+      : '';
     return `timestamptz${precision}`;
   },
   toDriver(value: Date | string | number) {
@@ -89,16 +79,14 @@ export const userProfileArray = customType<{
     if (!value || value.length === 0) {
       return sql`'{}'::user_profile[]`;
     }
-    const elements = value
-      .map((id) => `ROW(${escapeLiteral(id)})::user_profile`)
-      .join(',');
+    const elements = value.map(id => `ROW(${escapeLiteral(id)})::user_profile`).join(',');
     return sql.raw(`ARRAY[${elements}]::user_profile[]`);
   },
   fromDriver(value: string): string[] {
     if (!value || value === '{}') return [];
     const inner = value.slice(1, -1);
     const matches = inner.match(/\([^)]*\)/g) || [];
-    return matches.map((m) => m.slice(1, -1).split(',')[0].trim());
+    return matches.map(m => m.slice(1, -1).split(',')[0].trim());
   },
 });
 
@@ -113,404 +101,321 @@ export const fileAttachmentArray = customType<{
     if (!value || value.length === 0) {
       return sql`'{}'::file_attachment[]`;
     }
-    const elements = value
-      .map(
-        (f) =>
-          `ROW(${escapeLiteral(f.bucket_id)},${escapeLiteral(f.file_path)})::file_attachment`,
-      )
-      .join(',');
+    const elements = value.map(f =>
+      `ROW(${escapeLiteral(f.bucket_id)},${escapeLiteral(f.file_path)})::file_attachment`
+    ).join(',');
     return sql.raw(`ARRAY[${elements}]::file_attachment[]`);
   },
   fromDriver(value: string): FileAttachment[] {
     if (!value || value === '{}') return [];
     const inner = value.slice(1, -1);
     const matches = inner.match(/\([^)]*\)/g) || [];
-    return matches.map((m) => {
+    return matches.map(m => {
       const [bucketId, filePath] = m.slice(1, -1).split(',');
       return { bucket_id: bucketId.trim(), file_path: filePath.trim() };
     });
   },
 });
 
-export const employeeIndicatorSnapshot = pgTable(
-  'employee_indicator_snapshot',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    employeeId: userProfile('employee_id').notNull(),
-    templateId: uuid('template_id').notNull(),
-    dimensionName: varchar('dimension_name', { length: 255 }).notNull(),
-    dimensionWeight: numeric('dimension_weight').notNull().default('0'),
-    content: varchar('content', { length: 255 }).notNull(),
-    description: text('description'),
-    algorithm: text('algorithm'),
-    dataSource: varchar('data_source', { length: 255 }),
-    weight: numeric('weight').notNull().default('0'),
-    isAdjusted: boolean('is_adjusted').notNull().default(false),
-    adjustedBy: userProfile('adjusted_by'),
-    adjustedAt: customTimestamptz('adjusted_at', { precision: 6 }),
-    sortOrder: integer('sort_order').notNull().default(0),
-    // System field: Creation time (auto-filled, do not modify)
-    createdAt: customTimestamptz('_created_at', { precision: 3 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    // System field: Creator (auto-filled, do not modify)
-    createdBy: userProfile('_created_by').default(sql`CASE
+export const position = pgTable("position", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  // System field: Creation time (auto-filled, do not modify)
+  createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Creator (auto-filled, do not modify)
+  createdBy: userProfile("_created_by").default(sql`CASE
     WHEN (current_setting('app.user_id'::text, true) = ''::text) THEN NULL`),
-    // System field: Update time (auto-filled, do not modify)
-    updatedAt: customTimestamptz('_updated_at', { precision: 3 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    // System field: Updater (auto-filled, do not modify)
-    updatedBy: userProfile('_updated_by').default(sql`CASE
+  // System field: Update time (auto-filled, do not modify)
+  updatedAt: customTimestamptz("_updated_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Updater (auto-filled, do not modify)
+  updatedBy: userProfile("_updated_by").default(sql`CASE
     WHEN (current_setting('app.user_id'::text, true) = ''::text) THEN NULL`),
-  },
-  (table) => [
-    // Complex index: CREATE INDEX idx_emp_snapshot_employee ON employee_indicator_snapshot USING btree (((employee_id).user_id)),
-    index('idx_emp_snapshot_template').on(table.templateId),
-  ],
-);
+});
 
-export const performanceGrade = pgTable(
-  'performance_grade',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    name: varchar('name', { length: 255 }).notNull(),
-    minScore: integer('min_score').notNull(),
-    maxScore: integer('max_score').notNull(),
-    sortOrder: integer('sort_order').notNull().default(0),
-    isActive: boolean('is_active').notNull().default(true),
-    // System field: Creation time (auto-filled, do not modify)
-    createdAt: customTimestamptz('_created_at', { precision: 6 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    // System field: Creator (auto-filled, do not modify)
-    createdBy: userProfile('_created_by'),
-    // System field: Update time (auto-filled, do not modify)
-    updatedAt: customTimestamptz('_updated_at', { precision: 6 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    // System field: Updater (auto-filled, do not modify)
-    updatedBy: userProfile('_updated_by'),
-  },
-  (table) => [index('idx_performance_grade_active').on(table.isActive)],
-);
-
-export const auditLog = pgTable('audit_log', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  operatorId: userProfile('operator_id'),
-  action: varchar('action', { length: 255 }).notNull(),
-  targetType: varchar('target_type', { length: 255 }).notNull(),
-  targetId: varchar('target_id', { length: 255 }).notNull(),
-  changes: jsonb('changes'),
-  reason: varchar('reason', { length: 255 }),
+export const employeeIndicatorSnapshot = pgTable("employee_indicator_snapshot", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  employeeId: userProfile("employee_id").notNull(),
+  templateId: uuid("template_id").notNull(),
+  dimensionName: varchar("dimension_name", { length: 255 }).notNull(),
+  dimensionWeight: numeric("dimension_weight").notNull().default('0'),
+  content: varchar("content", { length: 255 }).notNull(),
+  description: text("description"),
+  algorithm: text("algorithm"),
+  dataSource: varchar("data_source", { length: 255 }),
+  weight: numeric("weight").notNull().default('0'),
+  isAdjusted: boolean("is_adjusted").notNull().default(false),
+  adjustedBy: userProfile("adjusted_by"),
+  adjustedAt: customTimestamptz("adjusted_at", { precision: 6 }),
+  sortOrder: integer("sort_order").notNull().default(0),
   // System field: Creation time (auto-filled, do not modify)
-  createdAt: customTimestamptz('_created_at', { precision: 6 })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+  createdAt: customTimestamptz("_created_at", { precision: 3 }).notNull().default(sql`CURRENT_TIMESTAMP`),
   // System field: Creator (auto-filled, do not modify)
-  createdBy: userProfile('_created_by'),
+  createdBy: userProfile("_created_by").default(sql`CASE
+    WHEN (current_setting('app.user_id'::text, true) = ''::text) THEN NULL`),
   // System field: Update time (auto-filled, do not modify)
-  updatedAt: customTimestamptz('_updated_at', { precision: 6 })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: customTimestamptz("_updated_at", { precision: 3 }).notNull().default(sql`CURRENT_TIMESTAMP`),
   // System field: Updater (auto-filled, do not modify)
-  updatedBy: userProfile('_updated_by'),
-});
+  updatedBy: userProfile("_updated_by").default(sql`CASE
+    WHEN (current_setting('app.user_id'::text, true) = ''::text) THEN NULL`),
+}, (table) => [
+  // Complex index: CREATE INDEX idx_emp_snapshot_employee ON employee_indicator_snapshot USING btree (((employee_id).user_id)),
+  index("idx_emp_snapshot_template").on(table.templateId),
+]);
 
-export const ratingRecord = pgTable(
-  'rating_record',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    instanceId: uuid('instance_id').notNull(),
-    indicatorSnapshotId: uuid('indicator_snapshot_id').notNull(),
-    ratingType: varchar('rating_type', { length: 255 }).notNull(),
-    score: numeric('score').notNull().default('0'),
-    comment: text('comment'),
-    ratedBy: userProfile('rated_by').notNull(),
-    submittedAt: customTimestamptz('submitted_at', { precision: 6 }),
-    isDraft: boolean('is_draft').notNull().default(true),
-    // System field: Creation time (auto-filled, do not modify)
-    createdAt: customTimestamptz('_created_at', { precision: 6 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    // System field: Creator (auto-filled, do not modify)
-    createdBy: userProfile('_created_by'),
-    // System field: Update time (auto-filled, do not modify)
-    updatedAt: customTimestamptz('_updated_at', { precision: 6 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    // System field: Updater (auto-filled, do not modify)
-    updatedBy: userProfile('_updated_by'),
-  },
-  (table) => [
-    index('idx_rating_instance').on(table.instanceId),
-    index('idx_rating_snapshot').on(table.indicatorSnapshotId),
-  ],
-);
-
-export const rolePermissionConfig = pgTable('role_permission_config', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  roleBizId: varchar('role_biz_id', { length: 100 }).notNull(),
-  permissions: jsonb('permissions').notNull().default('[]'),
+export const performanceGrade = pgTable("performance_grade", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  minScore: integer("min_score").notNull(),
+  maxScore: integer("max_score").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
   // System field: Creation time (auto-filled, do not modify)
-  createdAt: customTimestamptz('_created_at', { precision: 6 })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+  createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
   // System field: Creator (auto-filled, do not modify)
-  createdBy: userProfile('_created_by'),
+  createdBy: userProfile("_created_by"),
   // System field: Update time (auto-filled, do not modify)
-  updatedAt: customTimestamptz('_updated_at', { precision: 6 })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: customTimestamptz("_updated_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
   // System field: Updater (auto-filled, do not modify)
-  updatedBy: userProfile('_updated_by'),
-});
+  updatedBy: userProfile("_updated_by"),
+}, (table) => [
+  index("idx_performance_grade_active").on(table.isActive),
+]);
 
-export const assessmentIndicatorSnapshot = pgTable(
-  'assessment_indicator_snapshot',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    instanceId: uuid('instance_id').notNull(),
-    dimensionName: varchar('dimension_name', { length: 255 }).notNull(),
-    dimensionWeight: numeric('dimension_weight').notNull().default('0'),
-    content: varchar('content', { length: 255 }).notNull(),
-    description: text('description'),
-    algorithm: text('algorithm'),
-    dataSource: varchar('data_source', { length: 255 }),
-    weight: numeric('weight').notNull().default('0'),
-    isAdjusted: boolean('is_adjusted').notNull().default(false),
-    adjustedBy: userProfile('adjusted_by'),
-    adjustedAt: customTimestamptz('adjusted_at', { precision: 6 }),
-    sortOrder: integer('sort_order').notNull().default(0),
-    // System field: Creation time (auto-filled, do not modify)
-    createdAt: customTimestamptz('_created_at', { precision: 6 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    // System field: Creator (auto-filled, do not modify)
-    createdBy: userProfile('_created_by'),
-    // System field: Update time (auto-filled, do not modify)
-    updatedAt: customTimestamptz('_updated_at', { precision: 6 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    // System field: Updater (auto-filled, do not modify)
-    updatedBy: userProfile('_updated_by'),
-  },
-  (table) => [index('idx_snapshot_instance').on(table.instanceId)],
-);
-
-export const assessmentInstance = pgTable(
-  'assessment_instance',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    period: varchar('period', { length: 255 }).notNull(),
-    employeeId: userProfile('employee_id').notNull(),
-    supervisorId: userProfile('supervisor_id'),
-    position: varchar('position', { length: 255 }).notNull(),
-    templateId: uuid('template_id').notNull(),
-    totalScore: numeric('total_score'),
-    grade: varchar('grade', { length: 255 }),
-    status: varchar('status', { length: 255 }).notNull().default('self_review'),
-    selfSignName: varchar('self_sign_name', { length: 255 }),
-    selfSignAt: customTimestamptz('self_sign_at', { precision: 6 }),
-    supervisorSignName: varchar('supervisor_sign_name', { length: 255 }),
-    supervisorSignAt: customTimestamptz('supervisor_sign_at', { precision: 6 }),
-    publishedBy: userProfile('published_by'),
-    publishedAt: customTimestamptz('published_at', { precision: 6 }),
-    completedAt: customTimestamptz('completed_at', { precision: 6 }),
-    selfSignImage: text('self_sign_image'),
-    supervisorSignImage: text('supervisor_sign_image'),
-    // System field: Creation time (auto-filled, do not modify)
-    createdAt: customTimestamptz('_created_at', { precision: 6 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    // System field: Creator (auto-filled, do not modify)
-    createdBy: userProfile('_created_by'),
-    // System field: Update time (auto-filled, do not modify)
-    updatedAt: customTimestamptz('_updated_at', { precision: 6 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    // System field: Updater (auto-filled, do not modify)
-    updatedBy: userProfile('_updated_by'),
-  },
-  (table) => [
-    // Complex index: CREATE INDEX idx_instance_employee ON assessment_instance USING btree (((employee_id).user_id)),
-    index('idx_instance_period').on(table.period),
-  ],
-);
-
-export const department = pgTable(
-  'department',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    name: varchar('name', { length: 255 }).notNull(),
-    parentId: uuid('parent_id'),
-    headId: userProfile('head_id'),
-    sortOrder: integer('sort_order').notNull().default(0),
-    isActive: boolean('is_active').notNull().default(true),
-    // System field: Creation time (auto-filled, do not modify)
-    createdAt: customTimestamptz('_created_at', { precision: 6 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    // System field: Creator (auto-filled, do not modify)
-    createdBy: userProfile('_created_by'),
-    // System field: Update time (auto-filled, do not modify)
-    updatedAt: customTimestamptz('_updated_at', { precision: 6 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    // System field: Updater (auto-filled, do not modify)
-    updatedBy: userProfile('_updated_by'),
-  },
-  (table) => [index('idx_department_parent').on(table.parentId)],
-);
-
-export const position = pgTable('position', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: varchar('name', { length: 255 }).notNull(),
-  sortOrder: integer('sort_order').notNull().default(0),
-  isActive: boolean('is_active').notNull().default(true),
-  createdAt: customTimestamptz('_created_at', { precision: 6 })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  createdBy: userProfile('_created_by'),
-  updatedAt: customTimestamptz('_updated_at', { precision: 6 })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedBy: userProfile('_updated_by'),
-});
-
-export const employeeBinding = pgTable(
-  'employee_binding',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    employeeId: userProfile('employee_id').notNull(),
-    templateId: uuid('template_id').notNull(),
-    effectiveFrom: varchar('effective_from', { length: 255 }).notNull(),
-    status: varchar('status', { length: 255 }).notNull().default('active'),
-    // System field: Creation time (auto-filled, do not modify)
-    createdAt: customTimestamptz('_created_at', { precision: 6 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    // System field: Creator (auto-filled, do not modify)
-    createdBy: userProfile('_created_by'),
-    // System field: Update time (auto-filled, do not modify)
-    updatedAt: customTimestamptz('_updated_at', { precision: 6 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    // System field: Updater (auto-filled, do not modify)
-    updatedBy: userProfile('_updated_by'),
-  },
-  (table) => [
-    // Complex index: CREATE INDEX idx_binding_employee ON employee_binding USING btree (((employee_id).user_id)),
-    index('idx_binding_template').on(table.templateId),
-  ],
-);
-
-export const assessmentIndicator = pgTable(
-  'assessment_indicator',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    dimensionId: uuid('dimension_id').notNull(),
-    content: varchar('content', { length: 255 }).notNull(),
-    description: text('description'),
-    algorithm: text('algorithm'),
-    dataSource: varchar('data_source', { length: 255 }),
-    weight: numeric('weight').notNull().default('0'),
-    sortOrder: integer('sort_order').notNull().default(0),
-    // System field: Creation time (auto-filled, do not modify)
-    createdAt: customTimestamptz('_created_at', { precision: 6 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    // System field: Creator (auto-filled, do not modify)
-    createdBy: userProfile('_created_by'),
-    // System field: Update time (auto-filled, do not modify)
-    updatedAt: customTimestamptz('_updated_at', { precision: 6 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    // System field: Updater (auto-filled, do not modify)
-    updatedBy: userProfile('_updated_by'),
-  },
-  (table) => [index('idx_indicator_dimension').on(table.dimensionId)],
-);
-
-export const assessmentDimension = pgTable(
-  'assessment_dimension',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    templateId: uuid('template_id').notNull(),
-    name: varchar('name', { length: 255 }).notNull(),
-    weight: numeric('weight').notNull().default('0'),
-    sortOrder: integer('sort_order').notNull().default(0),
-    // System field: Creation time (auto-filled, do not modify)
-    createdAt: customTimestamptz('_created_at', { precision: 6 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    // System field: Creator (auto-filled, do not modify)
-    createdBy: userProfile('_created_by'),
-    // System field: Update time (auto-filled, do not modify)
-    updatedAt: customTimestamptz('_updated_at', { precision: 6 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    // System field: Updater (auto-filled, do not modify)
-    updatedBy: userProfile('_updated_by'),
-  },
-  (table) => [index('idx_dimension_template').on(table.templateId)],
-);
-
-export const assessmentTemplate = pgTable('assessment_template', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: varchar('name', { length: 255 }).notNull(),
-  position: varchar('position', { length: 255 }).notNull(),
-  type: varchar('type', { length: 255 }).notNull().default('monthly'),
-  isActive: boolean('is_active').notNull().default(true),
+export const auditLog = pgTable("audit_log", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  operatorId: userProfile("operator_id"),
+  action: varchar("action", { length: 255 }).notNull(),
+  targetType: varchar("target_type", { length: 255 }).notNull(),
+  targetId: varchar("target_id", { length: 255 }).notNull(),
+  changes: jsonb("changes"),
+  reason: varchar("reason", { length: 255 }),
   // System field: Creation time (auto-filled, do not modify)
-  createdAt: customTimestamptz('_created_at', { precision: 6 })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+  createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
   // System field: Creator (auto-filled, do not modify)
-  createdBy: userProfile('_created_by'),
+  createdBy: userProfile("_created_by"),
   // System field: Update time (auto-filled, do not modify)
-  updatedAt: customTimestamptz('_updated_at', { precision: 6 })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: customTimestamptz("_updated_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
   // System field: Updater (auto-filled, do not modify)
-  updatedBy: userProfile('_updated_by'),
+  updatedBy: userProfile("_updated_by"),
 });
 
-export const employee = pgTable(
-  'employee',
-  {
-    id: userProfile('id').notNull(),
-    name: varchar('name', { length: 255 }).notNull(),
-    position: varchar('position', { length: 255 }).notNull(),
-    department: varchar('department', { length: 255 }).notNull(),
-    supervisorId: userProfile('supervisor_id'),
-    status: varchar('status', { length: 255 }).notNull().default('active'),
-    employeeNo: varchar('employee_no', { length: 50 }),
-    title: varchar('title', { length: 100 }),
-    role: varchar('role', { length: 50 }).default('employee'),
-    phone: varchar('phone', { length: 50 }),
-    hireDate: customTimestamptz('hire_date', { precision: 6 }),
-    probationMonths: integer('probation_months').default(3),
-    permissions: jsonb('permissions'),
-    deletedAt: customTimestamptz('deleted_at', { precision: 6 }),
-    // System field: Creation time (auto-filled, do not modify)
-    createdAt: customTimestamptz('_created_at', { precision: 6 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    // System field: Creator (auto-filled, do not modify)
-    createdBy: userProfile('_created_by'),
-    // System field: Update time (auto-filled, do not modify)
-    updatedAt: customTimestamptz('_updated_at', { precision: 6 })
-      .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
-    // System field: Updater (auto-filled, do not modify)
-    updatedBy: userProfile('_updated_by'),
-  },
-  (table) => [
-    // Complex index: CREATE UNIQUE INDEX idx_employee_pk ON employee USING btree (((id).user_id)),
-    // Complex index: CREATE INDEX idx_employee_supervisor ON employee USING btree (((supervisor_id).user_id)),
-  ],
-);
+export const ratingRecord = pgTable("rating_record", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  instanceId: uuid("instance_id").notNull(),
+  indicatorSnapshotId: uuid("indicator_snapshot_id").notNull(),
+  ratingType: varchar("rating_type", { length: 255 }).notNull(),
+  score: numeric("score").notNull().default('0'),
+  comment: text("comment"),
+  ratedBy: userProfile("rated_by").notNull(),
+  submittedAt: customTimestamptz("submitted_at", { precision: 6 }),
+  isDraft: boolean("is_draft").notNull().default(true),
+  // System field: Creation time (auto-filled, do not modify)
+  createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Creator (auto-filled, do not modify)
+  createdBy: userProfile("_created_by"),
+  // System field: Update time (auto-filled, do not modify)
+  updatedAt: customTimestamptz("_updated_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Updater (auto-filled, do not modify)
+  updatedBy: userProfile("_updated_by"),
+}, (table) => [
+  index("idx_rating_instance").on(table.instanceId),
+  index("idx_rating_snapshot").on(table.indicatorSnapshotId),
+]);
+
+export const rolePermissionConfig = pgTable("role_permission_config", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  roleBizId: varchar("role_biz_id", { length: 100 }).notNull(),
+  permissions: jsonb("permissions").notNull().default('[]'),
+  // System field: Creation time (auto-filled, do not modify)
+  createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Creator (auto-filled, do not modify)
+  createdBy: userProfile("_created_by"),
+  // System field: Update time (auto-filled, do not modify)
+  updatedAt: customTimestamptz("_updated_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Updater (auto-filled, do not modify)
+  updatedBy: userProfile("_updated_by"),
+});
+
+export const assessmentIndicatorSnapshot = pgTable("assessment_indicator_snapshot", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  instanceId: uuid("instance_id").notNull(),
+  dimensionName: varchar("dimension_name", { length: 255 }).notNull(),
+  dimensionWeight: numeric("dimension_weight").notNull().default('0'),
+  content: varchar("content", { length: 255 }).notNull(),
+  description: text("description"),
+  algorithm: text("algorithm"),
+  dataSource: varchar("data_source", { length: 255 }),
+  weight: numeric("weight").notNull().default('0'),
+  isAdjusted: boolean("is_adjusted").notNull().default(false),
+  adjustedBy: userProfile("adjusted_by"),
+  adjustedAt: customTimestamptz("adjusted_at", { precision: 6 }),
+  sortOrder: integer("sort_order").notNull().default(0),
+  // System field: Creation time (auto-filled, do not modify)
+  createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Creator (auto-filled, do not modify)
+  createdBy: userProfile("_created_by"),
+  // System field: Update time (auto-filled, do not modify)
+  updatedAt: customTimestamptz("_updated_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Updater (auto-filled, do not modify)
+  updatedBy: userProfile("_updated_by"),
+}, (table) => [
+  index("idx_snapshot_instance").on(table.instanceId),
+]);
+
+export const assessmentInstance = pgTable("assessment_instance", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  period: varchar("period", { length: 255 }).notNull(),
+  employeeId: userProfile("employee_id").notNull(),
+  supervisorId: userProfile("supervisor_id"),
+  position: varchar("position", { length: 255 }).notNull(),
+  templateId: uuid("template_id").notNull(),
+  totalScore: numeric("total_score"),
+  grade: varchar("grade", { length: 255 }),
+  status: varchar("status", { length: 255 }).notNull().default('self_review'),
+  selfSignName: varchar("self_sign_name", { length: 255 }),
+  selfSignAt: customTimestamptz("self_sign_at", { precision: 6 }),
+  supervisorSignName: varchar("supervisor_sign_name", { length: 255 }),
+  supervisorSignAt: customTimestamptz("supervisor_sign_at", { precision: 6 }),
+  publishedBy: userProfile("published_by"),
+  publishedAt: customTimestamptz("published_at", { precision: 6 }),
+  completedAt: customTimestamptz("completed_at", { precision: 6 }),
+  selfSignImage: text("self_sign_image"),
+  supervisorSignImage: text("supervisor_sign_image"),
+  // System field: Creation time (auto-filled, do not modify)
+  createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Creator (auto-filled, do not modify)
+  createdBy: userProfile("_created_by"),
+  // System field: Update time (auto-filled, do not modify)
+  updatedAt: customTimestamptz("_updated_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Updater (auto-filled, do not modify)
+  updatedBy: userProfile("_updated_by"),
+}, (table) => [
+  // Complex index: CREATE INDEX idx_instance_employee ON assessment_instance USING btree (((employee_id).user_id)),
+  index("idx_instance_period").on(table.period),
+]);
+
+export const department = pgTable("department", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  parentId: uuid("parent_id"),
+  headId: userProfile("head_id"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  // System field: Creation time (auto-filled, do not modify)
+  createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Creator (auto-filled, do not modify)
+  createdBy: userProfile("_created_by"),
+  // System field: Update time (auto-filled, do not modify)
+  updatedAt: customTimestamptz("_updated_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Updater (auto-filled, do not modify)
+  updatedBy: userProfile("_updated_by"),
+}, (table) => [
+  index("idx_department_parent").on(table.parentId),
+]);
+
+export const employeeBinding = pgTable("employee_binding", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  employeeId: userProfile("employee_id").notNull(),
+  templateId: uuid("template_id").notNull(),
+  effectiveFrom: varchar("effective_from", { length: 255 }).notNull(),
+  status: varchar("status", { length: 255 }).notNull().default('active'),
+  // System field: Creation time (auto-filled, do not modify)
+  createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Creator (auto-filled, do not modify)
+  createdBy: userProfile("_created_by"),
+  // System field: Update time (auto-filled, do not modify)
+  updatedAt: customTimestamptz("_updated_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Updater (auto-filled, do not modify)
+  updatedBy: userProfile("_updated_by"),
+}, (table) => [
+  // Complex index: CREATE INDEX idx_binding_employee ON employee_binding USING btree (((employee_id).user_id)),
+  index("idx_binding_template").on(table.templateId),
+]);
+
+export const assessmentIndicator = pgTable("assessment_indicator", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  dimensionId: uuid("dimension_id").notNull(),
+  content: varchar("content", { length: 255 }).notNull(),
+  description: text("description"),
+  algorithm: text("algorithm"),
+  dataSource: varchar("data_source", { length: 255 }),
+  weight: numeric("weight").notNull().default('0'),
+  sortOrder: integer("sort_order").notNull().default(0),
+  // System field: Creation time (auto-filled, do not modify)
+  createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Creator (auto-filled, do not modify)
+  createdBy: userProfile("_created_by"),
+  // System field: Update time (auto-filled, do not modify)
+  updatedAt: customTimestamptz("_updated_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Updater (auto-filled, do not modify)
+  updatedBy: userProfile("_updated_by"),
+}, (table) => [
+  index("idx_indicator_dimension").on(table.dimensionId),
+]);
+
+export const assessmentDimension = pgTable("assessment_dimension", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  templateId: uuid("template_id").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  weight: numeric("weight").notNull().default('0'),
+  sortOrder: integer("sort_order").notNull().default(0),
+  // System field: Creation time (auto-filled, do not modify)
+  createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Creator (auto-filled, do not modify)
+  createdBy: userProfile("_created_by"),
+  // System field: Update time (auto-filled, do not modify)
+  updatedAt: customTimestamptz("_updated_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Updater (auto-filled, do not modify)
+  updatedBy: userProfile("_updated_by"),
+}, (table) => [
+  index("idx_dimension_template").on(table.templateId),
+]);
+
+export const assessmentTemplate = pgTable("assessment_template", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  position: varchar("position", { length: 255 }).notNull(),
+  type: varchar("type", { length: 255 }).notNull().default('monthly'),
+  isActive: boolean("is_active").notNull().default(true),
+  // System field: Creation time (auto-filled, do not modify)
+  createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Creator (auto-filled, do not modify)
+  createdBy: userProfile("_created_by"),
+  // System field: Update time (auto-filled, do not modify)
+  updatedAt: customTimestamptz("_updated_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Updater (auto-filled, do not modify)
+  updatedBy: userProfile("_updated_by"),
+});
+
+export const employee = pgTable("employee", {
+  id: userProfile("id").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  position: varchar("position", { length: 255 }).notNull(),
+  department: varchar("department", { length: 255 }).notNull(),
+  supervisorId: userProfile("supervisor_id"),
+  status: varchar("status", { length: 255 }).notNull().default('active'),
+  employeeNo: varchar("employee_no", { length: 50 }),
+  title: varchar("title", { length: 100 }),
+  role: varchar("role", { length: 50 }).default('employee'),
+  phone: varchar("phone", { length: 50 }),
+  hireDate: customTimestamptz("hire_date", { precision: 6 }),
+  probationMonths: integer("probation_months").default(3),
+  permissions: jsonb("permissions"),
+  deletedAt: customTimestamptz("deleted_at", { precision: 6 }),
+  // System field: Creation time (auto-filled, do not modify)
+  createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Creator (auto-filled, do not modify)
+  createdBy: userProfile("_created_by"),
+  // System field: Update time (auto-filled, do not modify)
+  updatedAt: customTimestamptz("_updated_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Updater (auto-filled, do not modify)
+  updatedBy: userProfile("_updated_by"),
+}, (table) => [
+  // Complex index: CREATE UNIQUE INDEX idx_employee_pk ON employee USING btree (((id).user_id)),
+  // Complex index: CREATE INDEX idx_employee_supervisor ON employee USING btree (((supervisor_id).user_id)),
+]);
 
 // table aliases
 export const assessmentDimensionTable = assessmentDimension;
@@ -524,5 +429,6 @@ export const employeeTable = employee;
 export const employeeBindingTable = employeeBinding;
 export const employeeIndicatorSnapshotTable = employeeIndicatorSnapshot;
 export const performanceGradeTable = performanceGrade;
+export const positionTable = position;
 export const ratingRecordTable = ratingRecord;
 export const rolePermissionConfigTable = rolePermissionConfig;
