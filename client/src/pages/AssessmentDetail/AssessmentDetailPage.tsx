@@ -178,97 +178,96 @@ const AssessmentDetailPage: React.FC = () => {
             </CardHeader>
             <CardContent className="flex flex-col gap-5">
               {/* Self */}
-              <div className="flex gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <User className="size-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-sm font-medium">我</p>
-                    <Badge
-                      className={
-                        detail.selfSignName
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    我
+                  </p>
+                  <Badge
+                    className={
+                      detail.status === 'completed'
+                        ? 'bg-success/10 text-success border-transparent text-xs'
+                        : detail.selfSignName
                           ? 'bg-success/10 text-success border-transparent text-xs'
                           : detail.status === 'self_review'
-                            ? 'bg-info/10 text-info border-transparent text-xs'
+                            ? 'bg-destructive/10 text-destructive border-transparent text-xs'
                             : 'bg-warning/10 text-warning border-transparent text-xs'
-                      }
-                    >
-                      {detail.selfSignName
-                        ? '已签名'
+                    }
+                  >
+                    {detail.status === 'completed'
+                      ? '已完成'
+                      : detail.selfSignName
+                        ? '已完成'
                         : detail.status === 'self_review'
-                          ? '待自评'
-                          : '待签名'}
-                    </Badge>
-                  </div>
-                  {detail.selfSignImage ? (
-                    <img
-                      src={detail.selfSignImage}
-                      alt="本人签名"
-                      className="h-14 border rounded-md object-contain bg-muted/30"
-                    />
-                  ) : (
-                    <p className="text-xs text-muted-foreground italic">
-                      {detail.status === 'self_review'
-                        ? '请完成自评后签名'
-                        : '请完成签名'}
-                    </p>
-                  )}
+                          ? '未自评'
+                          : '未签名'}
+                  </Badge>
                 </div>
+                <div className="flex items-center gap-3">
+                  <UserDisplay
+                    userId={detail.employeeId}
+                    size="medium"
+                    showLabel
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    {detail.position}
+                  </span>
+                </div>
+                {detail.selfSignImage && (
+                  <img
+                    src={detail.selfSignImage}
+                    alt="本人签名"
+                    className="mt-2 h-12 border rounded-md object-contain bg-muted/30"
+                  />
+                )}
               </div>
 
               {/* Supervisor */}
-              <div className="border-t pt-4 flex gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-info/10 text-info">
-                  <Users2 className="size-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="min-w-0">
-                      <p className="text-xs text-muted-foreground">上级</p>
-                      {detail.supervisorId ? (
-                        <UserDisplay
-                          userId={detail.supervisorId}
-                          size="small"
-                        />
-                      ) : (
-                        <p className="text-sm text-muted-foreground">-</p>
-                      )}
-                    </div>
-                    <Badge
-                      className={
-                        detail.supervisorSignName
-                          ? 'bg-success/10 text-success border-transparent text-xs shrink-0 ml-2'
+              <div className="border-t pt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    上级
+                  </p>
+                  <Badge
+                    className={
+                      detail.status === 'completed'
+                        ? 'bg-success/10 text-success border-transparent text-xs'
+                        : detail.supervisorSignName
+                          ? 'bg-success/10 text-success border-transparent text-xs'
                           : detail.status === 'supervisor_review'
-                            ? 'bg-info/10 text-info border-transparent text-xs shrink-0 ml-2'
-                            : 'bg-warning/10 text-warning border-transparent text-xs shrink-0 ml-2'
-                      }
-                    >
-                      {detail.supervisorSignName
-                        ? '已签名'
+                            ? 'bg-destructive/10 text-destructive border-transparent text-xs'
+                            : detail.status === 'self_review'
+                              ? 'bg-destructive/10 text-destructive border-transparent text-xs'
+                              : 'bg-warning/10 text-warning border-transparent text-xs'
+                    }
+                  >
+                    {detail.status === 'completed'
+                      ? '已完成'
+                      : detail.supervisorSignName
+                        ? '已完成'
                         : detail.status === 'supervisor_review'
-                          ? '待评分'
-                          : detail.status === 'completed'
-                            ? '已签名'
-                            : '待签名'}
-                    </Badge>
-                  </div>
-                  {detail.supervisorSignImage ? (
-                    <img
-                      src={detail.supervisorSignImage}
-                      alt="上级签名"
-                      className="h-14 border rounded-md object-contain bg-muted/30"
-                    />
-                  ) : (
-                    <p className="text-xs text-muted-foreground italic">
-                      {detail.status === 'supervisor_review'
-                        ? '请完成上级评分后签名'
-                        : detail.status === 'completed'
-                          ? ''
-                          : '请完成签名'}
-                    </p>
-                  )}
+                          ? '未评分'
+                          : detail.status === 'self_review'
+                            ? '未评分'
+                            : '未签名'}
+                  </Badge>
                 </div>
+                {detail.supervisorId ? (
+                  <UserDisplay
+                    userId={detail.supervisorId}
+                    size="medium"
+                    showLabel
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground">-</p>
+                )}
+                {detail.supervisorSignImage && (
+                  <img
+                    src={detail.supervisorSignImage}
+                    alt="上级签名"
+                    className="mt-2 h-12 border rounded-md object-contain bg-muted/30"
+                  />
+                )}
               </div>
             </CardContent>
           </Card>
