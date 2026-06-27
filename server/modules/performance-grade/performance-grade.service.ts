@@ -182,7 +182,7 @@ export class PerformanceGradeService {
       .where(eq(performanceGrade.isActive, true));
 
     for (const rule of rules) {
-      if (totalScore >= rule.minScore && totalScore < rule.maxScore) {
+      if (totalScore >= rule.minScore && totalScore <= rule.maxScore) {
         return rule.name;
       }
     }
@@ -213,12 +213,12 @@ export class PerformanceGradeService {
     for (let i = 0; i < sorted.length - 1; i++) {
       const curr = sorted[i];
       const next = sorted[i + 1];
-      if (curr.maxScore > next.minScore) {
+      if (curr.maxScore >= next.minScore) {
         throw new BadRequestException(
-          `等级「${curr.name}」(区间[${curr.minScore},${curr.maxScore}))与等级「${next.name}」(区间[${next.minScore},${next.maxScore}))分数区间重叠`,
+          `等级「${curr.name}」(区间[${curr.minScore},${curr.maxScore}])与等级「${next.name}」(区间[${next.minScore},${next.maxScore}])分数区间重叠`,
         );
       }
-      if (curr.maxScore < next.minScore) {
+      if (curr.maxScore + 1 < next.minScore) {
         throw new BadRequestException(
           `等级「${curr.name}」(最高分${curr.maxScore})与等级「${next.name}」(最低分${next.minScore})之间存在未覆盖的分数区间`,
         );
