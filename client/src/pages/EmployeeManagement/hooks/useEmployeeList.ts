@@ -1,6 +1,15 @@
-import { useState, useEffect, useCallback, type Dispatch, type SetStateAction } from 'react';
+import {
+  useState,
+  useEffect,
+  useCallback,
+  type Dispatch,
+  type SetStateAction,
+} from 'react';
 import { employeeManagement } from '@/api';
-import { assessmentTemplate as templateApi } from '@/api';
+import {
+  assessmentTemplate as templateApi,
+  position as positionApi,
+} from '@/api';
 import type {
   EmployeeItem,
   AssessmentTemplateItem,
@@ -69,8 +78,8 @@ export function useEmployeeList(
 
   const fetchPositions = useCallback(async () => {
     try {
-      const res = await employeeManagement.getPositions();
-      setPositions(res.positions);
+      const res = await positionApi.list();
+      setPositions(res.items.map((p) => p.name));
     } catch (error: unknown) {
       handleApiError(error);
     }

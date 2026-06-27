@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type {
   EmployeeItem,
   CreateEmployeeRequest,
+  PositionItem,
 } from '@shared/api.interface';
+import { position as positionApi } from '@/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -101,6 +103,15 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
     !isEditing && formData.userId ? [formData.userId] : [],
   );
 
+  const [positions, setPositions] = useState<PositionItem[]>([]);
+
+  useEffect(() => {
+    positionApi
+      .list()
+      .then((res) => setPositions(res.items))
+      .catch(() => {});
+  }, []);
+
   React.useEffect(() => {
     if (isEditing || !formData.userId) return;
     const userInfo = usersResponse?.data?.userInfoMap?.[formData.userId];
@@ -151,12 +162,21 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
               <Label className="text-xs text-muted-foreground mb-1.5">
                 岗位 *
               </Label>
-              <Input
+              <Select
                 value={formData.position}
-                onChange={(e) =>
-                  setFormData({ ...formData, position: e.target.value })
-                }
-              />
+                onValueChange={(v) => setFormData({ ...formData, position: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="选择岗位" />
+                </SelectTrigger>
+                <SelectContent>
+                  {positions.map((p) => (
+                    <SelectItem key={p.id} value={p.name}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

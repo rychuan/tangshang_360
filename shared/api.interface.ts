@@ -630,6 +630,24 @@ export interface CreateDepartmentRequest {
   sortOrder?: number;
 }
 export type UpdateDepartmentRequest = CreateDepartmentRequest;
+
+// === Position Management ===
+export interface PositionItem {
+  id: string;
+  name: string;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+}
+export interface PositionListResponse {
+  items: PositionItem[];
+}
+export interface CreatePositionRequest {
+  name: string;
+  sortOrder?: number;
+}
+export type UpdatePositionRequest = CreatePositionRequest;
+
 export interface ExportResultItem extends StatisticsRecordItem {}
 export interface ExportResult {
   items: ExportResultItem[];

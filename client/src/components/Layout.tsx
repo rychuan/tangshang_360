@@ -30,6 +30,7 @@ import {
   UserCog,
   Shield,
   Award,
+  Briefcase,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -120,6 +121,12 @@ const navGroups: NavGroup[] = [
         roles: MANAGER_ROLES,
       },
       {
+        label: '岗位管理',
+        path: '/position-config',
+        icon: Briefcase,
+        roles: ADMIN_HRD_ROLES,
+      },
+      {
         label: '权限管理',
         path: '/permissions',
         icon: Shield,
@@ -138,6 +145,7 @@ const pathTitleMap: Record<string, string> = {
   '/grade-config': '绩效等级配置',
   '/my-assessments': '我的绩效',
   '/team-performance': '团队绩效',
+  '/position-config': '岗位管理',
   '/permissions': '权限管理',
 };
 
