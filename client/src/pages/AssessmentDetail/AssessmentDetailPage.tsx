@@ -303,7 +303,7 @@ const AssessmentDetailPage: React.FC = () => {
                       <img
                         src={step.signImage}
                         alt={`${step.label}签名`}
-                        className="h-10 border rounded-md object-contain bg-muted/30"
+                        className="h-16 w-full max-w-[120px] border rounded-md object-contain bg-white"
                       />
                     </div>
                   )}
