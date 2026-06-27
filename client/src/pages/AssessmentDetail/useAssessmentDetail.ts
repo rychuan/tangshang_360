@@ -110,11 +110,10 @@ export function useAssessmentDetail(
     isSupervisorCandidate && (isSupervisorView || !isEmployeeCandidate);
 
   const canEditSelf: boolean = detail?.status === 'self_review' && isEmployee;
+  // 上级评分/签名：允许所有非员工本人的用户操作（发布上级/当前上级/部门负责人），
+  // 最终权限由后端校验
   const canEditSupervisor: boolean =
-    detail?.status === 'supervisor_review' &&
-    (isSupervisor || (!isEmployeeCandidate && isSupervisorView));
-  // 上级签名：允许所有非员工本人且未签名的用户操作（含发布上级/当前上级/部门负责人），
-  // 最终权限由后端校验（后端支持发布上级、当前上级、部门负责人三种身份）
+    detail?.status === 'supervisor_review' && !isEmployeeCandidate;
   const canSignSupervisor: boolean =
     detail?.status === 'pending_sign' &&
     !isEmployeeCandidate &&
