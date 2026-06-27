@@ -180,11 +180,16 @@ const AssessmentDetailPage: React.FC = () => {
       {/* Process stepper card */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">绩效进度</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">
+            <UserDisplay userId={detail.employeeId} size="small" showLabel />
+            <span className="text-muted-foreground font-normal text-sm">
+              【{detail.position}】的绩效评分
+            </span>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {/* 4-step progress bar */}
-          <div className="flex items-start justify-between gap-1 mb-6">
+          <div className="flex items-start justify-between gap-1">
             {[
               {
                 key: 'self',
@@ -192,6 +197,7 @@ const AssessmentDetailPage: React.FC = () => {
                 icon: User,
                 done: detail.status !== 'self_review',
                 active: detail.status === 'self_review',
+                person: detail.employeeId,
               },
               {
                 key: 'supervisor',
@@ -201,6 +207,7 @@ const AssessmentDetailPage: React.FC = () => {
                   detail.status === 'pending_sign' ||
                   detail.status === 'completed',
                 active: detail.status === 'supervisor_review',
+                person: detail.supervisorId,
               },
               {
                 key: 'selfSign',
@@ -209,6 +216,7 @@ const AssessmentDetailPage: React.FC = () => {
                 done: !!detail.selfSignName,
                 active:
                   detail.status === 'pending_sign' && !detail.selfSignName,
+                person: null,
               },
               {
                 key: 'supSign',
@@ -220,9 +228,10 @@ const AssessmentDetailPage: React.FC = () => {
                   detail.status === 'pending_sign' &&
                   !!detail.selfSignName &&
                   !detail.supervisorSignName,
+                person: null,
               },
             ].map((step, i) => (
-              <div key={step.key} className="flex-1 flex items-center min-w-0">
+              <div key={step.key} className="flex-1 flex items-start min-w-0">
                 <div className="flex flex-col items-center gap-1.5 w-full">
                   <div
                     className={`flex size-9 items-center justify-center rounded-full text-sm font-bold ${
@@ -263,6 +272,15 @@ const AssessmentDetailPage: React.FC = () => {
                   >
                     {step.done ? '已完成' : step.active ? '进行中' : '待进行'}
                   </span>
+                  {step.person && (
+                    <div className="mt-1">
+                      <UserDisplay
+                        userId={step.person}
+                        size="small"
+                        showLabel
+                      />
+                    </div>
+                  )}
                 </div>
                 {i < 3 && (
                   <ChevronRight
@@ -273,43 +291,6 @@ const AssessmentDetailPage: React.FC = () => {
                 )}
               </div>
             ))}
-          </div>
-
-          {/* People info */}
-          <div className="border-t pt-4 grid grid-cols-2 gap-4">
-            <div className="flex items-start gap-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <User className="size-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground mb-0.5">员工</p>
-                <UserDisplay
-                  userId={detail.employeeId}
-                  size="medium"
-                  showLabel
-                />
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {detail.position}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-info/10 text-info">
-                <Users2 className="size-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground mb-0.5">上级</p>
-                {detail.supervisorId ? (
-                  <UserDisplay
-                    userId={detail.supervisorId}
-                    size="medium"
-                    showLabel
-                  />
-                ) : (
-                  <p className="text-sm text-muted-foreground">-</p>
-                )}
-              </div>
-            </div>
           </div>
         </CardContent>
       </Card>
