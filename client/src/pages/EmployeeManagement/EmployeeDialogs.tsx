@@ -2,8 +2,8 @@ import React from 'react';
 import { toast } from 'sonner';
 import { UserSelect } from '@client/src/components/business-ui/user-select';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import MultiMonthPicker from '@/components/ui/multi-month-picker';
 import {
   Dialog,
   DialogContent,
@@ -44,8 +44,8 @@ export interface BindDialogProps {
   setBindEmployeeIds: (v: string[]) => void;
   bindTemplateId: string;
   setBindTemplateId: (v: string) => void;
-  bindEffectiveFrom: string;
-  setBindEffectiveFrom: (v: string) => void;
+  bindEffectiveFrom: string[];
+  setBindEffectiveFrom: (v: string[]) => void;
   bindSubmitting: boolean;
   onConfirm: () => void;
   templates: AssessmentTemplateItem[];
@@ -73,7 +73,7 @@ const BindDialog: React.FC<BindDialogProps> = ({
       toast.error('请选择绩效模板');
       return;
     }
-    if (!bindEffectiveFrom) {
+    if (!bindEffectiveFrom.length) {
       toast.error('请选择生效月份');
       return;
     }
@@ -125,12 +125,9 @@ const BindDialog: React.FC<BindDialogProps> = ({
             <Label className="text-xs text-muted-foreground mb-1.5">
               生效月份
             </Label>
-            <Input
-              type="month"
+            <MultiMonthPicker
               value={bindEffectiveFrom}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setBindEffectiveFrom(e.target.value)
-              }
+              onChange={setBindEffectiveFrom}
             />
           </div>
         </div>

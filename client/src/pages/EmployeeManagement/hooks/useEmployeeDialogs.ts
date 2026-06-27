@@ -30,7 +30,7 @@ export function useEmployeeDialogs(refetch: () => void) {
   const [bindOpen, setBindOpen] = useState(false);
   const [bindEmployeeIds, setBindEmployeeIds] = useState<string[]>([]);
   const [bindTemplateId, setBindTemplateId] = useState('');
-  const [bindEffectiveFrom, setBindEffectiveFrom] = useState('');
+  const [bindEffectiveFrom, setBindEffectiveFrom] = useState<string[]>([]);
   const [bindSubmitting, setBindSubmitting] = useState(false);
 
   // ---- 解绑对话框 ----
@@ -94,19 +94,19 @@ export function useEmployeeDialogs(refetch: () => void) {
   const openBindDialog = useCallback((emp?: EmployeeItem) => {
     setBindEmployeeIds(emp ? [emp.id] : []);
     setBindTemplateId('');
-    setBindEffectiveFrom('');
+    setBindEffectiveFrom([]);
     setBindOpen(true);
   }, []);
 
   const openBatchBindDialog = useCallback((ids: string[]) => {
     setBindEmployeeIds(ids);
     setBindTemplateId('');
-    setBindEffectiveFrom('');
+    setBindEffectiveFrom([]);
     setBindOpen(true);
   }, []);
 
   const handleBindConfirm = useCallback(async () => {
-    if (!bindEmployeeIds.length || !bindTemplateId || !bindEffectiveFrom) {
+    if (!bindEmployeeIds.length || !bindTemplateId || !bindEffectiveFrom.length) {
       toast.error('请填写完整的绑定信息');
       return;
     }
@@ -115,7 +115,7 @@ export function useEmployeeDialogs(refetch: () => void) {
       await employeeManagement.bind({
         employeeIds: bindEmployeeIds,
         templateId: bindTemplateId,
-        effectiveFrom: bindEffectiveFrom,
+        effectiveFrom: bindEffectiveFrom[0],
       });
       toast.success('绑定成功');
       setBindOpen(false);
