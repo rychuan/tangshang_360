@@ -55,7 +55,7 @@ const EMPTY_INDICATOR: AdjustIndicatorInput = {
   description: '',
   algorithm: '',
   dataSource: '',
-  weight: 100,
+  weight: 0,
   dimensionName: '',
   dimensionWeight: 0,
 };
@@ -145,14 +145,37 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
     };
   }, [dimensionGroups]);
 
+  const indicatorWeightValidation = useMemo(() => {
+    const invalidDims: string[] = [];
+    for (const g of dimensionGroups) {
+      const indicatorSum: number = g.indicators.reduce(
+        (sum: number, ind: AdjustIndicatorInput) => sum + (ind.weight ?? 0),
+        0,
+      );
+      if (Math.abs(indicatorSum - g.dimensionWeight) > 0.01) {
+        invalidDims.push(g.dimensionName || '未分组');
+      }
+    }
+    return {
+      invalidDims,
+      isValid: invalidDims.length === 0,
+    };
+  }, [dimensionGroups]);
+
   const handleAddIndicator = (
     dimensionName: string,
     dimensionWeight: number,
   ): void => {
-    setIndicators((prev: AdjustIndicatorInput[]) => [
-      ...prev,
-      { ...EMPTY_INDICATOR, dimensionName, dimensionWeight },
-    ]);
+    setIndicators((prev: AdjustIndicatorInput[]) => {
+      const existingSum: number = prev
+        .filter((ind: AdjustIndicatorInput) => (ind.dimensionName || '未分组') === (dimensionName || '未分组'))
+        .reduce((sum: number, ind: AdjustIndicatorInput) => sum + (ind.weight ?? 0), 0);
+      const remaining: number = Math.max(0, dimensionWeight - existingSum);
+      return [
+        ...prev,
+        { ...EMPTY_INDICATOR, weight: remaining, dimensionName, dimensionWeight },
+      ];
+    });
   };
 
   const handleRemoveIndicator = (flatIndex: number): void => {
@@ -207,7 +230,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
     }
     setIndicators((prev: AdjustIndicatorInput[]) => [
       ...prev,
-      { ...EMPTY_INDICATOR, dimensionName: name, dimensionWeight: weight },
+      { ...EMPTY_INDICATOR, weight, dimensionName: name, dimensionWeight: weight },
     ]);
     setAddingDimension(false);
     setNewDimName('');
@@ -230,6 +253,12 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
     if (!dimensionWeightValidation.isValid) {
       toast.error(
         `维度权重之和必须等于 100%，当前为 ${dimensionWeightValidation.totalWeight}%`,
+      );
+      return;
+    }
+    if (!indicatorWeightValidation.isValid) {
+      toast.error(
+        `以下维度的指标权重之和不等于维度权重：${indicatorWeightValidation.invalidDims.join('、')}`,
       );
       return;
     }
@@ -351,6 +380,22 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
+        {(() => {
+          const indicatorSum: number = group.indicators.reduce(
+            (sum: number, ind: AdjustIndicatorInput) => sum + (ind.weight ?? 0),
+            0,
+          );
+          const mismatch: boolean =
+            Math.abs(indicatorSum - group.dimensionWeight) > 0.01;
+          return mismatch ? (
+            <Alert variant="destructive">
+              <AlertTriangle className="size-4" />
+              <AlertDescription>
+                指标权重之和({indicatorSum})不等于维度权重({group.dimensionWeight})
+              </AlertDescription>
+            </Alert>
+          ) : null;
+        })()}
         {group.indicators.map((ind: AdjustIndicatorInput, idx: number) => {
           const flatIndex: number = group.flatIndices[idx];
           return (
@@ -426,7 +471,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
                 </div>
               </div>
               <div className="flex flex-col gap-2">
-                <Label className="text-xs">最高分</Label>
+                <Label className="text-xs">权重(分)</Label>
                 <Input
                   type="number"
                   value={ind.weight}
@@ -437,7 +482,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
                       Number(e.target.value),
                     )
                   }
-                  placeholder="100"
+                  placeholder="0"
                 />
               </div>
             </div>
@@ -627,7 +672,10 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
                 data-ai-section-type="button"
                 onClick={handleSubmit}
                 disabled={
-                  loading || previewMode || !dimensionWeightValidation.isValid
+                  loading ||
+                  previewMode ||
+                  !dimensionWeightValidation.isValid ||
+                  !indicatorWeightValidation.isValid
                 }
               >
                 {loading ? '调整中...' : '确认调整'}
