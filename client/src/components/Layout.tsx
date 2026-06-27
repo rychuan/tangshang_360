@@ -121,7 +121,7 @@ const navGroups: NavGroup[] = [
         roles: MANAGER_ROLES,
       },
       {
-        label: '岗位管理',
+        label: '字段管理',
         path: '/dictionary/position',
         icon: Briefcase,
         roles: ADMIN_HRD_ROLES,
@@ -145,7 +145,7 @@ const pathTitleMap: Record<string, string> = {
   '/grade-config': '绩效等级配置',
   '/my-assessments': '我的绩效',
   '/team-performance': '团队绩效',
-  '/dictionary/position': '岗位管理',
+  '/dictionary/position': '字段管理',
   '/permissions': '权限管理',
 };
 
