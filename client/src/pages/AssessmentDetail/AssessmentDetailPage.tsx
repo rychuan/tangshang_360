@@ -12,9 +12,9 @@ import {
   Users2,
   PenTool,
   CheckCircle2,
-  Circle,
   ChevronRight,
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
@@ -187,9 +187,9 @@ const AssessmentDetailPage: React.FC = () => {
             </span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          {/* 4-step progress bar */}
-          <div className="flex items-start justify-between gap-1">
+        <CardContent className="flex flex-col gap-4">
+          {/* 4-step progress bar — compact inline */}
+          <div className="flex items-center justify-between gap-2">
             {[
               {
                 key: 'self',
@@ -197,6 +197,8 @@ const AssessmentDetailPage: React.FC = () => {
                 icon: User,
                 done: detail.status !== 'self_review',
                 active: detail.status === 'self_review',
+                statusText:
+                  detail.status !== 'self_review' ? '已完成' : '进行中',
                 person: detail.employeeId,
               },
               {
@@ -207,6 +209,11 @@ const AssessmentDetailPage: React.FC = () => {
                   detail.status === 'pending_sign' ||
                   detail.status === 'completed',
                 active: detail.status === 'supervisor_review',
+                statusText:
+                  detail.status === 'pending_sign' ||
+                  detail.status === 'completed'
+                    ? '已完成'
+                    : '进行中',
                 person: detail.supervisorId,
               },
               {
@@ -216,6 +223,11 @@ const AssessmentDetailPage: React.FC = () => {
                 done: !!detail.selfSignName,
                 active:
                   detail.status === 'pending_sign' && !detail.selfSignName,
+                statusText: detail.selfSignName
+                  ? '已完成'
+                  : detail.status === 'pending_sign' && !detail.selfSignName
+                    ? '待签名'
+                    : '待进行',
                 person: null,
               },
               {
@@ -228,52 +240,55 @@ const AssessmentDetailPage: React.FC = () => {
                   detail.status === 'pending_sign' &&
                   !!detail.selfSignName &&
                   !detail.supervisorSignName,
+                statusText:
+                  detail.supervisorSignName || detail.status === 'completed'
+                    ? '已完成'
+                    : detail.status === 'pending_sign' && detail.selfSignName
+                      ? '待签名'
+                      : '待进行',
                 person: null,
               },
             ].map((step, i) => (
-              <div key={step.key} className="flex-1 flex items-start min-w-0">
-                <div className="flex flex-col items-center gap-1.5 w-full">
-                  <div
-                    className={`flex size-9 items-center justify-center rounded-full text-sm font-bold ${
-                      step.done
-                        ? 'bg-success text-success-foreground'
-                        : step.active
-                          ? 'bg-primary text-primary-foreground ring-4 ring-primary/20'
-                          : 'bg-muted text-muted-foreground'
-                    }`}
-                  >
-                    {step.done ? (
-                      <CheckCircle2 className="size-5" />
-                    ) : step.active ? (
-                      <step.icon className="size-4" />
-                    ) : (
-                      <Circle className="size-4" />
-                    )}
+              <div key={step.key} className="flex flex-1 items-center min-w-0">
+                <div className="flex flex-col gap-2 w-full">
+                  <div className="flex items-center gap-1.5">
+                    <div
+                      className={`flex size-7 shrink-0 items-center justify-center rounded-full ${
+                        step.done
+                          ? 'bg-success text-success-foreground'
+                          : step.active
+                            ? 'bg-primary text-primary-foreground ring-2 ring-primary/20'
+                            : 'bg-muted text-muted-foreground'
+                      }`}
+                    >
+                      {step.done ? (
+                        <CheckCircle2 className="size-4" />
+                      ) : (
+                        <step.icon className="size-3.5" />
+                      )}
+                    </div>
+                    <span className="text-xs font-medium truncate">
+                      {step.label}
+                    </span>
+                    <Badge
+                      variant={
+                        step.done
+                          ? 'default'
+                          : step.active
+                            ? 'secondary'
+                            : 'outline'
+                      }
+                      className={`text-[0.625rem] px-1.5 py-0 shrink-0 ${
+                        step.done
+                          ? 'bg-success/10 text-success border-transparent'
+                          : ''
+                      }`}
+                    >
+                      {step.statusText}
+                    </Badge>
                   </div>
-                  <p
-                    className={`text-xs text-center leading-tight ${
-                      step.active
-                        ? 'text-primary font-semibold'
-                        : step.done
-                          ? 'text-foreground font-medium'
-                          : 'text-muted-foreground'
-                    }`}
-                  >
-                    {step.label}
-                  </p>
-                  <span
-                    className={`text-[0.625rem] ${
-                      step.done
-                        ? 'text-success'
-                        : step.active
-                          ? 'text-primary'
-                          : 'text-muted-foreground'
-                    }`}
-                  >
-                    {step.done ? '已完成' : step.active ? '进行中' : '待进行'}
-                  </span>
                   {step.person && (
-                    <div className="mt-1">
+                    <div className="pl-8">
                       <UserDisplay
                         userId={step.person}
                         size="small"
@@ -284,7 +299,7 @@ const AssessmentDetailPage: React.FC = () => {
                 </div>
                 {i < 3 && (
                   <ChevronRight
-                    className={`size-4 shrink-0 -ml-1 -mr-1 mt-3 ${
+                    className={`size-4 shrink-0 -ml-1 -mr-1 ${
                       step.done ? 'text-success' : 'text-muted-foreground/30'
                     }`}
                   />
