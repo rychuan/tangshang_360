@@ -631,22 +631,25 @@ export interface CreateDepartmentRequest {
 }
 export type UpdateDepartmentRequest = CreateDepartmentRequest;
 
-// === Position Management ===
-export interface PositionItem {
+// === Dictionary Management ===
+export interface DictEntry {
   id: string;
+  dictType: string;
+  code: string;
   name: string;
   sortOrder: number;
   isActive: boolean;
   createdAt: string;
 }
-export interface PositionListResponse {
-  items: PositionItem[];
+export interface DictListResponse {
+  items: DictEntry[];
 }
-export interface CreatePositionRequest {
+export interface CreateDictRequest {
+  code?: string;
   name: string;
   sortOrder?: number;
 }
-export type UpdatePositionRequest = CreatePositionRequest;
+export type UpdateDictRequest = CreateDictRequest;
 
 export interface ExportResultItem extends StatisticsRecordItem {}
 export interface ExportResult {

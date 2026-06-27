@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { position as positionApi } from '@/api';
-import type {
-  PositionItem,
-  CreatePositionRequest,
-} from '@shared/api.interface';
+import { useParams } from 'react-router-dom';
+import dictApi from '@/api/dictionary';
+import type { DictEntry, CreateDictRequest } from '@shared/api.interface';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +15,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Briefcase } from 'lucide-react';
+import { Plus, Pencil, Trash2, Database } from 'lucide-react';
 import { handleApiError } from '@/utils/api-error';
 import {
   AlertDialog,
@@ -31,94 +29,94 @@ import {
 } from '@/components/ui/alert-dialog';
 import { PageHeader } from '@/components/business-ui/page-header';
 
-const PositionConfigPage: React.FC = () => {
-  const [items, setItems] = useState<PositionItem[]>([]);
+/** 字典类型元数据 — 新增类型在此注册 */
+const DICT_META: Record<string, { title: string; description: string }> = {
+  position: {
+    title: '岗位管理',
+    description: '管理系统中的岗位字典，新建员工时可下拉选择。',
+  },
+};
+
+const DictionaryConfigPage: React.FC = () => {
+  const { type = 'position' } = useParams<{ type: string }>();
+  const meta = DICT_META[type] || { title: type, description: '' };
+  const api = dictApi(type);
+
+  const [items, setItems] = useState<DictEntry[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<PositionItem | null>(null);
-  const [formData, setFormData] = useState<{ name: string; sortOrder: number }>(
-    {
-      name: '',
-      sortOrder: 0,
-    },
-  );
+  const [editingItem, setEditingItem] = useState<DictEntry | null>(null);
+  const [form, setForm] = useState({ code: '', name: '', sortOrder: 0 });
   const [saving, setSaving] = useState(false);
-
-  const [deleteTarget, setDeleteTarget] = useState<PositionItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DictEntry | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const loadData = useCallback(async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await positionApi.list();
+      const res = await api.list();
       setItems(res.items);
-    } catch (error: unknown) {
-      handleApiError(error);
+    } catch (e: unknown) {
+      handleApiError(e);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [api]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    load();
+  }, [load]);
 
   const openCreate = () => {
     setEditingItem(null);
-    setFormData({ name: '', sortOrder: 0 });
+    setForm({ code: '', name: '', sortOrder: 0 });
     setDialogOpen(true);
   };
-
-  const openEdit = (item: PositionItem) => {
+  const openEdit = (item: DictEntry) => {
     setEditingItem(item);
-    setFormData({ name: item.name, sortOrder: item.sortOrder });
+    setForm({ code: item.code, name: item.name, sortOrder: item.sortOrder });
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
-    if (!formData.name.trim()) {
-      toast.error('请输入岗位名称');
+    if (!form.name.trim()) {
+      toast.error('请输入名称');
       return;
     }
     setSaving(true);
     try {
-      const payload: CreatePositionRequest = {
-        name: formData.name.trim(),
-        sortOrder: formData.sortOrder,
+      const payload: CreateDictRequest = {
+        code: form.code.trim() || undefined,
+        name: form.name.trim(),
+        sortOrder: form.sortOrder,
       };
       if (editingItem) {
-        await positionApi.update(editingItem.id, payload);
-        toast.success('岗位已更新');
+        await api.update(editingItem.id, payload);
+        toast.success('已更新');
       } else {
-        await positionApi.create(payload);
-        toast.success('岗位已创建');
+        await api.create(payload);
+        toast.success('已创建');
       }
       setDialogOpen(false);
-      loadData();
-    } catch (error: unknown) {
-      handleApiError(error);
+      load();
+    } catch (e: unknown) {
+      handleApiError(e);
     } finally {
       setSaving(false);
     }
-  };
-
-  const openDelete = (item: PositionItem) => {
-    setDeleteTarget(item);
-    setDeleteOpen(true);
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await positionApi.remove(deleteTarget.id);
-      toast.success('岗位已删除');
+      await api.remove(deleteTarget.id);
+      toast.success('已删除');
       setDeleteOpen(false);
-      loadData();
-    } catch (error: unknown) {
-      handleApiError(error);
+      load();
+    } catch (e: unknown) {
+      handleApiError(e);
     } finally {
       setDeleting(false);
     }
@@ -126,23 +124,19 @@ const PositionConfigPage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader
-        title="岗位管理"
-        description="管理系统中的岗位字典，新建员工时可下拉选择。"
-      />
-
+      <PageHeader title={meta.title} description={meta.description} />
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-base flex items-center gap-2">
-            <Briefcase className="size-4" />
-            岗位列表
+            <Database className="size-4" />
+            {meta.title}列表
             <span className="text-sm font-normal text-muted-foreground">
               （共 {items.length} 个）
             </span>
           </CardTitle>
           <Button size="sm" onClick={openCreate}>
             <Plus className="mr-1.5 size-3.5" />
-            新建岗位
+            新建
           </Button>
         </CardHeader>
         <CardContent className="p-0">
@@ -152,9 +146,8 @@ const PositionConfigPage: React.FC = () => {
             </div>
           ) : items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <Briefcase className="size-10 mb-2 opacity-30" />
-              <p className="text-sm">暂无岗位数据</p>
-              <p className="text-xs mt-1">点击「新建岗位」开始添加</p>
+              <Database className="size-10 mb-2 opacity-30" />
+              <p className="text-sm">暂无数据</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -162,7 +155,10 @@ const PositionConfigPage: React.FC = () => {
                 <thead>
                   <tr className="border-b bg-muted/50">
                     <th className="h-10 px-4 text-left text-xs font-medium text-muted-foreground">
-                      岗位名称
+                      编码
+                    </th>
+                    <th className="h-10 px-4 text-left text-xs font-medium text-muted-foreground">
+                      名称
                     </th>
                     <th className="h-10 px-4 text-left text-xs font-medium text-muted-foreground hidden sm:table-cell">
                       排序
@@ -178,6 +174,9 @@ const PositionConfigPage: React.FC = () => {
                 <tbody>
                   {items.map((item) => (
                     <tr key={item.id} className="border-b hover:bg-muted/30">
+                      <td className="px-4 py-3 text-sm text-muted-foreground font-mono">
+                        {item.code}
+                      </td>
                       <td className="px-4 py-3 text-sm font-medium">
                         {item.name}
                       </td>
@@ -204,7 +203,10 @@ const PositionConfigPage: React.FC = () => {
                           variant="ghost"
                           size="sm"
                           className="text-destructive hover:text-destructive"
-                          onClick={() => openDelete(item)}
+                          onClick={() => {
+                            setDeleteTarget(item);
+                            setDeleteOpen(true);
+                          }}
                         >
                           <Trash2 className="size-3.5" />
                         </Button>
@@ -221,19 +223,27 @@ const PositionConfigPage: React.FC = () => {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle>{editingItem ? '编辑岗位' : '新建岗位'}</DialogTitle>
+            <DialogTitle>{editingItem ? '编辑' : '新建'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div>
               <Label className="text-xs text-muted-foreground mb-1.5">
-                岗位名称 *
+                编码
               </Label>
               <Input
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                placeholder="例如：前端工程师"
+                value={form.code}
+                onChange={(e) => setForm({ ...form, code: e.target.value })}
+                placeholder="唯一标识，留空则使用名称"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1.5">
+                名称 *
+              </Label>
+              <Input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="显示名称"
               />
             </div>
             <div>
@@ -242,10 +252,10 @@ const PositionConfigPage: React.FC = () => {
               </Label>
               <Input
                 type="number"
-                value={formData.sortOrder}
+                value={form.sortOrder}
                 onChange={(e) =>
-                  setFormData({
-                    ...formData,
+                  setForm({
+                    ...form,
                     sortOrder: parseInt(e.target.value, 10) || 0,
                   })
                 }
@@ -270,10 +280,9 @@ const PositionConfigPage: React.FC = () => {
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent className="w-[95vw] max-w-sm">
           <AlertDialogHeader>
-            <AlertDialogTitle>确认删除岗位</AlertDialogTitle>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
             <AlertDialogDescription>
-              确定要删除岗位「{deleteTarget?.name}
-              」吗？若该岗位正在被员工使用则无法删除。
+              确定要删除「{deleteTarget?.name}」吗？若正在被使用则无法删除。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -292,4 +301,4 @@ const PositionConfigPage: React.FC = () => {
   );
 };
 
-export default PositionConfigPage;
+export default DictionaryConfigPage;

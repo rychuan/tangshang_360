@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import type {
   EmployeeItem,
   CreateEmployeeRequest,
-  PositionItem,
+  DictEntry,
 } from '@shared/api.interface';
-import { position as positionApi } from '@/api';
+import dictionaryApi from '@/api/dictionary';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -103,10 +103,10 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
     !isEditing && formData.userId ? [formData.userId] : [],
   );
 
-  const [positions, setPositions] = useState<PositionItem[]>([]);
+  const [positions, setPositions] = useState<DictEntry[]>([]);
 
   useEffect(() => {
-    positionApi
+    dictionaryApi('position')
       .list()
       .then((res) => setPositions(res.items))
       .catch(() => {});

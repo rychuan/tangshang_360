@@ -13,4 +13,4 @@ export * as department from './department';
 export * as employeeManagement from './employee-management';
 export * as roleManager from './role-manager';
 export * as performanceGrade from './performance-grade';
-export * as position from './position';
+export { default as dictionary } from './dictionary';

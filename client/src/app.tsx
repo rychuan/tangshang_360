@@ -16,7 +16,7 @@ import EmployeeManagementPage from './pages/EmployeeManagement/EmployeeManagemen
 import EmployeeDetailPage from './pages/EmployeeManagement/EmployeeDetailPage';
 import PermissionPage from './pages/EmployeeManagement/PermissionPage';
 import GradeConfigPage from './pages/GradeConfig/GradeConfigPage';
-import PositionConfigPage from './pages/PositionConfig/PositionConfigPage';
+import DictionaryConfigPage from './pages/DictionaryConfig/DictionaryConfigPage';
 
 const ALL_ROLES = ['admin', 'hrd', 'dept_head', 'supervisor', 'employee'];
 const MANAGER_ROLES = ['admin', 'hrd', 'dept_head', 'supervisor'];
@@ -141,10 +141,10 @@ const RoutesComponent = () => {
             }
           />
           <Route
-            path="position-config"
+            path="dictionary/:type"
             element={
               <ProtectedRoute roles={ADMIN_HRD_ROLES}>
-                <PositionConfigPage />
+                <DictionaryConfigPage />
               </ProtectedRoute>
             }
           />

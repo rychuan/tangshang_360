@@ -10,56 +10,60 @@ import {
   Req,
 } from '@nestjs/common';
 import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
-import { PositionService } from './position.service';
+import { SystemDictService } from './system-dict.service';
 import type {
-  PositionListResponse,
-  CreatePositionRequest,
-  UpdatePositionRequest,
+  DictListResponse,
+  CreateDictRequest,
+  UpdateDictRequest,
 } from '@shared/api.interface';
 
-@Controller('api/positions')
-export class PositionController {
-  constructor(private readonly service: PositionService) {}
+@Controller('api/dictionary')
+export class SystemDictController {
+  constructor(private readonly service: SystemDictService) {}
 
   @CanRole(['admin', 'hrd'])
-  @Get()
+  @Get(':type')
   async list(
+    @Param('type') type: string,
     @Query('keyword') keyword?: string,
-  ): Promise<PositionListResponse> {
-    return this.service.list({ keyword });
+  ): Promise<DictListResponse> {
+    return this.service.list(type, keyword);
   }
 
   @CanRole(['admin', 'hrd'])
   @NeedLogin()
-  @Post()
+  @Post(':type')
   async create(
     @Req() req: any,
-    @Body() body: CreatePositionRequest,
+    @Param('type') type: string,
+    @Body() body: CreateDictRequest,
   ): Promise<{ id: string }> {
     const { userId } = req.userContext as { userId: string };
-    return this.service.create(body, userId);
+    return this.service.create(type, body, userId);
   }
 
   @CanRole(['admin', 'hrd'])
   @NeedLogin()
-  @Put(':id')
+  @Put(':type/:id')
   async update(
     @Req() req: any,
+    @Param('type') type: string,
     @Param('id') id: string,
-    @Body() body: UpdatePositionRequest,
+    @Body() body: UpdateDictRequest,
   ): Promise<{ success: boolean }> {
     const { userId } = req.userContext as { userId: string };
-    return this.service.update(id, body, userId);
+    return this.service.update(type, id, body, userId);
   }
 
   @CanRole(['admin', 'hrd'])
   @NeedLogin()
-  @Delete(':id')
+  @Delete(':type/:id')
   async remove(
     @Req() req: any,
+    @Param('type') type: string,
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {
     const { userId } = req.userContext as { userId: string };
-    return this.service.remove(id, userId);
+    return this.service.remove(type, id, userId);
   }
 }

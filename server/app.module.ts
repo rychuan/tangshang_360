@@ -12,7 +12,7 @@ import { AssessmentDashboardModule } from './modules/assessment-dashboard/assess
 import { MyAssessmentModule } from './modules/my-assessment/my-assessment.module';
 import { TeamPerformanceModule } from './modules/team-performance/team-performance.module';
 import { DepartmentModule } from './modules/department/department.module';
-import { PositionModule } from './modules/position/position.module';
+import { SystemDictModule } from './modules/system-dict/system-dict.module';
 import { EmployeeManagementModule } from './modules/employee-management/employee-management.module';
 import { RoleManagerModule } from './modules/role-manager/role-manager.module';
 import { PerformanceGradeModule } from './modules/performance-grade/performance-grade.module';
@@ -33,7 +33,7 @@ import { ViewModule } from './modules/view/view.module';
     MyAssessmentModule,
     TeamPerformanceModule,
     DepartmentModule,
-    PositionModule,
+    SystemDictModule,
     EmployeeManagementModule,
     RoleManagerModule,
     PerformanceGradeModule,
