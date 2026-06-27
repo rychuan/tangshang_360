@@ -32,8 +32,8 @@ import { PageHeader } from '@/components/business-ui/page-header';
 /** 字典类型元数据 — 新增类型在此注册 */
 const DICT_META: Record<string, { title: string; description: string }> = {
   position: {
-    title: '岗位管理',
-    description: '管理系统中的岗位字典，新建员工时可下拉选择。',
+    title: '岗位字典',
+    description: '字段管理 · 管理系统中的岗位，新建员工时可下拉选择。',
   },
 };
 
