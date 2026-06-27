@@ -105,20 +105,22 @@ export function useAssessmentDetail(
 
   // 员工身份仅基于 identity 匹配，不受 ?view 参数影响
   const isEmployee: boolean = isEmployeeCandidate;
-  // 上级身份：是上级 AND (显式要求上级视角 OR 不是被评估人本人)
-  // 这样当员工本人误加 ?view=supervisor 时不会锁死入口
+  // 上级身份：是发布时上级 AND (显式要求上级视角 OR 不是被评估人本人)
   const isSupervisor: boolean =
     isSupervisorCandidate && (isSupervisorView || !isEmployeeCandidate);
 
   const canEditSelf: boolean = detail?.status === 'self_review' && isEmployee;
   const canEditSupervisor: boolean =
-    detail?.status === 'supervisor_review' && isSupervisor;
-  const canSignSelf: boolean =
-    detail?.status === 'pending_sign' && isEmployee && !detail.selfSignName;
+    detail?.status === 'supervisor_review' &&
+    (isSupervisor || (!isEmployeeCandidate && isSupervisorView));
+  // 上级签名：允许所有非员工本人且未签名的用户操作（含发布上级/当前上级/部门负责人），
+  // 最终权限由后端校验（后端支持发布上级、当前上级、部门负责人三种身份）
   const canSignSupervisor: boolean =
     detail?.status === 'pending_sign' &&
-    isSupervisor &&
+    !isEmployeeCandidate &&
     !detail.supervisorSignName;
+  const canSignSelf: boolean =
+    detail?.status === 'pending_sign' && isEmployee && !detail.selfSignName;
   const isCompleted: boolean = detail?.status === 'completed';
 
   const groupedIndicators = useMemo<DimensionGroup[]>(() => {
