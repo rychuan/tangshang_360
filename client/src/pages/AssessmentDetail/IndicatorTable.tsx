@@ -111,16 +111,16 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                 <TableBody>
                   {group.indicators.map((indicator) => (
                     <TableRow key={indicator.id}>
-                      <TableCell className="font-medium whitespace-normal break-words w-[140px]">
+                      <TableCell className="font-medium whitespace-pre-wrap break-words w-[140px]">
                         {indicator.content}
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-[0.625rem] leading-4 whitespace-normal break-words w-[160px] hidden md:table-cell">
+                      <TableCell className="text-muted-foreground text-[0.625rem] leading-4 whitespace-pre-wrap break-words w-[160px] hidden md:table-cell">
                         {indicator.description || '-'}
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-xs whitespace-normal break-words max-w-[140px] hidden lg:table-cell">
+                      <TableCell className="text-muted-foreground text-xs whitespace-pre-wrap break-words max-w-[140px] hidden lg:table-cell">
                         {indicator.algorithm || '-'}
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-xs whitespace-normal break-words max-w-[100px] hidden lg:table-cell">
+                      <TableCell className="text-muted-foreground text-xs whitespace-pre-wrap break-words max-w-[100px] hidden lg:table-cell">
                         {indicator.dataSource || '-'}
                       </TableCell>
                       <TableCell className="text-center text-sm">
