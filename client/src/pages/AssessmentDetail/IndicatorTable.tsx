@@ -93,7 +93,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                     <TableHead className="whitespace-nowrap w-[140px]">
                       指标
                     </TableHead>
-                    <TableHead className="whitespace-nowrap max-w-[140px] hidden md:table-cell">
+                    <TableHead className="whitespace-nowrap w-[160px] hidden md:table-cell">
                       说明
                     </TableHead>
                     <TableHead className="whitespace-nowrap max-w-[140px] hidden lg:table-cell">
@@ -111,10 +111,10 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                 <TableBody>
                   {group.indicators.map((indicator) => (
                     <TableRow key={indicator.id}>
-                      <TableCell className="font-medium whitespace-nowrap">
+                      <TableCell className="font-medium whitespace-normal break-words w-[140px]">
                         {indicator.content}
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-xs whitespace-normal break-words max-w-[140px] hidden md:table-cell">
+                      <TableCell className="text-muted-foreground text-[0.625rem] leading-4 whitespace-normal break-words w-[160px] hidden md:table-cell">
                         {indicator.description || '-'}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-xs whitespace-normal break-words max-w-[140px] hidden lg:table-cell">
