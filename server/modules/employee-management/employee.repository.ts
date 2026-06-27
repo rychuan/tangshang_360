@@ -108,7 +108,7 @@ export class EmployeeRepository {
   nameSubquery(refColumn: Column | SQL): SQL {
     return sql<string>`(SELECT e.name FROM ${employee} e
       WHERE (e.id).user_id = (${refColumn}).user_id
-        AND e.${employee.deletedAt} IS NULL
+        AND e.deleted_at IS NULL
       LIMIT 1)`;
   }
 
