@@ -93,8 +93,11 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                     <TableHead className="whitespace-nowrap w-[140px]">
                       指标
                     </TableHead>
-                    <TableHead className="whitespace-normal max-w-[160px] hidden md:table-cell">
-                      说明与算法描述
+                    <TableHead className="whitespace-nowrap max-w-[140px] hidden md:table-cell">
+                      说明
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap max-w-[140px] hidden lg:table-cell">
+                      指标算法/描述
                     </TableHead>
                     <TableHead className="whitespace-nowrap max-w-[100px] hidden lg:table-cell">
                       数据来源
@@ -111,20 +114,11 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                       <TableCell className="font-medium whitespace-nowrap">
                         {indicator.content}
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-xs whitespace-normal break-words max-w-[160px] hidden md:table-cell">
-                        <div className="line-clamp-3">
-                          {indicator.description && (
-                            <p className="mb-1">{indicator.description}</p>
-                          )}
-                          {indicator.algorithm && (
-                            <p className="text-muted-foreground/70">
-                              {indicator.algorithm}
-                            </p>
-                          )}
-                          {!indicator.description &&
-                            !indicator.algorithm &&
-                            '-'}
-                        </div>
+                      <TableCell className="text-muted-foreground text-xs whitespace-normal break-words max-w-[140px] hidden md:table-cell">
+                        {indicator.description || '-'}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-xs whitespace-normal break-words max-w-[140px] hidden lg:table-cell">
+                        {indicator.algorithm || '-'}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-xs whitespace-normal break-words max-w-[100px] hidden lg:table-cell">
                         {indicator.dataSource || '-'}
