@@ -141,6 +141,14 @@ const RoutesComponent = () => {
             }
           />
           <Route
+            path="dictionary"
+            element={
+              <ProtectedRoute roles={ADMIN_HRD_ROLES}>
+                <DictionaryConfigPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="dictionary/:type"
             element={
               <ProtectedRoute roles={ADMIN_HRD_ROLES}>
