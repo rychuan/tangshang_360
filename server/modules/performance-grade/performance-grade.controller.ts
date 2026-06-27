@@ -11,6 +11,7 @@ import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
 import { PerformanceGradeService } from './performance-grade.service';
 import type {
   PerformanceGradeListResponse,
+  ActiveGradeListResponse,
   CreatePerformanceGradeRequest,
   UpdatePerformanceGradeRequest,
   CreateResponse,
@@ -22,9 +23,16 @@ export class PerformanceGradeController {
   constructor(private readonly service: PerformanceGradeService) {}
 
   @CanRole(['admin', 'hrd'])
+  @NeedLogin()
   @Get()
   async list(): Promise<PerformanceGradeListResponse> {
     return this.service.list();
+  }
+
+  @NeedLogin()
+  @Get('active')
+  async listActive(): Promise<ActiveGradeListResponse> {
+    return this.service.listActive();
   }
 
   @CanRole(['admin', 'hrd'])

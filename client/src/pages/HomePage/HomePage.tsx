@@ -123,7 +123,7 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="@container/main flex flex-1 flex-col gap-4 md:gap-6">
-      <PageHeader title="考核概览" visuallyHidden />
+      <PageHeader title="绩效概览" visuallyHidden />
 
       {/* Section Cards */}
       <div className="grid auto-rows-min gap-4 md:grid-cols-3">
@@ -173,7 +173,7 @@ const HomePage: React.FC = () => {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
             <AreaChartIcon className="size-4 text-muted-foreground" />
-            考核趋势
+            绩效趋势
           </CardTitle>
         </CardHeader>
         <CardContent>

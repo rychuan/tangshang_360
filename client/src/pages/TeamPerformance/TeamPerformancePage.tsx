@@ -172,7 +172,7 @@ const TeamPerformancePage: React.FC = () => {
       { key: 'name', header: '姓名', render: (item) => item.employeeName },
       { key: 'dept', header: '部门', render: (item) => item.department },
       { key: 'position', header: '职位', render: (item) => item.position },
-      { key: 'period', header: '考核周期', render: (item) => item.period },
+      { key: 'period', header: '绩效周期', render: (item) => item.period },
       {
         key: 'status',
         header: '状态',
@@ -314,7 +314,7 @@ const TeamPerformancePage: React.FC = () => {
       {/* Subordinates Table */}
       <Card className="rounded-xl">
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="text-base">下属考核列表</CardTitle>
+          <CardTitle className="text-base">下属绩效列表</CardTitle>
           <Select
             value={statusFilter || '__all'}
             onValueChange={(val: string) => {
@@ -341,7 +341,7 @@ const TeamPerformancePage: React.FC = () => {
             loading={loadingList}
             emptyMessage={
               statusFilter
-                ? '暂无符合筛选条件的考核记录'
+                ? '暂无符合筛选条件的绩效记录'
                 : '暂无非您负责的下属团队数据'
             }
             page={page}
@@ -357,7 +357,7 @@ const TeamPerformancePage: React.FC = () => {
           <DialogHeader>
             <DialogTitle>催办提醒</DialogTitle>
             <DialogDescription>
-              确认向 {remindTarget?.employeeName ?? ''} 发送催办提醒？考核周期：
+              确认向 {remindTarget?.employeeName ?? ''} 发送催办提醒？绩效周期：
               {remindTarget?.period ?? ''}
             </DialogDescription>
           </DialogHeader>

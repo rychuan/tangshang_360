@@ -2,13 +2,39 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { toast } from 'sonner';
 import * as assessmentOperation from '@client/src/api/assessment-operation';
-import type { AssessmentInstanceDetail } from '@shared/api.interface';
+import * as performanceGradeApi from '@client/src/api/performance-grade';
+import type {
+  AssessmentInstanceDetail,
+  ActiveGradeRule,
+} from '@shared/api.interface';
 import {
   type RatingsState,
   type DimensionGroup,
   buildRatingPayload,
   calculatePreviewScore,
+  matchGradeLocally,
 } from './assessment-utils';
+
+const GRADE_STYLE_TIERS = [
+  'bg-destructive/10 text-destructive',
+  'bg-warning/10 text-warning',
+  'bg-primary/10 text-primary',
+  'bg-success/10 text-success',
+  'bg-success/20 text-success font-semibold',
+];
+
+function buildGradeStyleMap(rules: ActiveGradeRule[]): Record<string, string> {
+  const map: Record<string, string> = {};
+  const tierCount = GRADE_STYLE_TIERS.length;
+  for (let i = 0; i < rules.length; i++) {
+    const tierIndex =
+      rules.length <= tierCount
+        ? i
+        : Math.floor((i / (rules.length - 1)) * (tierCount - 1));
+    map[rules[i].name] = GRADE_STYLE_TIERS[tierIndex];
+  }
+  return map;
+}
 
 export function useAssessmentDetail(
   id: string | undefined,
@@ -20,6 +46,7 @@ export function useAssessmentDetail(
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [ratings, setRatings] = useState<RatingsState>({});
+  const [gradeRules, setGradeRules] = useState<ActiveGradeRule[]>([]);
 
   const fetchDetail = useCallback(async () => {
     if (!id) return;
@@ -62,6 +89,15 @@ export function useAssessmentDetail(
     fetchDetail();
   }, [fetchDetail]);
 
+  useEffect(() => {
+    performanceGradeApi
+      .listActive()
+      .then((res) => setGradeRules(res?.rules ?? []))
+      .catch(() => {
+        // 非关键数据，静默失败
+      });
+  }, []);
+
   const isEmployeeCandidate =
     !!currentUserId && !!detail && currentUserId === detail.employeeId;
   const isSupervisorCandidate =
@@ -69,7 +105,7 @@ export function useAssessmentDetail(
 
   // 员工身份仅基于 identity 匹配，不受 ?view 参数影响
   const isEmployee: boolean = isEmployeeCandidate;
-  // 上级身份：是上级 AND (显式要求上级视角 OR 不是被考核人本人)
+  // 上级身份：是上级 AND (显式要求上级视角 OR 不是被评估人本人)
   // 这样当员工本人误加 ?view=supervisor 时不会锁死入口
   const isSupervisor: boolean =
     isSupervisorCandidate && (isSupervisorView || !isEmployeeCandidate);
@@ -102,9 +138,14 @@ export function useAssessmentDetail(
   }, [detail]);
 
   const preview = useMemo(() => {
-    if (!canEditSupervisor) return null;
-    return calculatePreviewScore(ratings, groupedIndicators);
-  }, [canEditSupervisor, ratings, groupedIndicators]);
+    if (!canEditSupervisor || gradeRules.length === 0) return null;
+    return calculatePreviewScore(ratings, groupedIndicators, gradeRules);
+  }, [canEditSupervisor, ratings, groupedIndicators, gradeRules]);
+
+  const gradeStyleMap = useMemo(
+    () => buildGradeStyleMap(gradeRules),
+    [gradeRules],
+  );
 
   const updateRating = useCallback(
     (
@@ -188,6 +229,7 @@ export function useAssessmentDetail(
     isCompleted,
     previewScore: preview?.score ?? null,
     previewGrade: preview?.grade ?? null,
+    gradeStyleMap,
     fetchDetail,
     updateRating,
     handleSaveDraft,

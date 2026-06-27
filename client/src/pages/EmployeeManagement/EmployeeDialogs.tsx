@@ -70,7 +70,7 @@ const BindDialog: React.FC<BindDialogProps> = ({
       return;
     }
     if (!bindTemplateId) {
-      toast.error('请选择考核模板');
+      toast.error('请选择绩效模板');
       return;
     }
     if (!bindEffectiveFrom) {
@@ -84,14 +84,16 @@ const BindDialog: React.FC<BindDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>绑定考核模板</DialogTitle>
+          <DialogTitle>绑定绩效模板</DialogTitle>
           <DialogDescription>
-            为员工绑定考核模板，绑定后原有模板将自动停用
+            为员工绑定绩效模板，绑定后原有模板将自动停用
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4 py-2">
           <div className="flex flex-col gap-2">
-            <Label className="text-xs text-muted-foreground mb-1.5">选择员工</Label>
+            <Label className="text-xs text-muted-foreground mb-1.5">
+              选择员工
+            </Label>
             <UserSelect
               multiple
               value={bindEmployeeIds}
@@ -100,7 +102,9 @@ const BindDialog: React.FC<BindDialogProps> = ({
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label className="text-xs text-muted-foreground mb-1.5">考核模板</Label>
+            <Label className="text-xs text-muted-foreground mb-1.5">
+              绩效模板
+            </Label>
             <Select
               value={bindTemplateId}
               onValueChange={(v: string) => setBindTemplateId(v)}
@@ -118,7 +122,9 @@ const BindDialog: React.FC<BindDialogProps> = ({
             </Select>
           </div>
           <div className="flex flex-col gap-2">
-            <Label className="text-xs text-muted-foreground mb-1.5">生效月份</Label>
+            <Label className="text-xs text-muted-foreground mb-1.5">
+              生效月份
+            </Label>
             <Input
               type="month"
               value={bindEffectiveFrom}
@@ -201,9 +207,7 @@ const HistoryDialog: React.FC<HistoryDialogProps> = ({
       <DialogContent className="w-[95vw] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>绑定历史</DialogTitle>
-          <DialogDescription>
-            {employeeName} 的绑定变更记录
-          </DialogDescription>
+          <DialogDescription>{employeeName} 的绑定变更记录</DialogDescription>
         </DialogHeader>
         <div className="max-h-80 overflow-y-auto py-2">
           {loading ? (

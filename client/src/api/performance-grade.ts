@@ -1,11 +1,20 @@
 import { axiosForBackend } from '@lark-apaas/client-toolkit/utils/getAxiosForBackend';
 import type {
   PerformanceGradeListResponse,
+  ActiveGradeListResponse,
   CreatePerformanceGradeRequest,
   UpdatePerformanceGradeRequest,
   CreateResponse,
   SuccessResponse,
 } from '@shared/api.interface';
+
+export async function listActive(): Promise<ActiveGradeListResponse> {
+  const res = await axiosForBackend<ActiveGradeListResponse>({
+    url: '/api/performance-grades/active',
+    method: 'GET',
+  });
+  return res.data;
+}
 
 export async function list(): Promise<PerformanceGradeListResponse> {
   const res = await axiosForBackend<PerformanceGradeListResponse>({

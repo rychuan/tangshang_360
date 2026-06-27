@@ -34,7 +34,7 @@ const IndicatorsFieldArray: React.FC<IndicatorsFieldArrayProps> = ({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium">考核指标</span>
+        <span className="text-sm font-medium">绩效指标</span>
         <Button
           type="button"
           variant="ghost"
@@ -98,7 +98,7 @@ const IndicatorsFieldArray: React.FC<IndicatorsFieldArrayProps> = ({
                 <FormLabel>说明</FormLabel>
                 <FormControl>
                   <Textarea
-                    placeholder="描述该指标的考核标准"
+                    placeholder="描述该指标的绩效标准"
                     rows={2}
                     {...field}
                   />
@@ -116,7 +116,11 @@ const IndicatorsFieldArray: React.FC<IndicatorsFieldArrayProps> = ({
                 <FormItem className="flex-1">
                   <FormLabel>指标算法/描述</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="如：完成率*满分" rows={2} {...field} />
+                    <Textarea
+                      placeholder="如：完成率*满分"
+                      rows={2}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

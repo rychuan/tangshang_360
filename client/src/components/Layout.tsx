@@ -5,42 +5,137 @@ import { useAppInfo } from '@lark-apaas/client-toolkit/hooks/useAppInfo';
 import { useAuth, ROLE_SUBJECT } from '@lark-apaas/client-toolkit/auth';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import {
-  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
-  SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton,
-  SidebarMenuItem, SidebarRail, SidebarTrigger,
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail,
+  SidebarSeparator,
+  SidebarTrigger,
 } from '@/components/ui/sidebar';
 import {
-  LayoutDashboard, ClipboardList, FileText, Send,
-  BarChart3, Users, UserCog, Shield, Award,
+  LayoutDashboard,
+  ClipboardList,
+  FileText,
+  Send,
+  BarChart3,
+  Users,
+  UserCog,
+  Shield,
+  Award,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbSeparator, BreadcrumbPage } from '@/components/ui/breadcrumb';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+  BreadcrumbPage,
+} from '@/components/ui/breadcrumb';
 
-type NavItem = { label: string; path: string; icon: typeof LayoutDashboard; roles: string[] };
+type NavItem = {
+  label: string;
+  path: string;
+  icon: typeof LayoutDashboard;
+  roles: string[];
+};
+
+type NavGroup = {
+  label: string;
+  items: NavItem[];
+};
 
 const ALL_ROLES = ['admin', 'hrd', 'dept_head', 'supervisor', 'employee'];
 const MANAGER_ROLES = ['admin', 'hrd', 'dept_head', 'supervisor'];
 const TEMPLATE_ROLES = ['admin', 'hrd', 'dept_head'];
 const ADMIN_HRD_ROLES = ['admin', 'hrd'];
 
-const allNavItems: NavItem[] = [
-  { label: '首页', path: '/', icon: LayoutDashboard, roles: ALL_ROLES },
-  { label: '我的考核', path: '/my-assessments', icon: ClipboardList, roles: ALL_ROLES },
-  { label: '团队绩效', path: '/team-performance', icon: Users, roles: MANAGER_ROLES },
-  { label: '员工管理', path: '/employees', icon: UserCog, roles: MANAGER_ROLES },
-  { label: '考核模板', path: '/template-management', icon: FileText, roles: TEMPLATE_ROLES },
-  { label: '考核发布', path: '/publish-management', icon: Send, roles: MANAGER_ROLES },
-  { label: '考核统计', path: '/statistics', icon: BarChart3, roles: MANAGER_ROLES },
-  { label: '绩效等级', path: '/grade-config', icon: Award, roles: ADMIN_HRD_ROLES },
-  { label: '权限管理', path: '/permissions', icon: Shield, roles: ADMIN_HRD_ROLES },
+const navGroups: NavGroup[] = [
+  {
+    label: '工作台',
+    items: [
+      {
+        label: '首页',
+        path: '/',
+        icon: LayoutDashboard,
+        roles: ALL_ROLES,
+      },
+      {
+        label: '我的绩效',
+        path: '/my-assessments',
+        icon: ClipboardList,
+        roles: ALL_ROLES,
+      },
+      {
+        label: '团队绩效',
+        path: '/team-performance',
+        icon: Users,
+        roles: MANAGER_ROLES,
+      },
+    ],
+  },
+  {
+    label: '绩效管理',
+    items: [
+      {
+        label: '绩效模板',
+        path: '/template-management',
+        icon: FileText,
+        roles: TEMPLATE_ROLES,
+      },
+      {
+        label: '绩效发布',
+        path: '/publish-management',
+        icon: Send,
+        roles: MANAGER_ROLES,
+      },
+      {
+        label: '绩效统计',
+        path: '/statistics',
+        icon: BarChart3,
+        roles: MANAGER_ROLES,
+      },
+      {
+        label: '绩效等级',
+        path: '/grade-config',
+        icon: Award,
+        roles: ADMIN_HRD_ROLES,
+      },
+    ],
+  },
+  {
+    label: '系统设置',
+    items: [
+      {
+        label: '员工管理',
+        path: '/employees',
+        icon: UserCog,
+        roles: MANAGER_ROLES,
+      },
+      {
+        label: '权限管理',
+        path: '/permissions',
+        icon: Shield,
+        roles: ADMIN_HRD_ROLES,
+      },
+    ],
+  },
 ];
 
 const pathTitleMap: Record<string, string> = {
-  '/': '首页', '/employees': '员工管理',
-  '/template-management': '考核模板管理',
-  '/publish-management': '考核发布管理', '/statistics': '考核统计查询',
+  '/': '首页',
+  '/employees': '员工管理',
+  '/template-management': '绩效模板管理',
+  '/publish-management': '绩效发布管理',
+  '/statistics': '绩效统计查询',
   '/grade-config': '绩效等级配置',
-  '/my-assessments': '我的考核', '/team-performance': '团队绩效',
+  '/my-assessments': '我的绩效',
+  '/team-performance': '团队绩效',
   '/permissions': '权限管理',
 };
 
@@ -52,14 +147,30 @@ const LayoutContent: React.FC = () => {
 
   const navItems = isLoading
     ? []
-    : allNavItems.filter(item =>
-        item.roles.some(r => ability.can(r, ROLE_SUBJECT))
+    : navGroups.flatMap((group) =>
+        group.items.filter((item) =>
+          item.roles.some((r) => ability.can(r, ROLE_SUBJECT)),
+        ),
       );
 
+  const navGroupItems = isLoading
+    ? []
+    : navGroups
+        .map((group) => ({
+          label: group.label,
+          items: group.items.filter((item) =>
+            item.roles.some((r) => ability.can(r, ROLE_SUBJECT)),
+          ),
+        }))
+        .filter((group) => group.items.length > 0);
+
   const currentLabel =
-    navItems.find(item => item.path === pathname)?.label ||
-    navItems.find(item => pathname.startsWith(item.path) && item.path !== '/')?.label ||
-    pathTitleMap[pathname] || pathname.split('/').pop() || '';
+    navItems.find((item) => item.path === pathname)?.label ||
+    navItems.find((item) => pathname.startsWith(item.path) && item.path !== '/')
+      ?.label ||
+    pathTitleMap[pathname] ||
+    pathname.split('/').pop() ||
+    '';
 
   const isActive = (itemPath: string) =>
     itemPath === '/' ? pathname === '/' : pathname.startsWith(itemPath);
@@ -67,7 +178,12 @@ const LayoutContent: React.FC = () => {
   if (isLoading) {
     return (
       <SidebarProvider
-        style={{ "--sidebar-width": "150px", "--header-height": "calc(var(--spacing) * 12)" } as React.CSSProperties}
+        style={
+          {
+            '--sidebar-width': '150px',
+            '--header-height': 'calc(var(--spacing) * 12)',
+          } as React.CSSProperties
+        }
       >
         <Sidebar variant="inset" />
         <SidebarInset>
@@ -79,19 +195,26 @@ const LayoutContent: React.FC = () => {
 
   return (
     <SidebarProvider
-      style={{ "--sidebar-width": "150px", "--header-height": "calc(var(--spacing) * 12)" } as React.CSSProperties}
+      style={
+        {
+          '--sidebar-width': '220px',
+          '--header-height': 'calc(var(--spacing) * 12)',
+        } as React.CSSProperties
+      }
     >
       <Sidebar variant="inset" collapsible="icon">
-        <SidebarHeader>
+        <SidebarHeader className="p-3">
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton size="lg" asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
+              <SidebarMenuButton size="lg" asChild>
                 <Link to="/">
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
                     <LayoutDashboard className="size-5" />
                   </div>
                   <div className="flex flex-col gap-0.5 leading-none">
-                    <span className="text-base font-semibold">{appName || '绩效考核'}</span>
+                    <span className="text-base font-semibold">
+                      {appName || '绩效考核'}
+                    </span>
                   </div>
                 </Link>
               </SidebarMenuButton>
@@ -99,37 +222,48 @@ const LayoutContent: React.FC = () => {
           </SidebarMenu>
         </SidebarHeader>
         <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>导航</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {navItems.map(item => (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive(item.path)}
-                      tooltip={item.label}
-                    >
-                      <Link to={item.path}>
-                        <item.icon data-icon="inline-start" />
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          {navGroupItems.map((group, groupIdx) => (
+            <React.Fragment key={group.label}>
+              {groupIdx > 0 && <SidebarSeparator className="mx-3" />}
+              <SidebarGroup>
+                <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {group.items.map((item) => (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive(item.path)}
+                          tooltip={item.label}
+                          className="data-[active=true]:border-l-2 data-[active=true]:border-primary data-[active=true]:rounded-l-none"
+                        >
+                          <Link to={item.path}>
+                            <item.icon className="size-5" />
+                            <span>{item.label}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </React.Fragment>
+          ))}
         </SidebarContent>
-        <SidebarFooter>
+        <SidebarFooter className="border-t border-sidebar-border">
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton size="lg">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+              <SidebarMenuButton
+                size="lg"
+                className="data-[state=open]:bg-sidebar-accent"
+              >
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-accent text-sidebar-accent-foreground text-sm font-medium">
                   {userInfo?.name?.[0] || 'U'}
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-medium truncate">{userInfo?.name || '用户'}</span>
+                  <span className="text-sm font-medium truncate">
+                    {userInfo?.name || '用户'}
+                  </span>
                 </div>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -140,7 +274,10 @@ const LayoutContent: React.FC = () => {
       <SidebarInset>
         <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
+          <Separator
+            orientation="vertical"
+            className="mr-2 data-[orientation=vertical]:h-4"
+          />
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem className="hidden md:block">

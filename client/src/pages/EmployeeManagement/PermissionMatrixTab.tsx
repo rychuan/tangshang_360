@@ -20,12 +20,12 @@ interface PermissionMatrixTabProps {
 
 const RESOURCE_LABELS: Record<PermissionResource, string> = {
   dashboard: '首页概览',
-  my_assessments: '我的考核',
+  my_assessments: '我的绩效',
   employees: '员工管理',
-  template_management: '考核模板管理',
+  template_management: '绩效模板管理',
   employee_binding: '员工模板绑定',
-  publish_management: '考核发布管理',
-  statistics: '考核统计查询',
+  publish_management: '绩效发布管理',
+  statistics: '绩效统计查询',
   team_performance: '团队绩效',
   organization: '组织架构',
   permission_management: '权限管理',
@@ -39,7 +39,13 @@ const ACTION_LABELS: Record<PermissionAction, string> = {
   publish: '发布',
 };
 
-const ALL_ACTIONS: PermissionAction[] = ['view', 'edit', 'delete', 'export', 'publish'];
+const ALL_ACTIONS: PermissionAction[] = [
+  'view',
+  'edit',
+  'delete',
+  'export',
+  'publish',
+];
 
 const PERMISSION_MATRIX: Record<PermissionResource, PermissionAction[]> = {
   dashboard: ['view'],
@@ -81,9 +87,14 @@ const PermissionMatrixTab: React.FC<PermissionMatrixTabProps> = ({ role }) => {
   }, [role.bizID, fetchPermissions]);
 
   const hasAction = (resource: PermissionResource, action: PermissionAction) =>
-    permissions.find((p) => p.resource === resource)?.actions.includes(action) ?? false;
+    permissions
+      .find((p) => p.resource === resource)
+      ?.actions.includes(action) ?? false;
 
-  const toggleAction = (resource: PermissionResource, action: PermissionAction) => {
+  const toggleAction = (
+    resource: PermissionResource,
+    action: PermissionAction,
+  ) => {
     setPermissions((prev) => {
       const copy = clonePermissions(prev);
       const existing = copy.find((p) => p.resource === resource);
@@ -120,7 +131,9 @@ const PermissionMatrixTab: React.FC<PermissionMatrixTabProps> = ({ role }) => {
   };
 
   const handleReset = () => {
-    const preset = (DEFAULT_PERMISSIONS as Record<string, PermissionItem[]>)[role.bizID ?? ''];
+    const preset = (DEFAULT_PERMISSIONS as Record<string, PermissionItem[]>)[
+      role.bizID ?? ''
+    ];
     if (preset) {
       setPermissions(clonePermissions(preset));
       toast.info('已重置为预设权限，点击保存生效');
@@ -146,9 +159,14 @@ const PermissionMatrixTab: React.FC<PermissionMatrixTabProps> = ({ role }) => {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b hover:bg-muted/50 transition-colors">
-                <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap w-[200px]">资源 / 页面</th>
+                <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap w-[200px]">
+                  资源 / 页面
+                </th>
                 {ALL_ACTIONS.map((a) => (
-                  <th key={a} className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap w-[90px] text-center">
+                  <th
+                    key={a}
+                    className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap w-[90px] text-center"
+                  >
                     {ACTION_LABELS[a]}
                   </th>
                 ))}
@@ -158,7 +176,10 @@ const PermissionMatrixTab: React.FC<PermissionMatrixTabProps> = ({ role }) => {
               {RESOURCE_ORDER.map((resource) => {
                 const validActions = PERMISSION_MATRIX[resource];
                 return (
-                  <tr key={resource} className="border-b hover:bg-muted/50 transition-colors">
+                  <tr
+                    key={resource}
+                    className="border-b hover:bg-muted/50 transition-colors"
+                  >
                     <td className="py-3 px-4 align-middle whitespace-nowrap font-medium">
                       {RESOURCE_LABELS[resource]}
                     </td>
@@ -174,10 +195,15 @@ const PermissionMatrixTab: React.FC<PermissionMatrixTabProps> = ({ role }) => {
                         );
                       }
                       return (
-                        <td key={action} className="py-3 px-4 align-middle whitespace-nowrap text-center">
+                        <td
+                          key={action}
+                          className="py-3 px-4 align-middle whitespace-nowrap text-center"
+                        >
                           <Checkbox
                             checked={hasAction(resource, action)}
-                            onCheckedChange={() => toggleAction(resource, action)}
+                            onCheckedChange={() =>
+                              toggleAction(resource, action)
+                            }
                           />
                         </td>
                       );

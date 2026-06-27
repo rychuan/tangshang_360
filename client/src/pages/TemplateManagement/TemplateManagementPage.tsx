@@ -29,7 +29,10 @@ import {
   FilterBar,
   FilterBarActions,
 } from '@/components/business-ui/filter-bar';
-import { PageTable, PageTableColumn } from '@/components/business-ui/page-table';
+import {
+  PageTable,
+  PageTableColumn,
+} from '@/components/business-ui/page-table';
 import TemplateFormDialog from './TemplateFormDialog';
 import TemplatePreviewDialog from './TemplatePreviewDialog';
 import * as assessmentTemplateApi from '@client/src/api/assessment-template';
@@ -192,10 +195,10 @@ const TemplateManagementPage: React.FC = () => {
     { key: 'position', header: '适用岗位', render: (item) => item.position },
     {
       key: 'type',
-      header: '考核类型',
+      header: '绩效类型',
       render: (item) => (
         <Badge variant="outline">
-          {item.type === 'monthly' ? '月度考核' : '试用期考核'}
+          {item.type === 'monthly' ? '月度绩效' : '试用期绩效'}
         </Badge>
       ),
     },
@@ -257,7 +260,7 @@ const TemplateManagementPage: React.FC = () => {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="考核模板管理"
+        title="绩效模板管理"
         actions={
           <CanRole roles={['admin', 'hrd']}>
             <Button onClick={handleOpenCreate}>
@@ -361,7 +364,7 @@ const TemplateManagementPage: React.FC = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>确认停用</AlertDialogTitle>
             <AlertDialogDescription>
-              停用后该模板将不再用于新的考核，但已发布的考核不受影响。确认停用？
+              停用后该模板将不再用于新的绩效，但已发布的绩效不受影响。确认停用？
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

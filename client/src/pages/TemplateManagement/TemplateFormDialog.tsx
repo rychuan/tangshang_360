@@ -3,10 +3,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-} from '@client/src/components/ui/dialog';
+import { Dialog, DialogContent } from '@client/src/components/ui/dialog';
 import { Button } from '@client/src/components/ui/button';
 import {
   Form,
@@ -98,10 +95,15 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
     defaultValues: buildDefault(),
   });
 
-  const { fields: dimFields, append: appendDim, remove: removeDim } =
-    useFieldArray({ control: form.control, name: 'dimensions' });
+  const {
+    fields: dimFields,
+    append: appendDim,
+    remove: removeDim,
+  } = useFieldArray({ control: form.control, name: 'dimensions' });
 
-  const [collapsedDims, setCollapsedDims] = useState<Record<number, boolean>>({});
+  const [collapsedDims, setCollapsedDims] = useState<Record<number, boolean>>(
+    {},
+  );
 
   useEffect(() => {
     if (open) {
@@ -126,7 +128,9 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
         0,
       );
       if (Math.abs(indicatorWeightSum - dim.weight) > 0.01) {
-        toast.error(`维度「${dim.name}」的指标权重之和必须等于维度权重 ${dim.weight}，当前为 ${indicatorWeightSum}`);
+        toast.error(
+          `维度「${dim.name}」的指标权重之和必须等于维度权重 ${dim.weight}，当前为 ${indicatorWeightSum}`,
+        );
         return;
       }
     }
@@ -163,10 +167,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
   const watchedDims = form.watch('dimensions');
 
   const totalDimWeight: number =
-    watchedDims?.reduce(
-      (sum: number, d) => sum + (d?.weight || 0),
-      0,
-    ) || 0;
+    watchedDims?.reduce((sum: number, d) => sum + (d?.weight || 0), 0) || 0;
   const dimWeightValid: boolean = Math.abs(totalDimWeight - 100) < 0.01;
 
   const indicatorWeightsValid: boolean =
@@ -190,7 +191,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
             className="flex flex-col gap-6"
           >
             <h2 className="text-lg font-semibold">
-              {template ? '编辑考核模板' : '新建考核模板'}
+              {template ? '编辑绩效模板' : '新建绩效模板'}
             </h2>
 
             <div className="flex flex-wrap gap-4">
@@ -203,7 +204,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                       模板名称 <span className="text-destructive">*</span>
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder="如：销售经理月度考核" {...field} />
+                      <Input placeholder="如：销售经理月度绩效" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -225,7 +226,9 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                       </FormControl>
                       <SelectContent>
                         {POSITION_OPTIONS.map((pos: string) => (
-                          <SelectItem key={pos} value={pos}>{pos}</SelectItem>
+                          <SelectItem key={pos} value={pos}>
+                            {pos}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -239,7 +242,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                 render={({ field }) => (
                   <FormItem className="w-[160px]">
                     <FormLabel>
-                      考核类型 <span className="text-destructive">*</span>
+                      绩效类型 <span className="text-destructive">*</span>
                     </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
@@ -248,8 +251,8 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="monthly">月度考核</SelectItem>
-                        <SelectItem value="probation">试用期考核</SelectItem>
+                        <SelectItem value="monthly">月度绩效</SelectItem>
+                        <SelectItem value="probation">试用期绩效</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -261,9 +264,9 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
             <Separator />
 
             <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <h3 className="text-base font-medium">考核维度</h3>
+                  <h3 className="text-base font-medium">绩效维度</h3>
                   <span
                     className={`text-sm font-medium ${dimWeightValid ? 'text-green-600' : 'text-destructive'}`}
                   >
@@ -350,7 +353,10 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                               <FormItem className="flex-1">
                                 <FormLabel>维度名称</FormLabel>
                                 <FormControl>
-                                  <Input placeholder="如：业绩指标" {...field} />
+                                  <Input
+                                    placeholder="如：业绩指标"
+                                    {...field}
+                                  />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -388,24 +394,25 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                           dimIdx={dimIdx}
                         />
 
-                        {dimData && (() => {
-                          const indSum: number =
-                            dimData.indicators?.reduce(
-                              (sum: number, i: { weight: number }) =>
-                                sum + (i.weight || 0),
-                              0,
-                            ) || 0;
-                          const indValid: boolean =
-                            Math.abs(indSum - (dimData.weight || 0)) < 0.01;
-                          return (
-                            <div
-                              className={`text-xs font-medium ${indValid ? 'text-green-600' : 'text-destructive'}`}
-                            >
-                              指标权重总和：{indSum} / {dimData.weight || 0}
-                              {!indValid && ' （必须等于维度权重）'}
-                            </div>
-                          );
-                        })()}
+                        {dimData &&
+                          (() => {
+                            const indSum: number =
+                              dimData.indicators?.reduce(
+                                (sum: number, i: { weight: number }) =>
+                                  sum + (i.weight || 0),
+                                0,
+                              ) || 0;
+                            const indValid: boolean =
+                              Math.abs(indSum - (dimData.weight || 0)) < 0.01;
+                            return (
+                              <div
+                                className={`text-xs font-medium ${indValid ? 'text-green-600' : 'text-destructive'}`}
+                              >
+                                指标权重总和：{indSum} / {dimData.weight || 0}
+                                {!indValid && ' （必须等于维度权重）'}
+                              </div>
+                            );
+                          })()}
                       </>
                     )}
                   </div>

@@ -39,7 +39,7 @@ const StatisticsCards: React.FC<StatisticsCardsProps> = ({
       iconBgClass: 'bg-warning/10 text-warning',
     },
     {
-      label: '待处理考核',
+      label: '待处理绩效',
       value: statistics?.pendingCount ?? 0,
       icon: Clock,
       iconBgClass: 'bg-destructive/10 text-destructive',

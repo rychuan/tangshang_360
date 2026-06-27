@@ -1,4 +1,7 @@
-import type { MemberMutationData, FilterParams } from '@lark-apaas/fullstack-nestjs-core';
+import type {
+  MemberMutationData,
+  FilterParams,
+} from '@lark-apaas/fullstack-nestjs-core';
 
 export interface AssessmentTemplateItem {
   id: string;
@@ -451,7 +454,7 @@ export interface MyAssessmentSummary {
 }
 export interface RemindResult {
   instanceId: string;
-  status: "sent" | "failed";
+  status: 'sent' | 'failed';
   reason?: string;
 }
 export interface RemindResponse {
@@ -459,7 +462,12 @@ export interface RemindResponse {
   results: RemindResult[];
 }
 // === Permission Management ===
-export type PermissionAction = 'view' | 'edit' | 'delete' | 'export' | 'publish';
+export type PermissionAction =
+  | 'view'
+  | 'edit'
+  | 'delete'
+  | 'export'
+  | 'publish';
 export type PermissionResource =
   | 'dashboard'
   | 'my_assessments'
@@ -642,6 +650,14 @@ export interface PerformanceGradeItem {
 }
 export interface PerformanceGradeListResponse {
   items: PerformanceGradeItem[];
+}
+export interface ActiveGradeRule {
+  name: string;
+  minScore: number;
+  maxScore: number;
+}
+export interface ActiveGradeListResponse {
+  rules: ActiveGradeRule[];
 }
 export interface CreatePerformanceGradeRequest {
   name: string;

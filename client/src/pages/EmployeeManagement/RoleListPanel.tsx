@@ -98,7 +98,9 @@ const RoleListPanel: React.FC<RoleListPanelProps> = ({
                       <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
                         {role.description || '暂无描述'}
                       </p>
-                      <p className="mt-1 text-xs text-muted-foreground">成员 {count}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        成员 {count}
+                      </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                       <CanRole roles={['admin']}>

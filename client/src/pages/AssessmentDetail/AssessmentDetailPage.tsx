@@ -34,6 +34,7 @@ const AssessmentDetailPage: React.FC = () => {
     isCompleted,
     previewScore,
     previewGrade,
+    gradeStyleMap,
     fetchDetail,
     updateRating,
     handleSaveDraft,
@@ -64,7 +65,7 @@ const AssessmentDetailPage: React.FC = () => {
         signImage: signImage ?? undefined,
       });
       toast.success(
-        result.status === 'completed' ? '双方已签名，考核完成' : '签名成功',
+        result.status === 'completed' ? '双方已签名，绩效完成' : '签名成功',
       );
       setSignDialogOpen(false);
       await fetchDetail();
@@ -88,7 +89,7 @@ const AssessmentDetailPage: React.FC = () => {
   if (error || !detail) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <p className="text-muted-foreground">{error || '考核记录不存在'}</p>
+        <p className="text-muted-foreground">{error || '绩效记录不存在'}</p>
         <Button variant="outline" onClick={() => navigate('/')}>
           返回首页
         </Button>
@@ -111,6 +112,7 @@ const AssessmentDetailPage: React.FC = () => {
         detail={detail}
         previewScore={previewScore}
         previewGrade={previewGrade}
+        gradeStyleMap={gradeStyleMap}
       />
 
       <IndicatorTable
@@ -173,7 +175,7 @@ const AssessmentDetailPage: React.FC = () => {
           </Button>
         )}
         {isCompleted && (
-          <p className="text-muted-foreground text-sm">考核已完成，档案只读</p>
+          <p className="text-muted-foreground text-sm">绩效已完成，档案只读</p>
         )}
       </div>
 

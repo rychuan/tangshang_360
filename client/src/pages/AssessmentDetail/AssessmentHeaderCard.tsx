@@ -21,24 +21,27 @@ const STATUS_VARIANTS: Record<
   completed: 'outline',
 };
 
-const GRADE_STYLES: Record<string, string> = {
-  S: 'bg-success/10 text-success',
-  A: 'bg-primary/10 text-primary',
-  B: 'bg-warning/10 text-warning',
-  C: 'bg-destructive/10 text-destructive',
-  D: 'bg-destructive/10 text-destructive',
-};
-
 interface AssessmentHeaderCardProps {
   detail: AssessmentInstanceDetail;
   previewScore?: number | null;
   previewGrade?: string | null;
+  gradeStyleMap?: Record<string, string>;
+}
+
+function getGradeStyle(
+  grade: string | undefined | null,
+  styleMap?: Record<string, string>,
+): string {
+  if (!grade) return '';
+  if (styleMap?.[grade]) return styleMap[grade];
+  return 'bg-muted text-muted-foreground';
 }
 
 const AssessmentHeaderCard: React.FC<AssessmentHeaderCardProps> = ({
   detail,
   previewScore,
   previewGrade,
+  gradeStyleMap,
 }) => {
   const hasFinalScore = detail.totalScore != null;
   const showPreview = !hasFinalScore && previewScore != null;
@@ -65,10 +68,7 @@ const AssessmentHeaderCard: React.FC<AssessmentHeaderCardProps> = ({
               </div>
               {detail.grade && (
                 <span
-                  className={`px-3 py-1 rounded-md text-lg font-bold ${
-                    GRADE_STYLES[detail.grade] ||
-                    'bg-muted text-muted-foreground'
-                  }`}
+                  className={`px-3 py-1 rounded-md text-lg font-bold ${getGradeStyle(detail.grade, gradeStyleMap)}`}
                 >
                   {detail.grade}
                 </span>
@@ -86,10 +86,7 @@ const AssessmentHeaderCard: React.FC<AssessmentHeaderCardProps> = ({
               {previewGrade && (
                 <div className="flex flex-col items-center gap-0.5">
                   <span
-                    className={`px-3 py-1 rounded-md text-lg font-bold ${
-                      GRADE_STYLES[previewGrade] ||
-                      'bg-muted text-muted-foreground'
-                    }`}
+                    className={`px-3 py-1 rounded-md text-lg font-bold ${getGradeStyle(previewGrade, gradeStyleMap)}`}
                   >
                     {previewGrade}
                   </span>

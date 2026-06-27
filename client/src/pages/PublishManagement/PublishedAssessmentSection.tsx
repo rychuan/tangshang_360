@@ -102,7 +102,7 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
       className="rounded-lg border bg-card p-6"
     >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">已发布考核</h2>
+        <h2 className="text-lg font-semibold">已发布绩效</h2>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <Label className="shrink-0 text-sm text-muted-foreground">
@@ -232,7 +232,7 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
                   </th>
                   <th className="py-3 pr-4 font-medium text-left">状态</th>
                   <th className="py-3 pr-4 font-medium text-left hidden sm:table-cell">
-                    考核进度
+                    绩效进度
                   </th>
                   <th className="py-3 pr-4 font-medium text-right">总分</th>
                   <th className="py-3 pr-4 font-medium text-center hidden sm:table-cell">

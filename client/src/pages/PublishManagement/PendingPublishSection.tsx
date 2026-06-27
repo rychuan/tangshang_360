@@ -157,10 +157,10 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
                   岗位
                 </th>
                 <th className="py-3 pr-4 font-medium hidden md:table-cell">
-                  考核模板
+                  绩效模板
                 </th>
                 <th className="py-3 pr-4 font-medium hidden md:table-cell">
-                  上月考核
+                  上月绩效
                 </th>
                 <th className="py-3 pr-4 font-medium">操作</th>
               </tr>

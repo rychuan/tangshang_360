@@ -286,7 +286,7 @@ const PublishManagementPage: React.FC = () => {
 
   const handleOpenBatchUnlock = (): void => {
     if (selectedInstanceIds.size === 0) {
-      toast.error('请选择要解锁的考核');
+      toast.error('请选择要解锁的绩效');
       return;
     }
     const selectedInstances: AssessmentInstanceItem[] = instances.filter(
@@ -299,11 +299,11 @@ const PublishManagementPage: React.FC = () => {
     const notUnlockableCount: number =
       selectedInstances.length - unlockable.length;
     if (unlockable.length === 0) {
-      toast.error('选中的考核均不可解锁（仅支持上级评分中/待签名/已完成状态）');
+      toast.error('选中的绩效均不可解锁（仅支持上级评分中/待签名/已完成状态）');
       return;
     }
     if (notUnlockableCount > 0) {
-      toast.info(`已自动过滤 ${notUnlockableCount} 项不可解锁的考核`);
+      toast.info(`已自动过滤 ${notUnlockableCount} 项不可解锁的绩效`);
     }
     setUnlockTargetIds(
       unlockable.map((inst: AssessmentInstanceItem) => inst.id),
@@ -346,7 +346,7 @@ const PublishManagementPage: React.FC = () => {
 
   const handleBatchNotify = async (): Promise<void> => {
     if (selectedInstanceIds.size === 0) {
-      toast.error('请选择要通知的考核');
+      toast.error('请选择要通知的绩效');
       return;
     }
     setBatchNotifyLoading(true);
@@ -393,8 +393,8 @@ const PublishManagementPage: React.FC = () => {
         }));
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, '考核列表');
-        XLSX.writeFile(wb, `考核列表_${period}.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, '绩效列表');
+        XLSX.writeFile(wb, `绩效列表_${period}.xlsx`);
         toast.success('导出成功');
       })
       .catch((err: unknown) => {
@@ -406,11 +406,11 @@ const PublishManagementPage: React.FC = () => {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-4">
-        <PageHeader title="考核发布管理" />
+        <PageHeader title="绩效发布管理" />
       </div>
 
       <div className="flex items-center gap-3">
-        <Label className="shrink-0 text-sm font-medium">考核周期</Label>
+        <Label className="shrink-0 text-sm font-medium">绩效周期</Label>
         <MonthPicker value={period} onChange={handlePeriodChange} />
       </div>
 

@@ -14,6 +14,7 @@ import { performanceGrade } from '@server/database/schema';
 import type {
   PerformanceGradeItem,
   PerformanceGradeListResponse,
+  ActiveGradeListResponse,
   CreatePerformanceGradeRequest,
   UpdatePerformanceGradeRequest,
   CreateResponse,
@@ -43,7 +44,7 @@ export class PerformanceGradeService {
       .orderBy(performanceGrade.sortOrder);
 
     const mapped: PerformanceGradeItem[] = items.map(
-      (item: typeof items[number]) => ({
+      (item: (typeof items)[number]) => ({
         id: item.id,
         name: item.name,
         minScore: item.minScore,
@@ -60,6 +61,20 @@ export class PerformanceGradeService {
     return { items: mapped };
   }
 
+  async listActive(): Promise<ActiveGradeListResponse> {
+    const rows = await this.db
+      .select({
+        name: performanceGrade.name,
+        minScore: performanceGrade.minScore,
+        maxScore: performanceGrade.maxScore,
+      })
+      .from(performanceGrade)
+      .where(eq(performanceGrade.isActive, true))
+      .orderBy(performanceGrade.sortOrder);
+
+    return { rules: rows };
+  }
+
   async create(body: CreatePerformanceGradeRequest): Promise<CreateResponse> {
     this.logger.log(`create: ${JSON.stringify(body)}`);
 
@@ -69,7 +84,7 @@ export class PerformanceGradeService {
       .where(eq(performanceGrade.isActive, true));
 
     const rules: GradeRuleForValidation[] = existing.map(
-      (r: typeof existing[number]) => ({
+      (r: (typeof existing)[number]) => ({
         name: r.name,
         minScore: r.minScore,
         maxScore: r.maxScore,
@@ -122,8 +137,8 @@ export class PerformanceGradeService {
       .where(eq(performanceGrade.isActive, true));
 
     const rules: GradeRuleForValidation[] = allActive
-      .filter((r: typeof allActive[number]) => r.id !== id)
-      .map((r: typeof allActive[number]) => ({
+      .filter((r: (typeof allActive)[number]) => r.id !== id)
+      .map((r: (typeof allActive)[number]) => ({
         name: r.name,
         minScore: r.minScore,
         maxScore: r.maxScore,
@@ -166,9 +181,7 @@ export class PerformanceGradeService {
       throw new NotFoundException('等级配置不存在');
     }
 
-    await this.db
-      .delete(performanceGrade)
-      .where(eq(performanceGrade.id, id));
+    await this.db.delete(performanceGrade).where(eq(performanceGrade.id, id));
 
     return { success: true };
   }
@@ -179,7 +192,8 @@ export class PerformanceGradeService {
     const rules = await this.db
       .select()
       .from(performanceGrade)
-      .where(eq(performanceGrade.isActive, true));
+      .where(eq(performanceGrade.isActive, true))
+      .orderBy(performanceGrade.sortOrder);
 
     for (const rule of rules) {
       if (totalScore >= rule.minScore && totalScore <= rule.maxScore) {
@@ -197,9 +211,11 @@ export class PerformanceGradeService {
       );
     }
 
+    const errors: string[] = [];
+
     for (const rule of rules) {
       if (rule.minScore >= rule.maxScore) {
-        throw new BadRequestException(
+        errors.push(
           `等级「${rule.name}」的最低分(${rule.minScore})必须小于最高分(${rule.maxScore})`,
         );
       }
@@ -214,29 +230,31 @@ export class PerformanceGradeService {
       const curr = sorted[i];
       const next = sorted[i + 1];
       if (curr.maxScore >= next.minScore) {
-        throw new BadRequestException(
+        errors.push(
           `等级「${curr.name}」(区间[${curr.minScore},${curr.maxScore}])与等级「${next.name}」(区间[${next.minScore},${next.maxScore}])分数区间重叠`,
         );
       }
       if (curr.maxScore + 1 < next.minScore) {
-        throw new BadRequestException(
+        errors.push(
           `等级「${curr.name}」(最高分${curr.maxScore})与等级「${next.name}」(最低分${next.minScore})之间存在未覆盖的分数区间`,
         );
       }
     }
 
-    const firstMin = sorted[0].minScore;
-    if (firstMin !== 0) {
-      throw new BadRequestException(
-        `最低等级的最低分应为0，当前为${firstMin}，未完整覆盖0-100区间`,
+    if (sorted[0].minScore !== 0) {
+      errors.push(
+        `最低等级的最低分应为0，当前为${sorted[0].minScore}，未完整覆盖0-100区间`,
       );
     }
 
-    const lastMax = sorted[sorted.length - 1].maxScore;
-    if (lastMax < 100) {
-      throw new BadRequestException(
-        `最高等级的最高分应至少为100，当前为${lastMax}，未完整覆盖0-100区间`,
+    if (sorted[sorted.length - 1].maxScore < 100) {
+      errors.push(
+        `最高等级的最高分应至少为100，当前为${sorted[sorted.length - 1].maxScore}，未完整覆盖0-100区间`,
       );
+    }
+
+    if (errors.length > 0) {
+      throw new BadRequestException(errors.join('；'));
     }
   }
 }

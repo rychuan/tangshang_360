@@ -56,7 +56,7 @@ function signBadge(label: string, signedAt?: string) {
 }
 
 const chartConfig = {
-  score: { label: '考核均分', color: 'hsl(var(--chart-2))' },
+  score: { label: '绩效均分', color: 'hsl(var(--chart-2))' },
 };
 
 const MyAssessmentsPage: React.FC = () => {
@@ -64,7 +64,7 @@ const MyAssessmentsPage: React.FC = () => {
   const navigate = useNavigate();
 
   const myAssessmentColumns: PageTableColumn<MyAssessmentRecordItem>[] = [
-    { key: 'period', header: '考核周期', render: (item) => item.period },
+    { key: 'period', header: '绩效周期', render: (item) => item.period },
     { key: 'position', header: '岗位', render: (item) => item.position },
     {
       key: 'totalScore',
@@ -153,7 +153,7 @@ const MyAssessmentsPage: React.FC = () => {
       setRecords(result?.items ?? []);
       setTotal(result.total);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '加载考核记录失败';
+      const msg = err instanceof Error ? err.message : '加载绩效记录失败';
       logger.error(`Failed to fetch my assessment records: ${msg}`);
       setRecords([]);
       setTotal(0);
@@ -229,7 +229,7 @@ const MyAssessmentsPage: React.FC = () => {
 
   const summaryCards = [
     {
-      title: '考核总数',
+      title: '绩效总数',
       value: summary ? String(summary.totalCount) : '-',
       icon: ClipboardList,
       colorClass: 'bg-primary/10 text-primary',
@@ -257,7 +257,7 @@ const MyAssessmentsPage: React.FC = () => {
   return (
     <div className="@container/main flex flex-1 flex-col gap-4 md:gap-6">
       <PageHeader
-        title="我的考核"
+        title="我的绩效"
         actions={
           <div className="flex items-center gap-1">
             <Button variant="outline" size="icon" onClick={handlePrevYear}>
@@ -326,7 +326,7 @@ const MyAssessmentsPage: React.FC = () => {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
             <AreaChartIcon className="size-4 text-muted-foreground" />
-            考核趋势
+            绩效趋势
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -421,19 +421,19 @@ const MyAssessmentsPage: React.FC = () => {
       {/* Records Table */}
       <Card className="rounded-xl">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">我的考核记录</CardTitle>
+          <CardTitle className="text-base">我的绩效记录</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {recordsError ? (
             <div className="flex items-center justify-center py-8 text-sm text-destructive">
-              考核记录加载失败：{recordsError}
+              绩效记录加载失败：{recordsError}
             </div>
           ) : (
             <PageTable
               columns={myAssessmentColumns}
               data={records}
               loading={loading}
-              emptyMessage="暂无考核记录"
+              emptyMessage="暂无绩效记录"
               page={page}
               totalPages={totalPages}
               total={total}

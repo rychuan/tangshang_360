@@ -188,7 +188,7 @@ const StatisticsPage: React.FC = () => {
       }
       const ws = XLSX.utils.json_to_sheet(
         data.map((r: StatisticsRecordItem) => ({
-          考核周期: r.period,
+          绩效周期: r.period,
           员工姓名: r.employeeName,
           部门: r.department,
           岗位: r.position,
@@ -200,8 +200,8 @@ const StatisticsPage: React.FC = () => {
         })),
       );
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, '考核记录');
-      XLSX.writeFile(wb, '考核记录导出.xlsx');
+      XLSX.utils.book_append_sheet(wb, ws, '绩效记录');
+      XLSX.writeFile(wb, '绩效记录导出.xlsx');
       toast.success(`导出成功，共 ${data.length} 条记录`);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '导出失败';
@@ -216,14 +216,14 @@ const StatisticsPage: React.FC = () => {
 
   return (
     <div className="@container/main flex flex-1 flex-col gap-4 md:gap-6">
-      <PageHeader title="考核统计查询" visuallyHidden />
+      <PageHeader title="绩效统计查询" visuallyHidden />
 
       {/* Filters */}
       <Card className="rounded-xl">
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-3 items-end">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs text-muted-foreground">考核周期</label>
+              <label className="text-xs text-muted-foreground">绩效周期</label>
               <MultiMonthPicker
                 value={filters.periods}
                 onChange={(value: string[]) =>
@@ -454,7 +454,7 @@ const StatisticsPage: React.FC = () => {
       {/* Records Table */}
       <Card className="rounded-xl">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">考核记录（共 {total} 条）</CardTitle>
+          <CardTitle className="text-base"绩效记录（共 {total} 条）</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
@@ -472,7 +472,7 @@ const StatisticsPage: React.FC = () => {
                   <thead>
                     <tr className="border-b text-muted-foreground">
                       <th className="text-left py-3 px-4 font-medium">
-                        考核周期
+                        绩效周期
                       </th>
                       <th className="text-left py-3 px-4 font-medium">员工</th>
                       <th className="text-left py-3 px-4 font-medium hidden sm:table-cell">
