@@ -113,19 +113,23 @@ export function DataTable<TData, TValue>({
               key={headerGroup.id}
               className="bg-muted/30 hover:bg-muted/30"
             >
-              {headerGroup.headers.map((header) => (
-                <TableHead
-                  key={header.id}
-                  className="h-10 px-4 font-medium text-muted-foreground"
-                >
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
-                      )}
-                </TableHead>
-              ))}
+              {headerGroup.headers.map((header) => {
+                const meta = header.column.columnDef.meta as
+                  { headerClass?: string; cellClass?: string } | undefined;
+                return (
+                  <TableHead
+                    key={header.id}
+                    className={`h-10 px-4 font-medium text-muted-foreground ${meta?.headerClass ?? ''}`}
+                  >
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+                  </TableHead>
+                );
+              })}
             </TableRow>
           ))}
         </TableHeader>
@@ -137,11 +141,18 @@ export function DataTable<TData, TValue>({
               className={onRowClick ? 'cursor-pointer' : ''}
               onClick={() => onRowClick?.(row.original)}
             >
-              {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id} className="py-3 px-4">
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
-              ))}
+              {row.getVisibleCells().map((cell) => {
+                const meta = cell.column.columnDef.meta as
+                  { headerClass?: string; cellClass?: string } | undefined;
+                return (
+                  <TableCell
+                    key={cell.id}
+                    className={`py-3 px-4 ${meta?.cellClass ?? ''}`}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                );
+              })}
             </TableRow>
           ))}
         </TableBody>

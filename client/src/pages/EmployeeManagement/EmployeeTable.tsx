@@ -62,7 +62,9 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
   const someChecked =
     employees.some((e) => selectedRowKeys.includes(e.id)) && !allChecked;
 
-  const columns: ColumnDef<EmployeeItem>[] = [
+  const stickyCol =
+    'sticky right-0 z-10 bg-background group-hover:bg-muted/30 border-l';
+  const cols: ColumnDef<EmployeeItem>[] = [
     {
       id: 'select',
       header: () => (
@@ -93,6 +95,10 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
     {
       id: 'employeeNo',
       header: '编号',
+      meta: {
+        headerClass: 'hidden sm:table-cell',
+        cellClass: 'hidden sm:table-cell',
+      },
       cell: ({ row }) => (
         <span className="text-muted-foreground">
           {row.original.employeeNo || '-'}
@@ -102,6 +108,10 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
     {
       id: 'position',
       header: '岗位',
+      meta: {
+        headerClass: 'hidden md:table-cell',
+        cellClass: 'hidden md:table-cell',
+      },
       cell: ({ row }) => (
         <span className="truncate">{row.original.position}</span>
       ),
@@ -109,6 +119,10 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
     {
       id: 'department',
       header: '部门',
+      meta: {
+        headerClass: 'hidden lg:table-cell',
+        cellClass: 'hidden lg:table-cell',
+      },
       cell: ({ row }) => (
         <span className="text-muted-foreground truncate">
           {row.original.department || '-'}
@@ -118,6 +132,10 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
     {
       id: 'supervisor',
       header: '上级',
+      meta: {
+        headerClass: 'hidden lg:table-cell',
+        cellClass: 'hidden lg:table-cell',
+      },
       cell: ({ row }) =>
         row.original.supervisorId ? (
           <UserDisplay userId={row.original.supervisorId} size="small" />
@@ -128,6 +146,10 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
     {
       id: 'role',
       header: '角色',
+      meta: {
+        headerClass: 'hidden md:table-cell',
+        cellClass: 'hidden md:table-cell',
+      },
       cell: ({ row }) => (
         <Badge variant="secondary" className="text-xs font-normal">
           {roleLabels[row.original.role] || row.original.role}
@@ -137,6 +159,10 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
     {
       id: 'binding',
       header: '模板',
+      meta: {
+        headerClass: 'hidden lg:table-cell',
+        cellClass: 'hidden lg:table-cell',
+      },
       cell: ({ row }) =>
         row.original.currentBinding ? (
           <span className="text-xs">
@@ -164,6 +190,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
     },
     {
       id: 'actions',
+      meta: { headerClass: stickyCol, cellClass: stickyCol },
       header: () => <div className="text-right">操作</div>,
       cell: ({ row }) => (
         <div
@@ -248,7 +275,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
 
   return (
     <DataTable
-      columns={columns}
+      columns={cols}
       data={employees}
       loading={loading}
       emptyMessage="暂无员工数据"
