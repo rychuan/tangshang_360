@@ -106,7 +106,11 @@ export function useEmployeeDialogs(refetch: () => void) {
   }, []);
 
   const handleBindConfirm = useCallback(async () => {
-    if (!bindEmployeeIds.length || !bindTemplateId || !bindEffectiveFrom.length) {
+    if (
+      !bindEmployeeIds.length ||
+      !bindTemplateId ||
+      !bindEffectiveFrom.length
+    ) {
       toast.error('请填写完整的绑定信息');
       return;
     }

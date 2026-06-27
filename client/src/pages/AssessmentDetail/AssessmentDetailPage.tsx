@@ -229,6 +229,7 @@ const AssessmentDetailPage: React.FC = () => {
                     ? '待签名'
                     : '待进行',
                 person: null,
+                signImage: detail.selfSignImage || null,
               },
               {
                 key: 'supSign',
@@ -247,6 +248,7 @@ const AssessmentDetailPage: React.FC = () => {
                       ? '待签名'
                       : '待进行',
                 person: null,
+                signImage: detail.supervisorSignImage || null,
               },
             ].map((step, i) => (
               <div key={step.key} className="flex flex-1 items-center min-w-0">
@@ -293,6 +295,15 @@ const AssessmentDetailPage: React.FC = () => {
                         userId={step.person}
                         size="small"
                         showLabel
+                      />
+                    </div>
+                  )}
+                  {step.signImage && (
+                    <div className="pl-8">
+                      <img
+                        src={step.signImage}
+                        alt={`${step.label}签名`}
+                        className="h-10 border rounded-md object-contain bg-muted/30"
                       />
                     </div>
                   )}
