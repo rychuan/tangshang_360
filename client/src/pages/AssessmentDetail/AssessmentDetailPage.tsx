@@ -3,9 +3,19 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useCurrentUserProfile } from '@lark-apaas/client-toolkit/hooks/useCurrentUserProfile';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { toast } from 'sonner';
-import { ArrowLeft, Save, Send, PenLine } from 'lucide-react';
+import {
+  ArrowLeft,
+  Save,
+  Send,
+  PenLine,
+  User,
+  Users2,
+  PenTool,
+  CheckCircle2,
+  Circle,
+  ChevronRight,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { StatusBadge } from '@/components/business-ui/status-badge';
@@ -167,91 +177,128 @@ const AssessmentDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Two-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Left column: info + actions */}
-        <div className="flex flex-col gap-4">
-          {/* Status overview card */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">绩效状态</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-5">
-              {/* Self */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    我
-                  </p>
-                  <Badge
-                    className={
-                      detail.status === 'completed'
-                        ? 'bg-success/10 text-success border-transparent text-xs'
-                        : detail.selfSignName
-                          ? 'bg-success/10 text-success border-transparent text-xs'
-                          : detail.status === 'self_review'
-                            ? 'bg-destructive/10 text-destructive border-transparent text-xs'
-                            : 'bg-warning/10 text-warning border-transparent text-xs'
-                    }
+      {/* Process stepper card */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">绩效进度</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* 4-step progress bar */}
+          <div className="flex items-start justify-between gap-1 mb-6">
+            {[
+              {
+                key: 'self',
+                label: '员工自评',
+                icon: User,
+                done: detail.status !== 'self_review',
+                active: detail.status === 'self_review',
+              },
+              {
+                key: 'supervisor',
+                label: '上级评分',
+                icon: Users2,
+                done:
+                  detail.status === 'pending_sign' ||
+                  detail.status === 'completed',
+                active: detail.status === 'supervisor_review',
+              },
+              {
+                key: 'selfSign',
+                label: '员工签名',
+                icon: PenTool,
+                done: !!detail.selfSignName,
+                active:
+                  detail.status === 'pending_sign' && !detail.selfSignName,
+              },
+              {
+                key: 'supSign',
+                label: '上级签名',
+                icon: PenTool,
+                done:
+                  !!detail.supervisorSignName || detail.status === 'completed',
+                active:
+                  detail.status === 'pending_sign' &&
+                  !!detail.selfSignName &&
+                  !detail.supervisorSignName,
+              },
+            ].map((step, i) => (
+              <div key={step.key} className="flex-1 flex items-center min-w-0">
+                <div className="flex flex-col items-center gap-1.5 w-full">
+                  <div
+                    className={`flex size-9 items-center justify-center rounded-full text-sm font-bold ${
+                      step.done
+                        ? 'bg-success text-success-foreground'
+                        : step.active
+                          ? 'bg-primary text-primary-foreground ring-4 ring-primary/20'
+                          : 'bg-muted text-muted-foreground'
+                    }`}
                   >
-                    {detail.status === 'completed'
-                      ? '已完成'
-                      : detail.selfSignName
-                        ? '已完成'
-                        : detail.status === 'self_review'
-                          ? '未自评'
-                          : '未签名'}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-3">
-                  <UserDisplay
-                    userId={detail.employeeId}
-                    size="medium"
-                    showLabel
-                  />
-                  <span className="text-xs text-muted-foreground">
-                    {detail.position}
+                    {step.done ? (
+                      <CheckCircle2 className="size-5" />
+                    ) : step.active ? (
+                      <step.icon className="size-4" />
+                    ) : (
+                      <Circle className="size-4" />
+                    )}
+                  </div>
+                  <p
+                    className={`text-xs text-center leading-tight ${
+                      step.active
+                        ? 'text-primary font-semibold'
+                        : step.done
+                          ? 'text-foreground font-medium'
+                          : 'text-muted-foreground'
+                    }`}
+                  >
+                    {step.label}
+                  </p>
+                  <span
+                    className={`text-[0.625rem] ${
+                      step.done
+                        ? 'text-success'
+                        : step.active
+                          ? 'text-primary'
+                          : 'text-muted-foreground'
+                    }`}
+                  >
+                    {step.done ? '已完成' : step.active ? '进行中' : '待进行'}
                   </span>
                 </div>
-                {detail.selfSignImage && (
-                  <img
-                    src={detail.selfSignImage}
-                    alt="本人签名"
-                    className="mt-2 h-12 border rounded-md object-contain bg-muted/30"
+                {i < 3 && (
+                  <ChevronRight
+                    className={`size-4 shrink-0 -ml-1 -mr-1 mt-3 ${
+                      step.done ? 'text-success' : 'text-muted-foreground/30'
+                    }`}
                   />
                 )}
               </div>
+            ))}
+          </div>
 
-              {/* Supervisor */}
-              <div className="border-t pt-4">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    上级
-                  </p>
-                  <Badge
-                    className={
-                      detail.status === 'completed'
-                        ? 'bg-success/10 text-success border-transparent text-xs'
-                        : detail.supervisorSignName
-                          ? 'bg-success/10 text-success border-transparent text-xs'
-                          : detail.status === 'supervisor_review'
-                            ? 'bg-destructive/10 text-destructive border-transparent text-xs'
-                            : detail.status === 'self_review'
-                              ? 'bg-destructive/10 text-destructive border-transparent text-xs'
-                              : 'bg-warning/10 text-warning border-transparent text-xs'
-                    }
-                  >
-                    {detail.status === 'completed'
-                      ? '已完成'
-                      : detail.supervisorSignName
-                        ? '已完成'
-                        : detail.status === 'supervisor_review'
-                          ? '未评分'
-                          : detail.status === 'self_review'
-                            ? '未评分'
-                            : '未签名'}
-                  </Badge>
-                </div>
+          {/* People info */}
+          <div className="border-t pt-4 grid grid-cols-2 gap-4">
+            <div className="flex items-start gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <User className="size-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground mb-0.5">员工</p>
+                <UserDisplay
+                  userId={detail.employeeId}
+                  size="medium"
+                  showLabel
+                />
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {detail.position}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-info/10 text-info">
+                <Users2 className="size-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground mb-0.5">上级</p>
                 {detail.supervisorId ? (
                   <UserDisplay
                     userId={detail.supervisorId}
@@ -261,99 +308,76 @@ const AssessmentDetailPage: React.FC = () => {
                 ) : (
                   <p className="text-sm text-muted-foreground">-</p>
                 )}
-                {detail.supervisorSignImage && (
-                  <img
-                    src={detail.supervisorSignImage}
-                    alt="上级签名"
-                    className="mt-2 h-12 border rounded-md object-contain bg-muted/30"
-                  />
-                )}
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Actions */}
-          <div className="flex flex-col gap-2">
-            {canEditSelf && (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={handleSaveDraft}
-                  disabled={submitting}
-                  className="w-full"
-                >
-                  <Save className="size-4 mr-2" />
-                  保存草稿
-                </Button>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                  className="w-full"
-                >
-                  <Send className="size-4 mr-2" />
-                  提交自评
-                </Button>
-              </>
-            )}
-            {canEditSupervisor && (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={handleSaveDraft}
-                  disabled={submitting}
-                  className="w-full"
-                >
-                  <Save className="size-4 mr-2" />
-                  保存草稿
-                </Button>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                  className="w-full"
-                >
-                  <Send className="size-4 mr-2" />
-                  提交评分
-                </Button>
-              </>
-            )}
-            {canSignSelf && (
-              <Button
-                onClick={() => handleOpenSignDialog('self')}
-                disabled={submitting}
-                className="w-full"
-              >
-                <PenLine className="size-4 mr-2" />
-                本人签名
-              </Button>
-            )}
-            {canSignSupervisor && (
-              <Button
-                onClick={() => handleOpenSignDialog('supervisor')}
-                disabled={submitting}
-                className="w-full"
-              >
-                <PenLine className="size-4 mr-2" />
-                上级签名
-              </Button>
-            )}
-            {isCompleted && (
-              <p className="text-muted-foreground text-sm text-center py-2">
-                绩效已完成，档案只读
-              </p>
-            )}
+            </div>
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Right column: indicator scoring */}
-        <div className="lg:col-span-3 min-w-0">
-          <IndicatorTable
-            groups={groupedIndicators}
-            ratings={ratings}
-            canEditSelf={canEditSelf}
-            canEditSupervisor={canEditSupervisor}
-            updateRating={updateRating}
-          />
-        </div>
+      {/* Indicator tables */}
+      <IndicatorTable
+        groups={groupedIndicators}
+        ratings={ratings}
+        canEditSelf={canEditSelf}
+        canEditSupervisor={canEditSupervisor}
+        updateRating={updateRating}
+      />
+
+      {/* Actions */}
+      <div className="flex flex-wrap items-center justify-center gap-3 pb-4">
+        {canEditSelf && (
+          <>
+            <Button
+              variant="outline"
+              onClick={handleSaveDraft}
+              disabled={submitting}
+            >
+              <Save className="size-4 mr-2" />
+              保存草稿
+            </Button>
+            <Button onClick={handleSubmit} disabled={submitting}>
+              <Send className="size-4 mr-2" />
+              提交自评
+            </Button>
+          </>
+        )}
+        {canEditSupervisor && (
+          <>
+            <Button
+              variant="outline"
+              onClick={handleSaveDraft}
+              disabled={submitting}
+            >
+              <Save className="size-4 mr-2" />
+              保存草稿
+            </Button>
+            <Button onClick={handleSubmit} disabled={submitting}>
+              <Send className="size-4 mr-2" />
+              提交评分
+            </Button>
+          </>
+        )}
+        {canSignSelf && (
+          <Button
+            onClick={() => handleOpenSignDialog('self')}
+            disabled={submitting}
+          >
+            <PenLine className="size-4 mr-2" />
+            员工签名
+          </Button>
+        )}
+        {canSignSupervisor && (
+          <Button
+            onClick={() => handleOpenSignDialog('supervisor')}
+            disabled={submitting}
+          >
+            <PenLine className="size-4 mr-2" />
+            上级签名
+          </Button>
+        )}
+        {isCompleted && (
+          <p className="text-muted-foreground text-sm">绩效已完成，档案只读</p>
+        )}
       </div>
 
       <SignDialog
