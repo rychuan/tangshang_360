@@ -201,7 +201,8 @@ export class PerformanceGradeService {
       }
     }
 
-    return 'D';
+    this.logger.warn('No matching grade rule found, fallback to unrated');
+    return '未评级';
   }
 
   private validateGradeRules(rules: GradeRuleForValidation[]): void {

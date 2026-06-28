@@ -33,6 +33,7 @@ import {
   Award,
   SunIcon,
   MoonIcon,
+  BookOpen,
 } from 'lucide-react';
 import { UserDisplay } from '@/components/business-ui/user-display';
 import { Separator } from '@/components/ui/separator';
@@ -143,6 +144,13 @@ const navGroups: NavGroup[] = [
         roles: ADMIN_HRD_ROLES,
         permissionResource: 'permission_management',
       },
+      {
+        label: '字段管理',
+        path: '/dictionary',
+        icon: BookOpen,
+        roles: ADMIN_HRD_ROLES,
+        permissionResource: 'dictionary_config',
+      },
     ],
   },
 ];
@@ -157,6 +165,7 @@ const pathTitleMap: Record<string, string> = {
   '/my-assessments': '我的绩效',
   '/team-performance': '团队绩效',
   '/permissions': '权限管理',
+  '/dictionary': '字段管理',
 };
 
 const LayoutContent: React.FC = () => {
