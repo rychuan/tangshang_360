@@ -66,12 +66,12 @@ const ADMIN_HRD_ROLES = ['admin', 'hrd'];
 const navGroups: NavGroup[] = [
   {
     label: '工作台',
-    icon: LayoutDashboard,
+    // icon: LayoutDashboard,
     items: [
       {
         label: '首页',
         path: '/',
-        icon: LayoutDashboard,
+        // icon: LayoutDashboard,
         roles: ALL_ROLES,
         permissionResource: 'dashboard',
       },
@@ -93,12 +93,12 @@ const navGroups: NavGroup[] = [
   },
   {
     label: '绩效管理',
-    icon: FileText,
+    // icon: FileText,
     items: [
       {
         label: '模板管理',
         path: '/template-management',
-        icon: FileText,
+        // icon: FileText,
         roles: TEMPLATE_ROLES,
         permissionResource: 'template_management',
       },
@@ -127,7 +127,7 @@ const navGroups: NavGroup[] = [
   },
   {
     label: '系统设置',
-    icon: Shield,
+    // icon: Shield,
     items: [
       {
         label: '员工管理',
@@ -139,7 +139,7 @@ const navGroups: NavGroup[] = [
       {
         label: '权限管理',
         path: '/permissions',
-        icon: Shield,
+        // icon: Shield,
         roles: ADMIN_HRD_ROLES,
         permissionResource: 'permission_management',
       },
@@ -253,7 +253,6 @@ const LayoutContent: React.FC = () => {
           {visibleGroups.map((group) => (
             <SidebarGroup key={group.label}>
               <SidebarGroupLabel>
-                <group.icon className="size-4" />
                 <span>{group.label}</span>
               </SidebarGroupLabel>
               <SidebarGroupContent>
@@ -280,21 +279,26 @@ const LayoutContent: React.FC = () => {
 
         {/* Footer — user */}
         <SidebarFooter>
-          <div className="px-2 py-1">
-            <UserDisplay userId={userInfo?.user_id} size="small" showLabel />
-          </div>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={() => {
-                  const isDark =
-                    document.documentElement.classList.toggle('dark');
-                  localStorage.setItem('theme', isDark ? 'dark' : 'light');
-                }}
-              >
-                <MoonIcon className="size-4 dark:hidden" />
-                <SunIcon className="size-4 hidden dark:block" />
-                <span>切换主题</span>
+              <SidebarMenuButton size="lg" asChild>
+                <div
+                  className="flex items-center gap-2 w-full cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const isDark =
+                      document.documentElement.classList.toggle('dark');
+                    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                  }}
+                >
+                  <UserDisplay
+                    userId={userInfo?.user_id}
+                    size="small"
+                    showLabel
+                  />
+                  <MoonIcon className="ml-auto size-4 shrink-0 dark:hidden" />
+                  <SunIcon className="ml-auto size-4 shrink-0 hidden dark:block" />
+                </div>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
