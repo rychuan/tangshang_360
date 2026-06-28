@@ -36,6 +36,10 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { UserDisplay } from '@/components/business-ui/user-display';
+import {
+  useBreadcrumb,
+  BreadcrumbProvider,
+} from '@/components/business-ui/breadcrumb-context';
 import { Separator } from '@/components/ui/separator';
 import {
   Breadcrumb,
@@ -182,6 +186,7 @@ const LayoutContent: React.FC = () => {
   const { appName } = useAppInfo();
   const { ability, isLoading } = useAuth();
   const { permissions } = usePermissions();
+  const { label: breadcrumbLabel } = useBreadcrumb();
 
   const hasPermAccess = (item: NavItem): boolean => {
     if (!item.permissionResource) return true;
@@ -214,6 +219,7 @@ const LayoutContent: React.FC = () => {
     path === '/' ? pathname === '/' : pathname.startsWith(path);
 
   const currentLabel =
+    breadcrumbLabel ||
     allItems.find((item) => item.path === pathname)?.label ||
     allItems.find((item) => pathname.startsWith(item.path) && item.path !== '/')
       ?.label ||
@@ -233,121 +239,123 @@ const LayoutContent: React.FC = () => {
   }
 
   return (
-    <SidebarProvider
-      style={{ '--sidebar-width': '220px' } as React.CSSProperties}
-    >
-      <Sidebar variant="inset" collapsible="offcanvas">
-        {/* Header — brand */}
-        <SidebarHeader>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton size="lg" asChild>
-                <Link to="/">
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                    <LayoutDashboard className="size-4" />
+    <BreadcrumbProvider>
+      <SidebarProvider
+        style={{ '--sidebar-width': '220px' } as React.CSSProperties}
+      >
+        <Sidebar variant="inset" collapsible="offcanvas">
+          {/* Header — brand */}
+          <SidebarHeader>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton size="lg" asChild>
+                  <Link to="/">
+                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                      <LayoutDashboard className="size-4" />
+                    </div>
+                    <div className="grid flex-1 text-left text-sm leading-tight">
+                      <span className="truncate font-semibold">
+                        {appName || '绩效考核'}
+                      </span>
+                    </div>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarHeader>
+
+          {/* Navigation groups */}
+          <SidebarContent>
+            {visibleGroups.map((group) => (
+              <SidebarGroup key={group.label}>
+                <SidebarGroupLabel>
+                  <span>{group.label}</span>
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {group.items.map((item) => (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive(item.path)}
+                          tooltip={item.label}
+                        >
+                          <Link to={item.path}>
+                            <item.icon />
+                            <span>{item.label}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ))}
+          </SidebarContent>
+
+          {/* Footer — user */}
+          <SidebarFooter className="bg-sidebar-accent/30 border-t border-sidebar-border">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton size="lg" asChild>
+                  <div
+                    className="flex items-center gap-2 w-full cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const isDark =
+                        document.documentElement.classList.toggle('dark');
+                      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                    }}
+                  >
+                    <UserDisplay
+                      userId={userInfo?.user_id}
+                      size="medium"
+                      showLabel
+                    />
+                    <MoonIcon className="ml-auto size-4 shrink-0 dark:hidden" />
+                    <SunIcon className="ml-auto size-4 shrink-0 hidden dark:block" />
                   </div>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">
-                      {appName || '绩效考核'}
-                    </span>
-                  </div>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarHeader>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
 
-        {/* Navigation groups */}
-        <SidebarContent>
-          {visibleGroups.map((group) => (
-            <SidebarGroup key={group.label}>
-              <SidebarGroupLabel>
-                <span>{group.label}</span>
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {group.items.map((item) => (
-                    <SidebarMenuItem key={item.path}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={isActive(item.path)}
-                        tooltip={item.label}
-                      >
-                        <Link to={item.path}>
-                          <item.icon />
-                          <span>{item.label}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          ))}
-        </SidebarContent>
+          <SidebarRail />
+        </Sidebar>
 
-        {/* Footer — user */}
-        <SidebarFooter className="bg-sidebar-accent/30 border-t border-sidebar-border">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton size="lg" asChild>
-                <div
-                  className="flex items-center gap-2 w-full cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const isDark =
-                      document.documentElement.classList.toggle('dark');
-                    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-                  }}
-                >
-                  <UserDisplay
-                    userId={userInfo?.user_id}
-                    size="medium"
-                    showLabel
-                  />
-                  <MoonIcon className="ml-auto size-4 shrink-0 dark:hidden" />
-                  <SunIcon className="ml-auto size-4 shrink-0 hidden dark:block" />
-                </div>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
+        <SidebarInset>
+          {/* SiteHeader — dashboard-01 style */}
+          <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
+            <SidebarTrigger className="-ml-1" />
+            <Separator
+              orientation="vertical"
+              className="mr-2 data-[orientation=vertical]:h-4"
+            />
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem className="hidden md:block">
+                  <BreadcrumbPage className="text-muted-foreground">
+                    绩效考核
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="hidden md:block" />
+                <BreadcrumbItem>
+                  <BreadcrumbPage>{currentLabel}</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          </header>
 
-        <SidebarRail />
-      </Sidebar>
-
-      <SidebarInset>
-        {/* SiteHeader — dashboard-01 style */}
-        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator
-            orientation="vertical"
-            className="mr-2 data-[orientation=vertical]:h-4"
-          />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbPage className="text-muted-foreground">
-                  绩效考核
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="hidden md:block" />
-              <BreadcrumbItem>
-                <BreadcrumbPage>{currentLabel}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </header>
-
-        {/* Main content — dashboard-01 layout with page transition */}
-        <div
-          key={pathname}
-          className="@container/main flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6 animate-in fade-in-0 slide-in-from-bottom-2 duration-300"
-        >
-          <Outlet />
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+          {/* Main content — dashboard-01 layout with page transition */}
+          <div
+            key={pathname}
+            className="@container/main flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6 animate-in fade-in-0 slide-in-from-bottom-2 duration-300"
+          >
+            <Outlet />
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    </BreadcrumbProvider>
   );
 };
 

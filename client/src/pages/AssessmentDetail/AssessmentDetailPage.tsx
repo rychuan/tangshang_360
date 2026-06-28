@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useCurrentUserProfile } from '@lark-apaas/client-toolkit/hooks/useCurrentUserProfile';
+import { useBreadcrumb } from '@/components/business-ui/breadcrumb-context';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { toast } from 'sonner';
 import {
@@ -62,6 +63,14 @@ const AssessmentDetailPage: React.FC = () => {
     handleSaveDraft,
     handleSubmit,
   } = useAssessmentDetail(id, isSupervisorView, currentUserId);
+
+  const { setLabel } = useBreadcrumb();
+  useEffect(() => {
+    if (detail) {
+      setLabel(`${detail.employeeName} · ${detail.period}`);
+    }
+    return () => setLabel(null);
+  }, [detail, setLabel]);
 
   const [signDialogOpen, setSignDialogOpen] = useState<boolean>(false);
   const [signType, setSignType] = useState<'self' | 'supervisor'>('self');
