@@ -89,6 +89,51 @@
   --spacing: 0.25rem;
 }
 
+.dark {
+  --button-outline: rgba(255, 255, 255, 0.12);
+  --badge-outline: rgba(255, 255, 255, 0.08);
+  --elevate-1: rgba(255, 255, 255, 0.04);
+  --elevate-2: rgba(255, 255, 255, 0.08);
+  --background: hsl(220 12% 8%);
+  --foreground: hsl(220 12% 92%);
+  --card: hsl(220 12% 14%);
+  --card-foreground: hsl(220 12% 92%);
+  --popover: hsl(220 12% 16%);
+  --popover-foreground: hsl(220 12% 92%);
+  --primary: hsl(217 70% 52%);
+  --primary-foreground: hsl(220 12% 8%);
+  --secondary: hsl(220 12% 18%);
+  --secondary-foreground: hsl(220 12% 88%);
+  --muted: hsl(220 12% 18%);
+  --muted-foreground: hsl(220 8% 60%);
+  --accent: hsl(217 24% 20%);
+  --accent-foreground: hsl(220 12% 92%);
+  --info: hsl(217 70% 52%);
+  --info-foreground: hsl(220 12% 8%);
+  --destructive: hsl(2 78% 56%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --success: hsl(142 52% 48%);
+  --success-foreground: hsl(220 12% 8%);
+  --warning: hsl(32 85% 52%);
+  --warning-foreground: hsl(220 12% 8%);
+  --border: hsl(220 12% 22%);
+  --input: hsl(220 12% 22%);
+  --ring: hsl(217 75% 52%);
+  --chart-1: hsl(217 70% 52%);
+  --chart-2: hsl(180 60% 50%);
+  --chart-3: hsl(45 80% 55%);
+  --chart-4: hsl(28 80% 55%);
+  --chart-5: hsl(285 40% 60%);
+  --sidebar: hsl(220 15% 10%);
+  --sidebar-foreground: hsl(220 12% 88%);
+  --sidebar-primary: hsl(217 70% 52%);
+  --sidebar-primary-foreground: hsl(220 12% 8%);
+  --sidebar-accent: hsl(217 30% 18%);
+  --sidebar-accent-foreground: hsl(217 70% 62%);
+  --sidebar-border: hsl(220 12% 22%);
+  --sidebar-ring: hsl(217 75% 52%);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

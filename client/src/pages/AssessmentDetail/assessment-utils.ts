@@ -5,7 +5,7 @@ import type {
 
 export interface RatingsState {
   [indicatorSnapshotId: string]: {
-    score: number;
+    score?: number;
     comment: string;
   };
 }
@@ -20,7 +20,7 @@ export function buildRatingPayload(ratings: RatingsState) {
   return {
     ratings: Object.entries(ratings).map(([indicatorSnapshotId, r]) => ({
       indicatorSnapshotId,
-      score: r.score,
+      score: r.score ?? 0,
       comment: r.comment || undefined,
     })),
   };

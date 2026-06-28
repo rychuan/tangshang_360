@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useLocation, Link, Outlet } from 'react-router-dom';
 import { useCurrentUserProfile } from '@lark-apaas/client-toolkit/hooks/useCurrentUserProfile';
 import { useAppInfo } from '@lark-apaas/client-toolkit/hooks/useAppInfo';
@@ -19,7 +19,6 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarRail,
-  SidebarSeparator,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import {
@@ -32,8 +31,10 @@ import {
   UserCog,
   Shield,
   Award,
-  Briefcase,
+  SunIcon,
+  MoonIcon,
 } from 'lucide-react';
+import { UserDisplay } from '@/components/business-ui/user-display';
 import { Separator } from '@/components/ui/separator';
 import {
   Breadcrumb,
@@ -53,6 +54,7 @@ type NavItem = {
 
 type NavGroup = {
   label: string;
+  icon: typeof LayoutDashboard;
   items: NavItem[];
 };
 
@@ -64,6 +66,7 @@ const ADMIN_HRD_ROLES = ['admin', 'hrd'];
 const navGroups: NavGroup[] = [
   {
     label: '工作台',
+    icon: LayoutDashboard,
     items: [
       {
         label: '首页',
@@ -90,30 +93,31 @@ const navGroups: NavGroup[] = [
   },
   {
     label: '绩效管理',
+    icon: FileText,
     items: [
       {
-        label: '绩效模板管理',
+        label: '模板管理',
         path: '/template-management',
         icon: FileText,
         roles: TEMPLATE_ROLES,
         permissionResource: 'template_management',
       },
       {
-        label: '绩效发布管理',
+        label: '发布管理',
         path: '/publish-management',
         icon: Send,
         roles: MANAGER_ROLES,
         permissionResource: 'publish_management',
       },
       {
-        label: '绩效统计查询',
+        label: '统计查询',
         path: '/statistics',
         icon: BarChart3,
         roles: MANAGER_ROLES,
         permissionResource: 'statistics',
       },
       {
-        label: '绩效等级配置',
+        label: '等级配置',
         path: '/grade-config',
         icon: Award,
         roles: ADMIN_HRD_ROLES,
@@ -123,6 +127,7 @@ const navGroups: NavGroup[] = [
   },
   {
     label: '系统设置',
+    icon: Shield,
     items: [
       {
         label: '员工管理',
@@ -130,13 +135,6 @@ const navGroups: NavGroup[] = [
         icon: UserCog,
         roles: MANAGER_ROLES,
         permissionResource: 'employees',
-      },
-      {
-        label: '字段管理',
-        path: '/dictionary',
-        icon: Briefcase,
-        roles: ADMIN_HRD_ROLES,
-        permissionResource: 'dictionary_config',
       },
       {
         label: '权限管理',
@@ -152,18 +150,25 @@ const navGroups: NavGroup[] = [
 const pathTitleMap: Record<string, string> = {
   '/': '首页',
   '/employees': '员工管理',
-  '/template-management': '绩效模板管理',
-  '/publish-management': '绩效发布管理',
-  '/statistics': '绩效统计查询',
-  '/grade-config': '绩效等级配置',
+  '/template-management': '模板管理',
+  '/publish-management': '发布管理',
+  '/statistics': '统计查询',
+  '/grade-config': '等级配置',
   '/my-assessments': '我的绩效',
   '/team-performance': '团队绩效',
-  '/dictionary': '字段管理',
   '/permissions': '权限管理',
 };
 
 const LayoutContent: React.FC = () => {
   const { pathname } = useLocation();
+
+  // Restore theme from localStorage on mount
+  React.useEffect(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
   const userInfo = useCurrentUserProfile();
   const { appName } = useAppInfo();
   const { ability, isLoading } = useAuth();
@@ -177,43 +182,39 @@ const LayoutContent: React.FC = () => {
     );
   };
 
-  const isItemVisible = (item: NavItem): boolean =>
-    item.roles.some((r) => ability.can(r, ROLE_SUBJECT)) && hasPermAccess(item);
+  const visibleGroups = useMemo(() => {
+    if (isLoading) return [];
+    return navGroups
+      .map((g) => ({
+        ...g,
+        items: g.items.filter(
+          (item) =>
+            item.roles.some((r) => ability.can(r, ROLE_SUBJECT)) &&
+            hasPermAccess(item),
+        ),
+      }))
+      .filter((g) => g.items.length > 0);
+  }, [isLoading, ability, permissions]);
 
-  const navItems = isLoading
-    ? []
-    : navGroups.flatMap((group) => group.items.filter(isItemVisible));
+  const allItems = useMemo(
+    () => visibleGroups.flatMap((g) => g.items),
+    [visibleGroups],
+  );
 
-  const navGroupItems = isLoading
-    ? []
-    : navGroups
-        .map((group) => ({
-          label: group.label,
-          items: group.items.filter(isItemVisible),
-        }))
-        .filter((group) => group.items.length > 0);
+  const isActive = (path: string) =>
+    path === '/' ? pathname === '/' : pathname.startsWith(path);
 
   const currentLabel =
-    navItems.find((item) => item.path === pathname)?.label ||
-    navItems.find((item) => pathname.startsWith(item.path) && item.path !== '/')
+    allItems.find((item) => item.path === pathname)?.label ||
+    allItems.find((item) => pathname.startsWith(item.path) && item.path !== '/')
       ?.label ||
     pathTitleMap[pathname] ||
     pathname.split('/').pop() ||
     '';
 
-  const isActive = (itemPath: string) =>
-    itemPath === '/' ? pathname === '/' : pathname.startsWith(itemPath);
-
   if (isLoading) {
     return (
-      <SidebarProvider
-        style={
-          {
-            '--sidebar-width': '150px',
-            '--header-height': 'calc(var(--spacing) * 12)',
-          } as React.CSSProperties
-        }
-      >
+      <SidebarProvider>
         <Sidebar variant="inset" />
         <SidebarInset>
           <div className="flex flex-1 flex-col" />
@@ -224,24 +225,20 @@ const LayoutContent: React.FC = () => {
 
   return (
     <SidebarProvider
-      style={
-        {
-          '--sidebar-width': '220px',
-          '--header-height': 'calc(var(--spacing) * 12)',
-        } as React.CSSProperties
-      }
+      style={{ '--sidebar-width': '220px' } as React.CSSProperties}
     >
-      <Sidebar variant="inset" collapsible="icon">
-        <SidebarHeader className="p-3">
+      <Sidebar variant="inset" collapsible="offcanvas">
+        {/* Header — brand */}
+        <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton size="lg" asChild>
                 <Link to="/">
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-                    <LayoutDashboard />
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                    <LayoutDashboard className="size-4" />
                   </div>
-                  <div className="flex flex-col gap-0.5 leading-none">
-                    <span className="text-base font-semibold">
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-semibold">
                       {appName || '绩效考核'}
                     </span>
                   </div>
@@ -250,58 +247,69 @@ const LayoutContent: React.FC = () => {
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
+
+        {/* Navigation groups */}
         <SidebarContent>
-          {navGroupItems.map((group, groupIdx) => (
-            <React.Fragment key={group.label}>
-              {groupIdx > 0 && <SidebarSeparator className="mx-3" />}
-              <SidebarGroup>
-                <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {group.items.map((item) => (
-                      <SidebarMenuItem key={item.path}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={isActive(item.path)}
-                          tooltip={item.label}
-                          className="data-[active=true]:border-l-2 data-[active=true]:border-primary data-[active=true]:rounded-l-none"
-                        >
-                          <Link to={item.path}>
-                            <item.icon />
-                            <span>{item.label}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-            </React.Fragment>
+          {visibleGroups.map((group) => (
+            <SidebarGroup key={group.label}>
+              <SidebarGroupLabel>
+                <span>{group.label}</span>
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.items.map((item) => (
+                    <SidebarMenuItem key={item.path}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(item.path)}
+                        tooltip={item.label}
+                      >
+                        <Link to={item.path}>
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
           ))}
         </SidebarContent>
-        <SidebarFooter className="border-t border-sidebar-border">
+
+        {/* Footer — user */}
+        <SidebarFooter className="bg-sidebar-accent/30 border-t border-sidebar-border">
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton
-                size="lg"
-                className="data-[state=open]:bg-sidebar-accent"
-              >
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-accent text-sidebar-accent-foreground text-sm font-medium">
-                  {userInfo?.name?.[0] || 'U'}
-                </div>
-                <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="text-sm font-medium truncate">
-                    {userInfo?.name || '用户'}
-                  </span>
+              <SidebarMenuButton size="lg" asChild>
+                <div
+                  className="flex items-center gap-2 w-full cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const isDark =
+                      document.documentElement.classList.toggle('dark');
+                    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                  }}
+                >
+                  <UserDisplay
+                    userId={userInfo?.user_id}
+                    size="medium"
+                    showLabel
+                  />
+                  <MoonIcon className="ml-auto size-4 shrink-0 dark:hidden" />
+                  <SunIcon className="ml-auto size-4 shrink-0 hidden dark:block" />
                 </div>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
+
         <SidebarRail />
       </Sidebar>
+
       <SidebarInset>
-        <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b px-4">
+        {/* SiteHeader — dashboard-01 style */}
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator
             orientation="vertical"
@@ -321,7 +329,12 @@ const LayoutContent: React.FC = () => {
             </BreadcrumbList>
           </Breadcrumb>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
+
+        {/* Main content — dashboard-01 layout with page transition */}
+        <div
+          key={pathname}
+          className="@container/main flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6 animate-in fade-in-0 slide-in-from-bottom-2 duration-300"
+        >
           <Outlet />
         </div>
       </SidebarInset>

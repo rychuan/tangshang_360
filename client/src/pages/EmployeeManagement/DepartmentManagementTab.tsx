@@ -223,14 +223,14 @@ const DepartmentManagementTab: React.FC = () => {
                 size="icon"
                 onClick={() => handleEdit(node)}
               >
-                <Pencil />
+                <Pencil className="size-4" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => handleDelete(node)}
               >
-                <Trash2 className="text-destructive" />
+                <Trash2 className="size-4 text-destructive" />
               </Button>
             </div>
           </TableCell>
@@ -369,10 +369,10 @@ const DepartmentManagementTab: React.FC = () => {
               </Empty>
             </div>
           ) : (
-            <div className="border rounded-lg">
+            <div className="overflow-hidden rounded-lg border">
               <Table>
                 <TableHeader>
-                  <TableRow>
+                  <TableRow className="bg-muted/30">
                     <TableHead>部门名称</TableHead>
                     <TableHead>上级部门</TableHead>
                     <TableHead>负责人</TableHead>

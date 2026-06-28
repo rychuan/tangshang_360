@@ -125,45 +125,48 @@ const HomePage: React.FC = () => {
     <div className="@container/main flex flex-1 flex-col gap-4 md:gap-6">
       <PageHeader title="绩效概览" visuallyHidden />
 
-      {/* Section Cards */}
-      <div className="grid auto-rows-min gap-4 md:grid-cols-3">
+      {/* Section Cards — dashboard-01 style */}
+      <div className="grid gap-4 md:grid-cols-3">
         <Card className="rounded-xl">
-          <CardContent className="flex items-center gap-4 p-6">
+          <CardContent className="p-6">
             <div className="flex items-center justify-center size-12 rounded-lg bg-warning/10 text-warning">
               <ClockIcon className="size-6" />
             </div>
-            <div>
-              <p className="text-3xl font-bold text-foreground">
-                {overview?.stats?.pendingCount ?? 0}
-              </p>
-              <p className="text-sm text-muted-foreground">待处理</p>
-            </div>
+            <p className="mt-4 text-3xl font-bold tabular-nums">
+              {overview?.stats?.pendingCount ?? 0}
+            </p>
+            <p className="mt-1 text-sm font-medium">待处理</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              当前待处理的考核任务
+            </p>
           </CardContent>
         </Card>
         <Card className="rounded-xl">
-          <CardContent className="flex items-center gap-4 p-6">
+          <CardContent className="p-6">
             <div className="flex items-center justify-center size-12 rounded-lg bg-success/10 text-success">
               <CheckCircleIcon className="size-6" />
             </div>
-            <div>
-              <p className="text-3xl font-bold text-foreground">
-                {overview?.stats?.completedCount ?? 0}
-              </p>
-              <p className="text-sm text-muted-foreground">已完成</p>
-            </div>
+            <p className="mt-4 text-3xl font-bold tabular-nums">
+              {overview?.stats?.completedCount ?? 0}
+            </p>
+            <p className="mt-1 text-sm font-medium">已完成</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              已完成的考核数量
+            </p>
           </CardContent>
         </Card>
         <Card className="rounded-xl">
-          <CardContent className="flex items-center gap-4 p-6">
+          <CardContent className="p-6">
             <div className="flex items-center justify-center size-12 rounded-lg bg-primary/10 text-primary">
               <TrendingUpIcon className="size-6" />
             </div>
-            <div>
-              <p className="text-3xl font-bold text-foreground">
-                {overview?.stats?.avgScore ?? '-'}
-              </p>
-              <p className="text-sm text-muted-foreground">平均分</p>
-            </div>
+            <p className="mt-4 text-3xl font-bold tabular-nums">
+              {overview?.stats?.avgScore ?? '-'}
+            </p>
+            <p className="mt-1 text-sm font-medium">平均分</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              所有考核的平均得分
+            </p>
           </CardContent>
         </Card>
       </div>
