@@ -114,6 +114,12 @@ export function useAssessmentDetail(
   // 最终权限由后端校验
   const canEditSupervisor: boolean =
     detail?.status === 'supervisor_review' && !isEmployeeCandidate;
+
+  if (detail) {
+    logger.info(
+      `[Permission] status=${detail.status} isEmployee=${isEmployeeCandidate} canEditSupervisor=${canEditSupervisor} userId=${currentUserId} empId=${detail.employeeId} supId=${detail.supervisorId}`,
+    );
+  }
   const canSignSupervisor: boolean =
     detail?.status === 'pending_sign' &&
     !isEmployeeCandidate &&
