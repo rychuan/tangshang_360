@@ -311,8 +311,11 @@ const LayoutContent: React.FC = () => {
           </Breadcrumb>
         </header>
 
-        {/* Main content — dashboard-01 layout */}
-        <div className="@container/main flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6">
+        {/* Main content — dashboard-01 layout with page transition */}
+        <div
+          key={pathname}
+          className="@container/main flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6 animate-in fade-in-0 slide-in-from-bottom-2 duration-300"
+        >
           <Outlet />
         </div>
       </SidebarInset>
