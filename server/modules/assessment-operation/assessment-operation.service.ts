@@ -191,6 +191,21 @@ export class AssessmentOperationService {
 
     const instance = rows[0];
 
+    // P1: 校验员工状态 — 离职员工不可评分
+    const empStatus = await this.db
+      .select({ status: employee.status })
+      .from(employee)
+      .where(
+        and(
+          sql`(${employee.id}).user_id = ${instance.employeeId}`,
+          isNull(employee.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (empStatus.length === 0 || empStatus[0].status !== 'active') {
+      throw new BadRequestException('员工已离职或不可用，无法提交评分');
+    }
+
     // P0: 校验当前用户是否为该员工本人
     if (instance.employeeId !== userId) {
       throw new ForbiddenException('只能提交自己的自评');
@@ -214,6 +229,9 @@ export class AssessmentOperationService {
         throw new BadRequestException(
           `指标快照不属于该考核实例: ${rating.indicatorSnapshotId}`,
         );
+      }
+      if (rating.score < 0 || !Number.isFinite(rating.score)) {
+        throw new BadRequestException('评分不能为负数或非法数值');
       }
       if (rating.score > Number(snapshot.weight)) {
         throw new BadRequestException(
@@ -355,8 +373,32 @@ export class AssessmentOperationService {
       isDeptHead = deptRows.length > 0;
     }
 
+    // P0: admin 兜底 — 无主管员工由系统管理员评分
+    let isAdmin = false;
     if (!isPublishedSupervisor && !isCurrentSupervisor && !isDeptHead) {
-      throw new ForbiddenException('您不是该员工的上级或部门负责人，无法评分');
+      const adminCheck = await this.db
+        .select({ id: employee.id })
+        .from(employee)
+        .where(
+          and(
+            sql`(${employee.id}).user_id = ${userId}`,
+            eq(employee.role, 'admin'),
+            isNull(employee.deletedAt),
+          ),
+        )
+        .limit(1);
+      isAdmin = adminCheck.length > 0;
+    }
+
+    if (
+      !isPublishedSupervisor &&
+      !isCurrentSupervisor &&
+      !isDeptHead &&
+      !isAdmin
+    ) {
+      throw new ForbiddenException(
+        '您不是该员工的上级、部门负责人或系统管理员，无法评分',
+      );
     }
 
     const allSnapshots = await this.db
@@ -372,6 +414,9 @@ export class AssessmentOperationService {
         throw new BadRequestException(
           `指标快照不属于该考核实例: ${rating.indicatorSnapshotId}`,
         );
+      }
+      if (rating.score < 0 || !Number.isFinite(rating.score)) {
+        throw new BadRequestException('评分不能为负数或非法数值');
       }
       if (rating.score > Number(snapshot.weight)) {
         throw new BadRequestException(
@@ -557,33 +602,69 @@ export class AssessmentOperationService {
         isHead = deptRows.length > 0;
       }
 
+      // P0: admin 兜底 — 无主管员工由系统管理员签署
+      let isAdminSign = false;
       if (!isPublishedSup && !isCurrentSup && !isHead) {
+        const adminCheck = await this.db
+          .select({ id: employee.id })
+          .from(employee)
+          .where(
+            and(
+              sql`(${employee.id}).user_id = ${userId}`,
+              eq(employee.role, 'admin'),
+              isNull(employee.deletedAt),
+            ),
+          )
+          .limit(1);
+        isAdminSign = adminCheck.length > 0;
+      }
+
+      if (!isPublishedSup && !isCurrentSup && !isHead && !isAdminSign) {
         throw new ForbiddenException(
-          '您不是该员工的上级或部门负责人，无法签署上级签名',
+          '您不是该员工的上级、部门负责人或系统管理员，无法签署上级签名',
         );
       }
     }
 
     const now: Date = new Date();
 
+    // P0: CAS 模式签名 — 防止并发覆盖
     if (body.signType === 'self') {
-      await this.db
+      const selfResult = await this.db
         .update(assessmentInstance)
         .set({
           selfSignName: effectiveSignName,
           selfSignAt: now,
           selfSignImage: body.signImage || null,
         })
-        .where(eq(assessmentInstance.id, id));
+        .where(
+          and(
+            eq(assessmentInstance.id, id),
+            sql`${assessmentInstance.selfSignName} IS NULL`,
+          ),
+        )
+        .returning();
+      if (selfResult.length === 0) {
+        throw new BadRequestException('本人签名已被他人抢先提交');
+      }
     } else {
-      await this.db
+      const supResult = await this.db
         .update(assessmentInstance)
         .set({
           supervisorSignName: effectiveSignName,
           supervisorSignAt: now,
           supervisorSignImage: body.signImage || null,
         })
-        .where(eq(assessmentInstance.id, id));
+        .where(
+          and(
+            eq(assessmentInstance.id, id),
+            sql`${assessmentInstance.supervisorSignName} IS NULL`,
+          ),
+        )
+        .returning();
+      if (supResult.length === 0) {
+        throw new BadRequestException('上级签名已被他人抢先提交');
+      }
     }
 
     // 原子操作：双方都已签名时将状态推进到 completed

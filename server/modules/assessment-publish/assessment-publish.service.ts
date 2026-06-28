@@ -247,8 +247,8 @@ export class AssessmentPublishService {
         .where(eq(assessmentDimension.templateId, templateId));
 
       if (Number(indicatorCountResult[0]?.cnt ?? 0) === 0) {
-        this.logger.warn(
-          `employee ${empId}: template ${templateId} has no indicators`,
+        throw new BadRequestException(
+          `模板 ${templateId} 没有配置考核指标，无法发布员工 ${empId}`,
         );
       }
       const empPosition: string = empRecord.position;
@@ -499,7 +499,14 @@ export class AssessmentPublishService {
         resetRatingType: 'supervisor',
         clearSigns: 'all',
       },
-      supervisor_review: { newStatus: 'self_review', resetRatingType: 'self' },
+      supervisor_review: {
+        newStatus: 'self_review',
+        resetRatingType: 'self',
+      },
+      self_review: {
+        newStatus: 'self_review',
+        resetRatingType: 'self',
+      },
     };
 
     const mapped = statusMap[instance.status];
@@ -525,6 +532,8 @@ export class AssessmentPublishService {
 
     const updateData: {
       status: string;
+      totalScore?: null;
+      grade?: null;
       selfSignName?: null;
       selfSignAt?: null;
       selfSignImage?: null;
@@ -533,6 +542,8 @@ export class AssessmentPublishService {
       supervisorSignImage?: null;
     } = {
       status: mapped.newStatus,
+      totalScore: null,
+      grade: null,
     };
     if (mapped.clearSigns === 'all') {
       updateData.selfSignName = null;

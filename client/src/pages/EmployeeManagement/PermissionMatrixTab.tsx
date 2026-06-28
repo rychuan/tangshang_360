@@ -31,14 +31,14 @@ const RESOURCE_LABELS: Record<PermissionResource, string> = {
   dashboard: '首页',
   my_assessments: '我的绩效',
   employees: '员工管理',
-  template_management: '绩效模板管理',
+  template_management: '模板管理',
   employee_binding: '员工模板绑定',
-  publish_management: '绩效发布管理',
-  statistics: '绩效统计查询',
+  publish_management: '发布管理',
+  statistics: '统计查询',
   team_performance: '团队绩效',
   organization: '组织架构',
   permission_management: '权限管理',
-  grade_config: '绩效等级配置',
+  grade_config: '等级配置',
   dictionary_config: '字段管理',
 };
 
