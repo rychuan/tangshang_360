@@ -1,12 +1,11 @@
 import React from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from '@lark-apaas/client-toolkit/auth';
 
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { PermissionsProvider } from './hooks/usePermissions';
 import NotFound from './pages/NotFound/NotFound';
-import HomePage from './pages/HomePage/HomePage';
 import TemplateManagementPage from './pages/TemplateManagement/TemplateManagementPage';
 import PublishManagementPage from './pages/PublishManagement/PublishManagementPage';
 import AssessmentDetailPage from './pages/AssessmentDetail/AssessmentDetailPage';
@@ -54,14 +53,7 @@ const RoutesComponent = () => {
       <PermissionsProvider>
         <Routes>
           <Route element={<Layout />}>
-            <Route
-              index
-              element={
-                <ProtectedRoute roles={ALL_ROLES}>
-                  <HomePage />
-                </ProtectedRoute>
-              }
-            />
+            <Route index element={<Navigate to="/my-assessments" replace />} />
             <Route
               path="template-management"
               element={

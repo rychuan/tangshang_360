@@ -74,13 +74,6 @@ const navGroups: NavGroup[] = [
     icon: LayoutDashboard,
     items: [
       {
-        label: '首页',
-        path: '/',
-        icon: LayoutDashboard,
-        roles: ALL_ROLES,
-        permissionResource: 'dashboard',
-      },
-      {
         label: '我的绩效',
         path: '/my-assessments',
         icon: ClipboardList,
@@ -160,7 +153,6 @@ const navGroups: NavGroup[] = [
 ];
 
 const pathTitleMap: Record<string, string> = {
-  '/': '首页',
   '/employees': '员工管理',
   '/template-management': '模板管理',
   '/publish-management': '发布管理',

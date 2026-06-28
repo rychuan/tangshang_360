@@ -28,7 +28,6 @@ interface PermissionMatrixTabProps {
 }
 
 const RESOURCE_LABELS: Record<PermissionResource, string> = {
-  dashboard: '首页',
   my_assessments: '我的绩效',
   employees: '员工管理',
   template_management: '模板管理',
@@ -59,7 +58,6 @@ const ALL_ACTIONS: PermissionAction[] = [
 ];
 
 const PERMISSION_MATRIX: Record<PermissionResource, PermissionAction[]> = {
-  dashboard: ['view'],
   my_assessments: ['view', 'edit'],
   employees: ['view', 'edit', 'delete'],
   template_management: ['view', 'edit', 'delete'],
