@@ -31,6 +31,8 @@ import {
   UserCog,
   Shield,
   Award,
+  SunIcon,
+  MoonIcon,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -158,6 +160,14 @@ const pathTitleMap: Record<string, string> = {
 
 const LayoutContent: React.FC = () => {
   const { pathname } = useLocation();
+
+  // Restore theme from localStorage on mount
+  React.useEffect(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
   const userInfo = useCurrentUserProfile();
   const { appName } = useAppInfo();
   const { ability, isLoading } = useAuth();
@@ -271,7 +281,14 @@ const LayoutContent: React.FC = () => {
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton size="lg">
+              <SidebarMenuButton
+                size="lg"
+                onClick={() => {
+                  const isDark =
+                    document.documentElement.classList.toggle('dark');
+                  localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                }}
+              >
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-accent text-sidebar-accent-foreground text-sm font-medium">
                   {userInfo?.name?.[0] || 'U'}
                 </div>
@@ -280,6 +297,8 @@ const LayoutContent: React.FC = () => {
                     {userInfo?.name || '用户'}
                   </span>
                 </div>
+                <MoonIcon className="ml-auto size-4 dark:hidden" />
+                <SunIcon className="ml-auto size-4 hidden dark:block" />
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
