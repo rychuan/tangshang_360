@@ -64,7 +64,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             }
           />
           <span className="text-xs text-muted-foreground">
-            {currentScore != null ? `${currentScore}/${indicator.weight}` : `/${indicator.weight}`}
+            {currentScore != null
+              ? `${currentScore}/${indicator.weight}`
+              : `/${indicator.weight}`}
           </span>
         </div>
       );
@@ -88,7 +90,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             </div>
           )}
 
-          <Card className="bg-emerald-50/60 dark:bg-emerald-950/20">
+          <Card className="bg-sky-50/60 dark:bg-sky-950/20">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-3">
                 <h3 className="text-base font-semibold">

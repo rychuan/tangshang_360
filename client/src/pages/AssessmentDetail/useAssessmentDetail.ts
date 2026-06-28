@@ -168,7 +168,9 @@ export function useAssessmentDetail(
           ...prev[indicatorId],
           [field]:
             field === 'score'
-              ? (value === '' ? undefined : Math.min(Number(value) || 0, weight ?? 100))
+              ? value === ''
+                ? undefined
+                : Math.min(Number(value) || 0, weight ?? 100)
               : value,
         },
       }));
@@ -205,14 +207,20 @@ export function useAssessmentDetail(
       for (const ind of group.indicators) {
         const s = ratings[ind.id]?.score;
         if (s == null) {
-          emptyIndicators.push(ind.content.length > 12 ? ind.content.slice(0, 12) + '…' : ind.content);
+          emptyIndicators.push(
+            ind.content.length > 12
+              ? ind.content.slice(0, 12) + '…'
+              : ind.content,
+          );
         }
       }
     }
     if (emptyIndicators.length > 0) {
       const names = emptyIndicators.slice(0, 3).join('、');
       const suffix = emptyIndicators.length > 3 ? '等' : '';
-      toast.warning(`以下 ${emptyIndicators.length} 项指标未评分：${names}${suffix}，请填写后提交`);
+      toast.warning(
+        `以下 ${emptyIndicators.length} 项指标未评分：${names}${suffix}，请填写后提交`,
+      );
       return;
     }
 
