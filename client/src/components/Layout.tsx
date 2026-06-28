@@ -6,11 +6,6 @@ import { useAuth, ROLE_SUBJECT } from '@lark-apaas/client-toolkit/auth';
 import { usePermissions } from '@/hooks/usePermissions';
 import type { PermissionResource } from '@shared/api.interface';
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -36,7 +31,6 @@ import {
   UserCog,
   Shield,
   Award,
-  ChevronRight,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -46,8 +40,6 @@ import {
   BreadcrumbSeparator,
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
-
-// ─── Types ──────────────────────────────────────────────
 
 type NavItem = {
   label: string;
@@ -62,8 +54,6 @@ type NavGroup = {
   icon: typeof LayoutDashboard;
   items: NavItem[];
 };
-
-// ─── Role constants ─────────────────────────────────────
 
 const ALL_ROLES = ['admin', 'hrd', 'dept_head', 'supervisor', 'employee'];
 const MANAGER_ROLES = ['admin', 'hrd', 'dept_head', 'supervisor'];
@@ -103,28 +93,28 @@ const navGroups: NavGroup[] = [
     icon: FileText,
     items: [
       {
-        label: '绩效模板管理',
+        label: '模板管理',
         path: '/template-management',
         icon: FileText,
         roles: TEMPLATE_ROLES,
         permissionResource: 'template_management',
       },
       {
-        label: '绩效发布管理',
+        label: '发布管理',
         path: '/publish-management',
         icon: Send,
         roles: MANAGER_ROLES,
         permissionResource: 'publish_management',
       },
       {
-        label: '绩效统计查询',
+        label: '统计查询',
         path: '/statistics',
         icon: BarChart3,
         roles: MANAGER_ROLES,
         permissionResource: 'statistics',
       },
       {
-        label: '绩效等级配置',
+        label: '等级配置',
         path: '/grade-config',
         icon: Award,
         roles: ADMIN_HRD_ROLES,
@@ -157,91 +147,14 @@ const navGroups: NavGroup[] = [
 const pathTitleMap: Record<string, string> = {
   '/': '首页',
   '/employees': '员工管理',
-  '/template-management': '绩效模板管理',
-  '/publish-management': '绩效发布管理',
-  '/statistics': '绩效统计查询',
-  '/grade-config': '绩效等级配置',
+  '/template-management': '模板管理',
+  '/publish-management': '发布管理',
+  '/statistics': '统计查询',
+  '/grade-config': '等级配置',
   '/my-assessments': '我的绩效',
   '/team-performance': '团队绩效',
-  '/dictionary': '字段管理',
   '/permissions': '权限管理',
 };
-
-// ─── NavMain — collapsible navigation groups ───────────
-
-function NavMain({
-  groups,
-  currentPath,
-}: {
-  groups: NavGroup[];
-  currentPath: string;
-}) {
-  const isActive = (path: string) =>
-    path === '/' ? currentPath === '/' : currentPath.startsWith(path);
-
-  return (
-    <>
-      {groups.map((group) => (
-        <Collapsible
-          key={group.label}
-          defaultOpen
-          className="group/collapsible"
-        >
-          <SidebarGroup>
-            <SidebarGroupLabel asChild>
-              <CollapsibleTrigger className="flex w-full items-center gap-2">
-                <group.icon className="size-4" />
-                <span>{group.label}</span>
-                <ChevronRight className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-              </CollapsibleTrigger>
-            </SidebarGroupLabel>
-            <CollapsibleContent>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {group.items.map((item) => (
-                    <SidebarMenuItem key={item.path}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={isActive(item.path)}
-                        tooltip={item.label}
-                      >
-                        <Link to={item.path}>
-                          <item.icon />
-                          <span>{item.label}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </SidebarGroup>
-        </Collapsible>
-      ))}
-    </>
-  );
-}
-
-// ─── NavUser — footer user info ─────────────────────────
-
-function NavUser({ name }: { name?: string }) {
-  return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <SidebarMenuButton size="lg">
-          <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-accent text-sidebar-accent-foreground text-sm font-medium">
-            {name?.[0] || 'U'}
-          </div>
-          <div className="grid flex-1 text-left text-sm leading-tight">
-            <span className="truncate font-semibold">{name || '用户'}</span>
-          </div>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-    </SidebarMenu>
-  );
-}
-
-// ─── Layout ─────────────────────────────────────────────
 
 const LayoutContent: React.FC = () => {
   const { pathname } = useLocation();
@@ -261,9 +174,9 @@ const LayoutContent: React.FC = () => {
   const visibleGroups = useMemo(() => {
     if (isLoading) return [];
     return navGroups
-      .map((group) => ({
-        ...group,
-        items: group.items.filter(
+      .map((g) => ({
+        ...g,
+        items: g.items.filter(
           (item) =>
             item.roles.some((r) => ability.can(r, ROLE_SUBJECT)) &&
             hasPermAccess(item),
@@ -277,6 +190,9 @@ const LayoutContent: React.FC = () => {
     [visibleGroups],
   );
 
+  const isActive = (path: string) =>
+    path === '/' ? pathname === '/' : pathname.startsWith(path);
+
   const currentLabel =
     allItems.find((item) => item.path === pathname)?.label ||
     allItems.find((item) => pathname.startsWith(item.path) && item.path !== '/')
@@ -287,14 +203,7 @@ const LayoutContent: React.FC = () => {
 
   if (isLoading) {
     return (
-      <SidebarProvider
-        style={
-          {
-            '--sidebar-width': '220px',
-            '--header-height': 'calc(var(--spacing) * 12)',
-          } as React.CSSProperties
-        }
-      >
+      <SidebarProvider>
         <Sidebar variant="inset" />
         <SidebarInset>
           <div className="flex flex-1 flex-col" />
@@ -305,15 +214,10 @@ const LayoutContent: React.FC = () => {
 
   return (
     <SidebarProvider
-      style={
-        {
-          '--sidebar-width': '220px',
-          '--header-height': 'calc(var(--spacing) * 12)',
-        } as React.CSSProperties
-      }
+      style={{ '--sidebar-width': '220px' } as React.CSSProperties}
     >
-      <Sidebar variant="inset" collapsible="icon">
-        {/* Header — app brand */}
+      <Sidebar variant="inset" collapsible="offcanvas">
+        {/* Header — brand */}
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
@@ -333,22 +237,60 @@ const LayoutContent: React.FC = () => {
           </SidebarMenu>
         </SidebarHeader>
 
-        {/* Content — collapsible nav groups */}
+        {/* Navigation groups */}
         <SidebarContent>
-          <NavMain groups={visibleGroups} currentPath={pathname} />
+          {visibleGroups.map((group) => (
+            <SidebarGroup key={group.label}>
+              <SidebarGroupLabel>
+                <group.icon className="size-4" />
+                <span>{group.label}</span>
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.items.map((item) => (
+                    <SidebarMenuItem key={item.path}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(item.path)}
+                        tooltip={item.label}
+                      >
+                        <Link to={item.path}>
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          ))}
         </SidebarContent>
 
-        {/* Footer — user info */}
+        {/* Footer — user */}
         <SidebarFooter>
-          <NavUser name={userInfo?.name} />
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg">
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-accent text-sidebar-accent-foreground text-sm font-medium">
+                  {userInfo?.name?.[0] || 'U'}
+                </div>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-semibold">
+                    {userInfo?.name || '用户'}
+                  </span>
+                </div>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
         </SidebarFooter>
 
         <SidebarRail />
       </Sidebar>
 
-      {/* Main content area */}
       <SidebarInset>
-        <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b px-4">
+        {/* SiteHeader — dashboard-01 style */}
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator
             orientation="vertical"
@@ -368,7 +310,9 @@ const LayoutContent: React.FC = () => {
             </BreadcrumbList>
           </Breadcrumb>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
+
+        {/* Main content — dashboard-01 layout */}
+        <div className="@container/main flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 lg:px-6">
           <Outlet />
         </div>
       </SidebarInset>
