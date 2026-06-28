@@ -131,12 +131,18 @@ const PermissionPage: React.FC = () => {
               className="h-full"
             >
               <div className="border-b px-3 pt-3">
-                <TabsList className="bg-muted">
-                  <TabsTrigger value="permissions">
-                    <Lock className="size-4" /> 权限配置
+                <TabsList className="bg-transparent rounded-none border-b p-0 h-auto w-full justify-start gap-0">
+                  <TabsTrigger
+                    value="permissions"
+                    className="data-[state=active]:shadow-none"
+                  >
+                    <Lock className="size-4 mr-1.5" /> 权限配置
                   </TabsTrigger>
-                  <TabsTrigger value="members">
-                    <Users className="size-4" /> 成员管理(
+                  <TabsTrigger
+                    value="members"
+                    className="data-[state=active]:shadow-none"
+                  >
+                    <Users className="size-4 mr-1.5" /> 成员管理(
                     {getRoleMemberCount(selectedRole)})
                   </TabsTrigger>
                 </TabsList>

@@ -9,19 +9,25 @@ const EmployeeManagementPage: React.FC = () => {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="员工管理" icon={UserCog} />
-      <Tabs defaultValue="employees">
-        <TabsList className="bg-muted/60">
-          <TabsTrigger value="employees" className="text-xs sm:text-sm">
+      <Tabs defaultValue="employees" className="w-full">
+        <TabsList className="w-full justify-start gap-0 rounded-none border-b bg-transparent p-0 h-auto">
+          <TabsTrigger
+            value="employees"
+            className="text-sm data-[state=active]:shadow-none"
+          >
             员工列表
           </TabsTrigger>
-          <TabsTrigger value="departments" className="text-xs sm:text-sm">
+          <TabsTrigger
+            value="departments"
+            className="text-sm data-[state=active]:shadow-none"
+          >
             部门管理
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="employees" className="mt-4">
+        <TabsContent value="employees" className="mt-6">
           <EmployeeListTab />
         </TabsContent>
-        <TabsContent value="departments" className="mt-4">
+        <TabsContent value="departments" className="mt-6">
           <DepartmentManagementTab />
         </TabsContent>
       </Tabs>
