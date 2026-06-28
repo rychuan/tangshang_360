@@ -278,7 +278,7 @@ const LayoutContent: React.FC = () => {
         </SidebarContent>
 
         {/* Footer — user */}
-        <SidebarFooter>
+        <SidebarFooter className="bg-sidebar-accent/30 border-t border-sidebar-border">
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton size="lg" asChild>
