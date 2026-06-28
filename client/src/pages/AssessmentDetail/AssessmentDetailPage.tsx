@@ -188,8 +188,8 @@ const AssessmentDetailPage: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          {/* 4-step progress bar — compact inline */}
-          <div className="flex items-center justify-between gap-2">
+          {/* 4-step progress bar — fixed height per step */}
+          <div className="flex items-stretch justify-between gap-2">
             {[
               {
                 key: 'self',
@@ -200,6 +200,7 @@ const AssessmentDetailPage: React.FC = () => {
                 statusText:
                   detail.status !== 'self_review' ? '已完成' : '进行中',
                 person: detail.employeeId,
+                signImage: null as string | null,
               },
               {
                 key: 'supervisor',
@@ -215,6 +216,7 @@ const AssessmentDetailPage: React.FC = () => {
                     ? '已完成'
                     : '进行中',
                 person: detail.supervisorId,
+                signImage: null as string | null,
               },
               {
                 key: 'selfSign',
@@ -252,8 +254,9 @@ const AssessmentDetailPage: React.FC = () => {
               },
             ].map((step, i) => (
               <div key={step.key} className="flex flex-1 items-center min-w-0">
-                <div className="flex flex-col gap-2 w-full">
-                  <div className="flex items-center gap-1.5">
+                <div className="flex flex-col w-full min-h-[120px]">
+                  {/* Fixed top: circle + label + badge */}
+                  <div className="flex items-center gap-1.5 mb-2">
                     <div
                       className={`flex size-7 shrink-0 items-center justify-center rounded-full ${
                         step.done
@@ -289,24 +292,30 @@ const AssessmentDetailPage: React.FC = () => {
                       {step.statusText}
                     </Badge>
                   </div>
-                  {step.person && (
-                    <div className="pl-8">
+                  {/* User area — fixed height */}
+                  <div className="pl-8 min-h-[28px]">
+                    {step.person ? (
                       <UserDisplay
                         userId={step.person}
                         size="small"
                         showLabel
                       />
-                    </div>
-                  )}
-                  {step.signImage && (
-                    <div className="pl-8">
+                    ) : (
+                      <div className="h-[22px]" />
+                    )}
+                  </div>
+                  {/* Signature area — fixed height container */}
+                  <div className="pl-8 mt-2 min-h-[64px]">
+                    {step.signImage ? (
                       <img
                         src={step.signImage}
                         alt={`${step.label}签名`}
                         className="h-16 w-full max-w-[120px] border rounded-md object-contain bg-white"
                       />
-                    </div>
-                  )}
+                    ) : (
+                      <div className="h-16" />
+                    )}
+                  </div>
                 </div>
                 {i < 3 && (
                   <ChevronRight
