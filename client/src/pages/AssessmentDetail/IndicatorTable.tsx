@@ -91,7 +91,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           )}
 
           <Card>
-            <CardHeader className="pb-4 bg-slate-100 dark:bg-slate-800/40">
+            <CardHeader className="pb-4 bg-slate-300 dark:bg-slate-800/40">
               <div className="flex items-center gap-3">
                 <h3 className="text-base font-semibold">
                   {group.dimensionName}
