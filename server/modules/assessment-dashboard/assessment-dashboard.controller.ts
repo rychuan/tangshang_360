@@ -1,6 +1,5 @@
 import { Controller, Get, Req } from '@nestjs/common';
 import { CanRole } from '@lark-apaas/fullstack-nestjs-core';
-import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import type { Request } from 'express';
 import { AssessmentDashboardService } from './assessment-dashboard.service';
 
@@ -9,7 +8,6 @@ export class AssessmentDashboardController {
   constructor(private readonly service: AssessmentDashboardService) {}
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
-  @RequirePermission('dashboard', 'view')
   @Get('todos')
   async todos(@Req() req: Request) {
     const { userId } = req.userContext as { userId: string };
@@ -17,7 +15,6 @@ export class AssessmentDashboardController {
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
-  @RequirePermission('dashboard', 'view')
   @Get('overview')
   async overview(@Req() req: Request) {
     const { userId } = req.userContext as { userId: string };

@@ -5,11 +5,6 @@ import { logger } from '@lark-apaas/client-toolkit/logger';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from '@/components/ui/native-select';
 import {
   ChartContainer,
   ChartTooltip,
@@ -18,10 +13,6 @@ import {
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import {
   Eye,
-  ClipboardList,
-  CheckCircle2,
-  Award,
-  BarChart3,
   ChevronLeft,
   ChevronRight,
   AreaChartIcon,
@@ -31,18 +22,7 @@ import { StatusBadge, GradeBadge } from '@/components/business-ui/status-badge';
 import { PageTable } from '@/components/business-ui/page-table';
 import type { PageTableColumn } from '@/components/business-ui/page-table';
 import * as myAssessmentApi from '@/api/my-assessment';
-import type {
-  MyAssessmentRecordItem,
-  MyAssessmentSummary,
-} from '@shared/api.interface';
-
-const STATUS_OPTIONS = [
-  { value: '', label: '全部状态' },
-  { value: 'self_review', label: '待自评' },
-  { value: 'supervisor_review', label: '待上级评分' },
-  { value: 'pending_sign', label: '待签名' },
-  { value: 'completed', label: '已完成' },
-];
+import type { MyAssessmentRecordItem } from '@shared/api.interface';
 
 function signBadge(label: string, signedAt?: string) {
   return signedAt ? (
@@ -125,7 +105,6 @@ const MyAssessmentsPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [recordsError, setRecordsError] = useState<string | null>(null);
 
-  const [statusFilter, setStatusFilter] = useState<string>('');
   const [yearFilter, setYearFilter] = useState<string>(
     String(new Date().getFullYear()),
   );
@@ -136,10 +115,6 @@ const MyAssessmentsPage: React.FC = () => {
   const [trendLoading, setTrendLoading] = useState<boolean>(true);
   const [trendError, setTrendError] = useState<string | null>(null);
 
-  const [summary, setSummary] = useState<MyAssessmentSummary | null>(null);
-  const [summaryLoading, setSummaryLoading] = useState<boolean>(true);
-  const [summaryError, setSummaryError] = useState<string | null>(null);
-
   const fetchRecords = useCallback(async () => {
     setLoading(true);
     setRecordsError(null);
@@ -147,7 +122,6 @@ const MyAssessmentsPage: React.FC = () => {
       const result = await myAssessmentApi.getRecords({
         page,
         pageSize,
-        status: statusFilter || undefined,
         periodStart: `${yearFilter}-01`,
         periodEnd: `${yearFilter}-12`,
       });
@@ -162,7 +136,7 @@ const MyAssessmentsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, statusFilter, yearFilter]);
+  }, [page, pageSize, yearFilter]);
 
   const fetchTrend = useCallback(async () => {
     setTrendLoading(true);
@@ -180,22 +154,6 @@ const MyAssessmentsPage: React.FC = () => {
     }
   }, [yearFilter]);
 
-  const fetchSummary = useCallback(async () => {
-    setSummaryLoading(true);
-    setSummaryError(null);
-    try {
-      const result = await myAssessmentApi.getSummary(yearFilter);
-      setSummary(result);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '加载汇总数据失败';
-      logger.error(`Failed to fetch my assessment summary: ${msg}`);
-      setSummary(null);
-      setSummaryError(msg);
-    } finally {
-      setSummaryLoading(false);
-    }
-  }, [yearFilter]);
-
   useEffect(() => {
     if (!userInfo?.user_id) return;
     fetchRecords();
@@ -204,10 +162,6 @@ const MyAssessmentsPage: React.FC = () => {
     if (!userInfo?.user_id) return;
     fetchTrend();
   }, [fetchTrend, userInfo?.user_id]);
-  useEffect(() => {
-    if (!userInfo?.user_id) return;
-    fetchSummary();
-  }, [fetchSummary, userInfo?.user_id]);
 
   const handlePrevYear = () => {
     setYearFilter(String(parseInt(yearFilter, 10) - 1));
@@ -227,33 +181,6 @@ const MyAssessmentsPage: React.FC = () => {
       </div>
     );
   }
-
-  const summaryCards = [
-    {
-      title: '绩效总数',
-      value: summary ? String(summary.totalCount) : '-',
-      icon: ClipboardList,
-      colorClass: 'bg-primary/10 text-primary',
-    },
-    {
-      title: '已完成',
-      value: summary ? String(summary.completedCount) : '-',
-      icon: CheckCircle2,
-      colorClass: 'bg-success/10 text-success',
-    },
-    {
-      title: '平均得分',
-      value: summary?.avgScore != null ? summary.avgScore.toFixed(1) : '-',
-      icon: BarChart3,
-      colorClass: 'bg-info/10 text-info',
-    },
-    {
-      title: '最新等级',
-      value: summary?.latestGrade ?? '-',
-      icon: Award,
-      colorClass: 'bg-warning/10 text-warning',
-    },
-  ];
 
   return (
     <div className="@container/main flex flex-1 flex-col gap-4 md:gap-6">
@@ -289,38 +216,6 @@ const MyAssessmentsPage: React.FC = () => {
           </div>
         }
       />
-
-      {/* Section Cards */}
-      <div className="grid auto-rows-min gap-4 md:grid-cols-4">
-        {summaryCards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <Card key={card.title} className="rounded-xl">
-              <CardContent className="flex items-center gap-4 p-6">
-                <div
-                  className={`flex size-12 items-center justify-center rounded-lg ${card.colorClass}`}
-                >
-                  <Icon className="size-6" />
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">
-                    {card.title}
-                  </div>
-                  <div className="text-3xl font-bold text-foreground">
-                    {summaryLoading ? '...' : card.value}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {summaryError && (
-        <Alert variant="destructive">
-          <AlertDescription>汇总数据加载失败：{summaryError}</AlertDescription>
-        </Alert>
-      )}
 
       {/* Trend Chart */}
       <Card className="rounded-xl">
@@ -396,26 +291,6 @@ const MyAssessmentsPage: React.FC = () => {
               </AreaChart>
             </ChartContainer>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Filter */}
-      <Card className="rounded-xl">
-        <CardContent className="flex flex-wrap items-center gap-3 p-4">
-          <span className="text-sm text-muted-foreground">筛选：</span>
-          <NativeSelect
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
-          >
-            {STATUS_OPTIONS.map((opt) => (
-              <NativeSelectOption key={opt.value} value={opt.value}>
-                {opt.label}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
         </CardContent>
       </Card>
 
