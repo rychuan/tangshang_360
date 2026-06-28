@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { NeedLogin } from '@lark-apaas/fullstack-nestjs-core';
 import { CanRole } from '@lark-apaas/fullstack-nestjs-core';
+import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { AuthorizationSDK } from '@lark-apaas/fullstack-nestjs-core';
 import { RoleManagerService } from './role-manager.service';
 import type {
@@ -40,19 +41,31 @@ export class RoleManagerController {
     return { data: { roleList } };
   }
 
+  @NeedLogin()
+  @Get('my-permissions')
+  async getMyPermissions(@Req() req: any) {
+    const userId = req.userContext?.userId || '';
+    const permissions =
+      await this.roleManagerService.getUserEffectivePermissions(userId);
+    return { data: { permissions } };
+  }
+
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('permission_management', 'view')
   @Get('roles')
   async listRoles() {
     return this.authzSDK.roles.list();
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('permission_management', 'view')
   @Get('roles/:bizID')
   async getRole(@Param('bizID') bizID: string) {
     return this.authzSDK.roles.get(bizID);
   }
 
   @CanRole(['admin'])
+  @RequirePermission('permission_management', 'edit')
   @NeedLogin()
   @Post('roles')
   async createRole(@Body() dto: CreateRoleRequest) {
@@ -60,6 +73,7 @@ export class RoleManagerController {
   }
 
   @CanRole(['admin'])
+  @RequirePermission('permission_management', 'edit')
   @NeedLogin()
   @Put('roles/:bizID')
   async updateRole(
@@ -70,6 +84,7 @@ export class RoleManagerController {
   }
 
   @CanRole(['admin'])
+  @RequirePermission('permission_management', 'edit')
   @NeedLogin()
   @Delete('roles/:bizID')
   async deleteRole(@Param('bizID') bizID: string) {
@@ -78,6 +93,7 @@ export class RoleManagerController {
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('permission_management', 'view')
   @Get('roles/:bizID/members')
   async listMembers(
     @Param('bizID') bizID: string,
@@ -93,6 +109,7 @@ export class RoleManagerController {
   }
 
   @CanRole(['admin'])
+  @RequirePermission('permission_management', 'edit')
   @NeedLogin()
   @Post('roles/:bizID/members')
   async addMembers(
@@ -103,6 +120,7 @@ export class RoleManagerController {
   }
 
   @CanRole(['admin'])
+  @RequirePermission('permission_management', 'edit')
   @NeedLogin()
   @Post('roles/:bizID/members/batch_remove')
   async removeMembers(
@@ -113,6 +131,7 @@ export class RoleManagerController {
   }
 
   @CanRole(['admin'])
+  @RequirePermission('permission_management', 'edit')
   @NeedLogin()
   @Delete('roles/:bizID/members')
   async clearMembers(@Param('bizID') bizID: string) {
@@ -120,12 +139,14 @@ export class RoleManagerController {
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('permission_management', 'view')
   @Post('search')
   async search(@Body() dto: SearchMembersRequest) {
     return this.authzSDK.search.search(dto);
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('permission_management', 'view')
   @Get('roles/:bizID/permissions')
   async getRolePermissions(
     @Param('bizID') bizID: string,
@@ -134,7 +155,9 @@ export class RoleManagerController {
     if (config) {
       return config;
     }
-    const preset = (DEFAULT_PERMISSIONS as Record<string, PermissionItem[]>)[bizID];
+    const preset = (DEFAULT_PERMISSIONS as Record<string, PermissionItem[]>)[
+      bizID
+    ];
     return {
       roleBizId: bizID,
       permissions: preset || [],
@@ -142,6 +165,7 @@ export class RoleManagerController {
   }
 
   @CanRole(['admin'])
+  @RequirePermission('permission_management', 'edit')
   @NeedLogin()
   @Put('roles/:bizID/permissions')
   async updateRolePermissions(

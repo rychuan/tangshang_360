@@ -6,6 +6,7 @@ import type {
   MemberMutationData,
 } from '@shared/api.interface';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
+import { CanDo } from '@/hooks/usePermissions';
 import { UserDisplay } from '@/components/business-ui/user-display';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -92,16 +93,18 @@ const MemberRow: React.FC<MemberRowProps> = ({
     <Checkbox checked={selected} onCheckedChange={onToggle} />
     {content}
     <CanRole roles={['admin']}>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-7 shrink-0"
-        title="移除成员"
-        disabled={removing}
-        onClick={onRemove}
-      >
-        <UserX className="h-3.5 w-3.5" />
-      </Button>
+      <CanDo resource="permission_management" action="edit">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-7 shrink-0"
+          title="移除成员"
+          disabled={removing}
+          onClick={onRemove}
+        >
+          <UserX className="h-3.5 w-3.5" />
+        </Button>
+      </CanDo>
     </CanRole>
   </div>
 );
@@ -186,20 +189,24 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
         </div>
         <div className="flex gap-2">
           <CanRole roles={['admin']}>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={selected.size === 0 || removing}
-              onClick={() => handleRemove(selected)}
-            >
-              <UserX className="mr-1 size-4" /> 批量移除
-              {selected.size > 0 ? ` (${selected.size})` : ''}
-            </Button>
+            <CanDo resource="permission_management" action="edit">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={selected.size === 0 || removing}
+                onClick={() => handleRemove(selected)}
+              >
+                <UserX className="mr-1 size-4" /> 批量移除
+                {selected.size > 0 ? ` (${selected.size})` : ''}
+              </Button>
+            </CanDo>
           </CanRole>
           <CanRole roles={['admin']}>
-            <Button size="sm" onClick={() => setAddOpen(true)}>
-              <UserPlus className="mr-1 size-4" /> 添加成员
-            </Button>
+            <CanDo resource="permission_management" action="edit">
+              <Button size="sm" onClick={() => setAddOpen(true)}>
+                <UserPlus className="mr-1 size-4" /> 添加成员
+              </Button>
+            </CanDo>
           </CanRole>
         </div>
       </div>

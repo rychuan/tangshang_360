@@ -168,12 +168,23 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
   ): void => {
     setIndicators((prev: AdjustIndicatorInput[]) => {
       const existingSum: number = prev
-        .filter((ind: AdjustIndicatorInput) => (ind.dimensionName || '未分组') === (dimensionName || '未分组'))
-        .reduce((sum: number, ind: AdjustIndicatorInput) => sum + (ind.weight ?? 0), 0);
+        .filter(
+          (ind: AdjustIndicatorInput) =>
+            (ind.dimensionName || '未分组') === (dimensionName || '未分组'),
+        )
+        .reduce(
+          (sum: number, ind: AdjustIndicatorInput) => sum + (ind.weight ?? 0),
+          0,
+        );
       const remaining: number = Math.max(0, dimensionWeight - existingSum);
       return [
         ...prev,
-        { ...EMPTY_INDICATOR, weight: remaining, dimensionName, dimensionWeight },
+        {
+          ...EMPTY_INDICATOR,
+          weight: remaining,
+          dimensionName,
+          dimensionWeight,
+        },
       ];
     });
   };
@@ -230,7 +241,12 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
     }
     setIndicators((prev: AdjustIndicatorInput[]) => [
       ...prev,
-      { ...EMPTY_INDICATOR, weight, dimensionName: name, dimensionWeight: weight },
+      {
+        ...EMPTY_INDICATOR,
+        weight,
+        dimensionName: name,
+        dimensionWeight: weight,
+      },
     ]);
     setAddingDimension(false);
     setNewDimName('');
@@ -391,7 +407,8 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
             <Alert variant="destructive">
               <AlertTriangle className="size-4" />
               <AlertDescription>
-                指标权重之和({indicatorSum})不等于维度权重({group.dimensionWeight})
+                指标权重之和({indicatorSum})不等于维度权重(
+                {group.dimensionWeight})
               </AlertDescription>
             </Alert>
           ) : null;

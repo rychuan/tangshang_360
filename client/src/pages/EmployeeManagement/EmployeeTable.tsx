@@ -4,6 +4,7 @@ import type { EmployeeItem } from '@shared/api.interface';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
+import { CanDo } from '@/hooks/usePermissions';
 import { Checkbox } from '@/components/ui/checkbox';
 import { UserDisplay } from '@/components/business-ui/user-display';
 import { DataTable } from '@/components/ui/data-table';
@@ -194,38 +195,44 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
           onClick={(e) => e.stopPropagation()}
         >
           <CanRole roles={['admin']}>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-7 sm:size-8"
-              onClick={() => onEdit(row.original)}
-              title="编辑"
-            >
-              <Pencil />
-            </Button>
+            <CanDo resource="employees" action="edit">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 sm:size-8"
+                onClick={() => onEdit(row.original)}
+                title="编辑"
+              >
+                <Pencil />
+              </Button>
+            </CanDo>
           </CanRole>
           <CanRole roles={['admin', 'hrd']}>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-7 sm:size-8 hidden sm:inline-flex"
-              onClick={() => onBind(row.original)}
-              title="绑定模板"
-            >
-              <Link2 />
-            </Button>
-          </CanRole>
-          {row.original.currentBinding && (
-            <CanRole roles={['admin', 'hrd']}>
+            <CanDo resource="employee_binding" action="edit">
               <Button
                 variant="ghost"
                 size="icon"
                 className="size-7 sm:size-8 hidden sm:inline-flex"
-                onClick={() => onUnbind(row.original)}
-                title="解绑"
+                onClick={() => onBind(row.original)}
+                title="绑定模板"
               >
-                <Unlink className="text-destructive" />
+                <Link2 />
               </Button>
+            </CanDo>
+          </CanRole>
+          {row.original.currentBinding && (
+            <CanRole roles={['admin', 'hrd']}>
+              <CanDo resource="employee_binding" action="edit">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 sm:size-8 hidden sm:inline-flex"
+                  onClick={() => onUnbind(row.original)}
+                  title="解绑"
+                >
+                  <Unlink className="text-destructive" />
+                </Button>
+              </CanDo>
             </CanRole>
           )}
           <Button
@@ -238,30 +245,34 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
             <History />
           </Button>
           <CanRole roles={['admin']}>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-7 sm:size-8"
-              onClick={() => onToggleStatus(row.original)}
-              title={row.original.status === 'active' ? '禁用' : '启用'}
-            >
-              {row.original.status === 'active' ? (
-                <Ban className="text-destructive" />
-              ) : (
-                <CheckCircle className="text-success" />
-              )}
-            </Button>
+            <CanDo resource="employees" action="edit">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 sm:size-8"
+                onClick={() => onToggleStatus(row.original)}
+                title={row.original.status === 'active' ? '禁用' : '启用'}
+              >
+                {row.original.status === 'active' ? (
+                  <Ban className="text-destructive" />
+                ) : (
+                  <CheckCircle className="text-success" />
+                )}
+              </Button>
+            </CanDo>
           </CanRole>
           <CanRole roles={['admin']}>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-7 sm:size-8"
-              onClick={() => onDelete(row.original)}
-              title="删除"
-            >
-              <Trash2 className="text-destructive" />
-            </Button>
+            <CanDo resource="employees" action="delete">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 sm:size-8"
+                onClick={() => onDelete(row.original)}
+                title="删除"
+              >
+                <Trash2 className="text-destructive" />
+              </Button>
+            </CanDo>
           </CanRole>
         </div>
       ),

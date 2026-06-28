@@ -1,13 +1,32 @@
-import { Controller, Get, Post, Patch, Delete, Param, Query, Body, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Query,
+  Body,
+  Req,
+} from '@nestjs/common';
 import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
+import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { AssessmentPublishService } from './assessment-publish.service';
-import type { PublishRequest, AdjustRequest, UnlockRequest, BatchUnlockRequest, BatchNotifyRequest, EmployeeSnapshotResponse } from '@shared/api.interface';
+import type {
+  PublishRequest,
+  AdjustRequest,
+  UnlockRequest,
+  BatchUnlockRequest,
+  BatchNotifyRequest,
+  EmployeeSnapshotResponse,
+} from '@shared/api.interface';
 
 @Controller('api')
 export class AssessmentPublishController {
   constructor(private readonly service: AssessmentPublishService) {}
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
+  @RequirePermission('publish_management', 'view')
   @Get('publish/employees')
   async listEmployees(
     @Query('period') period: string,
@@ -18,6 +37,7 @@ export class AssessmentPublishController {
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
+  @RequirePermission('publish_management', 'view')
   @Get('assessment-instances')
   async listInstances(
     @Query('period') period: string,
@@ -27,7 +47,14 @@ export class AssessmentPublishController {
     @Query('department') department: string,
     @Query('grade') grade: string,
   ) {
-    return this.service.listInstances(period, page, pageSize, status, department, grade);
+    return this.service.listInstances(
+      period,
+      page,
+      pageSize,
+      status,
+      department,
+      grade,
+    );
   }
 
   @Get('publish/statistics')
@@ -36,6 +63,7 @@ export class AssessmentPublishController {
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('publish_management', 'edit')
   @NeedLogin()
   @Patch('assessment-instances/batch-unlock')
   async batchUnlock(@Req() req: any, @Body() body: BatchUnlockRequest) {
@@ -51,6 +79,7 @@ export class AssessmentPublishController {
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('publish_management', 'publish')
   @NeedLogin()
   @Post('publish')
   async publish(@Req() req: any, @Body() body: PublishRequest) {
@@ -59,29 +88,43 @@ export class AssessmentPublishController {
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('publish_management', 'edit')
   @NeedLogin()
   @Patch('assessment-instances/:id/unlock')
-  async unlock(@Req() req: any, @Param('id') id: string, @Body() body: UnlockRequest) {
+  async unlock(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: UnlockRequest,
+  ) {
     const { userId } = req.userContext;
     return this.service.unlock(id, body, userId);
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('publish_management', 'view')
   @NeedLogin()
   @Get('publish/employees/:employeeId/indicators')
-  async getEmployeeSnapshot(@Param('employeeId') employeeId: string): Promise<EmployeeSnapshotResponse> {
+  async getEmployeeSnapshot(
+    @Param('employeeId') employeeId: string,
+  ): Promise<EmployeeSnapshotResponse> {
     return this.service.getEmployeeSnapshot(employeeId);
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('publish_management', 'edit')
   @NeedLogin()
   @Patch('publish/employees/:employeeId/indicators')
-  async adjustEmployeeSnapshot(@Req() req: any, @Param('employeeId') employeeId: string, @Body() body: AdjustRequest) {
+  async adjustEmployeeSnapshot(
+    @Req() req: any,
+    @Param('employeeId') employeeId: string,
+    @Body() body: AdjustRequest,
+  ) {
     const { userId } = req.userContext;
     return this.service.adjustEmployeeSnapshot(employeeId, body, userId);
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('publish_management', 'edit')
   @NeedLogin()
   @Delete('publish/employees/:employeeId/indicators')
   async deleteEmployeeSnapshot(@Param('employeeId') employeeId: string) {
@@ -89,6 +132,7 @@ export class AssessmentPublishController {
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('publish_management', 'view')
   @Get('assessment-instances/:id/unlock-history')
   async getUnlockHistory(@Param('id') id: string) {
     return this.service.getUnlockHistory(id);

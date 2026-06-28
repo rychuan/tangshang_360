@@ -38,6 +38,7 @@ import {
 import { toast } from 'sonner';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
+import { CanDo } from '@/hooks/usePermissions';
 import { handleApiError } from '@/utils/api-error';
 import { PageHeader } from '@/components/business-ui/page-header';
 import { StatusBadge, GradeBadge } from '@/components/business-ui/status-badge';
@@ -197,15 +198,17 @@ const TeamPerformancePage: React.FC = () => {
           <div className="flex items-center gap-2">
             {item.status === 'self_review' && (
               <CanRole roles={['admin', 'dept_head', 'supervisor']}>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={remindingIds.has(item.id)}
-                  onClick={() => handleRemind(item)}
-                >
-                  <Bell data-icon="inline-start" />
-                  催办
-                </Button>
+                <CanDo resource="team_performance" action="edit">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={remindingIds.has(item.id)}
+                    onClick={() => handleRemind(item)}
+                  >
+                    <Bell data-icon="inline-start" />
+                    催办
+                  </Button>
+                </CanDo>
               </CanRole>
             )}
             <Button

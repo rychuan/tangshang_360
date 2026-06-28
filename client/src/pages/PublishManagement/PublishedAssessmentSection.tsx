@@ -12,6 +12,7 @@ import {
   SelectGroup,
 } from '@/components/ui/select';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
+import { CanDo } from '@/hooks/usePermissions';
 import { UserDisplay } from '@/components/business-ui/user-display';
 import { Unlock, Send, Download, Award } from 'lucide-react';
 import dayjs from 'dayjs';
@@ -365,13 +366,15 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
                         'supervisor_review',
                       ].includes(record.status) && (
                         <CanRole roles={['admin', 'hrd']}>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onUnlock(record)}
-                          >
-                            解锁
-                          </Button>
+                          <CanDo resource="publish_management" action="edit">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onUnlock(record)}
+                            >
+                              解锁
+                            </Button>
+                          </CanDo>
                         </CanRole>
                       )}
                       <CanRole roles={['admin', 'hrd']}>

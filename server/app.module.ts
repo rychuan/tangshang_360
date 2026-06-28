@@ -1,8 +1,9 @@
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { Module } from '@nestjs/common';
 import { PlatformModule } from '@lark-apaas/fullstack-nestjs-core';
 
 import { GlobalExceptionFilter } from './common/filters/exception.filter';
+import { PermissionsGuard } from './common/guards/permissions.guard';
 import { AssessmentTemplateModule } from './modules/assessment-template/assessment-template.module';
 import { TeamStructureModule } from './modules/team-structure/team-structure.module';
 import { AssessmentPublishModule } from './modules/assessment-publish/assessment-publish.module';
@@ -48,6 +49,10 @@ import { ViewModule } from './modules/view/view.module';
     {
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: PermissionsGuard,
     },
   ],
 })

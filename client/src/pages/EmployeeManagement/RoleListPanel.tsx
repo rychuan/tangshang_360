@@ -1,6 +1,7 @@
 import React from 'react';
 import type { ForceRoleDTO } from '@shared/api.interface';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
+import { CanDo } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -40,9 +41,11 @@ const RoleListPanel: React.FC<RoleListPanelProps> = ({
           <Shield className="size-4" /> 角色列表
         </h2>
         <CanRole roles={['admin']}>
-          <Button size="sm" onClick={onCreateClick}>
-            <Plus className="mr-1 size-4" /> 新增角色
-          </Button>
+          <CanDo resource="permission_management" action="edit">
+            <Button size="sm" onClick={onCreateClick}>
+              <Plus className="mr-1 size-4" /> 新增角色
+            </Button>
+          </CanDo>
         </CanRole>
       </div>
 
@@ -104,33 +107,37 @@ const RoleListPanel: React.FC<RoleListPanelProps> = ({
                     </div>
                     <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                       <CanRole roles={['admin']}>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-7"
-                          title="编辑角色"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEditClick(role);
-                          }}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
+                        <CanDo resource="permission_management" action="edit">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-7"
+                            title="编辑角色"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEditClick(role);
+                            }}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </CanDo>
                       </CanRole>
                       <CanRole roles={['admin']}>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-7"
-                          title={builtin ? '内置角色不可删除' : '删除角色'}
-                          disabled={builtin}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDeleteClick(role);
-                          }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        <CanDo resource="permission_management" action="edit">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-7"
+                            title={builtin ? '内置角色不可删除' : '删除角色'}
+                            disabled={builtin}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteClick(role);
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </CanDo>
                       </CanRole>
                     </div>
                   </div>

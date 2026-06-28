@@ -8,6 +8,7 @@ import type {
 } from '@shared/api.interface';
 import { DEFAULT_PERMISSIONS } from '@shared/api.interface';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
+import { CanDo } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -221,9 +222,12 @@ const PermissionMatrixTab: React.FC<PermissionMatrixTabProps> = ({ role }) => {
             <RotateCcw data-icon="inline-start" /> 重置为预设
           </Button>
           <CanRole roles={['admin']}>
-            <Button size="sm" onClick={handleSave} disabled={saving}>
-              <Save data-icon="inline-start" /> {saving ? '保存中...' : '保存'}
-            </Button>
+            <CanDo resource="permission_management" action="edit">
+              <Button size="sm" onClick={handleSave} disabled={saving}>
+                <Save data-icon="inline-start" />{' '}
+                {saving ? '保存中...' : '保存'}
+              </Button>
+            </CanDo>
           </CanRole>
         </div>
       </div>

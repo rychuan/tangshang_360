@@ -3,6 +3,8 @@ import { useLocation, Link, Outlet } from 'react-router-dom';
 import { useCurrentUserProfile } from '@lark-apaas/client-toolkit/hooks/useCurrentUserProfile';
 import { useAppInfo } from '@lark-apaas/client-toolkit/hooks/useAppInfo';
 import { useAuth, ROLE_SUBJECT } from '@lark-apaas/client-toolkit/auth';
+import { usePermissions } from '@/hooks/usePermissions';
+import type { PermissionResource } from '@shared/api.interface';
 import {
   Sidebar,
   SidebarContent,
@@ -46,6 +48,7 @@ type NavItem = {
   path: string;
   icon: typeof LayoutDashboard;
   roles: string[];
+  permissionResource?: PermissionResource;
 };
 
 type NavGroup = {
@@ -67,18 +70,21 @@ const navGroups: NavGroup[] = [
         path: '/',
         icon: LayoutDashboard,
         roles: ALL_ROLES,
+        permissionResource: 'dashboard',
       },
       {
         label: '我的绩效',
         path: '/my-assessments',
         icon: ClipboardList,
         roles: ALL_ROLES,
+        permissionResource: 'my_assessments',
       },
       {
         label: '团队绩效',
         path: '/team-performance',
         icon: Users,
         roles: MANAGER_ROLES,
+        permissionResource: 'team_performance',
       },
     ],
   },
@@ -90,24 +96,28 @@ const navGroups: NavGroup[] = [
         path: '/template-management',
         icon: FileText,
         roles: TEMPLATE_ROLES,
+        permissionResource: 'template_management',
       },
       {
         label: '绩效发布',
         path: '/publish-management',
         icon: Send,
         roles: MANAGER_ROLES,
+        permissionResource: 'publish_management',
       },
       {
         label: '绩效统计',
         path: '/statistics',
         icon: BarChart3,
         roles: MANAGER_ROLES,
+        permissionResource: 'statistics',
       },
       {
         label: '绩效等级',
         path: '/grade-config',
         icon: Award,
         roles: ADMIN_HRD_ROLES,
+        permissionResource: 'permission_management',
       },
     ],
   },
@@ -119,18 +129,21 @@ const navGroups: NavGroup[] = [
         path: '/employees',
         icon: UserCog,
         roles: MANAGER_ROLES,
+        permissionResource: 'employees',
       },
       {
         label: '字段管理',
         path: '/dictionary',
         icon: Briefcase,
         roles: ADMIN_HRD_ROLES,
+        permissionResource: 'permission_management',
       },
       {
         label: '权限管理',
         path: '/permissions',
         icon: Shield,
         roles: ADMIN_HRD_ROLES,
+        permissionResource: 'permission_management',
       },
     ],
   },
@@ -154,23 +167,29 @@ const LayoutContent: React.FC = () => {
   const userInfo = useCurrentUserProfile();
   const { appName } = useAppInfo();
   const { ability, isLoading } = useAuth();
+  const { permissions } = usePermissions();
+
+  const hasPermAccess = (item: NavItem): boolean => {
+    if (!item.permissionResource) return true;
+    return permissions.some(
+      (p) =>
+        p.resource === item.permissionResource && p.actions.includes('view'),
+    );
+  };
+
+  const isItemVisible = (item: NavItem): boolean =>
+    item.roles.some((r) => ability.can(r, ROLE_SUBJECT)) && hasPermAccess(item);
 
   const navItems = isLoading
     ? []
-    : navGroups.flatMap((group) =>
-        group.items.filter((item) =>
-          item.roles.some((r) => ability.can(r, ROLE_SUBJECT)),
-        ),
-      );
+    : navGroups.flatMap((group) => group.items.filter(isItemVisible));
 
   const navGroupItems = isLoading
     ? []
     : navGroups
         .map((group) => ({
           label: group.label,
-          items: group.items.filter((item) =>
-            item.roles.some((r) => ability.can(r, ROLE_SUBJECT)),
-          ),
+          items: group.items.filter(isItemVisible),
         }))
         .filter((group) => group.items.length > 0);
 

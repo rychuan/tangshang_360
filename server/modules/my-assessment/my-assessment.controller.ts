@@ -1,5 +1,6 @@
 import { Controller, Get, Query, Req } from '@nestjs/common';
 import { CanRole } from '@lark-apaas/fullstack-nestjs-core';
+import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import type { Request } from 'express';
 import { MyAssessmentService } from './my-assessment.service';
 import type {
@@ -13,6 +14,7 @@ export class MyAssessmentController {
   constructor(private readonly service: MyAssessmentService) {}
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
+  @RequirePermission('my_assessments', 'view')
   @Get('years')
   async getYears(@Req() req: Request): Promise<string[]> {
     const { userId } = req.userContext;
@@ -20,6 +22,7 @@ export class MyAssessmentController {
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
+  @RequirePermission('my_assessments', 'view')
   @Get('summary')
   async getSummary(
     @Req() req: Request,
@@ -30,6 +33,7 @@ export class MyAssessmentController {
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
+  @RequirePermission('my_assessments', 'view')
   @Get('records')
   async getRecords(
     @Req() req: Request,
@@ -46,6 +50,7 @@ export class MyAssessmentController {
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
+  @RequirePermission('my_assessments', 'view')
   @Get('trend')
   async getTrend(
     @Req() req: Request,

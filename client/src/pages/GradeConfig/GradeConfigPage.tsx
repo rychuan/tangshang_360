@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Pencil, Trash2, Award } from 'lucide-react';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
+import { CanDo } from '@/hooks/usePermissions';
 import { Button } from '@client/src/components/ui/button';
 import { Badge } from '@client/src/components/ui/badge';
 import { PageHeader } from '@/components/business-ui/page-header';
@@ -93,10 +94,12 @@ const GradeConfigPage: React.FC = () => {
         description="管理绩效分数对应的绩效等级规则"
         actions={
           <CanRole roles={['admin', 'hrd']}>
-            <Button onClick={handleOpenCreate}>
-              <Plus data-icon="inline-start" />
-              新建等级
-            </Button>
+            <CanDo resource="permission_management" action="edit">
+              <Button onClick={handleOpenCreate}>
+                <Plus data-icon="inline-start" />
+                新建等级
+              </Button>
+            </CanDo>
           </CanRole>
         }
       />
@@ -156,25 +159,29 @@ const GradeConfigPage: React.FC = () => {
                   <TableCell className="py-3 px-4">
                     <div className="flex items-center gap-1">
                       <CanRole roles={['admin', 'hrd']}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleOpenEdit(item)}
-                        >
-                          <Pencil data-icon="inline-start" />
-                          编辑
-                        </Button>
+                        <CanDo resource="permission_management" action="edit">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenEdit(item)}
+                          >
+                            <Pencil data-icon="inline-start" />
+                            编辑
+                          </Button>
+                        </CanDo>
                       </CanRole>
                       <CanRole roles={['admin', 'hrd']}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive"
-                          onClick={() => setDeleteId(item.id)}
-                        >
-                          <Trash2 data-icon="inline-start" />
-                          删除
-                        </Button>
+                        <CanDo resource="permission_management" action="edit">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive"
+                            onClick={() => setDeleteId(item.id)}
+                          >
+                            <Trash2 data-icon="inline-start" />
+                            删除
+                          </Button>
+                        </CanDo>
                       </CanRole>
                     </div>
                   </TableCell>

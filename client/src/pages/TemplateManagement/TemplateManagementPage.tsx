@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Plus, Eye, Pencil, Ban, Search, RotateCcw } from 'lucide-react';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
+import { CanDo } from '@/hooks/usePermissions';
 import { Button } from '@client/src/components/ui/button';
 import { handleApiError } from '@client/src/utils/api-error';
 import { Input } from '@client/src/components/ui/input';
@@ -232,25 +233,29 @@ const TemplateManagementPage: React.FC = () => {
             预览
           </Button>
           <CanRole roles={['admin', 'hrd']}>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleEdit(item.id)}
-            >
-              <Pencil data-icon="inline-start" />
-              编辑
-            </Button>
+            <CanDo resource="template_management" action="edit">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleEdit(item.id)}
+              >
+                <Pencil data-icon="inline-start" />
+                编辑
+              </Button>
+            </CanDo>
           </CanRole>
           {item.isActive && (
             <CanRole roles={['admin', 'hrd']}>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setDeactivateId(item.id)}
-              >
-                <Ban data-icon="inline-start" />
-                停用
-              </Button>
+              <CanDo resource="template_management" action="delete">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setDeactivateId(item.id)}
+                >
+                  <Ban data-icon="inline-start" />
+                  停用
+                </Button>
+              </CanDo>
             </CanRole>
           )}
         </div>
@@ -264,10 +269,12 @@ const TemplateManagementPage: React.FC = () => {
         title="绩效模板管理"
         actions={
           <CanRole roles={['admin', 'hrd']}>
-            <Button onClick={handleOpenCreate}>
-              <Plus data-icon="inline-start" />
-              新建模板
-            </Button>
+            <CanDo resource="template_management" action="edit">
+              <Button onClick={handleOpenCreate}>
+                <Plus data-icon="inline-start" />
+                新建模板
+              </Button>
+            </CanDo>
           </CanRole>
         }
       />

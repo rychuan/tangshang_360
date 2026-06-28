@@ -10,6 +10,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
+import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { SystemDictService } from './system-dict.service';
 import type {
   DictListResponse,
@@ -22,6 +23,7 @@ export class SystemDictController {
   constructor(private readonly service: SystemDictService) {}
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('permission_management', 'view')
   @Get(':type')
   async list(
     @Param('type') type: string,
@@ -31,6 +33,7 @@ export class SystemDictController {
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('permission_management', 'edit')
   @NeedLogin()
   @Post(':type')
   async create(
@@ -43,6 +46,7 @@ export class SystemDictController {
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('permission_management', 'edit')
   @NeedLogin()
   @Put(':type/:id')
   async update(
@@ -56,6 +60,7 @@ export class SystemDictController {
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('permission_management', 'edit')
   @NeedLogin()
   @Delete(':type/:id')
   async remove(

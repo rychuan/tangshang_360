@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
+import { CanDo } from '@/hooks/usePermissions';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -140,13 +141,15 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
             </Select>
           </div>
           <CanRole roles={['admin', 'hrd']}>
-            <Button
-              data-ai-section-type="button"
-              disabled={selectedIds.size === 0 || publishing}
-              onClick={onPublish}
-            >
-              {publishing ? '发布中...' : `发布选中 (${selectedIds.size})`}
-            </Button>
+            <CanDo resource="publish_management" action="publish">
+              <Button
+                data-ai-section-type="button"
+                disabled={selectedIds.size === 0 || publishing}
+                onClick={onPublish}
+              >
+                {publishing ? '发布中...' : `发布选中 (${selectedIds.size})`}
+              </Button>
+            </CanDo>
           </CanRole>
         </div>
       </div>
@@ -229,20 +232,24 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
                 <TableCell className="py-3 pr-4">
                   <div className="flex items-center gap-1">
                     <CanRole roles={['admin', 'hrd']}>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onAdjust(emp)}
-                      >
-                        调整
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => onDeleteSnapshot(emp)}
-                      >
-                        删除快照
-                      </Button>
+                      <CanDo resource="publish_management" action="edit">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onAdjust(emp)}
+                        >
+                          调整
+                        </Button>
+                      </CanDo>
+                      <CanDo resource="publish_management" action="edit">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => onDeleteSnapshot(emp)}
+                        >
+                          删除快照
+                        </Button>
+                      </CanDo>
                     </CanRole>
                   </div>
                 </TableCell>

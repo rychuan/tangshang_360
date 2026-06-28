@@ -40,6 +40,7 @@ import {
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
+import { CanDo } from '@/hooks/usePermissions';
 import { useEmployeeFilters } from './hooks/useEmployeeFilters';
 import { useEmployeeList } from './hooks/useEmployeeList';
 import { useEmployeeDialogs } from './hooks/useEmployeeDialogs';
@@ -106,10 +107,12 @@ const EmployeeListTab: React.FC = () => {
             </CanRole>
           )}
           <CanRole roles={['admin']}>
-            <Button size="sm" onClick={dialogs.openCreateDialog}>
-              <Plus data-icon="inline-start" />
-              新建员工
-            </Button>
+            <CanDo resource="employees" action="edit">
+              <Button size="sm" onClick={dialogs.openCreateDialog}>
+                <Plus data-icon="inline-start" />
+                新建员工
+              </Button>
+            </CanDo>
           </CanRole>
         </div>
       </div>

@@ -8,6 +8,7 @@ import {
   Body,
 } from '@nestjs/common';
 import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
+import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { PerformanceGradeService } from './performance-grade.service';
 import type {
   PerformanceGradeListResponse,
@@ -23,6 +24,7 @@ export class PerformanceGradeController {
   constructor(private readonly service: PerformanceGradeService) {}
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('permission_management', 'view')
   @NeedLogin()
   @Get()
   async list(): Promise<PerformanceGradeListResponse> {
@@ -36,6 +38,7 @@ export class PerformanceGradeController {
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('permission_management', 'edit')
   @NeedLogin()
   @Post()
   async create(
@@ -45,6 +48,7 @@ export class PerformanceGradeController {
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('permission_management', 'edit')
   @NeedLogin()
   @Put(':id')
   async update(
@@ -55,6 +59,7 @@ export class PerformanceGradeController {
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('permission_management', 'edit')
   @NeedLogin()
   @Delete(':id')
   async remove(@Param('id') id: string): Promise<SuccessResponse> {

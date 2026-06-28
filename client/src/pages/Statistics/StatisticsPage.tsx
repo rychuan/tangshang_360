@@ -9,6 +9,7 @@ import {
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { toast } from 'sonner';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
+import { CanDo } from '@/hooks/usePermissions';
 import { handleApiError } from '@/utils/api-error';
 import * as XLSX from 'xlsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -297,15 +298,17 @@ const StatisticsPage: React.FC = () => {
               查询
             </Button>
             <CanRole roles={['admin', 'hrd', 'dept_head']}>
-              <Button
-                variant="outline"
-                onClick={handleExport}
-                disabled={exporting}
-                className="flex items-center gap-1"
-              >
-                <DownloadIcon data-icon="inline-start" />
-                {exporting ? '导出中...' : '导出'}
-              </Button>
+              <CanDo resource="statistics" action="export">
+                <Button
+                  variant="outline"
+                  onClick={handleExport}
+                  disabled={exporting}
+                  className="flex items-center gap-1"
+                >
+                  <DownloadIcon data-icon="inline-start" />
+                  {exporting ? '导出中...' : '导出'}
+                </Button>
+              </CanDo>
             </CanRole>
           </div>
         </CardContent>
