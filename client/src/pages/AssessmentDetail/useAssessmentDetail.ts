@@ -71,7 +71,7 @@ export function useAssessmentDetail(
               ? ind.supervisorComment
               : undefined;
         initial[ind.id] = {
-          score: score ?? 0,
+          score: score ?? undefined,
           comment: comment ?? '',
         };
       }
@@ -168,7 +168,7 @@ export function useAssessmentDetail(
           ...prev[indicatorId],
           [field]:
             field === 'score'
-              ? Math.min(Number(value) || 0, weight ?? 100)
+              ? (value === '' ? undefined : Math.min(Number(value) || 0, weight ?? 100))
               : value,
         },
       }));
@@ -198,6 +198,24 @@ export function useAssessmentDetail(
 
   const handleSubmit = async () => {
     if (!id || !detail) return;
+
+    // 提交前校验：所有指标必须已填写分数
+    const emptyIndicators: string[] = [];
+    for (const group of groupedIndicators) {
+      for (const ind of group.indicators) {
+        const s = ratings[ind.id]?.score;
+        if (s == null) {
+          emptyIndicators.push(ind.content.length > 12 ? ind.content.slice(0, 12) + '…' : ind.content);
+        }
+      }
+    }
+    if (emptyIndicators.length > 0) {
+      const names = emptyIndicators.slice(0, 3).join('、');
+      const suffix = emptyIndicators.length > 3 ? '等' : '';
+      toast.warning(`以下 ${emptyIndicators.length} 项指标未评分：${names}${suffix}，请填写后提交`);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const body = { ...buildRatingPayload(ratings), isDraft: false };

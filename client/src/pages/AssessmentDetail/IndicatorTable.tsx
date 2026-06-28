@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { ChevronDown } from 'lucide-react';
 import type { AssessmentIndicatorDetail } from '@shared/api.interface';
 import type { RatingsState, DimensionGroup } from './assessment-utils';
 
@@ -43,15 +44,16 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
       type === 'self' ? indicator.selfScore : indicator.supervisorScore;
 
     if (canEditThis) {
-      const currentScore = ratings[indicator.id]?.score ?? 0;
+      const currentScore = ratings[indicator.id]?.score;
       return (
         <div className="flex flex-col items-center gap-0.5">
           <Input
             type="number"
             min={0}
             max={indicator.weight}
+            placeholder="0"
             className="w-20 mx-auto text-center"
-            value={currentScore}
+            value={currentScore ?? ''}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               updateRating(
                 indicator.id,
@@ -62,7 +64,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             }
           />
           <span className="text-xs text-muted-foreground">
-            {currentScore}/{indicator.weight}
+            {currentScore != null ? `${currentScore}/${indicator.weight}` : `/${indicator.weight}`}
           </span>
         </div>
       );
@@ -79,20 +81,14 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     <div className="flex flex-col">
       {groups.map((group, idx) => (
         <React.Fragment key={group.dimensionName}>
-          {/* 卡片间连接指示 — 表示下方还有维度卡片 */}
+          {/* 卡片间连接指示 — 向下箭头表示下方还有维度卡片 */}
           {idx > 0 && (
-            <div className="flex justify-center py-1.5" aria-hidden="true">
-              <div className="flex items-center gap-2.5">
-                <span className="block w-6 h-px rounded-full bg-border/50" />
-                <span className="block size-[3px] rounded-full bg-primary/30" />
-                <span className="block size-[3px] rounded-full bg-primary/45" />
-                <span className="block size-[3px] rounded-full bg-primary/30" />
-                <span className="block w-6 h-px rounded-full bg-border/50" />
-              </div>
+            <div className="flex justify-center py-1" aria-hidden="true">
+              <ChevronDown className="size-4 text-primary/25" />
             </div>
           )}
 
-          <Card>
+          <Card className="bg-emerald-50/60 dark:bg-emerald-950/20">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-3">
                 <h3 className="text-base font-semibold">
