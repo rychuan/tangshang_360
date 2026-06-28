@@ -108,7 +108,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
   useEffect(() => {
     dictionaryApi('position')
       .list()
-      .then((res) => setPositions(res.items))
+      .then((res) => setPositions(res.items || []))
       .catch(() => {});
   }, []);
 
