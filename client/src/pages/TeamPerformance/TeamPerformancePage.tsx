@@ -7,6 +7,7 @@ import { Spinner } from '@/components/ui/spinner';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -202,7 +203,7 @@ const TeamPerformancePage: React.FC = () => {
                   disabled={remindingIds.has(item.id)}
                   onClick={() => handleRemind(item)}
                 >
-                  <Bell className="size-4 mr-2" />
+                  <Bell data-icon="inline-start" />
                   催办
                 </Button>
               </CanRole>
@@ -212,7 +213,7 @@ const TeamPerformancePage: React.FC = () => {
               variant="outline"
               onClick={() => navigate(`/assessment/${item.id}?view=supervisor`)}
             >
-              <Eye className="size-4 mr-2" />
+              <Eye data-icon="inline-start" />
               查看/评分
             </Button>
           </div>
@@ -326,11 +327,13 @@ const TeamPerformancePage: React.FC = () => {
               <SelectValue placeholder="全部状态" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__all">全部状态</SelectItem>
-              <SelectItem value="self_review">待自评</SelectItem>
-              <SelectItem value="supervisor_review">待上级评分</SelectItem>
-              <SelectItem value="pending_sign">待签名</SelectItem>
-              <SelectItem value="completed">已完成</SelectItem>
+              <SelectGroup>
+                <SelectItem value="__all">全部状态</SelectItem>
+                <SelectItem value="self_review">待自评</SelectItem>
+                <SelectItem value="supervisor_review">待上级评分</SelectItem>
+                <SelectItem value="pending_sign">待签名</SelectItem>
+                <SelectItem value="completed">已完成</SelectItem>
+              </SelectGroup>
             </SelectContent>
           </Select>
         </CardHeader>

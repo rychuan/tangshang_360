@@ -10,9 +10,26 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
 } from '@/components/ui/select';
 import { UserDisplay } from '@/components/business-ui/user-display';
 import type { PublishEmployeeItem } from '@shared/api.interface';
+import { Spinner } from '@/components/ui/spinner';
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
+import { Award } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 interface PendingPublishSectionProps {
   employees: PublishEmployeeItem[];
@@ -88,12 +105,14 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
                 <SelectValue placeholder="全部部门" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__all__">全部部门</SelectItem>
-                {departments.map((dept: string) => (
-                  <SelectItem key={dept} value={dept}>
-                    {dept}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  <SelectItem value="__all__">全部部门</SelectItem>
+                  {departments.map((dept: string) => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
           </div>
@@ -109,12 +128,14 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
                 <SelectValue placeholder="全部模板" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__all__">全部模板</SelectItem>
-                {templates.map((t: { id: string; name: string }) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.name}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  <SelectItem value="__all__">全部模板</SelectItem>
+                  {templates.map((t: { id: string; name: string }) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
           </div>
@@ -131,98 +152,104 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12 text-muted-foreground">
-          加载中...
+        <div className="flex items-center justify-center py-12">
+          <Spinner />
         </div>
       ) : employees.length === 0 ? (
-        <div className="flex items-center justify-center py-12 text-muted-foreground">
-          暂无符合条件的待发布员工
-        </div>
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Award className="size-6" />
+            </EmptyMedia>
+            <EmptyTitle>暂无符合条件的待发布员工</EmptyTitle>
+          </EmptyHeader>
+        </Empty>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-muted-foreground">
-                <th className="w-10 py-3 pr-4 font-medium">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-b text-left text-muted-foreground">
+              <TableHead className="w-10 py-3 pr-4 font-medium">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={(checked: boolean) => onSelectAll(checked)}
+                />
+              </TableHead>
+              <TableHead className="py-3 pr-4 font-medium">员工</TableHead>
+              <TableHead className="py-3 pr-4 font-medium hidden sm:table-cell">
+                部门
+              </TableHead>
+              <TableHead className="py-3 pr-4 font-medium hidden sm:table-cell">
+                岗位
+              </TableHead>
+              <TableHead className="py-3 pr-4 font-medium hidden md:table-cell">
+                绩效模板
+              </TableHead>
+              <TableHead className="py-3 pr-4 font-medium hidden md:table-cell">
+                上月绩效
+              </TableHead>
+              <TableHead className="py-3 pr-4 font-medium">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {employees.map((emp: PublishEmployeeItem) => (
+              <TableRow
+                key={emp.employeeId}
+                className="border-b hover:bg-muted/50"
+              >
+                <TableCell className="py-3 pr-4">
                   <Checkbox
-                    checked={allSelected}
-                    onCheckedChange={(checked: boolean) => onSelectAll(checked)}
+                    checked={selectedIds.has(emp.employeeId)}
+                    onCheckedChange={(checked: boolean) =>
+                      onSelectOne(emp.employeeId, checked)
+                    }
                   />
-                </th>
-                <th className="py-3 pr-4 font-medium">员工</th>
-                <th className="py-3 pr-4 font-medium hidden sm:table-cell">
-                  部门
-                </th>
-                <th className="py-3 pr-4 font-medium hidden sm:table-cell">
-                  岗位
-                </th>
-                <th className="py-3 pr-4 font-medium hidden md:table-cell">
-                  绩效模板
-                </th>
-                <th className="py-3 pr-4 font-medium hidden md:table-cell">
-                  上月绩效
-                </th>
-                <th className="py-3 pr-4 font-medium">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.map((emp: PublishEmployeeItem) => (
-                <tr key={emp.employeeId} className="border-b hover:bg-muted/50">
-                  <td className="py-3 pr-4">
-                    <Checkbox
-                      checked={selectedIds.has(emp.employeeId)}
-                      onCheckedChange={(checked: boolean) =>
-                        onSelectOne(emp.employeeId, checked)
-                      }
-                    />
-                  </td>
-                  <td className="py-3 pr-4">
-                    <UserDisplay value={[emp.employeeId]} size="small" />
-                  </td>
-                  <td className="py-3 pr-4 hidden sm:table-cell">
-                    {emp.department || '-'}
-                  </td>
-                  <td className="py-3 pr-4 hidden sm:table-cell">
-                    {emp.position}
-                  </td>
-                  <td className="py-3 pr-4 hidden md:table-cell">
-                    {emp.templateName}
-                  </td>
-                  <td className="py-3 pr-4 hidden md:table-cell">
-                    {emp.lastPeriodStatus ? (
-                      <Badge variant="outline">
-                        {LAST_PERIOD_STATUS_LABELS[emp.lastPeriodStatus] ||
-                          emp.lastPeriodStatus}
-                      </Badge>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </td>
-                  <td className="py-3 pr-4">
-                    <div className="flex items-center gap-1">
-                      <CanRole roles={['admin', 'hrd']}>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onAdjust(emp)}
-                        >
-                          调整
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => onDeleteSnapshot(emp)}
-                        >
-                          删除快照
-                        </Button>
-                      </CanRole>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                </TableCell>
+                <TableCell className="py-3 pr-4">
+                  <UserDisplay value={[emp.employeeId]} size="small" />
+                </TableCell>
+                <TableCell className="py-3 pr-4 hidden sm:table-cell">
+                  {emp.department || '-'}
+                </TableCell>
+                <TableCell className="py-3 pr-4 hidden sm:table-cell">
+                  {emp.position}
+                </TableCell>
+                <TableCell className="py-3 pr-4 hidden md:table-cell">
+                  {emp.templateName}
+                </TableCell>
+                <TableCell className="py-3 pr-4 hidden md:table-cell">
+                  {emp.lastPeriodStatus ? (
+                    <Badge variant="outline">
+                      {LAST_PERIOD_STATUS_LABELS[emp.lastPeriodStatus] ||
+                        emp.lastPeriodStatus}
+                    </Badge>
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
+                  )}
+                </TableCell>
+                <TableCell className="py-3 pr-4">
+                  <div className="flex items-center gap-1">
+                    <CanRole roles={['admin', 'hrd']}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onAdjust(emp)}
+                      >
+                        调整
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => onDeleteSnapshot(emp)}
+                      >
+                        删除快照
+                      </Button>
+                    </CanRole>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
     </div>
   );

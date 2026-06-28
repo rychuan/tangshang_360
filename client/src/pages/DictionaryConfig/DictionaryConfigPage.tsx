@@ -29,6 +29,15 @@ import {
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
 import { PageHeader } from '@/components/business-ui/page-header';
+import { Spinner } from '@/components/ui/spinner';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 /** 字典类型注册表 — 新增类型在此注册即自动出现在 Tab 中 */
 const DICT_TYPES: { type: string; label: string; desc: string }[] = [
@@ -130,14 +139,14 @@ const DictPanel: React.FC<{ dictType: string }> = ({ dictType }) => {
             <Database className="size-4" />共 {items.length} 个条目
           </CardTitle>
           <Button size="sm" onClick={openCreate}>
-            <Plus className="mr-1.5 size-3.5" />
+            <Plus data-icon="inline-start" />
             新建
           </Button>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
-              加载中...
+            <div className="flex items-center justify-center py-12">
+              <Spinner className="size-6" />
             </div>
           ) : items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
@@ -145,72 +154,73 @@ const DictPanel: React.FC<{ dictType: string }> = ({ dictType }) => {
               <p className="text-sm">暂无数据</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="h-10 px-4 text-left text-xs font-medium text-muted-foreground">
-                      编码
-                    </th>
-                    <th className="h-10 px-4 text-left text-xs font-medium text-muted-foreground">
-                      名称
-                    </th>
-                    <th className="h-10 px-4 text-left text-xs font-medium text-muted-foreground hidden sm:table-cell">
-                      排序
-                    </th>
-                    <th className="h-10 px-4 text-left text-xs font-medium text-muted-foreground hidden sm:table-cell">
-                      状态
-                    </th>
-                    <th className="h-10 px-4 text-right text-xs font-medium text-muted-foreground">
-                      操作
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((item) => (
-                    <tr key={item.id} className="border-b hover:bg-muted/30">
-                      <td className="px-4 py-3 text-sm text-muted-foreground font-mono">
-                        {item.code}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium">
-                        {item.name}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground hidden sm:table-cell">
-                        {item.sortOrder}
-                      </td>
-                      <td className="px-4 py-3 hidden sm:table-cell">
-                        <Badge
-                          variant={item.isActive ? 'default' : 'secondary'}
-                          className="text-xs"
-                        >
-                          {item.isActive ? '启用' : '停用'}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEdit(item)}
-                        >
-                          <Pencil className="size-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => {
-                            setDeleteTarget(item);
-                            setDeleteOpen(true);
-                          }}
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b bg-muted/50">
+                  <TableHead className="h-10 px-4 text-left text-xs font-medium text-muted-foreground">
+                    编码
+                  </TableHead>
+                  <TableHead className="h-10 px-4 text-left text-xs font-medium text-muted-foreground">
+                    名称
+                  </TableHead>
+                  <TableHead className="h-10 px-4 text-left text-xs font-medium text-muted-foreground hidden sm:table-cell">
+                    排序
+                  </TableHead>
+                  <TableHead className="h-10 px-4 text-left text-xs font-medium text-muted-foreground hidden sm:table-cell">
+                    状态
+                  </TableHead>
+                  <TableHead className="h-10 px-4 text-right text-xs font-medium text-muted-foreground">
+                    操作
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((item) => (
+                  <TableRow
+                    key={item.id}
+                    className="border-b hover:bg-muted/30"
+                  >
+                    <TableCell className="px-4 py-3 text-sm text-muted-foreground font-mono">
+                      {item.code}
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-sm font-medium">
+                      {item.name}
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-muted-foreground hidden sm:table-cell">
+                      {item.sortOrder}
+                    </TableCell>
+                    <TableCell className="px-4 py-3 hidden sm:table-cell">
+                      <Badge
+                        variant={item.isActive ? 'default' : 'secondary'}
+                        className="text-xs"
+                      >
+                        {item.isActive ? '启用' : '停用'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEdit(item)}
+                      >
+                        <Pencil />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => {
+                          setDeleteTarget(item);
+                          setDeleteOpen(true);
+                        }}
+                      >
+                        <Trash2 />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
@@ -221,31 +231,37 @@ const DictPanel: React.FC<{ dictType: string }> = ({ dictType }) => {
             <DialogTitle>{editingItem ? '编辑' : '新建'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1.5">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs text-muted-foreground" htmlFor="code">
                 编码
               </Label>
               <Input
+                id="code"
                 value={form.code}
                 onChange={(e) => setForm({ ...form, code: e.target.value })}
                 placeholder="唯一标识，留空则使用名称"
               />
             </div>
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1.5">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs text-muted-foreground" htmlFor="name">
                 名称 *
               </Label>
               <Input
+                id="name"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="显示名称"
               />
             </div>
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1.5">
+            <div className="flex flex-col gap-1.5">
+              <Label
+                className="text-xs text-muted-foreground"
+                htmlFor="sortOrder"
+              >
                 排序
               </Label>
               <Input
+                id="sortOrder"
                 type="number"
                 value={form.sortOrder}
                 onChange={(e) =>

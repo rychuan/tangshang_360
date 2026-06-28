@@ -178,11 +178,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
       cell: ({ row }) => (
         <Badge
           variant={row.original.status === 'active' ? 'default' : 'secondary'}
-          className={`text-xs font-normal ${
-            row.original.status === 'active'
-              ? 'bg-success/10 text-success border-transparent'
-              : ''
-          }`}
+          className="text-xs font-normal"
         >
           {row.original.status === 'active' ? '在职' : '离职'}
         </Badge>
@@ -205,7 +201,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
               onClick={() => onEdit(row.original)}
               title="编辑"
             >
-              <Pencil className="size-3.5 sm:size-4" />
+              <Pencil />
             </Button>
           </CanRole>
           <CanRole roles={['admin', 'hrd']}>
@@ -216,7 +212,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
               onClick={() => onBind(row.original)}
               title="绑定模板"
             >
-              <Link2 className="size-3.5 sm:size-4" />
+              <Link2 />
             </Button>
           </CanRole>
           {row.original.currentBinding && (
@@ -228,7 +224,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
                 onClick={() => onUnbind(row.original)}
                 title="解绑"
               >
-                <Unlink className="size-3.5 sm:size-4 text-destructive" />
+                <Unlink className="text-destructive" />
               </Button>
             </CanRole>
           )}
@@ -239,7 +235,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
             onClick={() => onHistory(row.original)}
             title="绑定历史"
           >
-            <History className="size-3.5 sm:size-4" />
+            <History />
           </Button>
           <CanRole roles={['admin']}>
             <Button
@@ -250,9 +246,9 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
               title={row.original.status === 'active' ? '禁用' : '启用'}
             >
               {row.original.status === 'active' ? (
-                <Ban className="size-3.5 sm:size-4 text-destructive" />
+                <Ban className="text-destructive" />
               ) : (
-                <CheckCircle className="size-3.5 sm:size-4 text-success" />
+                <CheckCircle className="text-success" />
               )}
             </Button>
           </CanRole>
@@ -264,7 +260,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
               onClick={() => onDelete(row.original)}
               title="删除"
             >
-              <Trash2 className="size-3.5 sm:size-4 text-destructive" />
+              <Trash2 className="text-destructive" />
             </Button>
           </CanRole>
         </div>

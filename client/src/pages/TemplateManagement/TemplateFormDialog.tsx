@@ -3,7 +3,12 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
-import { Dialog, DialogContent } from '@client/src/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@client/src/components/ui/dialog';
 import { Button } from '@client/src/components/ui/button';
 import {
   Form,
@@ -190,9 +195,11 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
             onSubmit={form.handleSubmit(handleSubmit)}
             className="flex flex-col gap-6"
           >
-            <h2 className="text-lg font-semibold">
-              {template ? '编辑绩效模板' : '新建绩效模板'}
-            </h2>
+            <DialogHeader>
+              <DialogTitle>
+                {template ? '编辑绩效模板' : '新建绩效模板'}
+              </DialogTitle>
+            </DialogHeader>
 
             <div className="flex flex-wrap gap-4">
               <FormField

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Award } from 'lucide-react';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { Button } from '@client/src/components/ui/button';
 import { Badge } from '@client/src/components/ui/badge';
@@ -18,6 +18,21 @@ import { useGradeConfig } from './useGradeConfig';
 import { CoverageBanner } from './CoverageBanner';
 import { GradeFormDialog } from './GradeFormDialog';
 import type { PerformanceGradeItem } from '@shared/api.interface';
+import { Spinner } from '@/components/ui/spinner';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 
 const GradeConfigPage: React.FC = () => {
   const {
@@ -79,7 +94,7 @@ const GradeConfigPage: React.FC = () => {
         actions={
           <CanRole roles={['admin', 'hrd']}>
             <Button onClick={handleOpenCreate}>
-              <Plus className="size-4 mr-2" />
+              <Plus data-icon="inline-start" />
               新建等级
             </Button>
           </CanRole>
@@ -90,70 +105,83 @@ const GradeConfigPage: React.FC = () => {
 
       <div className="overflow-hidden rounded-lg border">
         {loading ? (
-          <div className="flex items-center justify-center h-32 text-muted-foreground">
-            加载中...
+          <div className="flex items-center justify-center py-12">
+            <Spinner className="size-6" />
           </div>
         ) : sortedItems.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-muted-foreground">
-            暂无数据
-          </div>
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Award className="size-6" />
+              </EmptyMedia>
+              <EmptyTitle>暂无数据</EmptyTitle>
+            </EmptyHeader>
+          </Empty>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-muted-foreground">
-                  <th className="py-3 px-4 font-medium text-left">等级名称</th>
-                  <th className="py-3 px-4 font-medium text-left">分数区间</th>
-                  <th className="py-3 px-4 font-medium text-left">排序值</th>
-                  <th className="py-3 px-4 font-medium text-left">启用状态</th>
-                  <th className="py-3 px-4 font-medium text-left">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedItems.map((item: PerformanceGradeItem) => (
-                  <tr key={item.id} className="border-b hover:bg-muted/50">
-                    <td className="py-3 px-4">{item.name}</td>
-                    <td className="py-3 px-4">
-                      {item.minScore} ~ {item.maxScore}
-                    </td>
-                    <td className="py-3 px-4">{item.sortOrder}</td>
-                    <td className="py-3 px-4">
-                      {item.isActive ? (
-                        <Badge variant="default">启用</Badge>
-                      ) : (
-                        <Badge variant="secondary">停用</Badge>
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-1">
-                        <CanRole roles={['admin', 'hrd']}>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleOpenEdit(item)}
-                          >
-                            <Pencil className="size-4 mr-1" />
-                            编辑
-                          </Button>
-                        </CanRole>
-                        <CanRole roles={['admin', 'hrd']}>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive"
-                            onClick={() => setDeleteId(item.id)}
-                          >
-                            <Trash2 className="size-4 mr-1" />
-                            删除
-                          </Button>
-                        </CanRole>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow className="border-b text-muted-foreground">
+                <TableHead className="py-3 px-4 font-medium text-left">
+                  等级名称
+                </TableHead>
+                <TableHead className="py-3 px-4 font-medium text-left">
+                  分数区间
+                </TableHead>
+                <TableHead className="py-3 px-4 font-medium text-left">
+                  排序值
+                </TableHead>
+                <TableHead className="py-3 px-4 font-medium text-left">
+                  启用状态
+                </TableHead>
+                <TableHead className="py-3 px-4 font-medium text-left">
+                  操作
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedItems.map((item: PerformanceGradeItem) => (
+                <TableRow key={item.id} className="border-b hover:bg-muted/50">
+                  <TableCell className="py-3 px-4">{item.name}</TableCell>
+                  <TableCell className="py-3 px-4">
+                    {item.minScore} ~ {item.maxScore}
+                  </TableCell>
+                  <TableCell className="py-3 px-4">{item.sortOrder}</TableCell>
+                  <TableCell className="py-3 px-4">
+                    {item.isActive ? (
+                      <Badge variant="default">启用</Badge>
+                    ) : (
+                      <Badge variant="secondary">停用</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="py-3 px-4">
+                    <div className="flex items-center gap-1">
+                      <CanRole roles={['admin', 'hrd']}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleOpenEdit(item)}
+                        >
+                          <Pencil data-icon="inline-start" />
+                          编辑
+                        </Button>
+                      </CanRole>
+                      <CanRole roles={['admin', 'hrd']}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive"
+                          onClick={() => setDeleteId(item.id)}
+                        >
+                          <Trash2 data-icon="inline-start" />
+                          删除
+                        </Button>
+                      </CanRole>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </div>
 

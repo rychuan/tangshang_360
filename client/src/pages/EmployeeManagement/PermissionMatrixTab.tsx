@@ -11,6 +11,14 @@ import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { toast } from 'sonner';
 import { Save, RotateCcw } from 'lucide-react';
 
@@ -156,63 +164,52 @@ const PermissionMatrixTab: React.FC<PermissionMatrixTabProps> = ({ role }) => {
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex-1 overflow-auto p-4">
         <div className="overflow-hidden rounded-lg border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b hover:bg-muted/50 transition-colors">
-                <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap w-[200px]">
-                  资源 / 页面
-                </th>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[200px]">资源 / 页面</TableHead>
                 {ALL_ACTIONS.map((a) => (
-                  <th
-                    key={a}
-                    className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap w-[90px] text-center"
-                  >
+                  <TableHead key={a} className="w-[90px] text-center">
                     {ACTION_LABELS[a]}
-                  </th>
+                  </TableHead>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {RESOURCE_ORDER.map((resource) => {
                 const validActions = PERMISSION_MATRIX[resource];
                 return (
-                  <tr
-                    key={resource}
-                    className="border-b hover:bg-muted/50 transition-colors"
-                  >
-                    <td className="py-3 px-4 align-middle whitespace-nowrap font-medium">
+                  <TableRow key={resource}>
+                    <TableCell className="font-medium">
                       {RESOURCE_LABELS[resource]}
-                    </td>
+                    </TableCell>
                     {ALL_ACTIONS.map((action) => {
                       if (!validActions.includes(action)) {
                         return (
-                          <td
+                          <TableCell
                             key={action}
-                            className="py-3 px-4 align-middle whitespace-nowrap text-center text-muted-foreground"
+                            className="text-center text-muted-foreground"
                           >
                             —
-                          </td>
+                          </TableCell>
                         );
                       }
                       return (
-                        <td
-                          key={action}
-                          className="py-3 px-4 align-middle whitespace-nowrap text-center"
-                        >
+                        <TableCell key={action} className="text-center">
                           <Checkbox
                             checked={hasAction(resource, action)}
                             onCheckedChange={() =>
                               toggleAction(resource, action)
                             }
                           />
-                        </td>
+                        </TableCell>
                       );
                     })}
-                  </tr>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
       <div className="flex items-center justify-between gap-4 border-t px-4 py-3">
@@ -221,11 +218,11 @@ const PermissionMatrixTab: React.FC<PermissionMatrixTabProps> = ({ role }) => {
         </p>
         <div className="flex shrink-0 gap-2">
           <Button variant="outline" size="sm" onClick={handleReset}>
-            <RotateCcw className="mr-1 size-4" /> 重置为预设
+            <RotateCcw data-icon="inline-start" /> 重置为预设
           </Button>
           <CanRole roles={['admin']}>
             <Button size="sm" onClick={handleSave} disabled={saving}>
-              <Save className="mr-1 size-4" /> {saving ? '保存中...' : '保存'}
+              <Save data-icon="inline-start" /> {saving ? '保存中...' : '保存'}
             </Button>
           </CanRole>
         </div>

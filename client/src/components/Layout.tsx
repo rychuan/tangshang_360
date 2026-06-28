@@ -219,7 +219,7 @@ const LayoutContent: React.FC = () => {
               <SidebarMenuButton size="lg" asChild>
                 <Link to="/">
                   <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-                    <LayoutDashboard className="size-5" />
+                    <LayoutDashboard />
                   </div>
                   <div className="flex flex-col gap-0.5 leading-none">
                     <span className="text-base font-semibold">
@@ -248,7 +248,7 @@ const LayoutContent: React.FC = () => {
                           className="data-[active=true]:border-l-2 data-[active=true]:border-primary data-[active=true]:rounded-l-none"
                         >
                           <Link to={item.path}>
-                            <item.icon className="size-5" />
+                            <item.icon />
                             <span>{item.label}</span>
                           </Link>
                         </SidebarMenuButton>

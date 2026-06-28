@@ -10,6 +10,7 @@ import { Badge } from '@client/src/components/ui/badge';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -227,7 +228,7 @@ const TemplateManagementPage: React.FC = () => {
             size="sm"
             onClick={() => handlePreview(item.id)}
           >
-            <Eye className="size-4 mr-2" />
+            <Eye data-icon="inline-start" />
             预览
           </Button>
           <CanRole roles={['admin', 'hrd']}>
@@ -236,7 +237,7 @@ const TemplateManagementPage: React.FC = () => {
               size="sm"
               onClick={() => handleEdit(item.id)}
             >
-              <Pencil className="size-4 mr-2" />
+              <Pencil data-icon="inline-start" />
               编辑
             </Button>
           </CanRole>
@@ -247,7 +248,7 @@ const TemplateManagementPage: React.FC = () => {
                 size="sm"
                 onClick={() => setDeactivateId(item.id)}
               >
-                <Ban className="size-4 mr-2" />
+                <Ban data-icon="inline-start" />
                 停用
               </Button>
             </CanRole>
@@ -264,7 +265,7 @@ const TemplateManagementPage: React.FC = () => {
         actions={
           <CanRole roles={['admin', 'hrd']}>
             <Button onClick={handleOpenCreate}>
-              <Plus className="size-4 mr-2" />
+              <Plus data-icon="inline-start" />
               新建模板
             </Button>
           </CanRole>
@@ -294,12 +295,14 @@ const TemplateManagementPage: React.FC = () => {
             <SelectValue placeholder="岗位筛选" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">全部岗位</SelectItem>
-            {POSITION_OPTIONS.map((pos: string) => (
-              <SelectItem key={pos} value={pos}>
-                {pos}
-              </SelectItem>
-            ))}
+            <SelectGroup>
+              <SelectItem value="all">全部岗位</SelectItem>
+              {POSITION_OPTIONS.map((pos: string) => (
+                <SelectItem key={pos} value={pos}>
+                  {pos}
+                </SelectItem>
+              ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
         <Select
@@ -313,18 +316,20 @@ const TemplateManagementPage: React.FC = () => {
             <SelectValue placeholder="状态" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">全部</SelectItem>
-            <SelectItem value="active">启用</SelectItem>
-            <SelectItem value="inactive">停用</SelectItem>
+            <SelectGroup>
+              <SelectItem value="all">全部</SelectItem>
+              <SelectItem value="active">启用</SelectItem>
+              <SelectItem value="inactive">停用</SelectItem>
+            </SelectGroup>
           </SelectContent>
         </Select>
         <FilterBarActions>
           <Button variant="secondary" onClick={handleSearch}>
-            <Search className="size-4 mr-2" />
+            <Search data-icon="inline-start" />
             搜索
           </Button>
           <Button variant="outline" onClick={handleReset}>
-            <RotateCcw className="size-4 mr-2" />
+            <RotateCcw data-icon="inline-start" />
             重置
           </Button>
         </FilterBarActions>

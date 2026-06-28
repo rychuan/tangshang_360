@@ -25,6 +25,14 @@ import {
   DialogTrigger,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import {
@@ -78,7 +86,7 @@ const DepartmentManagementTab: React.FC = () => {
       setItems(res?.items ?? []);
       setTree(res.tree);
       setExpanded(new Set(res.tree.map((n: DepartmentTreeNode) => n.id)));
-    } catch {
+    } catch (err) {
       toast.error('加载部门数据失败');
     } finally {
       setLoading(false);
@@ -165,8 +173,8 @@ const DepartmentManagementTab: React.FC = () => {
     const hasChildren = node.children && node.children.length > 0;
     return (
       <React.Fragment key={node.id}>
-        <tr className="border-b hover:bg-muted/50 transition-colors group">
-          <td className="py-3 px-4 align-middle whitespace-nowrap">
+        <TableRow className="group">
+          <TableCell>
             <div
               className="flex items-center gap-2"
               style={{ paddingLeft: depth * 20 }}
@@ -188,14 +196,14 @@ const DepartmentManagementTab: React.FC = () => {
               <Building2 className="size-4 text-muted-foreground" />
               <span className="font-medium">{node.name}</span>
             </div>
-          </td>
-          <td className="py-3 px-4 align-middle whitespace-nowrap text-muted-foreground">
+          </TableCell>
+          <TableCell className="text-muted-foreground">
             {node.parentName || '-'}
-          </td>
-          <td className="py-3 px-4 align-middle whitespace-nowrap text-muted-foreground">
+          </TableCell>
+          <TableCell className="text-muted-foreground">
             {node.headName || '-'}
-          </td>
-          <td className="py-3 px-4 align-middle whitespace-nowrap">
+          </TableCell>
+          <TableCell>
             <button
               className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
               onClick={() => {
@@ -206,29 +214,27 @@ const DepartmentManagementTab: React.FC = () => {
               <Users className="h-3.5 w-3.5" />
               {node.memberCount}
             </button>
-          </td>
-          <td className="py-3 px-4 align-middle whitespace-nowrap">
-            {node.sortOrder}
-          </td>
-          <td className="py-3 px-4 align-middle whitespace-nowrap sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
+          </TableCell>
+          <TableCell>{node.sortOrder}</TableCell>
+          <TableCell className="sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
             <div className="flex items-center gap-1.5">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => handleEdit(node)}
               >
-                <Pencil className="size-4" />
+                <Pencil />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => handleDelete(node)}
               >
-                <Trash2 className="size-4 text-destructive" />
+                <Trash2 className="text-destructive" />
               </Button>
             </div>
-          </td>
-        </tr>
+          </TableCell>
+        </TableRow>
         {isOpen &&
           hasChildren &&
           node.children.map((child) => renderTreeNode(child, depth + 1))}
@@ -259,7 +265,7 @@ const DepartmentManagementTab: React.FC = () => {
                 });
               }}
             >
-              <Plus className="mr-2 size-4" />
+              <Plus data-icon="inline-start" />
               新建部门
             </Button>
           </DialogTrigger>
@@ -348,7 +354,9 @@ const DepartmentManagementTab: React.FC = () => {
         </CardHeader>
         <CardContent className="p-0 sm:p-4">
           {loading ? (
-            <p className="py-8 text-center text-muted-foreground">加载中...</p>
+            <div className="flex items-center justify-center py-12">
+              <Spinner className="size-6" />
+            </div>
           ) : tree.length === 0 ? (
             <div className="py-12">
               <Empty>
@@ -361,32 +369,24 @@ const DepartmentManagementTab: React.FC = () => {
               </Empty>
             </div>
           ) : (
-            <div className="border rounded-lg overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b hover:bg-muted/50 transition-colors">
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
-                      部门名称
-                    </th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
-                      上级部门
-                    </th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
-                      负责人
-                    </th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
-                      成员
-                    </th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
-                      排序
-                    </th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap w-[100px] sticky right-0 bg-background z-20 border-l">
+            <div className="border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>部门名称</TableHead>
+                    <TableHead>上级部门</TableHead>
+                    <TableHead>负责人</TableHead>
+                    <TableHead>成员</TableHead>
+                    <TableHead>排序</TableHead>
+                    <TableHead className="w-[100px] sticky right-0 bg-background z-20 border-l">
                       操作
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>{tree.map((node) => renderTreeNode(node))}</tbody>
-              </table>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tree.map((node) => renderTreeNode(node))}
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>

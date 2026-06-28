@@ -5,6 +5,7 @@ import { logger } from '@lark-apaas/client-toolkit/logger';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   NativeSelect,
   NativeSelectOption,
@@ -110,7 +111,7 @@ const MyAssessmentsPage: React.FC = () => {
           size="sm"
           onClick={() => navigate(`/assessment/${item.id}`)}
         >
-          <Eye className="size-4 mr-2" />
+          <Eye data-icon="inline-start" />
           查看详情
         </Button>
       ),
@@ -261,7 +262,7 @@ const MyAssessmentsPage: React.FC = () => {
         actions={
           <div className="flex items-center gap-1">
             <Button variant="outline" size="icon" onClick={handlePrevYear}>
-              <ChevronLeft className="size-4" />
+              <ChevronLeft />
             </Button>
             <span className="text-base font-semibold min-w-[72px] text-center text-foreground">
               {yearFilter}年
@@ -272,7 +273,7 @@ const MyAssessmentsPage: React.FC = () => {
               onClick={handleNextYear}
               disabled={parseInt(yearFilter, 10) >= new Date().getFullYear()}
             >
-              <ChevronRight className="size-4" />
+              <ChevronRight />
             </Button>
             <Button
               variant="outline"
@@ -316,9 +317,9 @@ const MyAssessmentsPage: React.FC = () => {
       </div>
 
       {summaryError && (
-        <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          汇总数据加载失败：{summaryError}
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>汇总数据加载失败：{summaryError}</AlertDescription>
+        </Alert>
       )}
 
       {/* Trend Chart */}

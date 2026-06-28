@@ -12,6 +12,14 @@ import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { handleApiError } from '@/utils/api-error';
 import * as XLSX from 'xlsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/business-ui/page-header';
 import {
@@ -26,6 +34,12 @@ import MultiSelect, {
   type MultiSelectOption,
 } from '@/components/ui/multi-select';
 import { Spinner } from '@/components/ui/spinner';
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 import {
   ChartContainer,
   ChartTooltip,
@@ -279,7 +293,7 @@ const StatisticsPage: React.FC = () => {
               />
             </div>
             <Button onClick={handleSearch} className="flex items-center gap-1">
-              <SearchIcon className="size-4" />
+              <SearchIcon data-icon="inline-start" />
               查询
             </Button>
             <CanRole roles={['admin', 'hrd', 'dept_head']}>
@@ -289,7 +303,7 @@ const StatisticsPage: React.FC = () => {
                 disabled={exporting}
                 className="flex items-center gap-1"
               >
-                <DownloadIcon className="size-4" />
+                <DownloadIcon data-icon="inline-start" />
                 {exporting ? '导出中...' : '导出'}
               </Button>
             </CanRole>
@@ -462,76 +476,90 @@ const StatisticsPage: React.FC = () => {
               <Spinner className="size-8" />
             </div>
           ) : records.length === 0 ? (
-            <div className="flex items-center justify-center h-64 text-muted-foreground">
-              暂无数据
+            <div className="flex items-center justify-center py-8">
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <BarChart3Icon className="size-6" />
+                  </EmptyMedia>
+                  <EmptyTitle>暂无数据</EmptyTitle>
+                </EmptyHeader>
+              </Empty>
             </div>
           ) : (
             <>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-muted-foreground">
-                      <th className="text-left py-3 px-4 font-medium">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30">
+                      <TableHead className="text-left py-3 px-4 font-medium">
                         绩效周期
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium">员工</th>
-                      <th className="text-left py-3 px-4 font-medium hidden sm:table-cell">
+                      </TableHead>
+                      <TableHead className="text-left py-3 px-4 font-medium">
+                        员工
+                      </TableHead>
+                      <TableHead className="text-left py-3 px-4 font-medium hidden sm:table-cell">
                         部门
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium hidden md:table-cell">
+                      </TableHead>
+                      <TableHead className="text-left py-3 px-4 font-medium hidden md:table-cell">
                         岗位
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium hidden md:table-cell">
+                      </TableHead>
+                      <TableHead className="text-left py-3 px-4 font-medium hidden md:table-cell">
                         上级
-                      </th>
-                      <th className="text-right py-3 px-4 font-medium">总分</th>
-                      <th className="text-center py-3 px-4 font-medium hidden sm:table-cell">
+                      </TableHead>
+                      <TableHead className="text-right py-3 px-4 font-medium">
+                        总分
+                      </TableHead>
+                      <TableHead className="text-center py-3 px-4 font-medium hidden sm:table-cell">
                         等级
-                      </th>
-                      <th className="text-center py-3 px-4 font-medium">
+                      </TableHead>
+                      <TableHead className="text-center py-3 px-4 font-medium">
                         状态
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium hidden lg:table-cell">
+                      </TableHead>
+                      <TableHead className="text-left py-3 px-4 font-medium hidden lg:table-cell">
                         完成时间
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {records.map((r: StatisticsRecordItem) => (
-                      <tr key={r.id} className="border-b hover:bg-muted/50">
-                        <td className="py-3 px-4">{r.period}</td>
-                        <td className="py-3 px-4 font-medium">
+                      <TableRow
+                        key={r.id}
+                        className="border-b hover:bg-muted/50"
+                      >
+                        <TableCell className="py-3 px-4">{r.period}</TableCell>
+                        <TableCell className="py-3 px-4 font-medium">
                           {r.employeeName}
-                        </td>
-                        <td className="py-3 px-4 hidden sm:table-cell text-muted-foreground">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 hidden sm:table-cell text-muted-foreground">
                           {r.department}
-                        </td>
-                        <td className="py-3 px-4 hidden md:table-cell text-muted-foreground">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 hidden md:table-cell text-muted-foreground">
                           {r.position}
-                        </td>
-                        <td className="py-3 px-4 hidden md:table-cell text-muted-foreground">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 hidden md:table-cell text-muted-foreground">
                           {r.supervisorName}
-                        </td>
-                        <td className="py-3 px-4 text-right font-mono">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-right font-mono">
                           {r.totalScore}
-                        </td>
-                        <td className="py-3 px-4 text-center hidden sm:table-cell">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-center hidden sm:table-cell">
                           <GradeBadge grade={r.grade} />
-                        </td>
-                        <td className="py-3 px-4 text-center">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-center">
                           <StatusBadge status={r.status} />
-                        </td>
-                        <td className="py-3 px-4 hidden lg:table-cell text-muted-foreground">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 hidden lg:table-cell text-muted-foreground">
                           {r.completedAt
                             ? new Date(r.completedAt).toLocaleDateString(
                                 'zh-CN',
                               )
                             : '-'}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
               {totalPages > 1 && (
                 <div className="flex items-center justify-between px-4 py-3 border-t">

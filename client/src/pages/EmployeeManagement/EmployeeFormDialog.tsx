@@ -127,9 +127,12 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
         <DialogHeader>
           <DialogTitle>{editingEmployee ? '编辑员工' : '新建员工'}</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div>
-            <Label className="text-xs text-muted-foreground mb-1.5">
+        <div className="flex flex-col gap-4 py-4">
+          <div className="flex flex-col gap-1.5">
+            <Label
+              htmlFor="employee-user"
+              className="text-xs text-muted-foreground"
+            >
               关联用户 *
             </Label>
             {isEditing ? (
@@ -147,10 +150,8 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
             )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1.5">
-                姓名 *
-              </Label>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs text-muted-foreground">姓名 *</Label>
               <Input
                 value={formData.name}
                 readOnly
@@ -158,10 +159,8 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
                 placeholder="选择用户后自动填充"
               />
             </div>
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1.5">
-                岗位 *
-              </Label>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs text-muted-foreground">岗位 *</Label>
               <Select
                 value={formData.position}
                 onValueChange={(v) => setFormData({ ...formData, position: v })}
@@ -180,10 +179,8 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1.5">
-                员工编号
-              </Label>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs text-muted-foreground">员工编号</Label>
               <Input
                 value={formData.employeeNo}
                 onChange={(e) =>
@@ -191,10 +188,8 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
                 }
               />
             </div>
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1.5">
-                职级
-              </Label>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs text-muted-foreground">职级</Label>
               <Input
                 value={formData.title}
                 onChange={(e) =>
@@ -205,10 +200,8 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1.5">
-                角色
-              </Label>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs text-muted-foreground">角色</Label>
               <div className="flex h-10 items-center rounded-md border border-input bg-muted px-3">
                 <span className="text-sm">
                   {formData.role === 'admin'
@@ -226,10 +219,8 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
                 </span>
               </div>
             </div>
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1.5">
-                部门
-              </Label>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs text-muted-foreground">部门</Label>
               <DepartmentTreeSelect
                 value={formData.department}
                 onChange={(name) =>
@@ -240,10 +231,8 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1.5">
-                上级
-              </Label>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs text-muted-foreground">上级</Label>
               <UserSelect
                 value={formData.supervisorId || null}
                 onChange={(v) =>
@@ -252,10 +241,8 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
                 placeholder="不指定则由部门负责人自动填充"
               />
             </div>
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1.5">
-                手机号
-              </Label>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs text-muted-foreground">手机号</Label>
               <Input
                 value={formData.phone}
                 onChange={(e) =>

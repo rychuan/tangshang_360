@@ -133,7 +133,7 @@ const AssessmentDetailPage: React.FC = () => {
             onClick={() => navigate(-1)}
             className="gap-1.5"
           >
-            <ArrowLeft className="size-4" />
+            <ArrowLeft data-icon="inline-start" />
             返回
           </Button>
           <h1 className="text-xl font-semibold">{detail.period}</h1>
@@ -348,11 +348,11 @@ const AssessmentDetailPage: React.FC = () => {
               onClick={handleSaveDraft}
               disabled={submitting}
             >
-              <Save className="size-4 mr-2" />
+              <Save data-icon="inline-start" />
               保存草稿
             </Button>
             <Button onClick={handleSubmit} disabled={submitting}>
-              <Send className="size-4 mr-2" />
+              <Send data-icon="inline-start" />
               提交自评
             </Button>
           </>
@@ -364,11 +364,11 @@ const AssessmentDetailPage: React.FC = () => {
               onClick={handleSaveDraft}
               disabled={submitting}
             >
-              <Save className="size-4 mr-2" />
+              <Save data-icon="inline-start" />
               保存草稿
             </Button>
             <Button onClick={handleSubmit} disabled={submitting}>
-              <Send className="size-4 mr-2" />
+              <Send data-icon="inline-start" />
               提交评分
             </Button>
           </>
@@ -378,7 +378,7 @@ const AssessmentDetailPage: React.FC = () => {
             onClick={() => handleOpenSignDialog('self')}
             disabled={submitting}
           >
-            <PenLine className="size-4 mr-2" />
+            <PenLine data-icon="inline-start" />
             员工签名
           </Button>
         )}
@@ -387,7 +387,7 @@ const AssessmentDetailPage: React.FC = () => {
             onClick={() => handleOpenSignDialog('supervisor')}
             disabled={submitting}
           >
-            <PenLine className="size-4 mr-2" />
+            <PenLine data-icon="inline-start" />
             上级签名
           </Button>
         )}

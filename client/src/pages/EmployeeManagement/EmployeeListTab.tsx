@@ -2,10 +2,15 @@ import React from 'react';
 import type { EmployeeItem } from '@shared/api.interface';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from '@/components/ui/input-group';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -95,14 +100,14 @@ const EmployeeListTab: React.FC = () => {
                 size="sm"
                 onClick={() => dialogs.openBatchBindDialog(selectedRowKeys)}
               >
-                <Link2 className="mr-1 size-3.5 sm:size-4" />
+                <Link2 data-icon="inline-start" />
                 批量绑定
               </Button>
             </CanRole>
           )}
           <CanRole roles={['admin']}>
             <Button size="sm" onClick={dialogs.openCreateDialog}>
-              <Plus className="mr-1.5 size-3.5 sm:size-4" />
+              <Plus data-icon="inline-start" />
               新建员工
             </Button>
           </CanRole>
@@ -113,15 +118,17 @@ const EmployeeListTab: React.FC = () => {
       <Card className="rounded-xl">
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-2 items-end">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-              <Input
-                className="w-40 pl-9 h-9 text-sm"
+            <InputGroup>
+              <InputGroupAddon>
+                <Search className="size-3.5" />
+              </InputGroupAddon>
+              <InputGroupInput
+                className="w-40"
                 placeholder="姓名/编号"
                 value={filters.keyword}
                 onChange={(e) => setters.setKeyword(e.target.value)}
               />
-            </div>
+            </InputGroup>
             <DepartmentTreeSelect
               value={filters.department}
               onChange={(name) => setters.setDepartment(name)}
@@ -142,12 +149,14 @@ const EmployeeListTab: React.FC = () => {
                 <SelectValue placeholder="角色" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">全部</SelectItem>
-                <SelectItem value="admin">管理员</SelectItem>
-                <SelectItem value="hrd">HRD</SelectItem>
-                <SelectItem value="dept_head">部门负责人</SelectItem>
-                <SelectItem value="supervisor">上级</SelectItem>
-                <SelectItem value="employee">员工</SelectItem>
+                <SelectGroup>
+                  <SelectItem value="all">全部</SelectItem>
+                  <SelectItem value="admin">管理员</SelectItem>
+                  <SelectItem value="hrd">HRD</SelectItem>
+                  <SelectItem value="dept_head">部门负责人</SelectItem>
+                  <SelectItem value="supervisor">上级</SelectItem>
+                  <SelectItem value="employee">员工</SelectItem>
+                </SelectGroup>
               </SelectContent>
             </Select>
             <Select
@@ -158,9 +167,11 @@ const EmployeeListTab: React.FC = () => {
                 <SelectValue placeholder="状态" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">全部</SelectItem>
-                <SelectItem value="active">已启用</SelectItem>
-                <SelectItem value="inactive">已禁用</SelectItem>
+                <SelectGroup>
+                  <SelectItem value="all">全部</SelectItem>
+                  <SelectItem value="active">已启用</SelectItem>
+                  <SelectItem value="inactive">已禁用</SelectItem>
+                </SelectGroup>
               </SelectContent>
             </Select>
           </div>

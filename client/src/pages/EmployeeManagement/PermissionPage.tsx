@@ -133,10 +133,10 @@ const PermissionPage: React.FC = () => {
               <div className="px-3 pt-3">
                 <TabsList>
                   <TabsTrigger value="permissions">
-                    <Lock className="size-4" /> 权限配置
+                    <Lock /> 权限配置
                   </TabsTrigger>
                   <TabsTrigger value="members">
-                    <Users className="size-4" /> 成员管理(
+                    <Users /> 成员管理(
                     {getRoleMemberCount(selectedRole)})
                   </TabsTrigger>
                 </TabsList>

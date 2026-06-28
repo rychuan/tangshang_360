@@ -155,7 +155,7 @@ function PageTable<T>({
                   disabled={page <= 1}
                   onClick={() => onPageChange?.(Math.max(1, page - 1))}
                 >
-                  <ChevronLeft className="size-4 mr-2" />
+                  <ChevronLeft data-icon="inline-start" />
                   {'上一页'}
                 </Button>
                 <span className="text-sm text-muted-foreground">
@@ -168,7 +168,7 @@ function PageTable<T>({
                   onClick={() => onPageChange?.(Math.min(totalPages, page + 1))}
                 >
                   {'下一页'}
-                  <ChevronRight className="size-4 ml-2" />
+                  <ChevronRight data-icon="inline-end" />
                 </Button>
               </div>
             </div>
