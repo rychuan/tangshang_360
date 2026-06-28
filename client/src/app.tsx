@@ -4,6 +4,7 @@ import { AuthProvider } from '@lark-apaas/client-toolkit/auth';
 
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import { PermissionsProvider } from './hooks/usePermissions';
 import NotFound from './pages/NotFound/NotFound';
 import HomePage from './pages/HomePage/HomePage';
 import TemplateManagementPage from './pages/TemplateManagement/TemplateManagementPage';
