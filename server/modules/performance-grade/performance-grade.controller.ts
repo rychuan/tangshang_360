@@ -24,7 +24,7 @@ export class PerformanceGradeController {
   constructor(private readonly service: PerformanceGradeService) {}
 
   @CanRole(['admin', 'hrd'])
-  @RequirePermission('permission_management', 'view')
+  @RequirePermission('grade_config', 'view')
   @NeedLogin()
   @Get()
   async list(): Promise<PerformanceGradeListResponse> {
@@ -38,7 +38,7 @@ export class PerformanceGradeController {
   }
 
   @CanRole(['admin', 'hrd'])
-  @RequirePermission('permission_management', 'edit')
+  @RequirePermission('grade_config', 'edit')
   @NeedLogin()
   @Post()
   async create(
@@ -48,7 +48,7 @@ export class PerformanceGradeController {
   }
 
   @CanRole(['admin', 'hrd'])
-  @RequirePermission('permission_management', 'edit')
+  @RequirePermission('grade_config', 'edit')
   @NeedLogin()
   @Put(':id')
   async update(
@@ -59,7 +59,7 @@ export class PerformanceGradeController {
   }
 
   @CanRole(['admin', 'hrd'])
-  @RequirePermission('permission_management', 'edit')
+  @RequirePermission('grade_config', 'edit')
   @NeedLogin()
   @Delete(':id')
   async remove(@Param('id') id: string): Promise<SuccessResponse> {

@@ -23,7 +23,7 @@ export class SystemDictController {
   constructor(private readonly service: SystemDictService) {}
 
   @CanRole(['admin', 'hrd'])
-  @RequirePermission('permission_management', 'view')
+  @RequirePermission('dictionary_config', 'view')
   @Get(':type')
   async list(
     @Param('type') type: string,
@@ -33,7 +33,7 @@ export class SystemDictController {
   }
 
   @CanRole(['admin', 'hrd'])
-  @RequirePermission('permission_management', 'edit')
+  @RequirePermission('dictionary_config', 'edit')
   @NeedLogin()
   @Post(':type')
   async create(
@@ -46,7 +46,7 @@ export class SystemDictController {
   }
 
   @CanRole(['admin', 'hrd'])
-  @RequirePermission('permission_management', 'edit')
+  @RequirePermission('dictionary_config', 'edit')
   @NeedLogin()
   @Put(':type/:id')
   async update(
@@ -60,7 +60,7 @@ export class SystemDictController {
   }
 
   @CanRole(['admin', 'hrd'])
-  @RequirePermission('permission_management', 'edit')
+  @RequirePermission('dictionary_config', 'edit')
   @NeedLogin()
   @Delete(':type/:id')
   async remove(

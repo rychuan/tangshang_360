@@ -94,7 +94,7 @@ const GradeConfigPage: React.FC = () => {
         description="管理绩效分数对应的绩效等级规则"
         actions={
           <CanRole roles={['admin', 'hrd']}>
-            <CanDo resource="permission_management" action="edit">
+            <CanDo resource="grade_config" action="edit">
               <Button onClick={handleOpenCreate}>
                 <Plus data-icon="inline-start" />
                 新建等级
@@ -159,7 +159,7 @@ const GradeConfigPage: React.FC = () => {
                   <TableCell className="py-3 px-4">
                     <div className="flex items-center gap-1">
                       <CanRole roles={['admin', 'hrd']}>
-                        <CanDo resource="permission_management" action="edit">
+                        <CanDo resource="grade_config" action="edit">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -171,7 +171,7 @@ const GradeConfigPage: React.FC = () => {
                         </CanDo>
                       </CanRole>
                       <CanRole roles={['admin', 'hrd']}>
-                        <CanDo resource="permission_management" action="edit">
+                        <CanDo resource="grade_config" action="edit">
                           <Button
                             variant="ghost"
                             size="sm"

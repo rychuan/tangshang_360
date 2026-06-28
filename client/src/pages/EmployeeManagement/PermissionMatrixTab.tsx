@@ -28,7 +28,7 @@ interface PermissionMatrixTabProps {
 }
 
 const RESOURCE_LABELS: Record<PermissionResource, string> = {
-  dashboard: '首页概览',
+  dashboard: '首页',
   my_assessments: '我的绩效',
   employees: '员工管理',
   template_management: '绩效模板管理',
@@ -38,6 +38,8 @@ const RESOURCE_LABELS: Record<PermissionResource, string> = {
   team_performance: '团队绩效',
   organization: '组织架构',
   permission_management: '权限管理',
+  grade_config: '绩效等级配置',
+  dictionary_config: '字段管理',
 };
 
 const ACTION_LABELS: Record<PermissionAction, string> = {
@@ -67,6 +69,8 @@ const PERMISSION_MATRIX: Record<PermissionResource, PermissionAction[]> = {
   team_performance: ['view', 'edit'],
   organization: ['view', 'edit', 'delete'],
   permission_management: ['view', 'edit'],
+  grade_config: ['view', 'edit'],
+  dictionary_config: ['view', 'edit'],
 };
 
 const RESOURCE_ORDER = Object.keys(RESOURCE_LABELS) as PermissionResource[];

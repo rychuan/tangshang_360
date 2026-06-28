@@ -463,11 +463,7 @@ export interface RemindResponse {
 }
 // === Permission Management ===
 export type PermissionAction =
-  | 'view'
-  | 'edit'
-  | 'delete'
-  | 'export'
-  | 'publish';
+  'view' | 'edit' | 'delete' | 'export' | 'publish';
 export type PermissionResource =
   | 'dashboard'
   | 'my_assessments'
@@ -478,7 +474,9 @@ export type PermissionResource =
   | 'publish_management'
   | 'statistics'
   | 'team_performance'
-  | 'permission_management';
+  | 'permission_management'
+  | 'grade_config'
+  | 'dictionary_config';
 export interface PermissionItem {
   resource: PermissionResource;
   actions: PermissionAction[];
@@ -495,6 +493,8 @@ export const DEFAULT_PERMISSIONS: Record<string, PermissionItem[]> = {
     { resource: 'team_performance', actions: ['view'] },
     { resource: 'organization', actions: ['view', 'edit', 'delete'] },
     { resource: 'permission_management', actions: ['view', 'edit'] },
+    { resource: 'grade_config', actions: ['view', 'edit'] },
+    { resource: 'dictionary_config', actions: ['view', 'edit'] },
   ],
   hrd: [
     { resource: 'dashboard', actions: ['view'] },
@@ -507,6 +507,8 @@ export const DEFAULT_PERMISSIONS: Record<string, PermissionItem[]> = {
     { resource: 'team_performance', actions: ['view'] },
     { resource: 'organization', actions: ['view', 'edit'] },
     { resource: 'permission_management', actions: ['view'] },
+    { resource: 'grade_config', actions: ['view', 'edit'] },
+    { resource: 'dictionary_config', actions: ['view', 'edit'] },
   ],
   dept_head: [
     { resource: 'dashboard', actions: ['view'] },
