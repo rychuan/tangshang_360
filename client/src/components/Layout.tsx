@@ -34,6 +34,7 @@ import {
   SunIcon,
   MoonIcon,
 } from 'lucide-react';
+import { UserDisplay } from '@/components/business-ui/user-display';
 import { Separator } from '@/components/ui/separator';
 import {
   Breadcrumb,
@@ -65,7 +66,7 @@ const ADMIN_HRD_ROLES = ['admin', 'hrd'];
 const navGroups: NavGroup[] = [
   {
     label: '工作台',
-    icon: LayoutDashboard,
+    // icon: LayoutDashboard,
     items: [
       {
         label: '首页',
@@ -92,7 +93,7 @@ const navGroups: NavGroup[] = [
   },
   {
     label: '绩效管理',
-    icon: FileText,
+    // icon: FileText,
     items: [
       {
         label: '模板管理',
@@ -126,7 +127,7 @@ const navGroups: NavGroup[] = [
   },
   {
     label: '系统设置',
-    icon: Shield,
+    // icon: Shield,
     items: [
       {
         label: '员工管理',
@@ -279,26 +280,21 @@ const LayoutContent: React.FC = () => {
 
         {/* Footer — user */}
         <SidebarFooter>
+          <div className="px-2 py-1">
+            <UserDisplay userId={userInfo?.user_id} size="small" showLabel />
+          </div>
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                size="lg"
                 onClick={() => {
                   const isDark =
                     document.documentElement.classList.toggle('dark');
                   localStorage.setItem('theme', isDark ? 'dark' : 'light');
                 }}
               >
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-accent text-sidebar-accent-foreground text-sm font-medium">
-                  {userInfo?.name?.[0] || 'U'}
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">
-                    {userInfo?.name || '用户'}
-                  </span>
-                </div>
-                <MoonIcon className="ml-auto size-4 dark:hidden" />
-                <SunIcon className="ml-auto size-4 hidden dark:block" />
+                <MoonIcon className="size-4 dark:hidden" />
+                <SunIcon className="size-4 hidden dark:block" />
+                <span>切换主题</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
