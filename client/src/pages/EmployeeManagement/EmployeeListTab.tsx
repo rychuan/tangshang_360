@@ -110,18 +110,14 @@ const EmployeeListTab: React.FC = () => {
       </div>
 
       {/* 筛选条件 */}
-      <Card>
-        <CardContent className="p-3 sm:p-4">
-          <div className="flex items-center gap-2 mb-3 text-xs text-muted-foreground">
-            <Filter className="size-3.5" />
-            筛选条件
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2 sm:gap-3">
+      <Card className="rounded-xl">
+        <CardContent className="p-4">
+          <div className="flex flex-wrap gap-2 items-end">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 sm:size-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
               <Input
-                className="w-full pl-9 h-9 text-sm"
-                placeholder="搜索姓名 / 编号..."
+                className="w-40 pl-9 h-9 text-sm"
+                placeholder="姓名/编号"
                 value={filters.keyword}
                 onChange={(e) => setters.setKeyword(e.target.value)}
               />
@@ -130,22 +126,23 @@ const EmployeeListTab: React.FC = () => {
               value={filters.department}
               onChange={(name) => setters.setDepartment(name)}
               placeholder="全部部门"
+              className="w-36"
             />
             <PositionMultiSelect
               positions={positions}
               value={filters.positions}
               onChange={(v) => setters.setPositions(v)}
-              className="w-full"
+              className="w-36"
             />
             <Select
               value={filters.role || 'all'}
               onValueChange={(v) => setters.setRole(v === 'all' ? '' : v)}
             >
-              <SelectTrigger className="w-full h-9 text-sm">
+              <SelectTrigger className="w-28 h-9 text-sm">
                 <SelectValue placeholder="角色" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">全部角色</SelectItem>
+                <SelectItem value="all">全部</SelectItem>
                 <SelectItem value="admin">管理员</SelectItem>
                 <SelectItem value="hrd">HRD</SelectItem>
                 <SelectItem value="dept_head">部门负责人</SelectItem>
@@ -157,11 +154,11 @@ const EmployeeListTab: React.FC = () => {
               value={filters.status || 'all'}
               onValueChange={(v) => setters.setStatus(v === 'all' ? '' : v)}
             >
-              <SelectTrigger className="w-full h-9 text-sm">
+              <SelectTrigger className="w-24 h-9 text-sm">
                 <SelectValue placeholder="状态" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">全部状态</SelectItem>
+                <SelectItem value="all">全部</SelectItem>
                 <SelectItem value="active">已启用</SelectItem>
                 <SelectItem value="inactive">已禁用</SelectItem>
               </SelectContent>
