@@ -642,8 +642,9 @@ export class AssessmentOperationService {
             eq(assessmentInstance.id, id),
             sql`${assessmentInstance.selfSignName} IS NULL`,
           ),
-        );
-      if (selfResult.rowCount === 0) {
+        )
+        .returning();
+      if (selfResult.length === 0) {
         throw new BadRequestException('本人签名已被他人抢先提交');
       }
     } else {
@@ -659,8 +660,9 @@ export class AssessmentOperationService {
             eq(assessmentInstance.id, id),
             sql`${assessmentInstance.supervisorSignName} IS NULL`,
           ),
-        );
-      if (supResult.rowCount === 0) {
+        )
+        .returning();
+      if (supResult.length === 0) {
         throw new BadRequestException('上级签名已被他人抢先提交');
       }
     }
