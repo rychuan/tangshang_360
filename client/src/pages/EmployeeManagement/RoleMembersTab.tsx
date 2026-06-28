@@ -6,6 +6,7 @@ import type {
   MemberMutationData,
 } from '@shared/api.interface';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
+import { CanDo } from '@/hooks/usePermissions';
 import { UserDisplay } from '@/components/business-ui/user-display';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -48,7 +49,8 @@ const buildRemovePayload = (keys: Set<string>): MemberMutationData => {
   });
   if (userIds.length) payload.userList = userIds.map((id) => ({ userID: id }));
   if (deptIds.length) payload.departmentList = deptIds.map((id) => ({ id }));
-  if (chatIds.length) payload.groupChatList = chatIds.map((id) => ({ chatID: id }));
+  if (chatIds.length)
+    payload.groupChatList = chatIds.map((id) => ({ chatID: id }));
   return payload;
 };
 
@@ -83,27 +85,34 @@ const MemberRow: React.FC<MemberRowProps> = ({
 }) => (
   <div
     className={`flex items-center gap-3 rounded-lg border px-3 py-2 transition-colors ${
-      selected ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/40'
+      selected
+        ? 'border-primary bg-primary/5'
+        : 'border-border hover:bg-muted/40'
     }`}
   >
     <Checkbox checked={selected} onCheckedChange={onToggle} />
     {content}
     <CanRole roles={['admin']}>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-7 shrink-0"
-        title="移除成员"
-        disabled={removing}
-        onClick={onRemove}
-      >
-        <UserX className="h-3.5 w-3.5" />
-      </Button>
+      <CanDo resource="permission_management" action="edit">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-7 shrink-0"
+          title="移除成员"
+          disabled={removing}
+          onClick={onRemove}
+        >
+          <UserX className="h-3.5 w-3.5" />
+        </Button>
+      </CanDo>
     </CanRole>
   </div>
 );
 
-const RoleMembersTab: React.FC<RoleMembersTabProps> = ({ role, onMembersChange }) => {
+const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
+  role,
+  onMembersChange,
+}) => {
   const [memberData, setMemberData] = useState<RoleMemberDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -140,7 +149,9 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({ role, onMembersChange }
     if (keys.size === 0 || !role.bizID) return;
     setRemoving(true);
     try {
-      await roleManager.removeMembers(role.bizID, { members: buildRemovePayload(keys) });
+      await roleManager.removeMembers(role.bizID, {
+        members: buildRemovePayload(keys),
+      });
       toast.success(`已移除 ${keys.size} 个成员`);
       setSelected(new Set());
       await fetchMembers(role.bizID);
@@ -178,20 +189,24 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({ role, onMembersChange }
         </div>
         <div className="flex gap-2">
           <CanRole roles={['admin']}>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={selected.size === 0 || removing}
-              onClick={() => handleRemove(selected)}
-            >
-              <UserX className="mr-1 size-4" /> 批量移除
-              {selected.size > 0 ? ` (${selected.size})` : ''}
-            </Button>
+            <CanDo resource="permission_management" action="edit">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={selected.size === 0 || removing}
+                onClick={() => handleRemove(selected)}
+              >
+                <UserX className="mr-1 size-4" /> 批量移除
+                {selected.size > 0 ? ` (${selected.size})` : ''}
+              </Button>
+            </CanDo>
           </CanRole>
           <CanRole roles={['admin']}>
-            <Button size="sm" onClick={() => setAddOpen(true)}>
-              <UserPlus className="mr-1 size-4" /> 添加成员
-            </Button>
+            <CanDo resource="permission_management" action="edit">
+              <Button size="sm" onClick={() => setAddOpen(true)}>
+                <UserPlus className="mr-1 size-4" /> 添加成员
+              </Button>
+            </CanDo>
           </CanRole>
         </div>
       </div>
@@ -214,7 +229,11 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({ role, onMembersChange }
         ) : (
           <div className="flex flex-col gap-4 p-4">
             {users.length > 0 && (
-              <MemberGroup title="用户" icon={<UserPlus className="size-4" />} count={users.length}>
+              <MemberGroup
+                title="用户"
+                icon={<UserPlus className="size-4" />}
+                count={users.length}
+              >
                 {users.map((u) => {
                   const id = u.userID ?? '';
                   const key = memberKey('user', id);
@@ -230,7 +249,9 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({ role, onMembersChange }
                           {id ? (
                             <UserDisplay value={id} size="small" />
                           ) : (
-                            <span className="text-sm">{i18nText(u.name) || '未知用户'}</span>
+                            <span className="text-sm">
+                              {i18nText(u.name) || '未知用户'}
+                            </span>
                           )}
                           {u.department?.name ? (
                             <span className="text-xs text-muted-foreground">
@@ -245,7 +266,11 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({ role, onMembersChange }
               </MemberGroup>
             )}
             {depts.length > 0 && (
-              <MemberGroup title="部门" icon={<Building2 className="size-4" />} count={depts.length}>
+              <MemberGroup
+                title="部门"
+                icon={<Building2 className="size-4" />}
+                count={depts.length}
+              >
                 {depts.map((d) => {
                   const id = String(d.id ?? '');
                   const key = memberKey('dept', id);
@@ -259,7 +284,9 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({ role, onMembersChange }
                       content={
                         <div className="flex flex-1 items-center gap-2">
                           <Building2 className="size-4 text-muted-foreground" />
-                          <span className="text-sm">{i18nText(d.name) || id || '未知部门'}</span>
+                          <span className="text-sm">
+                            {i18nText(d.name) || id || '未知部门'}
+                          </span>
                         </div>
                       }
                     />
@@ -268,7 +295,11 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({ role, onMembersChange }
               </MemberGroup>
             )}
             {chats.length > 0 && (
-              <MemberGroup title="群组" icon={<Users className="size-4" />} count={chats.length}>
+              <MemberGroup
+                title="群组"
+                icon={<Users className="size-4" />}
+                count={chats.length}
+              >
                 {chats.map((c) => {
                   const id = String(c.chatID ?? '');
                   const key = memberKey('chat', id);
@@ -282,7 +313,9 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({ role, onMembersChange }
                       content={
                         <div className="flex flex-1 items-center gap-2">
                           <Users className="size-4 text-muted-foreground" />
-                          <span className="text-sm">{i18nText(c.name) || id || '未知群组'}</span>
+                          <span className="text-sm">
+                            {i18nText(c.name) || id || '未知群组'}
+                          </span>
                         </div>
                       }
                     />

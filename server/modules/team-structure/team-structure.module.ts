@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TeamStructureController } from './team-structure.controller';
 import { TeamStructureService } from './team-structure.service';
-import { EmployeeSnapshotModule } from '../employee-snapshot/employee-snapshot.module';
+import { EmployeeManagementModule } from '../employee-management/employee-management.module';
 
 @Module({
-  imports: [EmployeeSnapshotModule],
+  imports: [EmployeeManagementModule],
   controllers: [TeamStructureController],
   providers: [TeamStructureService],
   exports: [TeamStructureService],

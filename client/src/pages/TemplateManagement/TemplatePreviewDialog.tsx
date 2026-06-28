@@ -4,16 +4,9 @@ import type {
   AssessmentDimensionDef,
   AssessmentTemplateDetail,
 } from '@shared/api.interface';
-import {
-  Dialog,
-  DialogContent,
-} from '@client/src/components/ui/dialog';
+import { Dialog, DialogContent } from '@client/src/components/ui/dialog';
 import { Badge } from '@client/src/components/ui/badge';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from '@client/src/components/ui/card';
+import { Card, CardContent, CardHeader } from '@client/src/components/ui/card';
 
 interface TemplatePreviewDialogProps {
   open: boolean;
@@ -37,7 +30,7 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
             <div className="flex flex-wrap gap-2 mt-2">
               <Badge variant="secondary">{template.position}</Badge>
               <Badge variant="outline">
-                {template.type === 'monthly' ? '月度考核' : '试用期考核'}
+                {template.type === 'monthly' ? '月度绩效' : '试用期绩效'}
               </Badge>
               <Badge variant={template.isActive ? 'default' : 'secondary'}>
                 {template.isActive ? '启用' : '已停用'}
@@ -51,9 +44,7 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <h3 className="text-lg font-semibold">{dim.name}</h3>
-                    <Badge variant="secondary">
-                      权重 {dim.weight}%
-                    </Badge>
+                    <Badge variant="secondary">权重 {dim.weight}%</Badge>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -80,14 +71,8 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
                       </thead>
                       <tbody>
                         {dim.indicators.map(
-                          (
-                            ind: AssessmentIndicatorDef,
-                            indIdx: number,
-                          ) => (
-                            <tr
-                              key={ind.id || indIdx}
-                              className="border-b"
-                            >
+                          (ind: AssessmentIndicatorDef, indIdx: number) => (
+                            <tr key={ind.id || indIdx} className="border-b">
                               <td className="py-3 px-2 font-medium">
                                 {ind.content}
                               </td>

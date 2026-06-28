@@ -33,19 +33,12 @@ const SignDialog: React.FC<SignDialogProps> = ({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {signType === 'self'
-              ? '本人签名确认'
-              : '上级签名确认'}
+            {signType === 'self' ? '本人签名确认' : '上级签名确认'}
           </DialogTitle>
-          <DialogDescription>
-            请在下方区域手写签名
-          </DialogDescription>
+          <DialogDescription>请在下方区域手写签名</DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4 pt-4">
-          <SignaturePad
-            onChange={setSignImage}
-            disabled={loading}
-          />
+          <SignaturePad onChange={setSignImage} disabled={loading} />
           <div className="flex justify-end gap-3">
             <Button
               variant="outline"
@@ -54,10 +47,7 @@ const SignDialog: React.FC<SignDialogProps> = ({
             >
               取消
             </Button>
-            <Button
-              onClick={onConfirm}
-              disabled={loading || !signImage}
-            >
+            <Button onClick={onConfirm} disabled={loading || !signImage}>
               确认签名
             </Button>
           </div>

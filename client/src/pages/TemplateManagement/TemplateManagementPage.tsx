@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Plus, Eye, Pencil, Ban, Search, RotateCcw } from 'lucide-react';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
+import { CanDo } from '@/hooks/usePermissions';
 import { Button } from '@client/src/components/ui/button';
 import { handleApiError } from '@client/src/utils/api-error';
 import { Input } from '@client/src/components/ui/input';
@@ -10,11 +11,11 @@ import { Badge } from '@client/src/components/ui/badge';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@client/src/components/ui/select';
-
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +26,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@client/src/components/ui/alert-dialog';
+import { PageHeader } from '@/components/business-ui/page-header';
+import {
+  FilterBar,
+  FilterBarActions,
+} from '@/components/business-ui/filter-bar';
+import {
+  PageTable,
+  PageTableColumn,
+} from '@/components/business-ui/page-table';
 import TemplateFormDialog from './TemplateFormDialog';
 import TemplatePreviewDialog from './TemplatePreviewDialog';
 import * as assessmentTemplateApi from '@client/src/api/assessment-template';
@@ -80,8 +90,7 @@ const TemplateManagementPage: React.FC = () => {
       setItems(res?.items ?? []);
       setTotal(res.total);
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : '加载失败';
+      const msg = err instanceof Error ? err.message : '加载失败';
       logger.error('fetchList error:', msg);
       handleApiError(err);
     } finally {
@@ -183,19 +192,94 @@ const TemplateManagementPage: React.FC = () => {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   };
 
+  const templateColumns: PageTableColumn<AssessmentTemplateItem>[] = [
+    { key: 'name', header: '模板名称', render: (item) => item.name },
+    { key: 'position', header: '适用岗位', render: (item) => item.position },
+    {
+      key: 'type',
+      header: '绩效类型',
+      render: (item) => (
+        <Badge variant="outline">
+          {item.type === 'monthly' ? '月度绩效' : '试用期绩效'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'status',
+      header: '状态',
+      render: (item) =>
+        item.isActive ? (
+          <Badge variant="default">启用</Badge>
+        ) : (
+          <Badge variant="secondary">停用</Badge>
+        ),
+    },
+    {
+      key: 'createdAt',
+      header: '创建时间',
+      render: (item) => formatCreatedAt(item.createdAt),
+    },
+    {
+      key: 'actions',
+      header: '操作',
+      render: (item) => (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handlePreview(item.id)}
+          >
+            <Eye data-icon="inline-start" />
+            预览
+          </Button>
+          <CanRole roles={['admin', 'hrd']}>
+            <CanDo resource="template_management" action="edit">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleEdit(item.id)}
+              >
+                <Pencil data-icon="inline-start" />
+                编辑
+              </Button>
+            </CanDo>
+          </CanRole>
+          {item.isActive && (
+            <CanRole roles={['admin', 'hrd']}>
+              <CanDo resource="template_management" action="delete">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setDeactivateId(item.id)}
+                >
+                  <Ban data-icon="inline-start" />
+                  停用
+                </Button>
+              </CanDo>
+            </CanRole>
+          )}
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">考核模板管理</h1>
-        <CanRole roles={['admin', 'hrd']}>
-          <Button onClick={handleOpenCreate}>
-            <Plus className="size-4 mr-2" />
-            新建模板
-          </Button>
-        </CanRole>
-      </div>
+      <PageHeader
+        title="绩效模板管理"
+        actions={
+          <CanRole roles={['admin', 'hrd']}>
+            <CanDo resource="template_management" action="edit">
+              <Button onClick={handleOpenCreate}>
+                <Plus data-icon="inline-start" />
+                新建模板
+              </Button>
+            </CanDo>
+          </CanRole>
+        }
+      />
 
-      <div className="flex flex-wrap items-center gap-3" data-ai-section-type="card-list">
+      <FilterBar data-ai-section-type="card-list">
         <Input
           placeholder="搜索模板名称..."
           value={keyword}
@@ -218,12 +302,14 @@ const TemplateManagementPage: React.FC = () => {
             <SelectValue placeholder="岗位筛选" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">全部岗位</SelectItem>
-            {POSITION_OPTIONS.map((pos: string) => (
-              <SelectItem key={pos} value={pos}>
-                {pos}
-              </SelectItem>
-            ))}
+            <SelectGroup>
+              <SelectItem value="all">全部岗位</SelectItem>
+              {POSITION_OPTIONS.map((pos: string) => (
+                <SelectItem key={pos} value={pos}>
+                  {pos}
+                </SelectItem>
+              ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
         <Select
@@ -237,88 +323,35 @@ const TemplateManagementPage: React.FC = () => {
             <SelectValue placeholder="状态" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">全部</SelectItem>
-            <SelectItem value="active">启用</SelectItem>
-            <SelectItem value="inactive">停用</SelectItem>
+            <SelectGroup>
+              <SelectItem value="all">全部</SelectItem>
+              <SelectItem value="active">启用</SelectItem>
+              <SelectItem value="inactive">停用</SelectItem>
+            </SelectGroup>
           </SelectContent>
         </Select>
-        <Button variant="secondary" onClick={handleSearch}>
-          <Search className="size-4 mr-1" />
-          搜索
-        </Button>
-        <Button variant="outline" onClick={handleReset}>
-          <RotateCcw className="size-4 mr-1" />
-          重置
-        </Button>
-      </div>
+        <FilterBarActions>
+          <Button variant="secondary" onClick={handleSearch}>
+            <Search data-icon="inline-start" />
+            搜索
+          </Button>
+          <Button variant="outline" onClick={handleReset}>
+            <RotateCcw data-icon="inline-start" />
+            重置
+          </Button>
+        </FilterBarActions>
+      </FilterBar>
 
-      <div className="overflow-hidden rounded-lg border p-[0px_12px_0px_12px]">
-        {loading ? (
-          <div className="flex items-center justify-center h-32 text-muted-foreground">加载中...</div>
-        ) : items.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-muted-foreground">暂无数据</div>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-muted-foreground">
-                    <th className="py-3 pr-4 font-medium text-left">模板名称</th>
-                    <th className="py-3 pr-4 font-medium text-left">适用岗位</th>
-                    <th className="py-3 pr-4 font-medium text-left">考核类型</th>
-                    <th className="py-3 pr-4 font-medium text-left">状态</th>
-                    <th className="py-3 pr-4 font-medium text-left">创建时间</th>
-                    <th className="py-3 pr-4 font-medium text-left">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((item: AssessmentTemplateItem) => (
-                    <tr key={item.id} className="border-b hover:bg-muted/50">
-                      <td className="py-3 pr-4">{item.name}</td>
-                      <td className="py-3 pr-4">{item.position}</td>
-                      <td className="py-3 pr-4">
-                        <Badge variant="outline">{item.type === 'monthly' ? '月度考核' : '试用期考核'}</Badge>
-                      </td>
-                      <td className="py-3 pr-4">
-                        {item.isActive ? <Badge variant="default">启用</Badge> : <Badge variant="secondary">停用</Badge>}
-                      </td>
-                      <td className="py-3 pr-4">{formatCreatedAt(item.createdAt)}</td>
-                      <td className="py-3 pr-4">
-                        <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => handlePreview(item.id)}>
-                            <Eye className="size-4 mr-1" />预览
-                          </Button>
-                          <CanRole roles={['admin', 'hrd']}>
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(item.id)}>
-                              <Pencil className="size-4 mr-1" />编辑
-                            </Button>
-                          </CanRole>
-                          {item.isActive && (
-                            <CanRole roles={['admin', 'hrd']}>
-                              <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setDeactivateId(item.id)}>
-                                <Ban className="size-4 mr-1" />停用
-                              </Button>
-                            </CanRole>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t">
-                <span className="text-sm text-muted-foreground">共 {total} 条</span>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p: number) => Math.max(1, p - 1))}>上一页</Button>
-                  <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p: number) => Math.min(totalPages, p + 1))}>下一页</Button>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+      <PageTable
+        columns={templateColumns}
+        data={items}
+        loading={loading}
+        emptyMessage="暂无数据"
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        onPageChange={setPage}
+      />
 
       <TemplateFormDialog
         open={formOpen}
@@ -343,7 +376,7 @@ const TemplateManagementPage: React.FC = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>确认停用</AlertDialogTitle>
             <AlertDialogDescription>
-              停用后该模板将不再用于新的考核，但已发布的考核不受影响。确认停用？
+              停用后该模板将不再用于新的绩效，但已发布的绩效不受影响。确认停用？
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

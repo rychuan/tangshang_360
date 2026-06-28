@@ -1,8 +1,9 @@
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { Module } from '@nestjs/common';
 import { PlatformModule } from '@lark-apaas/fullstack-nestjs-core';
 
 import { GlobalExceptionFilter } from './common/filters/exception.filter';
+import { PermissionsGuard } from './common/guards/permissions.guard';
 import { AssessmentTemplateModule } from './modules/assessment-template/assessment-template.module';
 import { TeamStructureModule } from './modules/team-structure/team-structure.module';
 import { AssessmentPublishModule } from './modules/assessment-publish/assessment-publish.module';
@@ -12,6 +13,7 @@ import { AssessmentDashboardModule } from './modules/assessment-dashboard/assess
 import { MyAssessmentModule } from './modules/my-assessment/my-assessment.module';
 import { TeamPerformanceModule } from './modules/team-performance/team-performance.module';
 import { DepartmentModule } from './modules/department/department.module';
+import { SystemDictModule } from './modules/system-dict/system-dict.module';
 import { EmployeeManagementModule } from './modules/employee-management/employee-management.module';
 import { RoleManagerModule } from './modules/role-manager/role-manager.module';
 import { PerformanceGradeModule } from './modules/performance-grade/performance-grade.module';
@@ -32,6 +34,7 @@ import { ViewModule } from './modules/view/view.module';
     MyAssessmentModule,
     TeamPerformanceModule,
     DepartmentModule,
+    SystemDictModule,
     EmployeeManagementModule,
     RoleManagerModule,
     PerformanceGradeModule,
@@ -46,6 +49,10 @@ import { ViewModule } from './modules/view/view.module';
     {
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: PermissionsGuard,
     },
   ],
 })

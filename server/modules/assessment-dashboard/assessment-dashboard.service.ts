@@ -3,7 +3,9 @@ import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { assessmentInstance, employee } from '@server/database/schema';
+import { assessmentInstance } from '@server/database/schema';
+import { RoleManagerService } from '../role-manager/role-manager.service';
+import { EmployeeRepository } from '../employee-management/employee.repository';
 import { eq, and, or, desc, count, avg, sql, isNull } from 'drizzle-orm';
 import type {
   DashboardTodosResponse,
@@ -16,33 +18,35 @@ export class AssessmentDashboardService {
 
   constructor(
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
+    private readonly roleManagerService: RoleManagerService,
+    private readonly employeeRepo: EmployeeRepository,
   ) {}
 
   async todos(userId: string): Promise<DashboardTodosResponse> {
+    const subIds = await this.employeeRepo.findSubordinateIds(userId);
+
+    const employeeCond = sql`(${assessmentInstance.employeeId}).user_id = ${userId}`;
+    const supervisorCond =
+      subIds.length > 0
+        ? buildEmployeeIdInCondition(assessmentInstance.employeeId, subIds)
+        : sql`FALSE`;
+
     const instances = await this.db
       .select({
         id: assessmentInstance.id,
         period: assessmentInstance.period,
         status: assessmentInstance.status,
-        employeeId: assessmentInstance.employeeId,
-        supervisorId: assessmentInstance.supervisorId,
       })
       .from(assessmentInstance)
       .where(
         or(
+          and(employeeCond, eq(assessmentInstance.status, 'self_review')),
           and(
-            sql`(${assessmentInstance.employeeId}).user_id = ${userId}`,
-            eq(assessmentInstance.status, 'self_review'),
-          ),
-          and(
-            sql`(${assessmentInstance.supervisorId}).user_id = ${userId}`,
+            supervisorCond,
             eq(assessmentInstance.status, 'supervisor_review'),
           ),
           and(
-            or(
-              sql`(${assessmentInstance.employeeId}).user_id = ${userId}`,
-              sql`(${assessmentInstance.supervisorId}).user_id = ${userId}`,
-            ),
+            or(employeeCond, supervisorCond),
             eq(assessmentInstance.status, 'pending_sign'),
           ),
         ),
@@ -51,18 +55,12 @@ export class AssessmentDashboardService {
 
     const items: DashboardTodosResponse['items'] = [];
     for (const inst of instances) {
-      const isEmployee =
-        inst.employeeId === userId && inst.status === 'self_review';
-      const isSupervisor =
-        inst.supervisorId === userId && inst.status === 'supervisor_review';
-      const isPendingSign = inst.status === 'pending_sign';
-
       let type: 'self_review' | 'supervisor_review' | 'sign';
-      if (isEmployee) {
+      if (inst.status === 'self_review') {
         type = 'self_review';
-      } else if (isSupervisor) {
+      } else if (inst.status === 'supervisor_review') {
         type = 'supervisor_review';
-      } else if (isPendingSign) {
+      } else if (inst.status === 'pending_sign') {
         type = 'sign';
       } else {
         continue;
@@ -100,11 +98,14 @@ export class AssessmentDashboardService {
       const subIds = await this.getSubordinateIds(userId);
       if (subIds.length === 0) {
         // 没有下属也 fallback 到个人数据
-        const personalPending = this.buildPersonalPendingWhere(userId);
+        const personalPending = await this.buildPersonalPendingWhere(userId);
         const personalCompleted = this.buildPersonalCompletedWhere(userId);
         return this.queryOverview(userId, personalPending, personalCompleted);
       }
-      const empInCond = buildEmployeeIdInCondition(assessmentInstance.employeeId, subIds);
+      const empInCond = buildEmployeeIdInCondition(
+        assessmentInstance.employeeId,
+        subIds,
+      );
       pendingWhere = and(
         empInCond,
         or(
@@ -119,7 +120,7 @@ export class AssessmentDashboardService {
       );
     } else {
       // 普通员工：个人数据
-      const personalPending = this.buildPersonalPendingWhere(userId);
+      const personalPending = await this.buildPersonalPendingWhere(userId);
       const personalCompleted = this.buildPersonalCompletedWhere(userId);
       return this.queryOverview(userId, personalPending, personalCompleted);
     }
@@ -169,12 +170,10 @@ export class AssessmentDashboardService {
       .groupBy(assessmentInstance.period)
       .orderBy(desc(assessmentInstance.period))
       .limit(6);
-    const trend = trendRows
-      .reverse()
-      .map((row) => ({
-        month: row.period,
-        score: row.avgVal ? Math.round(Number(row.avgVal) * 100) / 100 : 0,
-      }));
+    const trend = trendRows.reverse().map((row) => ({
+      month: row.period,
+      score: row.avgVal ? Math.round(Number(row.avgVal) * 100) / 100 : 0,
+    }));
 
     const shortcuts = await this.buildShortcuts(userId, role);
 
@@ -193,21 +192,20 @@ export class AssessmentDashboardService {
     };
   }
 
-  private buildPersonalPendingWhere(userId: string) {
+  private async buildPersonalPendingWhere(userId: string) {
+    const subIds = await this.employeeRepo.findSubordinateIds(userId);
+
+    const employeeCond = sql`(${assessmentInstance.employeeId}).user_id = ${userId}`;
+    const supervisorCond =
+      subIds.length > 0
+        ? buildEmployeeIdInCondition(assessmentInstance.employeeId, subIds)
+        : sql`FALSE`;
+
     return or(
+      and(employeeCond, eq(assessmentInstance.status, 'self_review')),
+      and(supervisorCond, eq(assessmentInstance.status, 'supervisor_review')),
       and(
-        sql`(${assessmentInstance.employeeId}).user_id = ${userId}`,
-        eq(assessmentInstance.status, 'self_review'),
-      ),
-      and(
-        sql`(${assessmentInstance.supervisorId}).user_id = ${userId}`,
-        eq(assessmentInstance.status, 'supervisor_review'),
-      ),
-      and(
-        or(
-          sql`(${assessmentInstance.employeeId}).user_id = ${userId}`,
-          sql`(${assessmentInstance.supervisorId}).user_id = ${userId}`,
-        ),
+        or(employeeCond, supervisorCond),
         eq(assessmentInstance.status, 'pending_sign'),
       ),
     );
@@ -270,12 +268,10 @@ export class AssessmentDashboardService {
       .groupBy(assessmentInstance.period)
       .orderBy(desc(assessmentInstance.period))
       .limit(6);
-    const trend = trendRows
-      .reverse()
-      .map((row) => ({
-        month: row.period,
-        score: row.avgVal ? Math.round(Number(row.avgVal) * 100) / 100 : 0,
-      }));
+    const trend = trendRows.reverse().map((row) => ({
+      month: row.period,
+      score: row.avgVal ? Math.round(Number(row.avgVal) * 100) / 100 : 0,
+    }));
 
     const shortcuts = await this.buildShortcuts(userId, 'employee');
 
@@ -294,41 +290,37 @@ export class AssessmentDashboardService {
     };
   }
 
-  private async getUserRole(userId: string): Promise<{ role: 'employee' | 'supervisor' | 'hrd'; hasSubordinates: boolean }> {
-    // 优先使用显式 role 字段判定
-    const empRows = await this.db
-      .select({ role: employee.role })
-      .from(employee)
-      .where(and(sql`(${employee.id}).user_id = ${userId}`, isNull(employee.deletedAt)))
-      .limit(1);
+  private async getUserRole(userId: string): Promise<{
+    role: 'employee' | 'supervisor' | 'hrd';
+    hasSubordinates: boolean;
+  }> {
+    const subIds = await this.employeeRepo.findSubordinateIds(userId);
+    const hasSubordinates = subIds.length > 0;
 
-    if (empRows.length === 0) {
-      return { role: 'employee', hasSubordinates: false };
+    try {
+      const roles = await this.roleManagerService.getUserRoles(userId);
+      if (
+        roles.includes('admin') ||
+        roles.includes('hrd') ||
+        roles.includes('dept_head')
+      ) {
+        return { role: 'hrd', hasSubordinates };
+      }
+      if (roles.includes('supervisor') || hasSubordinates) {
+        return { role: 'supervisor', hasSubordinates };
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Failed to get roles from AuthorizationSDK for ${userId}`,
+      );
     }
 
-    // 查是否有其他人以其为上级
-    const subResult = await this.db
-      .select({ cnt: count() })
-      .from(employee)
-      .where(and(sql`(${employee.supervisorId}).user_id = ${userId}`, isNull(employee.deletedAt)));
-    const hasSubordinates = Number(subResult[0].cnt) > 0;
-
-    const role = (empRows[0].role as string) || 'employee';
-    if (role === 'admin' || role === 'hrd' || role === 'dept_head') {
-      return { role: 'hrd', hasSubordinates };
-    }
-    if (role === 'supervisor' || hasSubordinates) {
-      return { role: 'supervisor', hasSubordinates };
-    }
+    if (hasSubordinates) return { role: 'supervisor', hasSubordinates: true };
     return { role: 'employee', hasSubordinates: false };
   }
 
   private async getSubordinateIds(userId: string): Promise<string[]> {
-    const subRows = await this.db
-      .select({ userId: sql<string>`(${employee.id}).user_id` })
-      .from(employee)
-      .where(and(sql`(${employee.supervisorId}).user_id = ${userId}`, isNull(employee.deletedAt)));
-    return subRows.map((r: { userId: string }) => r.userId);
+    return this.employeeRepo.findSubordinateIds(userId);
   }
 
   private async buildShortcuts(

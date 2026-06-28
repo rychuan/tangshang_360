@@ -1,4 +1,7 @@
-import type { AssessmentIndicatorDetail } from '@shared/api.interface';
+import type {
+  AssessmentIndicatorDetail,
+  ActiveGradeRule,
+} from '@shared/api.interface';
 
 export interface RatingsState {
   [indicatorSnapshotId: string]: {
@@ -15,40 +18,51 @@ export interface DimensionGroup {
 
 export function buildRatingPayload(ratings: RatingsState) {
   return {
-    ratings: Object.entries(ratings).map(
-      ([indicatorSnapshotId, r]) => ({
-        indicatorSnapshotId,
-        score: r.score,
-        comment: r.comment || undefined,
-      }),
-    ),
+    ratings: Object.entries(ratings).map(([indicatorSnapshotId, r]) => ({
+      indicatorSnapshotId,
+      score: r.score,
+      comment: r.comment || undefined,
+    })),
   };
+}
+
+/** 根据后端配置的等级规则匹配分数对应的等级名称 */
+export function matchGradeLocally(
+  totalScore: number,
+  rules: ActiveGradeRule[],
+): string {
+  for (const rule of rules) {
+    if (totalScore >= rule.minScore && totalScore <= rule.maxScore) {
+      return rule.name;
+    }
+  }
+  return 'D';
 }
 
 export function calculatePreviewScore(
   ratings: RatingsState,
   groups: DimensionGroup[],
+  gradeRules: ActiveGradeRule[],
 ): { score: number; grade: string } | null {
   let totalScore = 0;
-  let hasAnyScore = false;
+  let hasAnyEdit = false;
 
   for (const group of groups) {
     for (const ind of group.indicators) {
-      const score = ratings[ind.id]?.score ?? 0;
+      const rating = ratings[ind.id];
+      const score = rating?.score ?? 0;
       totalScore += score;
-      if (score > 0) hasAnyScore = true;
+      // 使用 !== undefined 区分「评了 0 分」和「未评分」
+      if (rating?.score !== undefined && rating.score !== null) {
+        hasAnyEdit = true;
+      }
     }
   }
 
-  if (!hasAnyScore) return null;
+  if (!hasAnyEdit) return null;
 
   const score = Math.round(totalScore * 100) / 100;
-  let grade: string;
-  if (score >= 90) grade = 'S';
-  else if (score >= 80) grade = 'A';
-  else if (score >= 70) grade = 'B';
-  else if (score >= 60) grade = 'C';
-  else grade = 'D';
+  const grade = matchGradeLocally(score, gradeRules);
 
   return { score, grade };
 }

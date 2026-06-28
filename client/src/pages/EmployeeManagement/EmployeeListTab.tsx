@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { employeeManagement } from '@/api';
-import { assessmentTemplate as templateApi } from '@/api';
-import type {
-  EmployeeItem,
-  AssessmentTemplateItem,
-  BindingHistoryItem,
-} from '@shared/api.interface';
+import React from 'react';
+import type { EmployeeItem } from '@shared/api.interface';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from '@/components/ui/input-group';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -26,19 +26,9 @@ import {
 import DepartmentTreeSelect from '@/components/ui/department-tree-select';
 import PositionMultiSelect from './PositionMultiSelect';
 import EmployeeTable from './EmployeeTable';
-import EmployeeFormDialog, {
-  emptyEmployeeForm,
-  employeeToForm,
-  formToCreateRequest,
-  type EmployeeFormData,
-} from './EmployeeFormDialog';
-import {
-  BindDialog,
-  UnbindDialog,
-  HistoryDialog,
-} from './EmployeeDialogs';
-import { toast } from 'sonner';
-import { Plus, Search, Link2 } from 'lucide-react';
+import EmployeeFormDialog from './EmployeeFormDialog';
+import { BindDialog, UnbindDialog, HistoryDialog } from './EmployeeDialogs';
+import { Plus, Search, Link2, Filter, Users } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -50,240 +40,32 @@ import {
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
-import { handleApiError } from '@/utils/api-error';
+import { CanDo } from '@/hooks/usePermissions';
+import { useEmployeeFilters } from './hooks/useEmployeeFilters';
+import { useEmployeeList } from './hooks/useEmployeeList';
+import { useEmployeeDialogs } from './hooks/useEmployeeDialogs';
 
 const PAGE_SIZE = 20;
 
 const EmployeeListTab: React.FC = () => {
-  const [employees, setEmployees] = useState<EmployeeItem[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-
-  const [keyword, setKeyword] = useState('');
-  const [departmentFilter, setDepartmentFilter] = useState('');
-  const [positionFilter, setPositionFilter] = useState<string[]>([]);
-  const [roleFilter, setRoleFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-
-  const [positions, setPositions] = useState<string[]>([]);
-  const [templates, setTemplates] = useState<AssessmentTemplateItem[]>([]);
-  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
-
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<EmployeeItem | null>(
-    null,
-  );
-  const [formData, setFormData] = useState<EmployeeFormData>(emptyEmployeeForm);
-
-  const [bindOpen, setBindOpen] = useState(false);
-  const [bindEmployeeIds, setBindEmployeeIds] = useState<string[]>([]);
-  const [bindTemplateId, setBindTemplateId] = useState('');
-  const [bindEffectiveFrom, setBindEffectiveFrom] = useState('');
-  const [bindSubmitting, setBindSubmitting] = useState(false);
-
-  const [unbindTargetId, setUnbindTargetId] = useState('');
-  const [unbindOpen, setUnbindOpen] = useState(false);
-
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const [historyEmployeeName, setHistoryEmployeeName] = useState('');
-  const [historyItems, setHistoryItems] = useState<BindingHistoryItem[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-
-  const [deleteTarget, setDeleteTarget] = useState<EmployeeItem | null>(null);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
-
-  const fetchEmployees = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await employeeManagement.list({
-        page,
-        pageSize: PAGE_SIZE,
-        keyword: keyword || undefined,
-        department: departmentFilter || undefined,
-        positions: positionFilter.length > 0 ? positionFilter.join(',') : undefined,
-        role: roleFilter || undefined,
-        status: statusFilter || undefined,
-      });
-      setEmployees(res?.items ?? []);
-      setTotal(res.total);
-      setSelectedRowKeys([]);
-    } catch (err: unknown) {
-      handleApiError(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, keyword, departmentFilter, positionFilter, roleFilter, statusFilter]);
-
-  const fetchPositions = useCallback(async () => {
-    try {
-      const res = await employeeManagement.getPositions();
-      setPositions(res.positions);
-    } catch (err: unknown) {
-      handleApiError(err);
-    }
-  }, []);
-
-  const fetchTemplates = useCallback(async () => {
-    try {
-      const res = await templateApi.list({ page: 1, pageSize: 200 });
-      setTemplates(res?.items ?? []);
-    } catch (err: unknown) {
-      handleApiError(err);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchEmployees();
-  }, [fetchEmployees]);
-
-  useEffect(() => {
-    fetchTemplates();
-  }, [fetchTemplates]);
-
-  useEffect(() => {
-    fetchPositions();
-  }, [fetchPositions]);
-
-  const handleSave = async (): Promise<void> => {
-    if (!editingEmployee && !formData.userId) {
-      toast.error('请选择关联用户');
-      return;
-    }
-    if (!formData.name || !formData.position) {
-      toast.error('请填写姓名和岗位');
-      return;
-    }
-    try {
-      const payload = formToCreateRequest(formData);
-      if (editingEmployee) {
-        await employeeManagement.update(editingEmployee.id, payload);
-        toast.success('员工信息已更新');
-      } else {
-        await employeeManagement.create(payload);
-        toast.success('员工已创建');
-      }
-      setDialogOpen(false);
-      setEditingEmployee(null);
-      setFormData(emptyEmployeeForm);
-      fetchEmployees();
-    } catch (err: unknown) {
-      handleApiError(err);
-    }
-  };
-
-  const handleEdit = (emp: EmployeeItem): void => {
-    setEditingEmployee(emp);
-    setFormData(employeeToForm(emp));
-    setDialogOpen(true);
-  };
-
-  const handleToggleStatus = async (emp: EmployeeItem): Promise<void> => {
-    try {
-      if (emp.status === 'active') {
-        await employeeManagement.deactivate(emp.id);
-        toast.success('员工已禁用');
-      } else {
-        await employeeManagement.activate(emp.id);
-        toast.success('员工已启用');
-      }
-      fetchEmployees();
-    } catch (err: unknown) {
-      handleApiError(err);
-    }
-  };
-
-  const openBindDialog = (ids: string[]): void => {
-    if (ids.length === 0) {
-      toast.error('请选择员工');
-      return;
-    }
-    setBindEmployeeIds(ids);
-    setBindTemplateId('');
-    const now = new Date();
-    setBindEffectiveFrom(
-      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
-    );
-    setBindOpen(true);
-  };
-
-  const handleBind = (emp: EmployeeItem): void => {
-    openBindDialog([emp.id]);
-  };
-
-  const handleConfirmBind = async (): Promise<void> => {
-    setBindSubmitting(true);
-    try {
-      await employeeManagement.bind({
-        employeeIds: bindEmployeeIds,
-        templateId: bindTemplateId,
-        effectiveFrom: bindEffectiveFrom,
-      });
-      toast.success('绑定成功');
-      setBindOpen(false);
-      fetchEmployees();
-    } catch (err: unknown) {
-      handleApiError(err);
-    } finally {
-      setBindSubmitting(false);
-    }
-  };
-
-  const handleUnbind = (emp: EmployeeItem): void => {
-    setUnbindTargetId(emp.id);
-    setUnbindOpen(true);
-  };
-
-  const handleConfirmUnbind = async (): Promise<void> => {
-    try {
-      await employeeManagement.unbind(unbindTargetId);
-      toast.success('解绑成功');
-      setUnbindOpen(false);
-      fetchEmployees();
-    } catch (err: unknown) {
-      handleApiError(err);
-    }
-  };
-
-  const handleHistory = async (emp: EmployeeItem): Promise<void> => {
-    setHistoryEmployeeName(emp.name);
-    setHistoryItems([]);
-    setHistoryOpen(true);
-    setHistoryLoading(true);
-    try {
-      const res = await employeeManagement.bindingHistory(emp.id);
-      setHistoryItems(res?.items ?? []);
-    } catch (err: unknown) {
-      handleApiError(err);
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
-
-  const handleDelete = (emp: EmployeeItem): void => {
-    setDeleteTarget(emp);
-    setDeleteOpen(true);
-  };
-
-  const handleConfirmDelete = async (): Promise<void> => {
-    if (!deleteTarget) return;
-    setDeleteSubmitting(true);
-    try {
-      await employeeManagement.remove(deleteTarget.id);
-      toast.success('员工已删除');
-      setDeleteOpen(false);
-      setDeleteTarget(null);
-      fetchEmployees();
-    } catch (err: unknown) {
-      handleApiError(err);
-    } finally {
-      setDeleteSubmitting(false);
-    }
-  };
+  const [filters, setters] = useEmployeeFilters();
+  const {
+    employees,
+    total,
+    loading,
+    positions,
+    templates,
+    selectedRowKeys,
+    setSelectedRowKeys,
+    refetch,
+  } = useEmployeeList(filters);
+  const dialogs = useEmployeeDialogs(refetch);
 
   const toggleAll = (): void => {
-    if (employees.length > 0 && employees.every((e) => selectedRowKeys.includes(e.id))) {
+    if (
+      employees.length > 0 &&
+      employees.every((e) => selectedRowKeys.includes(e.id))
+    ) {
       setSelectedRowKeys([]);
     } else {
       setSelectedRowKeys(employees.map((e) => e.id));
@@ -300,204 +82,228 @@ const EmployeeListTab: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="text-sm text-muted-foreground">
-          共 {total} 条
+      {/* 顶部统计 + 批量操作 */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Users className="size-4" />共{' '}
+          <span className="font-semibold text-foreground">{total}</span> 条
           {selectedRowKeys.length > 0 && (
-            <span className="ml-2 text-primary">
-              已选 {selectedRowKeys.length} 项
+            <span className="ml-1 text-primary font-medium">
+              · 已选 {selectedRowKeys.length} 项
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {selectedRowKeys.length > 0 && (
             <CanRole roles={['admin', 'hrd']}>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => openBindDialog(selectedRowKeys)}
+                onClick={() => dialogs.openBatchBindDialog(selectedRowKeys)}
               >
-                <Link2 className="mr-1 size-4" />
+                <Link2 data-icon="inline-start" />
                 批量绑定
               </Button>
             </CanRole>
           )}
           <CanRole roles={['admin']}>
-            <Button
-              size="sm"
-              onClick={() => {
-                setEditingEmployee(null);
-                setFormData(emptyEmployeeForm);
-                setDialogOpen(true);
-              }}
-            >
-              <Plus className="mr-2 size-4" />
-              新建员工
-            </Button>
+            <CanDo resource="employees" action="edit">
+              <Button size="sm" onClick={dialogs.openCreateDialog}>
+                <Plus data-icon="inline-start" />
+                新建员工
+              </Button>
+            </CanDo>
           </CanRole>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="relative min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            className="w-full pl-9"
-            placeholder="搜索姓名 / 编号..."
-            value={keyword}
-            onChange={(e) => {
-              setKeyword(e.target.value);
-              setPage(1);
-            }}
-          />
-        </div>
-        <div className="w-full">
-          <DepartmentTreeSelect
-            value={departmentFilter}
-            onChange={(name) => {
-              setDepartmentFilter(name);
-              setPage(1);
-            }}
-            placeholder="全部部门"
-          />
-        </div>
-        <PositionMultiSelect
-          positions={positions}
-          value={positionFilter}
-          onChange={(v) => {
-            setPositionFilter(v);
-            setPage(1);
-          }}
-          className="w-full"
-        />
-        <Select
-          value={roleFilter || 'all'}
-          onValueChange={(v) => {
-            setRoleFilter(v === 'all' ? '' : v);
-            setPage(1);
-          }}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="角色" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">全部角色</SelectItem>
-            <SelectItem value="admin">管理员</SelectItem>
-            <SelectItem value="hrd">HRD</SelectItem>
-            <SelectItem value="dept_head">部门负责人</SelectItem>
-            <SelectItem value="supervisor">上级</SelectItem>
-            <SelectItem value="employee">员工</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select
-          value={statusFilter || 'all'}
-          onValueChange={(v) => {
-            setStatusFilter(v === 'all' ? '' : v);
-            setPage(1);
-          }}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="状态" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">全部状态</SelectItem>
-            <SelectItem value="active">已启用</SelectItem>
-            <SelectItem value="inactive">已禁用</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* 筛选条件 */}
+      <Card className="rounded-xl">
+        <CardContent className="p-4">
+          <div className="flex flex-wrap gap-2 items-end">
+            <InputGroup>
+              <InputGroupAddon>
+                <Search className="size-3.5" />
+              </InputGroupAddon>
+              <InputGroupInput
+                className="w-40"
+                placeholder="姓名/编号"
+                value={filters.keyword}
+                onChange={(e) => setters.setKeyword(e.target.value)}
+              />
+            </InputGroup>
+            <DepartmentTreeSelect
+              value={filters.department}
+              onChange={(name) => setters.setDepartment(name)}
+              placeholder="全部部门"
+              className="w-36"
+            />
+            <PositionMultiSelect
+              positions={positions}
+              value={filters.positions}
+              onChange={(v) => setters.setPositions(v)}
+              className="w-36"
+            />
+            <Select
+              value={filters.role || 'all'}
+              onValueChange={(v) => setters.setRole(v === 'all' ? '' : v)}
+            >
+              <SelectTrigger className="w-28 h-9 text-sm">
+                <SelectValue placeholder="角色" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">全部</SelectItem>
+                  <SelectItem value="admin">管理员</SelectItem>
+                  <SelectItem value="hrd">HRD</SelectItem>
+                  <SelectItem value="dept_head">部门负责人</SelectItem>
+                  <SelectItem value="supervisor">上级</SelectItem>
+                  <SelectItem value="employee">员工</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <Select
+              value={filters.status || 'all'}
+              onValueChange={(v) => setters.setStatus(v === 'all' ? '' : v)}
+            >
+              <SelectTrigger className="w-24 h-9 text-sm">
+                <SelectValue placeholder="状态" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">全部</SelectItem>
+                  <SelectItem value="active">已启用</SelectItem>
+                  <SelectItem value="inactive">已禁用</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
-      <EmployeeTable
-        employees={employees}
-        loading={loading}
-        selectedRowKeys={selectedRowKeys}
-        onToggleAll={toggleAll}
-        onToggleRow={toggleRow}
-        onEdit={handleEdit}
-        onBind={handleBind}
-        onUnbind={handleUnbind}
-        onHistory={handleHistory}
-        onToggleStatus={handleToggleStatus}
-        onDelete={handleDelete}
-      />
+      {/* 员工表格 */}
+      <Card>
+        <CardContent className="p-0">
+          <EmployeeTable
+            employees={employees}
+            loading={loading}
+            selectedRowKeys={selectedRowKeys}
+            onToggleAll={toggleAll}
+            onToggleRow={toggleRow}
+            onEdit={dialogs.openEditDialog}
+            onBind={dialogs.openBindDialog}
+            onUnbind={dialogs.openUnbindDialog}
+            onHistory={dialogs.openHistoryDialog}
+            onToggleStatus={dialogs.handleToggleStatus}
+            onDelete={dialogs.openDeleteDialog}
+          />
+        </CardContent>
+      </Card>
 
+      {/* 分页 */}
       {totalPages > 1 && (
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                onClick={() => setPage(Math.max(1, page - 1))}
-              />
-            </PaginationItem>
-            {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
-              const p = i + Math.max(1, page - 3);
-              if (p > totalPages) return null;
-              return (
-                <PaginationItem key={p}>
-                  <PaginationLink
-                    isActive={p === page}
-                    onClick={() => setPage(p)}
-                  >
-                    {p}
-                  </PaginationLink>
-                </PaginationItem>
-              );
-            })}
-            <PaginationItem>
-              <PaginationNext
-                onClick={() => setPage(Math.min(totalPages, page + 1))}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
+        <div className="flex items-center justify-center">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => setters.setPage(Math.max(1, filters.page - 1))}
+                  className="h-8 sm:h-9 text-xs sm:text-sm"
+                />
+              </PaginationItem>
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                const start = Math.max(
+                  1,
+                  Math.min(filters.page - 2, totalPages - 4),
+                );
+                const p = start + i;
+                if (p > totalPages) return null;
+                return (
+                  <PaginationItem key={p}>
+                    <PaginationLink
+                      isActive={p === filters.page}
+                      onClick={() => setters.setPage(p)}
+                      className="h-8 w-8 sm:h-9 sm:w-9 text-xs sm:text-sm"
+                    >
+                      {p}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              })}
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() =>
+                    setters.setPage(Math.min(totalPages, filters.page + 1))
+                  }
+                  className="h-8 sm:h-9 text-xs sm:text-sm"
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
       )}
 
+      {/* 表单对话框 */}
       <EmployeeFormDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        editingEmployee={editingEmployee}
-        formData={formData}
-        setFormData={setFormData}
-        onSave={handleSave}
+        open={dialogs.formDialog.open}
+        onOpenChange={dialogs.formDialog.onOpenChange}
+        editingEmployee={dialogs.formDialog.editingEmployee}
+        formData={dialogs.formDialog.formData}
+        setFormData={dialogs.formDialog.setFormData}
+        onSave={dialogs.formDialog.onSave}
       />
+
+      {/* 绑定对话框 */}
       <BindDialog
-        open={bindOpen}
-        onOpenChange={setBindOpen}
-        bindEmployeeIds={bindEmployeeIds}
-        setBindEmployeeIds={setBindEmployeeIds}
-        bindTemplateId={bindTemplateId}
-        setBindTemplateId={setBindTemplateId}
-        bindEffectiveFrom={bindEffectiveFrom}
-        setBindEffectiveFrom={setBindEffectiveFrom}
-        bindSubmitting={bindSubmitting}
-        onConfirm={handleConfirmBind}
+        open={dialogs.bindDialog.open}
+        onOpenChange={dialogs.bindDialog.onOpenChange}
+        bindEmployeeIds={dialogs.bindDialog.bindEmployeeIds}
+        setBindEmployeeIds={dialogs.bindDialog.setBindEmployeeIds}
+        bindTemplateId={dialogs.bindDialog.bindTemplateId}
+        setBindTemplateId={dialogs.bindDialog.setBindTemplateId}
+        bindEffectiveFrom={dialogs.bindDialog.bindEffectiveFrom}
+        setBindEffectiveFrom={dialogs.bindDialog.setBindEffectiveFrom}
+        bindSubmitting={dialogs.bindDialog.bindSubmitting}
+        onConfirm={dialogs.bindDialog.onConfirm}
         templates={templates}
       />
+
+      {/* 解绑对话框 */}
       <UnbindDialog
-        open={unbindOpen}
-        onOpenChange={setUnbindOpen}
-        onConfirm={handleConfirmUnbind}
+        open={dialogs.unbindDialog.open}
+        onOpenChange={dialogs.unbindDialog.onOpenChange}
+        onConfirm={dialogs.unbindDialog.onConfirm}
       />
+
+      {/* 历史对话框 */}
       <HistoryDialog
-        open={historyOpen}
-        onOpenChange={setHistoryOpen}
-        employeeName={historyEmployeeName}
-        historyItems={historyItems}
-        loading={historyLoading}
+        open={dialogs.historyDialog.open}
+        onOpenChange={dialogs.historyDialog.onOpenChange}
+        employeeName={dialogs.historyDialog.employeeName}
+        historyItems={dialogs.historyDialog.historyItems}
+        loading={dialogs.historyDialog.loading}
       />
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+
+      {/* 删除确认 */}
+      <AlertDialog
+        open={dialogs.deleteDialog.open}
+        onOpenChange={dialogs.deleteDialog.onOpenChange}
+      >
         <AlertDialogContent className="w-[95vw] max-w-sm">
           <AlertDialogHeader>
             <AlertDialogTitle>确认删除员工</AlertDialogTitle>
             <AlertDialogDescription>
-              确定要删除员工「{deleteTarget?.name}」吗？此操作不可撤销，删除后该员工的档案将被永久移除。
+              确定要删除员工「{dialogs.deleteDialog.target?.name}
+              」吗？此操作不可撤销，删除后该员工的档案将被永久移除。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteSubmitting}>取消</AlertDialogCancel>
+            <AlertDialogCancel disabled={dialogs.deleteDialog.submitting}>
+              取消
+            </AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleConfirmDelete}
-              disabled={deleteSubmitting}
+              onClick={dialogs.deleteDialog.onConfirm}
+              disabled={dialogs.deleteDialog.submitting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               确认删除

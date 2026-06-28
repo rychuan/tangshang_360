@@ -65,13 +65,19 @@ const MemberOption: React.FC<MemberOptionProps> = ({
       disabled ? 'opacity-50' : 'hover:bg-muted/50'
     }`}
   >
-    <Checkbox checked={checked} disabled={disabled} onCheckedChange={onToggle} />
+    <Checkbox
+      checked={checked}
+      disabled={disabled}
+      onCheckedChange={onToggle}
+    />
     <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
       {icon}
     </span>
     <div className="min-w-0 flex-1">
       <div className="truncate text-sm font-medium">{label}</div>
-      {sub ? <div className="truncate text-xs text-muted-foreground">{sub}</div> : null}
+      {sub ? (
+        <div className="truncate text-xs text-muted-foreground">{sub}</div>
+      ) : null}
     </div>
     {tag ? (
       <Badge variant="secondary" className="shrink-0">
@@ -110,7 +116,10 @@ const AddMemberDialog: React.FC<AddMemberDialogProps> = ({
     if (!query.trim()) return;
     setSearching(true);
     try {
-      const res = await roleManager.searchMembers({ query: query.trim(), pageSize: 30 });
+      const res = await roleManager.searchMembers({
+        query: query.trim(),
+        pageSize: 30,
+      });
       setResult(res.result ?? null);
     } catch {
       toast.error('搜索失败');
@@ -131,7 +140,8 @@ const AddMemberDialog: React.FC<AddMemberDialogProps> = ({
     });
   };
 
-  const totalSelected = selectedUsers.size + selectedDepts.size + selectedChats.size;
+  const totalSelected =
+    selectedUsers.size + selectedDepts.size + selectedChats.size;
 
   const handleAdd = async () => {
     if (!bizID) return;
@@ -141,13 +151,17 @@ const AddMemberDialog: React.FC<AddMemberDialogProps> = ({
     }
     const members: MemberMutationData = {};
     if (selectedUsers.size > 0) {
-      members.userList = Array.from(selectedUsers).map((id) => ({ userID: id }));
+      members.userList = Array.from(selectedUsers).map((id) => ({
+        userID: id,
+      }));
     }
     if (selectedDepts.size > 0) {
       members.departmentList = Array.from(selectedDepts).map((id) => ({ id }));
     }
     if (selectedChats.size > 0) {
-      members.groupChatList = Array.from(selectedChats).map((id) => ({ chatID: id }));
+      members.groupChatList = Array.from(selectedChats).map((id) => ({
+        chatID: id,
+      }));
     }
     setSubmitting(true);
     try {
@@ -224,7 +238,11 @@ const AddMemberDialog: React.FC<AddMemberDialogProps> = ({
                         checked={selectedUsers.has(id)}
                         disabled={already || !id}
                         label={i18nText(u.name) || id || '未知用户'}
-                        sub={u.department?.name ? i18nText(u.department.name) : u.email || ''}
+                        sub={
+                          u.department?.name
+                            ? i18nText(u.department.name)
+                            : u.email || ''
+                        }
                         icon={<User className="size-4" />}
                         tag={already ? '已添加' : undefined}
                         onToggle={() => toggle(id, setSelectedUsers)}
@@ -234,7 +252,10 @@ const AddMemberDialog: React.FC<AddMemberDialogProps> = ({
                 </MemberSection>
               )}
               {depts.length > 0 && (
-                <MemberSection title="部门" icon={<Building2 className="size-4" />}>
+                <MemberSection
+                  title="部门"
+                  icon={<Building2 className="size-4" />}
+                >
                   {depts.map((d) => {
                     const id = String(d.departmentID ?? '');
                     const already = existingDeptIds.includes(id);
@@ -276,12 +297,21 @@ const AddMemberDialog: React.FC<AddMemberDialogProps> = ({
           )}
         </div>
         <DialogFooter className="items-center justify-between sm:justify-between">
-          <span className="text-sm text-muted-foreground">已选 {totalSelected} 项</span>
+          <span className="text-sm text-muted-foreground">
+            已选 {totalSelected} 项
+          </span>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={submitting}
+            >
               取消
             </Button>
-            <Button onClick={handleAdd} disabled={submitting || totalSelected === 0}>
+            <Button
+              onClick={handleAdd}
+              disabled={submitting || totalSelected === 0}
+            >
               {submitting ? '添加中...' : '添加选中'}
             </Button>
           </div>

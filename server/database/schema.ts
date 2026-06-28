@@ -117,6 +117,25 @@ export const fileAttachmentArray = customType<{
   },
 });
 
+export const systemDict = pgTable("system_dict", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  dictType: varchar("dict_type", { length: 50 }).notNull(),
+  code: varchar("code", { length: 100 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  // System field: Creation time (auto-filled, do not modify)
+  createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Creator (auto-filled, do not modify)
+  createdBy: userProfile("_created_by").default(sql`CASE
+    WHEN (current_setting('app.user_id'::text, true) = ''::text) THEN NULL`),
+  // System field: Update time (auto-filled, do not modify)
+  updatedAt: customTimestamptz("_updated_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Updater (auto-filled, do not modify)
+  updatedBy: userProfile("_updated_by").default(sql`CASE
+    WHEN (current_setting('app.user_id'::text, true) = ''::text) THEN NULL`),
+});
+
 export const employeeIndicatorSnapshot = pgTable("employee_indicator_snapshot", {
   id: uuid("id").primaryKey().defaultRandom(),
   employeeId: userProfile("employee_id").notNull(),
@@ -373,7 +392,7 @@ export const assessmentTemplate = pgTable("assessment_template", {
 });
 
 export const employee = pgTable("employee", {
-  id: userProfile("id").notNull(),
+  id: userProfile("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   position: varchar("position", { length: 255 }).notNull(),
   department: varchar("department", { length: 255 }).notNull(),
@@ -414,3 +433,4 @@ export const employeeIndicatorSnapshotTable = employeeIndicatorSnapshot;
 export const performanceGradeTable = performanceGrade;
 export const ratingRecordTable = ratingRecord;
 export const rolePermissionConfigTable = rolePermissionConfig;
+export const systemDictTable = systemDict;

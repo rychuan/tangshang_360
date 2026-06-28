@@ -22,6 +22,7 @@ import type {
   PeriodStatisticsResponse,
   BatchOperationResponse,
 } from '@shared/api.interface';
+import { PageHeader } from '@/components/business-ui/page-header';
 import { PUBLISHED_STATUS_LABELS } from './published-assessment-columns';
 import StatisticsCards from './StatisticsCards';
 import PendingPublishSection from './PendingPublishSection';
@@ -72,7 +73,9 @@ const PublishManagementPage: React.FC = () => {
   const [unlockLoading, setUnlockLoading] = useState<boolean>(false);
 
   const [historyOpen, setHistoryOpen] = useState<boolean>(false);
-  const [historyInstanceId, setHistoryInstanceId] = useState<string | null>(null);
+  const [historyInstanceId, setHistoryInstanceId] = useState<string | null>(
+    null,
+  );
 
   const fetchStatistics = useCallback(async (p: string): Promise<void> => {
     if (!p) return;
@@ -136,7 +139,13 @@ const PublishManagementPage: React.FC = () => {
     if (!period) return;
     fetchStatistics(period);
     fetchEmployees(period, pendingDeptFilter, pendingTplFilter);
-  }, [period, pendingDeptFilter, pendingTplFilter, fetchStatistics, fetchEmployees]);
+  }, [
+    period,
+    pendingDeptFilter,
+    pendingTplFilter,
+    fetchStatistics,
+    fetchEmployees,
+  ]);
 
   useEffect(() => {
     fetchInstances();
@@ -158,9 +167,10 @@ const PublishManagementPage: React.FC = () => {
     employees.forEach((e: PublishEmployeeItem) => {
       if (e.templateId) map.set(e.templateId, e.templateName);
     });
-    return Array.from(map.entries()).map(
-      ([id, name]: [string, string]) => ({ id, name }),
-    );
+    return Array.from(map.entries()).map(([id, name]: [string, string]) => ({
+      id,
+      name,
+    }));
   }, [employees]);
 
   const handlePeriodChange = (value: string): void => {
@@ -172,9 +182,7 @@ const PublishManagementPage: React.FC = () => {
   const handleSelectAllEmployees = (checked: boolean): void => {
     if (checked) {
       setSelectedEmployeeIds(
-        new Set(
-          employees.map((e: PublishEmployeeItem) => e.employeeId),
-        ),
+        new Set(employees.map((e: PublishEmployeeItem) => e.employeeId)),
       );
     } else {
       setSelectedEmployeeIds(new Set());
@@ -232,7 +240,9 @@ const PublishManagementPage: React.FC = () => {
     }
     setAdjustLoading(true);
     try {
-      await adjustEmployeeSnapshot(adjustingEmployee.employeeId, { indicators });
+      await adjustEmployeeSnapshot(adjustingEmployee.employeeId, {
+        indicators,
+      });
       toast.success('调整成功');
       setAdjustOpen(false);
       fetchEmployees(period, pendingDeptFilter, pendingTplFilter);
@@ -268,28 +278,36 @@ const PublishManagementPage: React.FC = () => {
     setHistoryOpen(true);
   };
 
-  const UNLOCKABLE_STATUSES: string[] = ['completed', 'pending_sign', 'supervisor_review'];
+  const UNLOCKABLE_STATUSES: string[] = [
+    'completed',
+    'pending_sign',
+    'supervisor_review',
+  ];
 
   const handleOpenBatchUnlock = (): void => {
     if (selectedInstanceIds.size === 0) {
-      toast.error('请选择要解锁的考核');
+      toast.error('请选择要解锁的绩效');
       return;
     }
     const selectedInstances: AssessmentInstanceItem[] = instances.filter(
       (inst: AssessmentInstanceItem) => selectedInstanceIds.has(inst.id),
     );
     const unlockable: AssessmentInstanceItem[] = selectedInstances.filter(
-      (inst: AssessmentInstanceItem) => UNLOCKABLE_STATUSES.includes(inst.status),
+      (inst: AssessmentInstanceItem) =>
+        UNLOCKABLE_STATUSES.includes(inst.status),
     );
-    const notUnlockableCount: number = selectedInstances.length - unlockable.length;
+    const notUnlockableCount: number =
+      selectedInstances.length - unlockable.length;
     if (unlockable.length === 0) {
-      toast.error('选中的考核均不可解锁（仅支持上级评分中/待签名/已完成状态）');
+      toast.error('选中的绩效均不可解锁（仅支持上级评分中/待签名/已完成状态）');
       return;
     }
     if (notUnlockableCount > 0) {
-      toast.info(`已自动过滤 ${notUnlockableCount} 项不可解锁的考核`);
+      toast.info(`已自动过滤 ${notUnlockableCount} 项不可解锁的绩效`);
     }
-    setUnlockTargetIds(unlockable.map((inst: AssessmentInstanceItem) => inst.id));
+    setUnlockTargetIds(
+      unlockable.map((inst: AssessmentInstanceItem) => inst.id),
+    );
     setUnlockReason('');
     setUnlockOpen(true);
   };
@@ -308,7 +326,9 @@ const PublishManagementPage: React.FC = () => {
       if (result.failedCount === 0) {
         toast.success(`解锁成功，共 ${result.successCount} 项`);
       } else if (result.successCount > 0) {
-        toast.warning(`解锁完成：成功 ${result.successCount} 项，失败 ${result.failedCount} 项`);
+        toast.warning(
+          `解锁完成：成功 ${result.successCount} 项，失败 ${result.failedCount} 项`,
+        );
       } else {
         toast.error(`解锁失败，共 ${result.failedCount} 项（状态不允许解锁）`);
       }
@@ -326,7 +346,7 @@ const PublishManagementPage: React.FC = () => {
 
   const handleBatchNotify = async (): Promise<void> => {
     if (selectedInstanceIds.size === 0) {
-      toast.error('请选择要通知的考核');
+      toast.error('请选择要通知的绩效');
       return;
     }
     setBatchNotifyLoading(true);
@@ -373,8 +393,8 @@ const PublishManagementPage: React.FC = () => {
         }));
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, '考核列表');
-        XLSX.writeFile(wb, `考核列表_${period}.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, '绩效列表');
+        XLSX.writeFile(wb, `绩效列表_${period}.xlsx`);
         toast.success('导出成功');
       })
       .catch((err: unknown) => {
@@ -386,106 +406,107 @@ const PublishManagementPage: React.FC = () => {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">考核发布管理</h1>
+        <PageHeader title="绩效发布管理" />
       </div>
 
       <div className="flex items-center gap-3">
-        <Label className="shrink-0 text-sm font-medium">考核周期</Label>
+        <Label className="shrink-0 text-sm font-medium">绩效周期</Label>
         <MonthPicker value={period} onChange={handlePeriodChange} />
       </div>
 
       <>
-        <StatisticsCards
-            statistics={statistics}
-            loading={loadingStatistics}
-          />
+        <StatisticsCards statistics={statistics} loading={loadingStatistics} />
 
-          <PendingPublishSection
-            employees={employees}
-            loading={loadingEmployees}
-            selectedIds={selectedEmployeeIds}
-            onSelectAll={handleSelectAllEmployees}
-            onSelectOne={handleSelectOneEmployee}
-            onPublish={handlePublish}
-            publishing={publishing}
-            departmentFilter={pendingDeptFilter}
-            onDepartmentFilterChange={setPendingDeptFilter}
-            templateFilter={pendingTplFilter}
-            onTemplateFilterChange={setPendingTplFilter}
-            departments={departments}
-            templates={templates}
-            onAdjust={handleOpenAdjust}
-            onDeleteSnapshot={handleDeleteSnapshot}
-          />
+        <PendingPublishSection
+          employees={employees}
+          loading={loadingEmployees}
+          selectedIds={selectedEmployeeIds}
+          onSelectAll={handleSelectAllEmployees}
+          onSelectOne={handleSelectOneEmployee}
+          onPublish={handlePublish}
+          publishing={publishing}
+          departmentFilter={pendingDeptFilter}
+          onDepartmentFilterChange={setPendingDeptFilter}
+          templateFilter={pendingTplFilter}
+          onTemplateFilterChange={setPendingTplFilter}
+          departments={departments}
+          templates={templates}
+          onAdjust={handleOpenAdjust}
+          onDeleteSnapshot={handleDeleteSnapshot}
+        />
 
-          <PublishedAssessmentSection
-            instances={instances}
-            loading={loadingInstances}
-            total={instancesTotal}
-            page={instancesPage}
-            pageSize={PAGE_SIZE}
-            onPageChange={setInstancesPage}
-            statusFilter={statusFilter}
-            onStatusFilterChange={(v: string) => {
-              setStatusFilter(v);
-              setInstancesPage(1);
-            }}
-            departmentFilter={deptFilter}
-            onDepartmentFilterChange={(v: string) => {
-              setDeptFilter(v);
-              setInstancesPage(1);
-            }}
-            gradeFilter={gradeFilter}
-            onGradeFilterChange={(v: string) => {
-              setGradeFilter(v);
-              setInstancesPage(1);
-            }}
-            selectedInstanceIds={selectedInstanceIds}
-            onSelectedInstancesChange={setSelectedInstanceIds}
-            onUnlock={handleOpenSingleUnlock}
-            onHistory={handleOpenHistory}
-            onBatchUnlock={handleOpenBatchUnlock}
-            onBatchNotify={handleBatchNotify}
-            onExport={handleExport}
-            batchUnlockLoading={unlockLoading}
-            batchNotifyLoading={batchNotifyLoading}
-            departments={departments}
-          />
+        <PublishedAssessmentSection
+          instances={instances}
+          loading={loadingInstances}
+          total={instancesTotal}
+          page={instancesPage}
+          pageSize={PAGE_SIZE}
+          onPageChange={setInstancesPage}
+          statusFilter={statusFilter}
+          onStatusFilterChange={(v: string) => {
+            setStatusFilter(v);
+            setInstancesPage(1);
+          }}
+          departmentFilter={deptFilter}
+          onDepartmentFilterChange={(v: string) => {
+            setDeptFilter(v);
+            setInstancesPage(1);
+          }}
+          gradeFilter={gradeFilter}
+          onGradeFilterChange={(v: string) => {
+            setGradeFilter(v);
+            setInstancesPage(1);
+          }}
+          selectedInstanceIds={selectedInstanceIds}
+          onSelectedInstancesChange={setSelectedInstanceIds}
+          onUnlock={handleOpenSingleUnlock}
+          onHistory={handleOpenHistory}
+          onBatchUnlock={handleOpenBatchUnlock}
+          onBatchNotify={handleBatchNotify}
+          onExport={handleExport}
+          batchUnlockLoading={unlockLoading}
+          batchNotifyLoading={batchNotifyLoading}
+          departments={departments}
+        />
 
-          <AdjustIndicatorsDialog
-            open={adjustOpen}
-            onOpenChange={setAdjustOpen}
-            employee={adjustingEmployee ? {
-              employeeId: adjustingEmployee.employeeId,
-              employeeName: adjustingEmployee.employeeName,
-              templateName: adjustingEmployee.templateName,
-            } : null}
-            onSubmit={handleAdjustSubmit}
-            onDeleteSnapshot={() => {
-              if (adjustingEmployee) {
-                handleDeleteSnapshot(adjustingEmployee);
-                setAdjustOpen(false);
-              }
-            }}
-            loading={adjustLoading}
-          />
+        <AdjustIndicatorsDialog
+          open={adjustOpen}
+          onOpenChange={setAdjustOpen}
+          employee={
+            adjustingEmployee
+              ? {
+                  employeeId: adjustingEmployee.employeeId,
+                  employeeName: adjustingEmployee.employeeName,
+                  templateName: adjustingEmployee.templateName,
+                }
+              : null
+          }
+          onSubmit={handleAdjustSubmit}
+          onDeleteSnapshot={() => {
+            if (adjustingEmployee) {
+              handleDeleteSnapshot(adjustingEmployee);
+              setAdjustOpen(false);
+            }
+          }}
+          loading={adjustLoading}
+        />
 
-          <BatchUnlockDialog
-            open={unlockOpen}
-            onOpenChange={setUnlockOpen}
-            selectedCount={unlockTargetIds.length}
-            reason={unlockReason}
-            onReasonChange={setUnlockReason}
-            onSubmit={handleUnlockSubmit}
-            loading={unlockLoading}
-          />
+        <BatchUnlockDialog
+          open={unlockOpen}
+          onOpenChange={setUnlockOpen}
+          selectedCount={unlockTargetIds.length}
+          reason={unlockReason}
+          onReasonChange={setUnlockReason}
+          onSubmit={handleUnlockSubmit}
+          loading={unlockLoading}
+        />
 
-          <UnlockHistoryDialog
-            open={historyOpen}
-            onOpenChange={setHistoryOpen}
-            instanceId={historyInstanceId}
-          />
-        </>
+        <UnlockHistoryDialog
+          open={historyOpen}
+          onOpenChange={setHistoryOpen}
+          instanceId={historyInstanceId}
+        />
+      </>
     </div>
   );
 };

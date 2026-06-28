@@ -1,11 +1,14 @@
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import type { AssessmentIndicatorDetail } from '@shared/api.interface';
 import type { RatingsState, DimensionGroup } from './assessment-utils';
 
@@ -35,16 +38,12 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     indicator: AssessmentIndicatorDetail,
     type: 'self' | 'supervisor',
   ) => {
-    const canEditThis =
-      type === 'self' ? canEditSelf : canEditSupervisor;
+    const canEditThis = type === 'self' ? canEditSelf : canEditSupervisor;
     const existingScore =
-      type === 'self'
-        ? indicator.selfScore
-        : indicator.supervisorScore;
+      type === 'self' ? indicator.selfScore : indicator.supervisorScore;
 
     if (canEditThis) {
-      const currentScore =
-        ratings[indicator.id]?.score ?? 0;
+      const currentScore = ratings[indicator.id]?.score ?? 0;
       return (
         <div className="flex flex-col items-center gap-0.5">
           <Input
@@ -53,9 +52,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             max={indicator.weight}
             className="w-20 mx-auto text-center"
             value={currentScore}
-            onChange={(
-              e: React.ChangeEvent<HTMLInputElement>,
-            ) =>
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               updateRating(
                 indicator.id,
                 'score',
@@ -77,86 +74,70 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   };
 
   return (
-    <>
+    <div className="flex flex-col gap-6">
       {groups.map((group) => (
         <Card key={group.dimensionName}>
-          <CardHeader>
+          <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
-              <h3 className="text-lg font-semibold">
-                {group.dimensionName}
-              </h3>
-              <span className="inline-flex items-center px-3 py-1 rounded-md bg-primary/10 text-primary text-sm font-bold border border-primary/20">
+              <h3 className="text-base font-semibold">{group.dimensionName}</h3>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-bold border border-primary/20">
                 权重 {group.dimensionWeight}%
               </span>
             </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-muted-foreground">
-                    <th className="text-left py-3 px-2 font-medium text-muted-foreground whitespace-nowrap">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30">
+                    <TableHead className="whitespace-nowrap w-[140px]">
                       指标
-                    </th>
-                    <th className="text-left py-3 px-2 font-medium text-muted-foreground whitespace-nowrap max-w-[120px]">
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap w-[160px] hidden md:table-cell">
                       说明
-                    </th>
-                    <th className="text-left py-3 px-2 font-medium text-muted-foreground whitespace-nowrap max-w-[120px]">
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap max-w-[140px] hidden lg:table-cell">
                       指标算法/描述
-                    </th>
-                    <th className="text-left py-3 px-2 font-medium text-muted-foreground whitespace-nowrap max-w-[120px]">
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap max-w-[100px] hidden lg:table-cell">
                       数据来源
-                    </th>
-                    <th className="text-center py-3 px-2 font-medium text-muted-foreground w-16">
-                      权重(分)
-                    </th>
-                    <th className="text-center py-3 px-2 font-medium text-muted-foreground w-28">
-                      自评
-                    </th>
-                    <th className="text-center py-3 px-2 font-medium text-muted-foreground w-28">
-                      上级评分
-                    </th>
-                    <th className="text-left py-3 px-2 font-medium text-muted-foreground w-48">
-                      备注
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
+                    </TableHead>
+                    <TableHead className="text-center w-16">权重(分)</TableHead>
+                    <TableHead className="text-center w-24">自评</TableHead>
+                    <TableHead className="text-center w-24">上级评分</TableHead>
+                    <TableHead className="w-40">备注</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {group.indicators.map((indicator) => (
-                    <tr
-                      key={indicator.id}
-                      className="border-b last:border-0"
-                    >
-                      <td className="py-2 px-2 font-medium whitespace-nowrap">
+                    <TableRow key={indicator.id}>
+                      <TableCell className="font-medium whitespace-pre-wrap break-words w-[140px]">
                         {indicator.content}
-                      </td>
-                      <td className="py-2 px-2 text-sm text-muted-foreground max-w-[120px] break-words">
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-[0.625rem] leading-4 whitespace-pre-wrap break-words w-[160px] hidden md:table-cell">
                         {indicator.description || '-'}
-                      </td>
-                      <td className="py-2 px-2 text-sm text-muted-foreground max-w-[120px] break-words">
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-xs whitespace-pre-wrap break-words max-w-[140px] hidden lg:table-cell">
                         {indicator.algorithm || '-'}
-                      </td>
-                      <td className="py-2 px-2 text-sm text-muted-foreground max-w-[120px] break-words">
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-xs whitespace-pre-wrap break-words max-w-[100px] hidden lg:table-cell">
                         {indicator.dataSource || '-'}
-                      </td>
-                      <td className="py-2 px-2 text-center">
+                      </TableCell>
+                      <TableCell className="text-center text-sm">
                         {indicator.weight}
-                      </td>
-                      <td className="py-2 px-2 text-center">
+                      </TableCell>
+                      <TableCell className="text-center">
                         {renderScoreCell(indicator, 'self')}
-                      </td>
-                      <td className="py-2 px-2 text-center">
+                      </TableCell>
+                      <TableCell className="text-center">
                         {renderScoreCell(indicator, 'supervisor')}
-                      </td>
-                      <td className="py-2 px-2">
+                      </TableCell>
+                      <TableCell>
                         {canEdit ? (
                           <Input
-                            className="w-full"
+                            className="w-full text-xs"
                             placeholder="备注"
-                            value={
-                              ratings[indicator.id]?.comment ??
-                              ''
-                            }
+                            value={ratings[indicator.id]?.comment ?? ''}
                             onChange={(
                               e: React.ChangeEvent<HTMLInputElement>,
                             ) =>
@@ -168,33 +149,34 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                             }
                           />
                         ) : (
-                          <span className="text-muted-foreground">
+                          <span className="text-muted-foreground text-xs">
                             {(() => {
-                              const selfC =
-                                indicator.selfComment;
-                              const supC =
-                                indicator.supervisorComment;
+                              const selfC = indicator.selfComment?.trim();
+                              const supC = indicator.supervisorComment?.trim();
                               if (selfC && supC) {
-                                return `自: ${selfC} | 上: ${supC}`;
+                                return (
+                                  <span className="flex flex-col gap-0.5">
+                                    <span>自评：{selfC}</span>
+                                    <span>上级：{supC}</span>
+                                  </span>
+                                );
                               }
-                              if (selfC)
-                                return `自: ${selfC}`;
-                              if (supC)
-                                return `上: ${supC}`;
+                              if (selfC) return <>自评：{selfC}</>;
+                              if (supC) return <>上级：{supC}</>;
                               return '-';
                             })()}
                           </span>
                         )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>
       ))}
-    </>
+    </div>
   );
 };
 

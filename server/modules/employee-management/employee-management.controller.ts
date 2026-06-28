@@ -12,6 +12,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
+import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { EmployeeManagementService } from './employee-management.service';
 import type {
   EmployeeListResponse,
@@ -27,6 +28,7 @@ export class EmployeeManagementController {
   constructor(private readonly service: EmployeeManagementService) {}
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
+  @RequirePermission('employees', 'view')
   @Get()
   async list(
     @Query('page') page: string,
@@ -51,6 +53,7 @@ export class EmployeeManagementController {
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
+  @RequirePermission('employees', 'view')
   @Get('positions')
   async getPositions(): Promise<{ positions: string[] }> {
     return this.service.getPositions();
@@ -64,6 +67,7 @@ export class EmployeeManagementController {
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('employee_binding', 'edit')
   @NeedLogin()
   @Post('bind')
   async bind(
@@ -75,6 +79,7 @@ export class EmployeeManagementController {
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
+  @RequirePermission('employee_binding', 'view')
   @Get(':id/binding-history')
   async bindingHistory(
     @Param('id') id: string,
@@ -83,12 +88,14 @@ export class EmployeeManagementController {
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
+  @RequirePermission('employees', 'view')
   @Get(':id')
   async detail(@Param('id') id: string): Promise<EmployeeDetail> {
     return this.service.detail(id);
   }
 
   @CanRole(['admin'])
+  @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Post()
   async create(
@@ -100,6 +107,7 @@ export class EmployeeManagementController {
   }
 
   @CanRole(['admin'])
+  @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Put(':id')
   async update(
@@ -112,6 +120,7 @@ export class EmployeeManagementController {
   }
 
   @CanRole(['admin'])
+  @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Patch(':id/activate')
   async activate(
@@ -123,6 +132,7 @@ export class EmployeeManagementController {
   }
 
   @CanRole(['admin'])
+  @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Patch(':id/deactivate')
   async deactivate(
@@ -134,6 +144,7 @@ export class EmployeeManagementController {
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('employee_binding', 'edit')
   @NeedLogin()
   @Patch(':id/unbind')
   async unbind(
@@ -145,6 +156,7 @@ export class EmployeeManagementController {
   }
 
   @CanRole(['admin'])
+  @RequirePermission('employees', 'delete')
   @NeedLogin()
   @Delete(':id')
   async delete(
@@ -156,6 +168,7 @@ export class EmployeeManagementController {
   }
 
   @CanRole(['admin'])
+  @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Put(':id/permissions')
   async updatePermissions(
@@ -168,7 +181,9 @@ export class EmployeeManagementController {
     if ((emp.role as string) === 'admin') {
       const adminCount = await this.service.validateAdminsExist();
       if (adminCount <= 1) {
-        throw new BadRequestException('系统中至少保留一个系统管理员，无法移除其权限');
+        throw new BadRequestException(
+          '系统中至少保留一个系统管理员，无法移除其权限',
+        );
       }
     }
     return this.service.updatePermissions(id, body.permissions, userId);

@@ -18,6 +18,7 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from '@/components/ui/empty';
+import { PageHeader } from '@/components/business-ui/page-header';
 import { toast } from 'sonner';
 import { Shield, Lock, Users, ShieldCheck } from 'lucide-react';
 import RoleListPanel from './RoleListPanel';
@@ -102,14 +103,11 @@ const PermissionPage: React.FC = () => {
   return (
     <div className="flex h-[calc(100svh-6.5rem)] min-h-0 flex-col gap-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-            <Shield className="size-5" /> 权限管理
-          </h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            基于角色配置功能权限与成员归属。
-          </p>
-        </div>
+        <PageHeader
+          title="权限管理"
+          icon={Shield}
+          description="基于角色配置功能权限与成员归属。"
+        />
       </div>
 
       <div className="flex min-h-0 flex-1 gap-4">
@@ -127,14 +125,19 @@ const PermissionPage: React.FC = () => {
 
         <section className="min-w-0 flex-1 overflow-hidden rounded-lg border">
           {selectedRole ? (
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
-              <div className="border-b px-3 pt-3">
-                <TabsList className="bg-[#dbdbdb]">
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="h-full"
+            >
+              <div className="px-3 pt-3">
+                <TabsList>
                   <TabsTrigger value="permissions">
-                    <Lock className="size-4" /> 权限配置
+                    <Lock /> 权限配置
                   </TabsTrigger>
                   <TabsTrigger value="members">
-                    <Users className="size-4" /> 成员管理({getRoleMemberCount(selectedRole)})
+                    <Users /> 成员管理(
+                    {getRoleMemberCount(selectedRole)})
                   </TabsTrigger>
                 </TabsList>
               </div>
@@ -190,14 +193,23 @@ const PermissionPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle>删除角色</DialogTitle>
             <DialogDescription>
-              确认删除角色「{deleteTarget?.name || deleteTarget?.bizID}」？此操作不可恢复，关联的权限配置也将被清除。
+              确认删除角色「{deleteTarget?.name || deleteTarget?.bizID}
+              」？此操作不可恢复，关联的权限配置也将被清除。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleting}
+            >
               取消
             </Button>
-            <Button variant="destructive" onClick={handleDeleteConfirm} disabled={deleting}>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={deleting}
+            >
               {deleting ? '删除中...' : '确认删除'}
             </Button>
           </DialogFooter>

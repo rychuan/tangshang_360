@@ -9,8 +9,12 @@ import {
   Req,
 } from '@nestjs/common';
 import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
+import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { TeamStructureService } from './team-structure.service';
-import type { CreateBindingRequest, BatchDeactivateRequest } from '@shared/api.interface';
+import type {
+  CreateBindingRequest,
+  BatchDeactivateRequest,
+} from '@shared/api.interface';
 
 type PatchEmployeeRequest = {
   name?: string;
@@ -25,6 +29,7 @@ export class TeamStructureController {
   constructor(private readonly service: TeamStructureService) {}
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
+  @RequirePermission('organization', 'view')
   @Get()
   async list(
     @Query('employeeName') employeeName?: string,
@@ -45,34 +50,32 @@ export class TeamStructureController {
   }
 
   @CanRole(['admin'])
+  @RequirePermission('organization', 'edit')
   @NeedLogin()
   @Post()
-  async create(
-    @Req() req: any,
-    @Body() body: CreateBindingRequest,
-  ) {
+  async create(@Req() req: any, @Body() body: CreateBindingRequest) {
     const { userId }: { userId: string } = req.userContext;
     return this.service.create(body, userId);
   }
 
   @CanRole(['admin'])
+  @RequirePermission('organization', 'edit')
   @NeedLogin()
   @Patch('employees/deactivate')
-  async batchDeactivate(
-    @Req() req: any,
-    @Body() body: BatchDeactivateRequest,
-  ) {
+  async batchDeactivate(@Req() req: any, @Body() body: BatchDeactivateRequest) {
     const { userId }: { userId: string } = req.userContext;
     return this.service.batchDeactivate(body.employeeIds, userId);
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
+  @RequirePermission('organization', 'view')
   @Get('employee/:id')
   async getEmployee(@Param('id') id: string) {
     return this.service.getEmployee(id);
   }
 
   @CanRole(['admin'])
+  @RequirePermission('organization', 'edit')
   @NeedLogin()
   @Patch('employee/:id')
   async updateEmployee(
@@ -85,17 +88,16 @@ export class TeamStructureController {
   }
 
   @CanRole(['admin'])
+  @RequirePermission('organization', 'edit')
   @NeedLogin()
   @Patch(':id/deactivate')
-  async deactivate(
-    @Req() req: any,
-    @Param('id') id: string,
-  ) {
+  async deactivate(@Req() req: any, @Param('id') id: string) {
     const { userId }: { userId: string } = req.userContext;
     return this.service.deactivate(id, userId);
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
+  @RequirePermission('organization', 'view')
   @Get(':employeeId/history')
   async history(@Param('employeeId') employeeId: string) {
     return this.service.history(employeeId);

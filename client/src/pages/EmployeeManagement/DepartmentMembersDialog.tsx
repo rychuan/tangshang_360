@@ -79,11 +79,21 @@ const DepartmentMembersDialog: React.FC<DepartmentMembersDialogProps> = ({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/30">
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">姓名</th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">编号</th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">岗位</th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">角色</th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">状态</th>
+                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
+                      姓名
+                    </th>
+                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
+                      编号
+                    </th>
+                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
+                      岗位
+                    </th>
+                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
+                      角色
+                    </th>
+                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
+                      状态
+                    </th>
                   </tr>
                 </thead>
                 <tbody>

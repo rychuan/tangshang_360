@@ -1,5 +1,6 @@
 import { Controller, Get, Query, Req } from '@nestjs/common';
 import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
+import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import {
   AssessmentStatisticsService,
   type RecordsQuery,
@@ -13,6 +14,7 @@ export class AssessmentStatisticsController {
   constructor(private readonly service: AssessmentStatisticsService) {}
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
+  @RequirePermission('statistics', 'view')
   @Get('records')
   async records(
     @Query('page') page: string,
@@ -27,15 +29,20 @@ export class AssessmentStatisticsController {
       page: parseInt(page, 10) || 1,
       pageSize: Math.min(parseInt(pageSize, 10) || 20, 50),
       periods: periods ? periods.split(',').filter(Boolean) : undefined,
-      departments: departments ? departments.split(',').filter(Boolean) : undefined,
+      departments: departments
+        ? departments.split(',').filter(Boolean)
+        : undefined,
       positions: positions ? positions.split(',').filter(Boolean) : undefined,
       grades: grades ? grades.split(',').filter(Boolean) : undefined,
-      employeeIds: employeeIds ? employeeIds.split(',').filter(Boolean) : undefined,
+      employeeIds: employeeIds
+        ? employeeIds.split(',').filter(Boolean)
+        : undefined,
     };
     return this.service.records(query);
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
+  @RequirePermission('statistics', 'view')
   @Get('charts')
   async charts(
     @Query('periods') periods: string,
@@ -45,7 +52,9 @@ export class AssessmentStatisticsController {
   ) {
     const query: ChartsQuery = {
       periods: periods ? periods.split(',').filter(Boolean) : undefined,
-      departments: departments ? departments.split(',').filter(Boolean) : undefined,
+      departments: departments
+        ? departments.split(',').filter(Boolean)
+        : undefined,
       positions: positions ? positions.split(',').filter(Boolean) : undefined,
       grades: grades ? grades.split(',').filter(Boolean) : undefined,
     };
@@ -53,6 +62,7 @@ export class AssessmentStatisticsController {
   }
 
   @CanRole(['admin', 'hrd', 'dept_head'])
+  @RequirePermission('statistics', 'export')
   @NeedLogin()
   @Get('export')
   async exportData(
@@ -64,10 +74,14 @@ export class AssessmentStatisticsController {
   ): Promise<ExportResult> {
     const query: ExportQuery = {
       periods: periods ? periods.split(',').filter(Boolean) : undefined,
-      departments: departments ? departments.split(',').filter(Boolean) : undefined,
+      departments: departments
+        ? departments.split(',').filter(Boolean)
+        : undefined,
       positions: positions ? positions.split(',').filter(Boolean) : undefined,
       grades: grades ? grades.split(',').filter(Boolean) : undefined,
-      employeeIds: employeeIds ? employeeIds.split(',').filter(Boolean) : undefined,
+      employeeIds: employeeIds
+        ? employeeIds.split(',').filter(Boolean)
+        : undefined,
     };
     return this.service.exportData(query);
   }

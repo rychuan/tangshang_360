@@ -2,9 +2,13 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { EmployeeItem } from '@shared/api.interface';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
+import { CanDo } from '@/hooks/usePermissions';
 import { Checkbox } from '@/components/ui/checkbox';
 import { UserDisplay } from '@/components/business-ui/user-display';
+import { DataTable } from '@/components/ui/data-table';
+import type { ColumnDef } from '@tanstack/react-table';
 import {
   Pencil,
   Ban,
@@ -13,6 +17,7 @@ import {
   Unlink,
   History,
   Trash2,
+  Users,
 } from 'lucide-react';
 
 export interface EmployeeTableProps {
@@ -58,169 +63,232 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
   const someChecked =
     employees.some((e) => selectedRowKeys.includes(e.id)) && !allChecked;
 
-  const toggleAll = (): void => {
-    onToggleAll();
-  };
+  const stickyCol =
+    'sticky right-0 z-10 bg-background group-hover:bg-muted/30 border-l';
+  const cols: ColumnDef<EmployeeItem>[] = [
+    {
+      id: 'select',
+      header: () => (
+        <Checkbox
+          checked={allChecked ? true : someChecked ? 'indeterminate' : false}
+          onCheckedChange={() => onToggleAll()}
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={selectedRowKeys.includes(row.original.id)}
+          onCheckedChange={() => onToggleRow(row.original.id)}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+      size: 40,
+      enableSorting: false,
+    },
+    {
+      id: 'name',
+      header: '姓名',
+      cell: ({ row }) => (
+        <div className="font-medium">
+          <UserDisplay userId={row.original.id} size="small" />
+        </div>
+      ),
+    },
+    {
+      id: 'employeeNo',
+      header: '编号',
+      meta: {
+        headerClass: 'hidden sm:table-cell',
+        cellClass: 'hidden sm:table-cell',
+      },
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">
+          {row.original.employeeNo || '-'}
+        </span>
+      ),
+    },
+    {
+      id: 'position',
+      header: '岗位',
+      meta: {
+        headerClass: 'hidden md:table-cell',
+        cellClass: 'hidden md:table-cell',
+      },
+      cell: ({ row }) => (
+        <span className="truncate">{row.original.position}</span>
+      ),
+    },
+    {
+      id: 'department',
+      header: '部门',
+      meta: {
+        headerClass: 'hidden lg:table-cell',
+        cellClass: 'hidden lg:table-cell',
+      },
+      cell: ({ row }) => (
+        <span className="text-muted-foreground truncate">
+          {row.original.department || '-'}
+        </span>
+      ),
+    },
+    {
+      id: 'supervisor',
+      header: '上级',
+      meta: {
+        headerClass: 'hidden lg:table-cell',
+        cellClass: 'hidden lg:table-cell',
+      },
+      cell: ({ row }) =>
+        row.original.supervisorId ? (
+          <UserDisplay userId={row.original.supervisorId} size="small" />
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        ),
+    },
+    {
+      id: 'role',
+      header: '角色',
+      meta: {
+        headerClass: 'hidden md:table-cell',
+        cellClass: 'hidden md:table-cell',
+      },
+      cell: ({ row }) => (
+        <Badge variant="secondary" className="text-xs font-normal">
+          {roleLabels[row.original.role] || row.original.role}
+        </Badge>
+      ),
+    },
+    {
+      id: 'binding',
+      header: '模板',
+      meta: {
+        headerClass: 'hidden lg:table-cell',
+        cellClass: 'hidden lg:table-cell',
+      },
+      cell: ({ row }) =>
+        row.original.currentBinding ? (
+          <span className="text-xs">
+            {row.original.currentBinding.templateName}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground">-</span>
+        ),
+    },
+    {
+      id: 'status',
+      header: '状态',
+      cell: ({ row }) => (
+        <Badge
+          variant={row.original.status === 'active' ? 'default' : 'secondary'}
+          className="text-xs font-normal"
+        >
+          {row.original.status === 'active' ? '在职' : '离职'}
+        </Badge>
+      ),
+    },
+    {
+      id: 'actions',
+      meta: { headerClass: stickyCol, cellClass: stickyCol },
+      header: () => <div className="text-right">操作</div>,
+      cell: ({ row }) => (
+        <div
+          className="flex items-center justify-end gap-0.5 sm:gap-1"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <CanRole roles={['admin']}>
+            <CanDo resource="employees" action="edit">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 sm:size-8"
+                onClick={() => onEdit(row.original)}
+                title="编辑"
+              >
+                <Pencil />
+              </Button>
+            </CanDo>
+          </CanRole>
+          <CanRole roles={['admin', 'hrd']}>
+            <CanDo resource="employee_binding" action="edit">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 sm:size-8 hidden sm:inline-flex"
+                onClick={() => onBind(row.original)}
+                title="绑定模板"
+              >
+                <Link2 />
+              </Button>
+            </CanDo>
+          </CanRole>
+          {row.original.currentBinding && (
+            <CanRole roles={['admin', 'hrd']}>
+              <CanDo resource="employee_binding" action="edit">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 sm:size-8 hidden sm:inline-flex"
+                  onClick={() => onUnbind(row.original)}
+                  title="解绑"
+                >
+                  <Unlink className="text-destructive" />
+                </Button>
+              </CanDo>
+            </CanRole>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7 sm:size-8 hidden sm:inline-flex"
+            onClick={() => onHistory(row.original)}
+            title="绑定历史"
+          >
+            <History />
+          </Button>
+          <CanRole roles={['admin']}>
+            <CanDo resource="employees" action="edit">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 sm:size-8"
+                onClick={() => onToggleStatus(row.original)}
+                title={row.original.status === 'active' ? '禁用' : '启用'}
+              >
+                {row.original.status === 'active' ? (
+                  <Ban className="text-destructive" />
+                ) : (
+                  <CheckCircle className="text-success" />
+                )}
+              </Button>
+            </CanDo>
+          </CanRole>
+          <CanRole roles={['admin']}>
+            <CanDo resource="employees" action="delete">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 sm:size-8"
+                onClick={() => onDelete(row.original)}
+                title="删除"
+              >
+                <Trash2 className="text-destructive" />
+              </Button>
+            </CanDo>
+          </CanRole>
+        </div>
+      ),
+      enableSorting: false,
+    },
+  ];
 
   return (
-    <div className="border rounded-lg">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b hover:bg-muted/50 transition-colors">
-              <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap w-[40px]">
-                <Checkbox
-                  checked={
-                    allChecked ? true : someChecked ? 'indeterminate' : false
-                  }
-                  onCheckedChange={toggleAll}
-                />
-              </th>
-              <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">姓名</th>
-              <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">编号</th>
-              <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">岗位</th>
-              <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">部门</th>
-              <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">角色</th>
-              <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">当前绑定模板</th>
-              <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">状态</th>
-              <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap w-[260px] sticky right-0 bg-background z-20 border-l">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr className="border-b hover:bg-muted/50 transition-colors">
-                <td colSpan={9} className="py-3 px-4 align-middle whitespace-nowrap text-center py-8">
-                  加载中...
-                </td>
-              </tr>
-            ) : employees.length === 0 ? (
-              <tr className="border-b hover:bg-muted/50 transition-colors">
-                <td
-                  colSpan={9}
-                  className="py-3 px-4 align-middle whitespace-nowrap text-center py-8 text-muted-foreground"
-                >
-                  暂无员工数据
-                </td>
-              </tr>
-            ) : (
-              employees.map((emp) => (
-                <tr
-                  key={emp.id}
-                  className="border-b hover:bg-muted/50 transition-colors group cursor-pointer"
-                  onClick={() => navigate(`/employees/${emp.id}`)}
-                >
-                  <td className="py-3 px-4 align-middle whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={selectedRowKeys.includes(emp.id)}
-                      onCheckedChange={() => onToggleRow(emp.id)}
-                    />
-                  </td>
-                  <td className="py-3 px-4 align-middle whitespace-nowrap font-medium">
-                    <UserDisplay userId={emp.id} size="small" />
-                  </td>
-                  <td className="py-3 px-4 align-middle whitespace-nowrap">{emp.employeeNo || '-'}</td>
-                  <td className="py-3 px-4 align-middle whitespace-nowrap">{emp.position}</td>
-                  <td className="py-3 px-4 align-middle whitespace-nowrap">{emp.department || '-'}</td>
-                  <td className="py-3 px-4 align-middle whitespace-nowrap">
-                    <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                      {roleLabels[emp.role] || emp.role}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 align-middle whitespace-nowrap">
-                    {emp.currentBinding ? (
-                      <span className="text-sm">
-                        {emp.currentBinding.templateName}
-                      </span>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">-</span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4 align-middle whitespace-nowrap">
-                    {emp.status === 'active' ? (
-                      <span className="text-green-600 text-xs font-medium">
-                        ● 已启用
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">
-                        ● 已禁用
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4 align-middle whitespace-nowrap sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-1.5">
-                      <CanRole roles={['admin']}>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onEdit(emp)}
-                          title="编辑"
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                      </CanRole>
-                      <CanRole roles={['admin', 'hrd']}>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onBind(emp)}
-                          title="绑定模板"
-                        >
-                          <Link2 className="size-4" />
-                        </Button>
-                      </CanRole>
-                      {emp.currentBinding && (
-                        <CanRole roles={['admin', 'hrd']}>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onUnbind(emp)}
-                            title="解绑"
-                          >
-                            <Unlink className="size-4 text-red-500" />
-                          </Button>
-                        </CanRole>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onHistory(emp)}
-                        title="绑定历史"
-                      >
-                        <History className="size-4" />
-                      </Button>
-                      <CanRole roles={['admin']}>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onToggleStatus(emp)}
-                          title={emp.status === 'active' ? '禁用' : '启用'}
-                        >
-                          {emp.status === 'active' ? (
-                            <Ban className="size-4 text-red-500" />
-                          ) : (
-                            <CheckCircle className="size-4 text-green-500" />
-                          )}
-                        </Button>
-                      </CanRole>
-                      <CanRole roles={['admin']}>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onDelete(emp)}
-                          title="删除"
-                        >
-                          <Trash2 className="size-4 text-red-500" />
-                        </Button>
-                      </CanRole>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <DataTable
+      columns={cols}
+      data={employees}
+      loading={loading}
+      emptyMessage="暂无员工数据"
+      emptyIcon={<Users className="size-6" />}
+      onRowClick={(emp) => navigate(`/employees/${emp.id}`)}
+    />
   );
 };
 

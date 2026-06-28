@@ -1,4 +1,7 @@
-import type { MemberMutationData, FilterParams } from '@lark-apaas/fullstack-nestjs-core';
+import type {
+  MemberMutationData,
+  FilterParams,
+} from '@lark-apaas/fullstack-nestjs-core';
 
 export interface AssessmentTemplateItem {
   id: string;
@@ -451,7 +454,7 @@ export interface MyAssessmentSummary {
 }
 export interface RemindResult {
   instanceId: string;
-  status: "sent" | "failed";
+  status: 'sent' | 'failed';
   reason?: string;
 }
 export interface RemindResponse {
@@ -459,7 +462,8 @@ export interface RemindResponse {
   results: RemindResult[];
 }
 // === Permission Management ===
-export type PermissionAction = 'view' | 'edit' | 'delete' | 'export' | 'publish';
+export type PermissionAction =
+  'view' | 'edit' | 'delete' | 'export' | 'publish';
 export type PermissionResource =
   | 'dashboard'
   | 'my_assessments'
@@ -470,7 +474,9 @@ export type PermissionResource =
   | 'publish_management'
   | 'statistics'
   | 'team_performance'
-  | 'permission_management';
+  | 'permission_management'
+  | 'grade_config'
+  | 'dictionary_config';
 export interface PermissionItem {
   resource: PermissionResource;
   actions: PermissionAction[];
@@ -487,6 +493,8 @@ export const DEFAULT_PERMISSIONS: Record<string, PermissionItem[]> = {
     { resource: 'team_performance', actions: ['view'] },
     { resource: 'organization', actions: ['view', 'edit', 'delete'] },
     { resource: 'permission_management', actions: ['view', 'edit'] },
+    { resource: 'grade_config', actions: ['view', 'edit'] },
+    { resource: 'dictionary_config', actions: ['view', 'edit'] },
   ],
   hrd: [
     { resource: 'dashboard', actions: ['view'] },
@@ -499,6 +507,8 @@ export const DEFAULT_PERMISSIONS: Record<string, PermissionItem[]> = {
     { resource: 'team_performance', actions: ['view'] },
     { resource: 'organization', actions: ['view', 'edit'] },
     { resource: 'permission_management', actions: ['view'] },
+    { resource: 'grade_config', actions: ['view', 'edit'] },
+    { resource: 'dictionary_config', actions: ['view', 'edit'] },
   ],
   dept_head: [
     { resource: 'dashboard', actions: ['view'] },
@@ -622,6 +632,27 @@ export interface CreateDepartmentRequest {
   sortOrder?: number;
 }
 export type UpdateDepartmentRequest = CreateDepartmentRequest;
+
+// === Dictionary Management ===
+export interface DictEntry {
+  id: string;
+  dictType: string;
+  code: string;
+  name: string;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+}
+export interface DictListResponse {
+  items: DictEntry[];
+}
+export interface CreateDictRequest {
+  code?: string;
+  name: string;
+  sortOrder?: number;
+}
+export type UpdateDictRequest = CreateDictRequest;
+
 export interface ExportResultItem extends StatisticsRecordItem {}
 export interface ExportResult {
   items: ExportResultItem[];
@@ -642,6 +673,14 @@ export interface PerformanceGradeItem {
 }
 export interface PerformanceGradeListResponse {
   items: PerformanceGradeItem[];
+}
+export interface ActiveGradeRule {
+  name: string;
+  minScore: number;
+  maxScore: number;
+}
+export interface ActiveGradeListResponse {
+  rules: ActiveGradeRule[];
 }
 export interface CreatePerformanceGradeRequest {
   name: string;

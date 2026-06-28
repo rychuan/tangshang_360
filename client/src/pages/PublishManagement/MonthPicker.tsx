@@ -1,7 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { CalendarIcon } from 'lucide-react';
 import dayjs from 'dayjs';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -36,7 +40,9 @@ const MonthPicker: React.FC<MonthPickerProps> = ({ value, onChange }) => {
 
   const initial: dayjs.Dayjs = value ? dayjs(value + '-01') : dayjs();
   const [tempYear, setTempYear] = useState<string>(String(initial.year()));
-  const [tempMonth, setTempMonth] = useState<string>(String(initial.month() + 1));
+  const [tempMonth, setTempMonth] = useState<string>(
+    String(initial.month() + 1),
+  );
 
   const handleOpenChange = (next: boolean): void => {
     if (next) {

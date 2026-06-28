@@ -6,6 +6,7 @@ import type {
   CreateDepartmentRequest,
 } from '@shared/api.interface';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { UserSelect } from '@/components/business-ui/user-select';
@@ -25,12 +26,21 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 import {
   Plus,
   Pencil,
@@ -76,7 +86,7 @@ const DepartmentManagementTab: React.FC = () => {
       setItems(res?.items ?? []);
       setTree(res.tree);
       setExpanded(new Set(res.tree.map((n: DepartmentTreeNode) => n.id)));
-    } catch {
+    } catch (err) {
       toast.error('加载部门数据失败');
     } finally {
       setLoading(false);
@@ -111,7 +121,9 @@ const DepartmentManagementTab: React.FC = () => {
       setFormData({ name: '', parentId: '', headId: '', sortOrder: 0 });
       loadData();
     } catch (err) {
-      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+      const msg = (
+        err as { response?: { data?: { error?: { message?: string } } } }
+      )?.response?.data?.error?.message;
       toast.error(msg || '操作失败');
     }
   };
@@ -128,14 +140,18 @@ const DepartmentManagementTab: React.FC = () => {
   };
 
   const handleDelete = async (dept: DepartmentItem): Promise<void> => {
-    const ok = await showConfirm(`确定删除「${dept.name}」？有子部门或员工时无法删除。`);
+    const ok = await showConfirm(
+      `确定删除「${dept.name}」？有子部门或员工时无法删除。`,
+    );
     if (!ok) return;
     try {
       await departmentApi.remove(dept.id);
       toast.success('部门已删除');
       loadData();
     } catch (err) {
-      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+      const msg = (
+        err as { response?: { data?: { error?: { message?: string } } } }
+      )?.response?.data?.error?.message;
       toast.error(msg || '删除失败');
     }
   };
@@ -157,8 +173,8 @@ const DepartmentManagementTab: React.FC = () => {
     const hasChildren = node.children && node.children.length > 0;
     return (
       <React.Fragment key={node.id}>
-        <tr className="border-b hover:bg-muted/50 transition-colors group">
-          <td className="py-3 px-4 align-middle whitespace-nowrap">
+        <TableRow className="group">
+          <TableCell>
             <div
               className="flex items-center gap-2"
               style={{ paddingLeft: depth * 20 }}
@@ -180,14 +196,14 @@ const DepartmentManagementTab: React.FC = () => {
               <Building2 className="size-4 text-muted-foreground" />
               <span className="font-medium">{node.name}</span>
             </div>
-          </td>
-          <td className="py-3 px-4 align-middle whitespace-nowrap text-muted-foreground">
+          </TableCell>
+          <TableCell className="text-muted-foreground">
             {node.parentName || '-'}
-          </td>
-          <td className="py-3 px-4 align-middle whitespace-nowrap text-muted-foreground">
+          </TableCell>
+          <TableCell className="text-muted-foreground">
             {node.headName || '-'}
-          </td>
-          <td className="py-3 px-4 align-middle whitespace-nowrap">
+          </TableCell>
+          <TableCell>
             <button
               className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
               onClick={() => {
@@ -198,27 +214,27 @@ const DepartmentManagementTab: React.FC = () => {
               <Users className="h-3.5 w-3.5" />
               {node.memberCount}
             </button>
-          </td>
-          <td className="py-3 px-4 align-middle whitespace-nowrap">{node.sortOrder}</td>
-          <td className="py-3 px-4 align-middle whitespace-nowrap sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
+          </TableCell>
+          <TableCell>{node.sortOrder}</TableCell>
+          <TableCell className="sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
             <div className="flex items-center gap-1.5">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => handleEdit(node)}
               >
-                <Pencil className="size-4" />
+                <Pencil />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => handleDelete(node)}
               >
-                <Trash2 className="size-4 text-red-500" />
+                <Trash2 className="text-destructive" />
               </Button>
             </div>
-          </td>
-        </tr>
+          </TableCell>
+        </TableRow>
         {isOpen &&
           hasChildren &&
           node.children.map((child) => renderTreeNode(child, depth + 1))}
@@ -249,15 +265,13 @@ const DepartmentManagementTab: React.FC = () => {
                 });
               }}
             >
-              <Plus className="mr-2 size-4" />
+              <Plus data-icon="inline-start" />
               新建部门
             </Button>
           </DialogTrigger>
           <DialogContent className="w-[95vw] sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>
-                {editingDept ? '编辑部门' : '新建部门'}
-              </DialogTitle>
+              <DialogTitle>{editingDept ? '编辑部门' : '新建部门'}</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div>
@@ -332,33 +346,47 @@ const DepartmentManagementTab: React.FC = () => {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>组织架构</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+            <Building2 className="size-4 sm:size-5 text-muted-foreground" />
+            组织架构
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 sm:p-4">
           {loading ? (
-            <p className="py-8 text-center text-muted-foreground">加载中...</p>
+            <div className="flex items-center justify-center py-12">
+              <Spinner className="size-6" />
+            </div>
           ) : tree.length === 0 ? (
-            <p className="py-8 text-center text-muted-foreground">
-              暂无部门数据，点击「新建部门」开始
-            </p>
+            <div className="py-12">
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <Building2 className="size-6" />
+                  </EmptyMedia>
+                  <EmptyTitle>暂无部门数据</EmptyTitle>
+                </EmptyHeader>
+              </Empty>
+            </div>
           ) : (
-            <div className="border rounded-lg overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b hover:bg-muted/50 transition-colors">
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">部门名称</th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">上级部门</th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">负责人</th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">成员</th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">排序</th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap w-[100px] sticky right-0 bg-background z-20 border-l">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <div className="border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>部门名称</TableHead>
+                    <TableHead>上级部门</TableHead>
+                    <TableHead>负责人</TableHead>
+                    <TableHead>成员</TableHead>
+                    <TableHead>排序</TableHead>
+                    <TableHead className="w-[100px] sticky right-0 bg-background z-20 border-l">
+                      操作
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {tree.map((node) => renderTreeNode(node))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>

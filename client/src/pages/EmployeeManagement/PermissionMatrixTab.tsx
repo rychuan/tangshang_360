@@ -8,9 +8,18 @@ import type {
 } from '@shared/api.interface';
 import { DEFAULT_PERMISSIONS } from '@shared/api.interface';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
+import { CanDo } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { toast } from 'sonner';
 import { Save, RotateCcw } from 'lucide-react';
 
@@ -19,16 +28,18 @@ interface PermissionMatrixTabProps {
 }
 
 const RESOURCE_LABELS: Record<PermissionResource, string> = {
-  dashboard: '首页概览',
-  my_assessments: '我的考核',
+  dashboard: '首页',
+  my_assessments: '我的绩效',
   employees: '员工管理',
-  template_management: '考核模板管理',
+  template_management: '绩效模板管理',
   employee_binding: '员工模板绑定',
-  publish_management: '考核发布管理',
-  statistics: '考核统计查询',
+  publish_management: '绩效发布管理',
+  statistics: '绩效统计查询',
   team_performance: '团队绩效',
   organization: '组织架构',
   permission_management: '权限管理',
+  grade_config: '绩效等级配置',
+  dictionary_config: '字段管理',
 };
 
 const ACTION_LABELS: Record<PermissionAction, string> = {
@@ -39,7 +50,13 @@ const ACTION_LABELS: Record<PermissionAction, string> = {
   publish: '发布',
 };
 
-const ALL_ACTIONS: PermissionAction[] = ['view', 'edit', 'delete', 'export', 'publish'];
+const ALL_ACTIONS: PermissionAction[] = [
+  'view',
+  'edit',
+  'delete',
+  'export',
+  'publish',
+];
 
 const PERMISSION_MATRIX: Record<PermissionResource, PermissionAction[]> = {
   dashboard: ['view'],
@@ -52,6 +69,8 @@ const PERMISSION_MATRIX: Record<PermissionResource, PermissionAction[]> = {
   team_performance: ['view', 'edit'],
   organization: ['view', 'edit', 'delete'],
   permission_management: ['view', 'edit'],
+  grade_config: ['view', 'edit'],
+  dictionary_config: ['view', 'edit'],
 };
 
 const RESOURCE_ORDER = Object.keys(RESOURCE_LABELS) as PermissionResource[];
@@ -81,9 +100,14 @@ const PermissionMatrixTab: React.FC<PermissionMatrixTabProps> = ({ role }) => {
   }, [role.bizID, fetchPermissions]);
 
   const hasAction = (resource: PermissionResource, action: PermissionAction) =>
-    permissions.find((p) => p.resource === resource)?.actions.includes(action) ?? false;
+    permissions
+      .find((p) => p.resource === resource)
+      ?.actions.includes(action) ?? false;
 
-  const toggleAction = (resource: PermissionResource, action: PermissionAction) => {
+  const toggleAction = (
+    resource: PermissionResource,
+    action: PermissionAction,
+  ) => {
     setPermissions((prev) => {
       const copy = clonePermissions(prev);
       const existing = copy.find((p) => p.resource === resource);
@@ -120,7 +144,9 @@ const PermissionMatrixTab: React.FC<PermissionMatrixTabProps> = ({ role }) => {
   };
 
   const handleReset = () => {
-    const preset = (DEFAULT_PERMISSIONS as Record<string, PermissionItem[]>)[role.bizID ?? ''];
+    const preset = (DEFAULT_PERMISSIONS as Record<string, PermissionItem[]>)[
+      role.bizID ?? ''
+    ];
     if (preset) {
       setPermissions(clonePermissions(preset));
       toast.info('已重置为预设权限，点击保存生效');
@@ -143,50 +169,52 @@ const PermissionMatrixTab: React.FC<PermissionMatrixTabProps> = ({ role }) => {
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex-1 overflow-auto p-4">
         <div className="overflow-hidden rounded-lg border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b hover:bg-muted/50 transition-colors">
-                <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap w-[200px]">资源 / 页面</th>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[200px]">资源 / 页面</TableHead>
                 {ALL_ACTIONS.map((a) => (
-                  <th key={a} className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap w-[90px] text-center">
+                  <TableHead key={a} className="w-[90px] text-center">
                     {ACTION_LABELS[a]}
-                  </th>
+                  </TableHead>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {RESOURCE_ORDER.map((resource) => {
                 const validActions = PERMISSION_MATRIX[resource];
                 return (
-                  <tr key={resource} className="border-b hover:bg-muted/50 transition-colors">
-                    <td className="py-3 px-4 align-middle whitespace-nowrap font-medium">
+                  <TableRow key={resource}>
+                    <TableCell className="font-medium">
                       {RESOURCE_LABELS[resource]}
-                    </td>
+                    </TableCell>
                     {ALL_ACTIONS.map((action) => {
                       if (!validActions.includes(action)) {
                         return (
-                          <td
+                          <TableCell
                             key={action}
-                            className="py-3 px-4 align-middle whitespace-nowrap text-center text-muted-foreground"
+                            className="text-center text-muted-foreground"
                           >
                             —
-                          </td>
+                          </TableCell>
                         );
                       }
                       return (
-                        <td key={action} className="py-3 px-4 align-middle whitespace-nowrap text-center">
+                        <TableCell key={action} className="text-center">
                           <Checkbox
                             checked={hasAction(resource, action)}
-                            onCheckedChange={() => toggleAction(resource, action)}
+                            onCheckedChange={() =>
+                              toggleAction(resource, action)
+                            }
                           />
-                        </td>
+                        </TableCell>
                       );
                     })}
-                  </tr>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
       <div className="flex items-center justify-between gap-4 border-t px-4 py-3">
@@ -195,12 +223,15 @@ const PermissionMatrixTab: React.FC<PermissionMatrixTabProps> = ({ role }) => {
         </p>
         <div className="flex shrink-0 gap-2">
           <Button variant="outline" size="sm" onClick={handleReset}>
-            <RotateCcw className="mr-1 size-4" /> 重置为预设
+            <RotateCcw data-icon="inline-start" /> 重置为预设
           </Button>
           <CanRole roles={['admin']}>
-            <Button size="sm" onClick={handleSave} disabled={saving}>
-              <Save className="mr-1 size-4" /> {saving ? '保存中...' : '保存'}
-            </Button>
+            <CanDo resource="permission_management" action="edit">
+              <Button size="sm" onClick={handleSave} disabled={saving}>
+                <Save data-icon="inline-start" />{' '}
+                {saving ? '保存中...' : '保存'}
+              </Button>
+            </CanDo>
           </CanRole>
         </div>
       </div>

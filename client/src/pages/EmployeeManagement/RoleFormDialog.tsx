@@ -85,7 +85,9 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{mode === 'create' ? '新增角色' : '编辑角色'}</DialogTitle>
+          <DialogTitle>
+            {mode === 'create' ? '新增角色' : '编辑角色'}
+          </DialogTitle>
           <DialogDescription>
             {mode === 'create'
               ? '创建一个新角色，随后可配置其权限与成员。'
@@ -94,7 +96,10 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
         </DialogHeader>
         <div className="flex flex-col gap-4 py-2">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="role-name" className="text-xs text-muted-foreground mb-1.5">
+            <Label
+              htmlFor="role-name"
+              className="text-xs text-muted-foreground mb-1.5"
+            >
               角色名称 <span className="text-destructive">*</span>
             </Label>
             <Input
@@ -106,7 +111,10 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
           </div>
           {mode === 'create' && (
             <div className="flex flex-col gap-2">
-              <Label htmlFor="role-bizid" className="text-xs text-muted-foreground mb-1.5">
+              <Label
+                htmlFor="role-bizid"
+                className="text-xs text-muted-foreground mb-1.5"
+              >
                 角色标识 <span className="text-destructive">*</span>
               </Label>
               <Input
@@ -121,7 +129,12 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
             </div>
           )}
           <div className="flex flex-col gap-2">
-            <Label htmlFor="role-desc" className="text-xs text-muted-foreground mb-1.5">角色描述</Label>
+            <Label
+              htmlFor="role-desc"
+              className="text-xs text-muted-foreground mb-1.5"
+            >
+              角色描述
+            </Label>
             <Textarea
               id="role-desc"
               value={description}
@@ -132,7 +145,11 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={submitting}
+          >
             取消
           </Button>
           <Button onClick={handleSubmit} disabled={submitting}>

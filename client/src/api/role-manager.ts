@@ -28,7 +28,9 @@ export async function getRole(bizID: string): Promise<ForceRoleDTO> {
   return data;
 }
 
-export async function createRole(dto: CreateRoleRequest): Promise<ForceRoleDTO> {
+export async function createRole(
+  dto: CreateRoleRequest,
+): Promise<ForceRoleDTO> {
   const { data } = await axiosForBackend({
     url: '/api/role_manager/roles',
     method: 'POST',
@@ -121,4 +123,14 @@ export async function updateRolePermissions(
     data: dto,
   });
   return data;
+}
+
+export async function getMyPermissions(): Promise<
+  import('@shared/api.interface').PermissionItem[]
+> {
+  const { data } = await axiosForBackend({
+    url: '/api/role_manager/my-permissions',
+    method: 'GET',
+  });
+  return data.data?.permissions || [];
 }

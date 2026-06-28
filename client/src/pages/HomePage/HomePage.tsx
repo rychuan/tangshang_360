@@ -15,15 +15,35 @@ import { logger } from '@lark-apaas/client-toolkit/logger';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area, Line, LineChart } from 'recharts';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  Line,
+  LineChart,
+} from 'recharts';
+import { PageHeader } from '@/components/business-ui/page-header';
 import { getTodos, getOverview } from '@/api/dashboard';
 import type {
   DashboardTodosResponse,
   DashboardOverviewResponse,
 } from '@shared/api.interface';
 
-const TODO_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+const TODO_ICONS: Record<
+  string,
+  React.ComponentType<{ className?: string }>
+> = {
   self_review: ClipboardCheckIcon,
   supervisor_review: UsersIcon,
   sign: PenToolIcon,
@@ -44,7 +64,9 @@ const TODO_COLORS: Record<string, string> = {
 const HomePage: React.FC = () => {
   const userInfo = useCurrentUserProfile();
   const [todos, setTodos] = useState<DashboardTodosResponse['items']>([]);
-  const [overview, setOverview] = useState<DashboardOverviewResponse | null>(null);
+  const [overview, setOverview] = useState<DashboardOverviewResponse | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -101,7 +123,7 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="@container/main flex flex-1 flex-col gap-4 md:gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight hidden">考核概览</h1>
+      <PageHeader title="绩效概览" visuallyHidden />
 
       {/* Section Cards */}
       <div className="grid auto-rows-min gap-4 md:grid-cols-3">
@@ -151,16 +173,30 @@ const HomePage: React.FC = () => {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
             <AreaChartIcon className="size-4 text-muted-foreground" />
-            考核趋势
+            绩效趋势
           </CardTitle>
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[300px] w-full">
-            <AreaChart data={trendData.length > 0 ? trendData : [{ month: '暂无数据', score: 0 }]}>
+            <AreaChart
+              data={
+                trendData.length > 0
+                  ? trendData
+                  : [{ month: '暂无数据', score: 0 }]
+              }
+            >
               <defs>
                 <linearGradient id="fillScore" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0.05} />
+                  <stop
+                    offset="5%"
+                    stopColor="hsl(var(--chart-2))"
+                    stopOpacity={0.3}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor="hsl(var(--chart-2))"
+                    stopOpacity={0.05}
+                  />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -207,7 +243,10 @@ const HomePage: React.FC = () => {
             ) : (
               <ChartContainer config={chartConfig} className="h-[250px] w-full">
                 <BarChart data={gradeData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    className="stroke-muted"
+                  />
                   <XAxis
                     dataKey="grade"
                     tickLine={false}
@@ -221,7 +260,11 @@ const HomePage: React.FC = () => {
                     allowDecimals={false}
                   />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="count" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+                  <Bar
+                    dataKey="count"
+                    fill="hsl(var(--chart-1))"
+                    radius={[4, 4, 0, 0]}
+                  />
                 </BarChart>
               </ChartContainer>
             )}
@@ -254,7 +297,9 @@ const HomePage: React.FC = () => {
                     >
                       <Card className="hover:bg-accent/50 transition-colors cursor-pointer rounded-lg">
                         <CardContent className="flex items-center gap-3 p-3">
-                          <div className={`flex items-center justify-center size-9 rounded-md ${colorClass}`}>
+                          <div
+                            className={`flex items-center justify-center size-9 rounded-md ${colorClass}`}
+                          >
                             <Icon className="size-4" />
                           </div>
                           <div className="flex-1 min-w-0">

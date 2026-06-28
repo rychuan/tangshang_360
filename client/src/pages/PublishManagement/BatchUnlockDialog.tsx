@@ -32,11 +32,11 @@ const BatchUnlockDialog: React.FC<BatchUnlockDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>批量解锁考核</DialogTitle>
+          <DialogTitle>批量解锁绩效</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-4">
           <p className="text-sm text-muted-foreground">
-            已选择 {selectedCount} 项考核，解锁后将回退到上一阶段。
+            已选择 {selectedCount} 项绩效，解锁后将回退到上一阶段。
           </p>
           <div className="flex flex-col gap-2">
             <Label className="text-sm">

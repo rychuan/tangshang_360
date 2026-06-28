@@ -19,14 +19,17 @@ import {
   DialogTrigger,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, ChevronRight, ChevronDown, Building2, Users } from 'lucide-react';
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  ChevronRight,
+  ChevronDown,
+  Building2,
+  Users,
+} from 'lucide-react';
 import { showConfirm } from '@lark-apaas/client-toolkit';
 
 const DepartmentPage: React.FC = () => {
@@ -36,7 +39,12 @@ const DepartmentPage: React.FC = () => {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingDept, setEditingDept] = useState<DepartmentItem | null>(null);
-  const [formData, setFormData] = useState({ name: '', parentId: '', headId: '', sortOrder: 0 });
+  const [formData, setFormData] = useState({
+    name: '',
+    parentId: '',
+    headId: '',
+    sortOrder: 0,
+  });
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -54,10 +62,15 @@ const DepartmentPage: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleSave = async () => {
-    if (!formData.name.trim()) { toast.error('请输入部门名称'); return; }
+    if (!formData.name.trim()) {
+      toast.error('请输入部门名称');
+      return;
+    }
     try {
       if (editingDept) {
         await departmentApi.update(editingDept.id, formData);
@@ -87,7 +100,12 @@ const DepartmentPage: React.FC = () => {
   };
 
   const handleDelete = async (dept: DepartmentItem) => {
-    if (!await showConfirm(`确定删除「${dept.name}」？有子部门或员工时无法删除。`)) return;
+    if (
+      !(await showConfirm(
+        `确定删除「${dept.name}」？有子部门或员工时无法删除。`,
+      ))
+    )
+      return;
     try {
       await departmentApi.remove(dept.id);
       toast.success('部门已删除');
@@ -100,7 +118,8 @@ const DepartmentPage: React.FC = () => {
   const toggleExpand = (id: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -112,10 +131,20 @@ const DepartmentPage: React.FC = () => {
       <React.Fragment key={node.id}>
         <tr className="border-b hover:bg-muted/50 transition-colors">
           <td className="py-3 px-4 align-middle whitespace-nowrap">
-            <div className="flex items-center gap-2" style={{ paddingLeft: depth * 20 }}>
+            <div
+              className="flex items-center gap-2"
+              style={{ paddingLeft: depth * 20 }}
+            >
               {hasChildren ? (
-                <button onClick={() => toggleExpand(node.id)} className="p-0.5 hover:bg-muted rounded">
-                  {isOpen ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+                <button
+                  onClick={() => toggleExpand(node.id)}
+                  className="p-0.5 hover:bg-muted rounded"
+                >
+                  {isOpen ? (
+                    <ChevronDown className="size-4" />
+                  ) : (
+                    <ChevronRight className="size-4" />
+                  )}
                 </button>
               ) : (
                 <span className="w-5" />
@@ -124,27 +153,43 @@ const DepartmentPage: React.FC = () => {
               <span className="font-medium">{node.name}</span>
             </div>
           </td>
-          <td className="py-3 px-4 align-middle whitespace-nowrap text-muted-foreground">{node.parentName || '-'}</td>
-          <td className="py-3 px-4 align-middle whitespace-nowrap text-muted-foreground">{node.headName || '-'}</td>
+          <td className="py-3 px-4 align-middle whitespace-nowrap text-muted-foreground">
+            {node.parentName || '-'}
+          </td>
+          <td className="py-3 px-4 align-middle whitespace-nowrap text-muted-foreground">
+            {node.headName || '-'}
+          </td>
           <td className="py-3 px-4 align-middle whitespace-nowrap">
             <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
               <Users className="h-3.5 w-3.5" />
               {node.memberCount}
             </span>
           </td>
-          <td className="py-3 px-4 align-middle whitespace-nowrap">{node.sortOrder}</td>
+          <td className="py-3 px-4 align-middle whitespace-nowrap">
+            {node.sortOrder}
+          </td>
           <td className="py-3 px-4 align-middle whitespace-nowrap">
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" onClick={() => handleEdit(node)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleEdit(node)}
+              >
                 <Pencil className="size-4" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => handleDelete(node)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleDelete(node)}
+              >
                 <Trash2 className="size-4 text-red-500" />
               </Button>
             </div>
           </td>
         </tr>
-        {isOpen && hasChildren && node.children.map((child) => renderTreeNode(child, depth + 1))}
+        {isOpen &&
+          hasChildren &&
+          node.children.map((child) => renderTreeNode(child, depth + 1))}
       </React.Fragment>
     );
   };
@@ -153,9 +198,25 @@ const DepartmentPage: React.FC = () => {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">团队结构管理</h1>
-        <Dialog open={dialogOpen} onOpenChange={(v) => { setDialogOpen(v); if (!v) setEditingDept(null); }}>
+        <Dialog
+          open={dialogOpen}
+          onOpenChange={(v) => {
+            setDialogOpen(v);
+            if (!v) setEditingDept(null);
+          }}
+        >
           <DialogTrigger asChild>
-            <Button onClick={() => { setEditingDept(null); setFormData({ name: '', parentId: '', headId: '', sortOrder: 0 }); }}>
+            <Button
+              onClick={() => {
+                setEditingDept(null);
+                setFormData({
+                  name: '',
+                  parentId: '',
+                  headId: '',
+                  sortOrder: 0,
+                });
+              }}
+            >
               <Plus className="mr-2 size-4" />
               新建部门
             </Button>
@@ -167,56 +228,102 @@ const DepartmentPage: React.FC = () => {
             <div className="grid gap-4 py-4">
               <div>
                 <Label>部门名称 *</Label>
-                <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+                <Input
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                />
               </div>
               <div>
                 <Label>上级部门</Label>
-                <Select value={formData.parentId || '__none'} onValueChange={(v) => setFormData({ ...formData, parentId: v === '__none' ? '' : v })}>
-                  <SelectTrigger><SelectValue placeholder="无（一级部门）" /></SelectTrigger>
+                <Select
+                  value={formData.parentId || '__none'}
+                  onValueChange={(v) =>
+                    setFormData({
+                      ...formData,
+                      parentId: v === '__none' ? '' : v,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="无（一级部门）" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none">无（一级部门）</SelectItem>
-                    {items.filter(d => d.id !== editingDept?.id).map((d) => (
-                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                    ))}
+                    {items
+                      .filter((d) => d.id !== editingDept?.id)
+                      .map((d) => (
+                        <SelectItem key={d.id} value={d.id}>
+                          {d.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label>排序</Label>
-                <Input type="number" value={formData.sortOrder} onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })} />
+                <Input
+                  type="number"
+                  value={formData.sortOrder}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      sortOrder: parseInt(e.target.value) || 0,
+                    })
+                  }
+                />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>取消</Button>
-              <Button onClick={handleSave}>{editingDept ? '保存' : '创建'}</Button>
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                取消
+              </Button>
+              <Button onClick={handleSave}>
+                {editingDept ? '保存' : '创建'}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
 
       <Card>
-        <CardHeader><CardTitle>组织架构</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>组织架构</CardTitle>
+        </CardHeader>
         <CardContent>
           {loading ? (
             <p className="py-8 text-center text-muted-foreground">加载中...</p>
           ) : tree.length === 0 ? (
-            <p className="py-8 text-center text-muted-foreground">暂无部门数据，点击「新建部门」开始</p>
+            <p className="py-8 text-center text-muted-foreground">
+              暂无部门数据，点击「新建部门」开始
+            </p>
           ) : (
             <div className="border rounded-lg overflow-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b hover:bg-muted/50 transition-colors">
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">部门名称</th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">上级部门</th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">负责人</th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">人数</th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">排序</th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap w-[100px]">操作</th>
+                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
+                      部门名称
+                    </th>
+                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
+                      上级部门
+                    </th>
+                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
+                      负责人
+                    </th>
+                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
+                      人数
+                    </th>
+                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
+                      排序
+                    </th>
+                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap w-[100px]">
+                      操作
+                    </th>
                   </tr>
                 </thead>
-                <tbody>
-                  {tree.map((node) => renderTreeNode(node))}
-                </tbody>
+                <tbody>{tree.map((node) => renderTreeNode(node))}</tbody>
               </table>
             </div>
           )}

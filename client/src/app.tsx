@@ -4,6 +4,7 @@ import { AuthProvider } from '@lark-apaas/client-toolkit/auth';
 
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import { PermissionsProvider } from './hooks/usePermissions';
 import NotFound from './pages/NotFound/NotFound';
 import HomePage from './pages/HomePage/HomePage';
 import TemplateManagementPage from './pages/TemplateManagement/TemplateManagementPage';
@@ -16,6 +17,7 @@ import EmployeeManagementPage from './pages/EmployeeManagement/EmployeeManagemen
 import EmployeeDetailPage from './pages/EmployeeManagement/EmployeeDetailPage';
 import PermissionPage from './pages/EmployeeManagement/PermissionPage';
 import GradeConfigPage from './pages/GradeConfig/GradeConfigPage';
+import DictionaryConfigPage from './pages/DictionaryConfig/DictionaryConfigPage';
 
 const ALL_ROLES = ['admin', 'hrd', 'dept_head', 'supervisor', 'employee'];
 const MANAGER_ROLES = ['admin', 'hrd', 'dept_head', 'supervisor'];
@@ -49,23 +51,118 @@ const getPermissionApiUrl = (): string => {
 const RoutesComponent = () => {
   return (
     <AuthProvider config={{ permissionApi: { url: getPermissionApiUrl() } }}>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route index element={<ProtectedRoute roles={ALL_ROLES}><HomePage /></ProtectedRoute>} />
-          <Route path="template-management" element={<ProtectedRoute roles={TEMPLATE_ROLES}><TemplateManagementPage /></ProtectedRoute>} />
-          <Route path="publish-management" element={<ProtectedRoute roles={MANAGER_ROLES}><PublishManagementPage /></ProtectedRoute>} />
-          <Route path="assessment/:id" element={<ProtectedRoute roles={ALL_ROLES}><AssessmentDetailPage /></ProtectedRoute>} />
-          <Route path="statistics" element={<ProtectedRoute roles={MANAGER_ROLES}><StatisticsPage /></ProtectedRoute>} />
-          <Route path="my-assessments" element={<ProtectedRoute roles={ALL_ROLES}><MyAssessmentsPage /></ProtectedRoute>} />
-          <Route path="team-performance" element={<ProtectedRoute roles={MANAGER_ROLES}><TeamPerformancePage /></ProtectedRoute>} />
-          <Route path="employees" element={<ProtectedRoute roles={MANAGER_ROLES}><EmployeeManagementPage /></ProtectedRoute>} />
-          <Route path="employees/:id" element={<ProtectedRoute roles={MANAGER_ROLES}><EmployeeDetailPage /></ProtectedRoute>} />
-          <Route path="permissions" element={<ProtectedRoute roles={ADMIN_HRD_ROLES}><PermissionPage /></ProtectedRoute>} />
-          <Route path="grade-config" element={<ProtectedRoute roles={ADMIN_HRD_ROLES}><GradeConfigPage /></ProtectedRoute>} />
-          <Route path="403" element={<ForbiddenPage />} />
-        </Route>
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <PermissionsProvider>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route
+              index
+              element={
+                <ProtectedRoute roles={ALL_ROLES}>
+                  <HomePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="template-management"
+              element={
+                <ProtectedRoute roles={TEMPLATE_ROLES}>
+                  <TemplateManagementPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="publish-management"
+              element={
+                <ProtectedRoute roles={MANAGER_ROLES}>
+                  <PublishManagementPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="assessment/:id"
+              element={
+                <ProtectedRoute roles={ALL_ROLES}>
+                  <AssessmentDetailPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="statistics"
+              element={
+                <ProtectedRoute roles={MANAGER_ROLES}>
+                  <StatisticsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="my-assessments"
+              element={
+                <ProtectedRoute roles={ALL_ROLES}>
+                  <MyAssessmentsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="team-performance"
+              element={
+                <ProtectedRoute roles={MANAGER_ROLES}>
+                  <TeamPerformancePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="employees"
+              element={
+                <ProtectedRoute roles={MANAGER_ROLES}>
+                  <EmployeeManagementPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="employees/:id"
+              element={
+                <ProtectedRoute roles={MANAGER_ROLES}>
+                  <EmployeeDetailPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="permissions"
+              element={
+                <ProtectedRoute roles={ADMIN_HRD_ROLES}>
+                  <PermissionPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="grade-config"
+              element={
+                <ProtectedRoute roles={ADMIN_HRD_ROLES}>
+                  <GradeConfigPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="dictionary"
+              element={
+                <ProtectedRoute roles={ADMIN_HRD_ROLES}>
+                  <DictionaryConfigPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="dictionary/:type"
+              element={
+                <ProtectedRoute roles={ADMIN_HRD_ROLES}>
+                  <DictionaryConfigPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="403" element={<ForbiddenPage />} />
+          </Route>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </PermissionsProvider>
     </AuthProvider>
   );
 };

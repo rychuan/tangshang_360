@@ -1,5 +1,13 @@
-import { Injectable, Inject, Logger, BadRequestException } from '@nestjs/common';
-import { DRIZZLE_DATABASE, type PostgresJsDatabase } from '@lark-apaas/fullstack-nestjs-core';
+import {
+  Injectable,
+  Inject,
+  Logger,
+  BadRequestException,
+} from '@nestjs/common';
+import {
+  DRIZZLE_DATABASE,
+  type PostgresJsDatabase,
+} from '@lark-apaas/fullstack-nestjs-core';
 import { eq, asc, and } from 'drizzle-orm';
 import {
   employeeIndicatorSnapshot,
@@ -27,12 +35,14 @@ export class EmployeeSnapshotService {
     employeeId: string,
     templateId: string,
     userId: string,
+    tx?: PostgresJsDatabase,
   ): Promise<void> {
+    const db = tx ?? this.db;
     this.logger.log(
       `generateFromTemplate employeeId=${employeeId} templateId=${templateId}`,
     );
 
-    const dimensionRows = await this.db
+    const dimensionRows = await db
       .select()
       .from(assessmentDimension)
       .where(eq(assessmentDimension.templateId, templateId))
@@ -60,7 +70,7 @@ export class EmployeeSnapshotService {
     for (let i: number = 0; i < indicators.length; i++) {
       const ind = indicators[i];
       const dim = dimensionMap.get(ind.assessment_indicator.dimensionId);
-      await this.db.insert(employeeIndicatorSnapshot).values({
+      await db.insert(employeeIndicatorSnapshot).values({
         employeeId,
         templateId,
         dimensionName: dim?.name ?? '',
@@ -78,9 +88,7 @@ export class EmployeeSnapshotService {
     }
   }
 
-  async getSnapshot(
-    employeeId: string,
-  ): Promise<EmployeeSnapshotResponse> {
+  async getSnapshot(employeeId: string): Promise<EmployeeSnapshotResponse> {
     this.logger.log(`getSnapshot employeeId=${employeeId}`);
 
     const bindingRows = await this.db
@@ -112,7 +120,7 @@ export class EmployeeSnapshotService {
 
     if (snapshotRows.length > 0) {
       const indicators: InstanceIndicatorItem[] = snapshotRows.map(
-        (row: typeof snapshotRows[number]) => ({
+        (row: (typeof snapshotRows)[number]) => ({
           content: row.content,
           description: row.description ?? '',
           algorithm: row.algorithm ?? '',
@@ -160,7 +168,7 @@ export class EmployeeSnapshotService {
       );
 
     const indicators: InstanceIndicatorItem[] = indicatorsForTemplate.map(
-      (ind: typeof indicatorsForTemplate[number]) => {
+      (ind: (typeof indicatorsForTemplate)[number]) => {
         const dim = dimensionMap.get(ind.assessment_indicator.dimensionId);
         return {
           content: ind.assessment_indicator.content,
@@ -182,7 +190,9 @@ export class EmployeeSnapshotService {
     templateId: string,
     indicators: AdjustIndicatorInput[],
     userId: string,
+    tx?: PostgresJsDatabase,
   ): Promise<{ success: boolean }> {
+    const db = tx ?? this.db;
     this.logger.log(
       `adjustSnapshot employeeId=${employeeId} templateId=${templateId}`,
     );
@@ -204,13 +214,31 @@ export class EmployeeSnapshotService {
       );
     }
 
-    const dimRows = await this.db
+    // 校验每个维度内指标权重之和等于该维度权重
+    const dimIndicatorSum: Map<string, number> = new Map();
+    for (const ind of indicators) {
+      const dimKey = ind.dimensionName || '未分组';
+      dimIndicatorSum.set(
+        dimKey,
+        (dimIndicatorSum.get(dimKey) || 0) + (ind.weight ?? 0),
+      );
+    }
+    for (const [dimName, indicatorSum] of dimIndicatorSum) {
+      const dimWeight = dimWeightMap.get(dimName) ?? 0;
+      if (Math.abs(indicatorSum - dimWeight) > 0.01) {
+        throw new BadRequestException(
+          `维度「${dimName}」的指标权重之和(${Math.round(indicatorSum * 100) / 100})不等于维度权重(${dimWeight})`,
+        );
+      }
+    }
+
+    const dimRows = await db
       .select()
       .from(assessmentDimension)
       .where(eq(assessmentDimension.templateId, templateId))
       .orderBy(asc(assessmentDimension.sortOrder));
 
-    await this.db
+    await db
       .delete(employeeIndicatorSnapshot)
       .where(eq(employeeIndicatorSnapshot.employeeId, employeeId));
 
@@ -218,12 +246,11 @@ export class EmployeeSnapshotService {
     for (let i: number = 0; i < indicators.length; i++) {
       const ind = indicators[i];
       const dimName: string =
-        ind.dimensionName ||
-        (dimRows.length > 0 ? dimRows[0].name : '调整项');
+        ind.dimensionName || (dimRows.length > 0 ? dimRows[0].name : '调整项');
       const dimWeight: number =
         ind.dimensionWeight ??
         (dimRows.length > 0 ? Number(dimRows[0].weight) : 0);
-      await this.db.insert(employeeIndicatorSnapshot).values({
+      await db.insert(employeeIndicatorSnapshot).values({
         employeeId,
         templateId,
         dimensionName: dimName,
@@ -245,10 +272,14 @@ export class EmployeeSnapshotService {
     return { success: true };
   }
 
-  async deleteSnapshot(employeeId: string): Promise<{ success: boolean }> {
+  async deleteSnapshot(
+    employeeId: string,
+    tx?: PostgresJsDatabase,
+  ): Promise<{ success: boolean }> {
+    const db = tx ?? this.db;
     this.logger.log(`deleteSnapshot employeeId=${employeeId}`);
 
-    await this.db
+    await db
       .delete(employeeIndicatorSnapshot)
       .where(eq(employeeIndicatorSnapshot.employeeId, employeeId));
 
@@ -258,19 +289,21 @@ export class EmployeeSnapshotService {
   async copyToInstance(
     employeeId: string,
     instanceId: string,
+    tx?: PostgresJsDatabase,
   ): Promise<void> {
+    const db = tx ?? this.db;
     this.logger.log(
       `copyToInstance employeeId=${employeeId} instanceId=${instanceId}`,
     );
 
-    const snapshotRows = await this.db
+    const snapshotRows = await db
       .select()
       .from(employeeIndicatorSnapshot)
       .where(eq(employeeIndicatorSnapshot.employeeId, employeeId))
       .orderBy(asc(employeeIndicatorSnapshot.sortOrder));
 
     for (const row of snapshotRows) {
-      await this.db.insert(assessmentIndicatorSnapshot).values({
+      await db.insert(assessmentIndicatorSnapshot).values({
         instanceId,
         dimensionName: row.dimensionName,
         dimensionWeight: row.dimensionWeight,
@@ -287,8 +320,12 @@ export class EmployeeSnapshotService {
     }
   }
 
-  async hasSnapshot(employeeId: string): Promise<boolean> {
-    const rows = await this.db
+  async hasSnapshot(
+    employeeId: string,
+    tx?: PostgresJsDatabase,
+  ): Promise<boolean> {
+    const db = tx ?? this.db;
+    const rows = await db
       .select({ id: employeeIndicatorSnapshot.id })
       .from(employeeIndicatorSnapshot)
       .where(eq(employeeIndicatorSnapshot.employeeId, employeeId))

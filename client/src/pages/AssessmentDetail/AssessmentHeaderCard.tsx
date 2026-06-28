@@ -1,10 +1,6 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { UserDisplay } from '@/components/business-ui/user-display';
 import type { AssessmentInstanceDetail } from '@shared/api.interface';
 
@@ -25,24 +21,27 @@ const STATUS_VARIANTS: Record<
   completed: 'outline',
 };
 
-const GRADE_STYLES: Record<string, string> = {
-  S: 'bg-success/10 text-success',
-  A: 'bg-primary/10 text-primary',
-  B: 'bg-warning/10 text-warning',
-  C: 'bg-destructive/10 text-destructive',
-  D: 'bg-destructive/10 text-destructive',
-};
-
 interface AssessmentHeaderCardProps {
   detail: AssessmentInstanceDetail;
   previewScore?: number | null;
   previewGrade?: string | null;
+  gradeStyleMap?: Record<string, string>;
+}
+
+function getGradeStyle(
+  grade: string | undefined | null,
+  styleMap?: Record<string, string>,
+): string {
+  if (!grade) return '';
+  if (styleMap?.[grade]) return styleMap[grade];
+  return 'bg-muted text-muted-foreground';
 }
 
 const AssessmentHeaderCard: React.FC<AssessmentHeaderCardProps> = ({
   detail,
   previewScore,
   previewGrade,
+  gradeStyleMap,
 }) => {
   const hasFinalScore = detail.totalScore != null;
   const showPreview = !hasFinalScore && previewScore != null;
@@ -53,9 +52,7 @@ const AssessmentHeaderCard: React.FC<AssessmentHeaderCardProps> = ({
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-3 flex-wrap">
-              <h2 className="text-xl font-semibold">
-                {detail.period}
-              </h2>
+              <h2 className="text-xl font-semibold">{detail.period}</h2>
               <Badge variant={STATUS_VARIANTS[detail.status]}>
                 {STATUS_LABELS[detail.status] || detail.status}
               </Badge>
@@ -64,19 +61,14 @@ const AssessmentHeaderCard: React.FC<AssessmentHeaderCardProps> = ({
           {hasFinalScore && (
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <p className="text-sm text-muted-foreground">
-                  总分
-                </p>
+                <p className="text-sm text-muted-foreground">总分</p>
                 <p className="text-2xl font-bold text-primary">
                   {detail.totalScore}
                 </p>
               </div>
               {detail.grade && (
                 <span
-                  className={`px-3 py-1 rounded-md text-lg font-bold ${
-                    GRADE_STYLES[detail.grade] ||
-                    'bg-muted text-muted-foreground'
-                  }`}
+                  className={`px-3 py-1 rounded-md text-lg font-bold ${getGradeStyle(detail.grade, gradeStyleMap)}`}
                 >
                   {detail.grade}
                 </span>
@@ -86,22 +78,22 @@ const AssessmentHeaderCard: React.FC<AssessmentHeaderCardProps> = ({
           {showPreview && (
             <div className="flex items-center gap-4 rounded-md bg-muted px-4 py-2">
               <div className="text-right">
-                <p className="text-sm text-muted-foreground">
-                  预览总分
-                </p>
+                <p className="text-sm text-muted-foreground">预览总分</p>
                 <p className="text-2xl font-bold text-muted-foreground">
                   {previewScore}
                 </p>
               </div>
               {previewGrade && (
-                <span
-                  className={`px-3 py-1 rounded-md text-lg font-bold ${
-                    GRADE_STYLES[previewGrade] ||
-                    'bg-muted text-muted-foreground'
-                  }`}
-                >
-                  {previewGrade}
-                </span>
+                <div className="flex flex-col items-center gap-0.5">
+                  <span
+                    className={`px-3 py-1 rounded-md text-lg font-bold ${getGradeStyle(previewGrade, gradeStyleMap)}`}
+                  >
+                    {previewGrade}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    仅供参考
+                  </span>
+                </div>
               )}
             </div>
           )}
@@ -111,10 +103,7 @@ const AssessmentHeaderCard: React.FC<AssessmentHeaderCardProps> = ({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <p className="text-sm text-muted-foreground">员工</p>
-            <UserDisplay
-              userId={detail.employeeId}
-              size="medium"
-            />
+            <UserDisplay userId={detail.employeeId} size="medium" />
           </div>
           <div>
             <p className="text-sm text-muted-foreground">岗位</p>
@@ -123,18 +112,13 @@ const AssessmentHeaderCard: React.FC<AssessmentHeaderCardProps> = ({
           <div>
             <p className="text-sm text-muted-foreground">上级</p>
             {detail.supervisorId ? (
-              <UserDisplay
-                userId={detail.supervisorId}
-                size="medium"
-              />
+              <UserDisplay userId={detail.supervisorId} size="medium" />
             ) : (
               <p className="text-sm text-muted-foreground">-</p>
             )}
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">
-              签名状态
-            </p>
+            <p className="text-sm text-muted-foreground">签名状态</p>
             <div className="text-sm flex flex-col gap-0.5 mt-0.5">
               <p>
                 本人：
@@ -149,15 +133,11 @@ const AssessmentHeaderCard: React.FC<AssessmentHeaderCardProps> = ({
                     )}
                     {detail.selfSignName}{' '}
                     {detail.selfSignAt
-                      ? new Date(
-                          detail.selfSignAt,
-                        ).toLocaleDateString('zh-CN')
+                      ? new Date(detail.selfSignAt).toLocaleDateString('zh-CN')
                       : ''}
                   </span>
                 ) : (
-                  <span className="text-muted-foreground">
-                    未签
-                  </span>
+                  <span className="text-muted-foreground">未签</span>
                 )}
               </p>
               <p>
@@ -173,15 +153,13 @@ const AssessmentHeaderCard: React.FC<AssessmentHeaderCardProps> = ({
                     )}
                     {detail.supervisorSignName}{' '}
                     {detail.supervisorSignAt
-                      ? new Date(
-                          detail.supervisorSignAt,
-                        ).toLocaleDateString('zh-CN')
+                      ? new Date(detail.supervisorSignAt).toLocaleDateString(
+                          'zh-CN',
+                        )
                       : ''}
                   </span>
                 ) : (
-                  <span className="text-muted-foreground">
-                    未签
-                  </span>
+                  <span className="text-muted-foreground">未签</span>
                 )}
               </p>
             </div>
