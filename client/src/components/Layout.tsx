@@ -1,10 +1,15 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useLocation, Link, Outlet } from 'react-router-dom';
 import { useCurrentUserProfile } from '@lark-apaas/client-toolkit/hooks/useCurrentUserProfile';
 import { useAppInfo } from '@lark-apaas/client-toolkit/hooks/useAppInfo';
 import { useAuth, ROLE_SUBJECT } from '@lark-apaas/client-toolkit/auth';
 import { usePermissions } from '@/hooks/usePermissions';
 import type { PermissionResource } from '@shared/api.interface';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import {
   Sidebar,
   SidebarContent,
@@ -19,7 +24,6 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarRail,
-  SidebarSeparator,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import {
@@ -32,7 +36,7 @@ import {
   UserCog,
   Shield,
   Award,
-  Briefcase,
+  ChevronRight,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -42,6 +46,8 @@ import {
   BreadcrumbSeparator,
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
+
+// ─── Types ──────────────────────────────────────────────
 
 type NavItem = {
   label: string;
@@ -53,8 +59,11 @@ type NavItem = {
 
 type NavGroup = {
   label: string;
+  icon: typeof LayoutDashboard;
   items: NavItem[];
 };
+
+// ─── Role constants ─────────────────────────────────────
 
 const ALL_ROLES = ['admin', 'hrd', 'dept_head', 'supervisor', 'employee'];
 const MANAGER_ROLES = ['admin', 'hrd', 'dept_head', 'supervisor'];
@@ -64,6 +73,7 @@ const ADMIN_HRD_ROLES = ['admin', 'hrd'];
 const navGroups: NavGroup[] = [
   {
     label: '工作台',
+    icon: LayoutDashboard,
     items: [
       {
         label: '首页',
@@ -90,6 +100,7 @@ const navGroups: NavGroup[] = [
   },
   {
     label: '绩效管理',
+    icon: FileText,
     items: [
       {
         label: '绩效模板管理',
@@ -123,6 +134,7 @@ const navGroups: NavGroup[] = [
   },
   {
     label: '系统设置',
+    icon: Shield,
     items: [
       {
         label: '员工管理',
@@ -130,13 +142,6 @@ const navGroups: NavGroup[] = [
         icon: UserCog,
         roles: MANAGER_ROLES,
         permissionResource: 'employees',
-      },
-      {
-        label: '字段管理',
-        path: '/dictionary',
-        icon: Briefcase,
-        roles: ADMIN_HRD_ROLES,
-        permissionResource: 'dictionary_config',
       },
       {
         label: '权限管理',
@@ -162,6 +167,82 @@ const pathTitleMap: Record<string, string> = {
   '/permissions': '权限管理',
 };
 
+// ─── NavMain — collapsible navigation groups ───────────
+
+function NavMain({
+  groups,
+  currentPath,
+}: {
+  groups: NavGroup[];
+  currentPath: string;
+}) {
+  const isActive = (path: string) =>
+    path === '/' ? currentPath === '/' : currentPath.startsWith(path);
+
+  return (
+    <>
+      {groups.map((group) => (
+        <Collapsible
+          key={group.label}
+          defaultOpen
+          className="group/collapsible"
+        >
+          <SidebarGroup>
+            <SidebarGroupLabel asChild>
+              <CollapsibleTrigger className="flex w-full items-center gap-2">
+                <group.icon className="size-4" />
+                <span>{group.label}</span>
+                <ChevronRight className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+              </CollapsibleTrigger>
+            </SidebarGroupLabel>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.items.map((item) => (
+                    <SidebarMenuItem key={item.path}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(item.path)}
+                        tooltip={item.label}
+                      >
+                        <Link to={item.path}>
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </SidebarGroup>
+        </Collapsible>
+      ))}
+    </>
+  );
+}
+
+// ─── NavUser — footer user info ─────────────────────────
+
+function NavUser({ name }: { name?: string }) {
+  return (
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <SidebarMenuButton size="lg">
+          <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-accent text-sidebar-accent-foreground text-sm font-medium">
+            {name?.[0] || 'U'}
+          </div>
+          <div className="grid flex-1 text-left text-sm leading-tight">
+            <span className="truncate font-semibold">{name || '用户'}</span>
+          </div>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  );
+}
+
+// ─── Layout ─────────────────────────────────────────────
+
 const LayoutContent: React.FC = () => {
   const { pathname } = useLocation();
   const userInfo = useCurrentUserProfile();
@@ -177,39 +258,39 @@ const LayoutContent: React.FC = () => {
     );
   };
 
-  const isItemVisible = (item: NavItem): boolean =>
-    item.roles.some((r) => ability.can(r, ROLE_SUBJECT)) && hasPermAccess(item);
+  const visibleGroups = useMemo(() => {
+    if (isLoading) return [];
+    return navGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter(
+          (item) =>
+            item.roles.some((r) => ability.can(r, ROLE_SUBJECT)) &&
+            hasPermAccess(item),
+        ),
+      }))
+      .filter((g) => g.items.length > 0);
+  }, [isLoading, ability, permissions]);
 
-  const navItems = isLoading
-    ? []
-    : navGroups.flatMap((group) => group.items.filter(isItemVisible));
-
-  const navGroupItems = isLoading
-    ? []
-    : navGroups
-        .map((group) => ({
-          label: group.label,
-          items: group.items.filter(isItemVisible),
-        }))
-        .filter((group) => group.items.length > 0);
+  const allItems = useMemo(
+    () => visibleGroups.flatMap((g) => g.items),
+    [visibleGroups],
+  );
 
   const currentLabel =
-    navItems.find((item) => item.path === pathname)?.label ||
-    navItems.find((item) => pathname.startsWith(item.path) && item.path !== '/')
+    allItems.find((item) => item.path === pathname)?.label ||
+    allItems.find((item) => pathname.startsWith(item.path) && item.path !== '/')
       ?.label ||
     pathTitleMap[pathname] ||
     pathname.split('/').pop() ||
     '';
-
-  const isActive = (itemPath: string) =>
-    itemPath === '/' ? pathname === '/' : pathname.startsWith(itemPath);
 
   if (isLoading) {
     return (
       <SidebarProvider
         style={
           {
-            '--sidebar-width': '150px',
+            '--sidebar-width': '220px',
             '--header-height': 'calc(var(--spacing) * 12)',
           } as React.CSSProperties
         }
@@ -232,16 +313,17 @@ const LayoutContent: React.FC = () => {
       }
     >
       <Sidebar variant="inset" collapsible="icon">
-        <SidebarHeader className="p-3">
+        {/* Header — app brand */}
+        <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton size="lg" asChild>
                 <Link to="/">
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-                    <LayoutDashboard />
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                    <LayoutDashboard className="size-4" />
                   </div>
-                  <div className="flex flex-col gap-0.5 leading-none">
-                    <span className="text-base font-semibold">
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-semibold">
                       {appName || '绩效考核'}
                     </span>
                   </div>
@@ -250,56 +332,21 @@ const LayoutContent: React.FC = () => {
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
+
+        {/* Content — collapsible nav groups */}
         <SidebarContent>
-          {navGroupItems.map((group, groupIdx) => (
-            <React.Fragment key={group.label}>
-              {groupIdx > 0 && <SidebarSeparator className="mx-3" />}
-              <SidebarGroup>
-                <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {group.items.map((item) => (
-                      <SidebarMenuItem key={item.path}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={isActive(item.path)}
-                          tooltip={item.label}
-                          className="data-[active=true]:border-l-2 data-[active=true]:border-primary data-[active=true]:rounded-l-none"
-                        >
-                          <Link to={item.path}>
-                            <item.icon />
-                            <span>{item.label}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-            </React.Fragment>
-          ))}
+          <NavMain groups={visibleGroups} currentPath={pathname} />
         </SidebarContent>
-        <SidebarFooter className="border-t border-sidebar-border">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                size="lg"
-                className="data-[state=open]:bg-sidebar-accent"
-              >
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-accent text-sidebar-accent-foreground text-sm font-medium">
-                  {userInfo?.name?.[0] || 'U'}
-                </div>
-                <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="text-sm font-medium truncate">
-                    {userInfo?.name || '用户'}
-                  </span>
-                </div>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
+
+        {/* Footer — user info */}
+        <SidebarFooter>
+          <NavUser name={userInfo?.name} />
         </SidebarFooter>
+
         <SidebarRail />
       </Sidebar>
+
+      {/* Main content area */}
       <SidebarInset>
         <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
