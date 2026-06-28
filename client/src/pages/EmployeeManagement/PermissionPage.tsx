@@ -130,7 +130,7 @@ const PermissionPage: React.FC = () => {
               onValueChange={setActiveTab}
               className="h-full"
             >
-              <div className="border-b px-3 pt-3">
+              <div className="px-3 pt-3">
                 <TabsList className="bg-transparent rounded-none border-b p-0 h-auto w-full justify-start gap-0">
                   <TabsTrigger
                     value="permissions"
