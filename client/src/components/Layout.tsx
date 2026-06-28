@@ -293,7 +293,7 @@ const LayoutContent: React.FC = () => {
                 >
                   <UserDisplay
                     userId={userInfo?.user_id}
-                    size="small"
+                    size="medium"
                     showLabel
                   />
                   <MoonIcon className="ml-auto size-4 shrink-0 dark:hidden" />
