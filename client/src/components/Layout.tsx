@@ -66,12 +66,12 @@ const ADMIN_HRD_ROLES = ['admin', 'hrd'];
 const navGroups: NavGroup[] = [
   {
     label: '工作台',
-    // icon: LayoutDashboard,
+    icon: LayoutDashboard,
     items: [
       {
         label: '首页',
         path: '/',
-        // icon: LayoutDashboard,
+        icon: LayoutDashboard,
         roles: ALL_ROLES,
         permissionResource: 'dashboard',
       },
@@ -93,12 +93,12 @@ const navGroups: NavGroup[] = [
   },
   {
     label: '绩效管理',
-    // icon: FileText,
+    icon: FileText,
     items: [
       {
         label: '模板管理',
         path: '/template-management',
-        // icon: FileText,
+        icon: FileText,
         roles: TEMPLATE_ROLES,
         permissionResource: 'template_management',
       },
@@ -127,7 +127,7 @@ const navGroups: NavGroup[] = [
   },
   {
     label: '系统设置',
-    // icon: Shield,
+    icon: Shield,
     items: [
       {
         label: '员工管理',
@@ -139,7 +139,7 @@ const navGroups: NavGroup[] = [
       {
         label: '权限管理',
         path: '/permissions',
-        // icon: Shield,
+        icon: Shield,
         roles: ADMIN_HRD_ROLES,
         permissionResource: 'permission_management',
       },
