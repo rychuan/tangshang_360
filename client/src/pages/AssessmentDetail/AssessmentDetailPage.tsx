@@ -254,9 +254,8 @@ const AssessmentDetailPage: React.FC = () => {
               },
             ].map((step, i) => (
               <div key={step.key} className="flex flex-1 items-center min-w-0">
-                <div className="flex flex-col w-full min-h-[120px]">
-                  {/* Fixed top: circle + label + badge */}
-                  <div className="flex items-center gap-1.5 mb-2">
+                <div className="flex flex-col w-full">
+                  <div className="flex items-center gap-1.5">
                     <div
                       className={`flex size-7 shrink-0 items-center justify-center rounded-full ${
                         step.done
@@ -292,30 +291,24 @@ const AssessmentDetailPage: React.FC = () => {
                       {step.statusText}
                     </Badge>
                   </div>
-                  {/* User area — fixed height */}
-                  <div className="pl-8 min-h-[28px]">
-                    {step.person ? (
+                  {step.person && (
+                    <div className="pl-8 mt-1.5">
                       <UserDisplay
                         userId={step.person}
                         size="small"
                         showLabel
                       />
-                    ) : (
-                      <div className="h-[22px]" />
-                    )}
-                  </div>
-                  {/* Signature area — fixed height container */}
-                  <div className="pl-8 mt-2 min-h-[64px]">
-                    {step.signImage ? (
+                    </div>
+                  )}
+                  {step.signImage && (
+                    <div className="pl-8 mt-1.5">
                       <img
                         src={step.signImage}
                         alt={`${step.label}签名`}
                         className="h-16 w-full max-w-[120px] border rounded-md object-contain bg-white"
                       />
-                    ) : (
-                      <div className="h-16" />
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
                 {i < 3 && (
                   <ChevronRight
