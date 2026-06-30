@@ -6,9 +6,8 @@ import {
   integer,
   jsonb,
   text,
-  customTimestamptz,
-  userProfile,
 } from 'drizzle-orm/pg-core';
+import { customTimestamptz, userProfile } from '../schema';
 import { sql } from 'drizzle-orm';
 
 export const bitableConnection = pgTable('bitable_connection', {
