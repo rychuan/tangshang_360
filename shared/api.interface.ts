@@ -332,6 +332,7 @@ export interface EmployeeItem {
   phone: string;
   hireDate: string;
   currentBinding?: EmployeeCurrentBinding | null;
+  bitableConnectionId?: string | null;
 }
 export interface EmployeeDetail extends EmployeeItem {
   probationMonths: number;
