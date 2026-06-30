@@ -684,3 +684,80 @@ export interface CreatePerformanceGradeRequest {
   isActive: boolean;
 }
 export interface UpdatePerformanceGradeRequest extends CreatePerformanceGradeRequest {}
+
+// === Bitable Connection ===
+
+export interface BitableConnectionItem {
+  id: string;
+  name: string;
+  bitableAppToken: string;
+  tableId: string;
+  isActive: boolean;
+  lastSyncAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BitableConnectionListResponse {
+  items: BitableConnectionItem[];
+  total: number;
+}
+
+export interface CreateBitableConnectionRequest {
+  name: string;
+  appId: string;
+  appSecret: string;
+  bitableAppToken: string;
+  tableId: string;
+}
+
+export interface BitableSyncLogItem {
+  id: string;
+  direction: 'import' | 'export';
+  status: 'success' | 'partial' | 'failed';
+  totalCount: number;
+  createdCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  failedCount: number;
+  errorMessage?: string;
+  operatorName: string;
+  startedAt: string;
+  completedAt?: string;
+}
+
+export interface BitableSyncLogDetail extends BitableSyncLogItem {
+  details: Array<{
+    row: number;
+    employeeNo: string;
+    name: string;
+    status: 'created' | 'updated' | 'skipped' | 'failed';
+    reason?: string;
+  }>;
+}
+
+export interface BitableSyncLogListResponse {
+  items: BitableSyncLogItem[];
+  total: number;
+}
+
+export interface BitableImportResponse {
+  success: boolean;
+  connectionId: string;
+  connectionName: string;
+  totalCount: number;
+  createdCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  failedCount: number;
+  logId: string;
+}
+
+export interface BitableExportResponse {
+  success: boolean;
+  connectionId: string;
+  totalCount: number;
+  syncedCount: number;
+  failedCount: number;
+  logId: string;
+}
