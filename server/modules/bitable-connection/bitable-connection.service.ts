@@ -589,8 +589,9 @@ export class BitableConnectionService {
             }
           } else {
             // 新增员工
+            // id is a userProfile composite type, not a simple string.
+            // Omit it — the employeeNo field records the identifier.
             const values = {
-              id: row.employeeNo!,
               name: row.name!,
               position: row.position!,
               employeeNo: row.employeeNo!,
@@ -604,7 +605,10 @@ export class BitableConnectionService {
               bitableConnectionId: connectionId,
             };
 
-            await this.db.insert(employee).values(values as any);
+            const [inserted] = await this.db
+              .insert(employee)
+              .values(values as any)
+              .returning({ id: employee.id });
             createdCount++;
             details.push({
               row: i + 1,
@@ -627,7 +631,7 @@ export class BitableConnectionService {
             // 模板绑定
             if (row.templateName && templateMap.has(row.templateName)) {
               await this.bindingService.bind(
-                row.employeeNo!,
+                String(inserted.id),
                 templateMap.get(row.templateName)!,
                 now,
                 userId,
@@ -738,7 +742,7 @@ export class BitableConnectionService {
         .from(employee)
         .where(
           and(
-            sql`${employee.bitableConnectionId}::uuid = ${connectionId}::uuid`,
+            sql`bitable_connection_id = ${connectionId}::uuid`,
             isNull(employee.deletedAt),
           ),
         );
@@ -752,6 +756,13 @@ export class BitableConnectionService {
 
       const appToken = connRow[0].bitableAppToken;
       const tableId = connRow[0].tableId;
+
+      // 预取多维表格所有记录，避免在循环中重复调用（N+1问题）
+      const allBitableRecords = await this.fetchBitableRecords(
+        appToken,
+        tableId,
+        token,
+      );
 
       for (const emp of employees) {
         try {
@@ -774,13 +785,8 @@ export class BitableConnectionService {
           }
           if (emp.status) fields[reverseMap['status']] = emp.status;
 
-          // 查找多维表格中是否已有工号匹配的行
-          const existingRecords = await this.fetchBitableRecords(
-            appToken,
-            tableId,
-            token,
-          );
-          const matched = existingRecords.find(
+          // 使用已缓存的记录查找工号匹配的行
+          const matched = allBitableRecords.find(
             (r) => String(r.fields['工号'] || '') === emp.employeeNo,
           );
 
