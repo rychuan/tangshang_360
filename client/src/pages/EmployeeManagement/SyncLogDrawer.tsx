@@ -91,6 +91,9 @@ const SyncLogDrawer: React.FC<SyncLogDrawerProps> = ({
       api
         .getLogs(connectionId, { page: 1, pageSize: 50 })
         .then((res) => setLogs(res.items))
+        .catch((err) => {
+          console.error('Failed to load sync logs:', err);
+        })
         .finally(() => setLoading(false));
     }
   }, [open, connectionId]);
@@ -100,6 +103,8 @@ const SyncLogDrawer: React.FC<SyncLogDrawerProps> = ({
     try {
       const detail = await api.getLogDetail(connectionId, logId);
       setSelectedLog(detail);
+    } catch (err) {
+      console.error('Failed to load log detail:', err);
     } finally {
       setLoadingDetail(false);
     }

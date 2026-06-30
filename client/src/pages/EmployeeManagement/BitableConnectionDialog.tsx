@@ -29,12 +29,12 @@ const emptyForm: CreateBitableConnectionRequest = {
   tableId: '',
 };
 
-const BitableConnectionDialog: React.FC<BitableConnectionDialogProps> = ({
+function BitableConnectionDialog({
   open,
   onOpenChange,
   editing,
   onSave,
-}) => {
+}: BitableConnectionDialogProps) {
   const [form, setForm] = useState<CreateBitableConnectionRequest>(emptyForm);
   const [saving, setSaving] = useState(false);
 
@@ -55,8 +55,7 @@ const BitableConnectionDialog: React.FC<BitableConnectionDialogProps> = ({
   const handleSave = async () => {
     if (
       !form.name ||
-      !form.appId ||
-      !form.appSecret ||
+      (!editing && (!form.appId || !form.appSecret)) ||
       !form.bitableAppToken ||
       !form.tableId
     ) {
@@ -152,6 +151,6 @@ const BitableConnectionDialog: React.FC<BitableConnectionDialogProps> = ({
       </DialogContent>
     </Dialog>
   );
-};
+}
 
 export default BitableConnectionDialog;
