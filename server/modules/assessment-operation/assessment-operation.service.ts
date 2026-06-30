@@ -85,7 +85,24 @@ export class AssessmentOperationService {
       isDeptHead = deptRows.length > 0;
     }
 
+    // 也允许系统管理员查看
+    let isAdmin = false;
     if (!isEmployee && !isSupervisor && !isDeptHead) {
+      const adminRows = await this.db
+        .select({ id: employee.id })
+        .from(employee)
+        .where(
+          and(
+            sql`(${employee.id}).user_id = ${userId}`,
+            eq(employee.role, 'admin'),
+            isNull(employee.deletedAt),
+          ),
+        )
+        .limit(1);
+      isAdmin = adminRows.length > 0;
+    }
+
+    if (!isEmployee && !isSupervisor && !isDeptHead && !isAdmin) {
       throw new ForbiddenException('无权查看该考核记录');
     }
 
@@ -222,6 +239,15 @@ export class AssessmentOperationService {
       .where(eq(assessmentIndicatorSnapshot.instanceId, id));
 
     const snapshotMap = new Map(allSnapshots.map((s) => [s.id, s]));
+
+    // P1: 运行时校验 body.ratings 不为空
+    if (
+      !body.ratings ||
+      !Array.isArray(body.ratings) ||
+      body.ratings.length === 0
+    ) {
+      throw new BadRequestException('评分数据不能为空');
+    }
 
     for (const rating of body.ratings) {
       const snapshot = snapshotMap.get(rating.indicatorSnapshotId);
@@ -414,6 +440,15 @@ export class AssessmentOperationService {
 
     const snapshotMap = new Map(allSnapshots.map((s) => [s.id, s]));
 
+    // P1: 运行时校验 body.ratings 不为空
+    if (
+      !body.ratings ||
+      !Array.isArray(body.ratings) ||
+      body.ratings.length === 0
+    ) {
+      throw new BadRequestException('评分数据不能为空');
+    }
+
     for (const rating of body.ratings) {
       const snapshot = snapshotMap.get(rating.indicatorSnapshotId);
       if (!snapshot) {
@@ -551,12 +586,20 @@ export class AssessmentOperationService {
       throw new BadRequestException('当前状态不允许签名，请先完成评分');
     }
 
+    // P1: 校验 signType 值
+    if (body.signType !== 'self' && body.signType !== 'supervisor') {
+      throw new BadRequestException('签名类型无效，必须为 self 或 supervisor');
+    }
+
     const effectiveSignName =
       body.signType === 'self'
         ? body.signName?.trim() || userName || ''
         : body.signName?.trim() || userName || '';
     if (!effectiveSignName) {
       throw new BadRequestException('签名姓名不能为空');
+    }
+    if (effectiveSignName.length > 255) {
+      throw new BadRequestException('签名姓名不能超过255个字符');
     }
 
     // P0: 签名不可变性校验 — 已签不可覆盖
