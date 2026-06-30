@@ -1,10 +1,5 @@
 // server/modules/bitable-connection/bitable-connection.service.ts
-import {
-  Injectable,
-  Logger,
-  Inject,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, Inject, NotFoundException } from '@nestjs/common';
 import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
@@ -72,17 +67,17 @@ function decryptSecret(encrypted: string): string {
 
 // 多维表格列名 → 系统字段名
 const FIELD_MAP: Record<string, string> = {
-  '姓名': 'name',
-  '工号': 'employeeNo',
-  '岗位': 'position',
-  '部门': 'department',
-  '上级工号': 'supervisorNo',
-  '职位': 'title',
-  '角色': 'role',
-  '手机': 'phone',
-  '入职日期': 'hireDate',
-  '状态': 'status',
-  '考核模板': 'templateName',
+  姓名: 'name',
+  工号: 'employeeNo',
+  岗位: 'position',
+  部门: 'department',
+  上级工号: 'supervisorNo',
+  职位: 'title',
+  角色: 'role',
+  手机: 'phone',
+  入职日期: 'hireDate',
+  状态: 'status',
+  考核模板: 'templateName',
 };
 
 const VALID_ROLES = ['admin', 'hrd', 'dept_head', 'supervisor', 'employee'];
@@ -288,10 +283,7 @@ export class BitableConnectionService {
     appId: string,
     appSecretEncrypted: string,
   ): Promise<string> {
-    if (
-      this.cachedToken &&
-      Date.now() < this.cachedToken.expiresAt - 60_000
-    ) {
+    if (this.cachedToken && Date.now() < this.cachedToken.expiresAt - 60_000) {
       return this.cachedToken.token;
     }
 
@@ -338,9 +330,7 @@ export class BitableConnectionService {
     appToken: string,
     tableId: string,
     accessToken: string,
-  ): Promise<
-    Array<{ record_id: string; fields: Record<string, unknown> }>
-  > {
+  ): Promise<Array<{ record_id: string; fields: Record<string, unknown> }>> {
     const allRecords: Array<{
       record_id: string;
       fields: Record<string, unknown>;
@@ -553,9 +543,9 @@ export class BitableConnectionService {
                 hireDate: row.hireDate
                   ? new Date(row.hireDate)
                   : existing[0].hireDate,
-                status: (row.status as 'active' | 'inactive') || existing[0].status,
-                supervisorId:
-                  row.supervisorId || existing[0].supervisorId,
+                status:
+                  (row.status as 'active' | 'inactive') || existing[0].status,
+                supervisorId: row.supervisorId || existing[0].supervisorId,
               })
               .where(eq(employee.id, existing[0].id));
             updatedCount++;
@@ -640,8 +630,7 @@ export class BitableConnectionService {
           }
         } catch (err) {
           failedCount++;
-          const reason =
-            err instanceof Error ? err.message : String(err);
+          const reason = err instanceof Error ? err.message : String(err);
           details.push({
             row: i + 1,
             employeeNo: '',
@@ -686,8 +675,7 @@ export class BitableConnectionService {
         logId: String(logRow.id),
       };
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : String(err);
+      const errorMessage = err instanceof Error ? err.message : String(err);
       await this.db.insert(bitableSyncLog).values({
         connectionId,
         direction: 'import',
@@ -768,12 +756,9 @@ export class BitableConnectionService {
         try {
           const fields: Record<string, unknown> = {};
           if (emp.name) fields[reverseMap['name']] = emp.name;
-          if (emp.employeeNo)
-            fields[reverseMap['employeeNo']] = emp.employeeNo;
-          if (emp.position)
-            fields[reverseMap['position']] = emp.position;
-          if (emp.department)
-            fields[reverseMap['department']] = emp.department;
+          if (emp.employeeNo) fields[reverseMap['employeeNo']] = emp.employeeNo;
+          if (emp.position) fields[reverseMap['position']] = emp.position;
+          if (emp.department) fields[reverseMap['department']] = emp.department;
           if (emp.title) fields[reverseMap['title']] = emp.title;
           if (emp.role) fields[reverseMap['role']] = emp.role;
           if (emp.phone) fields[reverseMap['phone']] = emp.phone;
@@ -825,8 +810,7 @@ export class BitableConnectionService {
           });
         } catch (err) {
           failedCount++;
-          const reason =
-            err instanceof Error ? err.message : String(err);
+          const reason = err instanceof Error ? err.message : String(err);
           details.push({
             row: syncedCount + failedCount,
             employeeNo: emp.employeeNo || '',
@@ -834,9 +818,7 @@ export class BitableConnectionService {
             status: 'failed',
             reason,
           });
-          this.logger.error(
-            `Export employee ${emp.name} failed: ${reason}`,
-          );
+          this.logger.error(`Export employee ${emp.name} failed: ${reason}`);
         }
       }
 
@@ -868,8 +850,7 @@ export class BitableConnectionService {
         logId: String(logRow.id),
       };
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : String(err);
+      const errorMessage = err instanceof Error ? err.message : String(err);
       await this.db.insert(bitableSyncLog).values({
         connectionId,
         direction: 'export',

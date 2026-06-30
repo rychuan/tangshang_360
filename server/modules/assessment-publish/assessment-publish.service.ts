@@ -51,6 +51,14 @@ import type {
   UnlockHistoryItem,
 } from '@shared/api.interface';
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function validateUUID(id: string, label = 'id'): void {
+  if (!UUID_PATTERN.test(id)) {
+    throw new BadRequestException(`${label} 格式无效`);
+  }
+}
+
 @Injectable()
 export class AssessmentPublishService {
   private readonly logger: Logger = new Logger(AssessmentPublishService.name);
@@ -474,6 +482,7 @@ export class AssessmentPublishService {
     body: UnlockRequest,
     userId: string,
   ): Promise<{ success: boolean }> {
+    validateUUID(instanceId);
     this.logger.log(
       `unlock instanceId=${instanceId} reason=${body.reason} userId=${userId}`,
     );
@@ -572,6 +581,7 @@ export class AssessmentPublishService {
   }
 
   async getUnlockHistory(instanceId: string): Promise<UnlockHistoryItem[]> {
+    validateUUID(instanceId);
     this.logger.log(`getUnlockHistory instanceId=${instanceId}`);
 
     const rows = await this.db
@@ -662,7 +672,7 @@ export class AssessmentPublishService {
         .where(
           and(
             eq(assessmentInstance.period, period),
-            sql`(${assessmentInstance.status} NOT IN ('self_review', 'draft') OR EXISTS(SELECT 1 FROM ${ratingRecord} WHERE ${ratingRecord.instanceId} = ${assessmentInstance.id} AND ${ratingRecord.ratingType} = 'self' AND ${ratingRecord.isDraft} = false))`,
+            sql`(${assessmentInstance.status} != 'self_review' OR EXISTS(SELECT 1 FROM ${ratingRecord} WHERE ${ratingRecord.instanceId} = ${assessmentInstance.id} AND ${ratingRecord.ratingType} = 'self' AND ${ratingRecord.isDraft} = false))`,
           ),
         );
       const selfReviewCompleted: number = parseInt(
@@ -699,6 +709,7 @@ export class AssessmentPublishService {
   async getInstanceIndicators(
     instanceId: string,
   ): Promise<InstanceIndicatorsResponse> {
+    validateUUID(instanceId);
     this.logger.log(`getInstanceIndicators instanceId=${instanceId}`);
     const rows = await this.db
       .select({
@@ -744,6 +755,7 @@ export class AssessmentPublishService {
 
     for (const instanceId of instanceIds) {
       try {
+        validateUUID(instanceId, '实例ID');
         const instanceRows = await this.db
           .select()
           .from(assessmentInstance)

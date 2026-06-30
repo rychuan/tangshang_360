@@ -74,9 +74,7 @@ function BitableConnectionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {editing ? '编辑连接' : '新建连接'}
-          </DialogTitle>
+          <DialogTitle>{editing ? '编辑连接' : '新建连接'}</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-4 py-4">
           <div className="flex flex-col gap-1.5">
@@ -84,9 +82,7 @@ function BitableConnectionDialog({
             <Input
               placeholder="如：研发部员工表"
               value={form.name}
-              onChange={(e) =>
-                setForm({ ...form, name: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -94,22 +90,16 @@ function BitableConnectionDialog({
             <Input
               placeholder="cli_xxxxxxxx"
               value={form.appId}
-              onChange={(e) =>
-                setForm({ ...form, appId: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, appId: e.target.value })}
             />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label>飞书 App Secret</Label>
             <Input
               type="password"
-              placeholder={
-                editing ? '留空则不修改' : '输入 App Secret'
-              }
+              placeholder={editing ? '留空则不修改' : '输入 App Secret'}
               value={form.appSecret}
-              onChange={(e) =>
-                setForm({ ...form, appSecret: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, appSecret: e.target.value })}
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -130,9 +120,7 @@ function BitableConnectionDialog({
             <Input
               placeholder="tblxxxxxxxx"
               value={form.tableId}
-              onChange={(e) =>
-                setForm({ ...form, tableId: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, tableId: e.target.value })}
             />
           </div>
         </div>

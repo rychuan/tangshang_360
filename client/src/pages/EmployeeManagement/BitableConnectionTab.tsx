@@ -34,13 +34,10 @@ import type {
 } from '@shared/api.interface';
 
 const BitableConnectionTab: React.FC = () => {
-  const [connections, setConnections] = useState<
-    BitableConnectionItem[]
-  >([]);
+  const [connections, setConnections] = useState<BitableConnectionItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] =
-    useState<BitableConnectionItem | null>(null);
+  const [editing, setEditing] = useState<BitableConnectionItem | null>(null);
   const [deleteTarget, setDeleteTarget] =
     useState<BitableConnectionItem | null>(null);
   const [importingId, setImportingId] = useState<string | null>(null);
@@ -145,9 +142,7 @@ const BitableConnectionTab: React.FC = () => {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
             <Link2 className="size-8 opacity-30" />
-            <p className="text-sm">
-              暂无连接，点击上方按钮创建
-            </p>
+            <p className="text-sm">暂无连接，点击上方按钮创建</p>
           </CardContent>
         </Card>
       ) : (
@@ -158,13 +153,9 @@ const BitableConnectionTab: React.FC = () => {
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-medium text-sm">
-                        {conn.name}
-                      </h4>
+                      <h4 className="font-medium text-sm">{conn.name}</h4>
                       <Badge
-                        variant={
-                          conn.isActive ? 'default' : 'secondary'
-                        }
+                        variant={conn.isActive ? 'default' : 'secondary'}
                         className="text-xs"
                       >
                         {conn.isActive ? (
@@ -181,10 +172,7 @@ const BitableConnectionTab: React.FC = () => {
                     {conn.lastSyncAt && (
                       <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
                         <Clock className="size-3" />
-                        最近同步:{' '}
-                        {new Date(
-                          conn.lastSyncAt,
-                        ).toLocaleString()}
+                        最近同步: {new Date(conn.lastSyncAt).toLocaleString()}
                       </p>
                     )}
                   </div>

@@ -15,9 +15,7 @@ describe('BitableConnectionService', () => {
       ],
     }).compile();
 
-    service = module.get<BitableConnectionService>(
-      BitableConnectionService,
-    );
+    service = module.get<BitableConnectionService>(BitableConnectionService);
   });
 
   it('should be defined', () => {
@@ -27,9 +25,9 @@ describe('BitableConnectionService', () => {
   describe('parseRow', () => {
     it('should map bitable column names to system fields', () => {
       const fields = {
-        '姓名': '张三',
-        '工号': 'E001',
-        '岗位': '工程师',
+        姓名: '张三',
+        工号: 'E001',
+        岗位: '工程师',
       };
       const result = (service as any).parseRow(fields);
       expect(result.name).toBe('张三');
@@ -41,21 +39,13 @@ describe('BitableConnectionService', () => {
   describe('validateRow', () => {
     it('should reject rows missing name', () => {
       const row = { employeeNo: 'E001', position: '工程师' };
-      const result = (service as any).validateRow(
-        row,
-        new Set(),
-        new Map(),
-      );
+      const result = (service as any).validateRow(row, new Set(), new Map());
       expect(result).toBe('缺少姓名');
     });
 
     it('should reject rows missing employeeNo', () => {
       const row = { name: '张三', position: '工程师' };
-      const result = (service as any).validateRow(
-        row,
-        new Set(),
-        new Map(),
-      );
+      const result = (service as any).validateRow(row, new Set(), new Map());
       expect(result).toBe('缺少工号');
     });
 
@@ -65,11 +55,7 @@ describe('BitableConnectionService', () => {
         employeeNo: 'E001',
         position: '工程师',
       };
-      const result = (service as any).validateRow(
-        row,
-        new Set(),
-        new Map(),
-      );
+      const result = (service as any).validateRow(row, new Set(), new Map());
       expect(result).toBeNull();
     });
 
@@ -95,11 +81,7 @@ describe('BitableConnectionService', () => {
         position: '工程师',
         templateName: '不存在的模板',
       };
-      const result = (service as any).validateRow(
-        row,
-        new Set(),
-        new Map(),
-      );
+      const result = (service as any).validateRow(row, new Set(), new Map());
       expect(result).toContain('不存在');
     });
   });

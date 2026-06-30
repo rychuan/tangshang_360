@@ -69,9 +69,7 @@ export class BitableConnectionController {
 
   @CanRole(['admin', 'hrd'])
   @Get(':id')
-  async detail(
-    @Param('id') id: string,
-  ): Promise<BitableConnectionItem> {
+  async detail(@Param('id') id: string): Promise<BitableConnectionItem> {
     return this.service.detail(id);
   }
 

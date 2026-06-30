@@ -63,10 +63,7 @@ const statusConfig: Record<
   },
 };
 
-const rowStatusConfig: Record<
-  string,
-  { label: string; className: string }
-> = {
+const rowStatusConfig: Record<string, { label: string; className: string }> = {
   created: { label: '新增', className: 'text-green-600' },
   updated: { label: '更新', className: 'text-blue-600' },
   skipped: { label: '跳过', className: 'text-amber-600' },
@@ -81,8 +78,9 @@ const SyncLogDrawer: React.FC<SyncLogDrawerProps> = ({
 }) => {
   const [logs, setLogs] = useState<BitableSyncLogItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedLog, setSelectedLog] =
-    useState<BitableSyncLogDetail | null>(null);
+  const [selectedLog, setSelectedLog] = useState<BitableSyncLogDetail | null>(
+    null,
+  );
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   useEffect(() => {
@@ -115,9 +113,7 @@ const SyncLogDrawer: React.FC<SyncLogDrawerProps> = ({
       <SheetContent className="w-[95vw] max-w-lg flex flex-col">
         <SheetHeader>
           <SheetTitle className="text-sm">
-            {selectedLog
-              ? '日志详情'
-              : `同步日志 — ${connectionName}`}
+            {selectedLog ? '日志详情' : `同步日志 — ${connectionName}`}
           </SheetTitle>
         </SheetHeader>
 
@@ -133,9 +129,7 @@ const SyncLogDrawer: React.FC<SyncLogDrawerProps> = ({
                 返回
               </Button>
               <Badge
-                variant={
-                  statusConfig[selectedLog.status]?.variant || 'outline'
-                }
+                variant={statusConfig[selectedLog.status]?.variant || 'outline'}
               >
                 {statusConfig[selectedLog.status]?.label}
               </Badge>
@@ -186,12 +180,9 @@ const SyncLogDrawer: React.FC<SyncLogDrawerProps> = ({
                       <TableCell>{d.name}</TableCell>
                       <TableCell>
                         <span
-                          className={
-                            rowStatusConfig[d.status]?.className || ''
-                          }
+                          className={rowStatusConfig[d.status]?.className || ''}
                         >
-                          {rowStatusConfig[d.status]?.label ||
-                            d.status}
+                          {rowStatusConfig[d.status]?.label || d.status}
                         </span>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-xs">
@@ -240,9 +231,7 @@ const SyncLogDrawer: React.FC<SyncLogDrawerProps> = ({
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <Badge
-                        variant={
-                          statusConfig[log.status]?.variant || 'outline'
-                        }
+                        variant={statusConfig[log.status]?.variant || 'outline'}
                         className="text-xs"
                       >
                         {statusConfig[log.status]?.label}

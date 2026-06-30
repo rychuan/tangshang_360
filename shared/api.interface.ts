@@ -164,6 +164,16 @@ export interface AssessmentIndicatorDetail {
   supervisorScore?: number;
   supervisorComment?: string;
 }
+
+// === Assessment Instance Status Constants ===
+export const ASSESSMENT_STATUS = {
+  SELF_REVIEW: 'self_review',
+  SUPERVISOR_REVIEW: 'supervisor_review',
+  PENDING_SIGN: 'pending_sign',
+  COMPLETED: 'completed',
+} as const;
+export type AssessmentStatus =
+  (typeof ASSESSMENT_STATUS)[keyof typeof ASSESSMENT_STATUS];
 export interface AssessmentInstanceDetail {
   id: string;
   period: string;
@@ -464,7 +474,11 @@ export interface RemindResponse {
 }
 // === Permission Management ===
 export type PermissionAction =
-  'view' | 'edit' | 'delete' | 'export' | 'publish';
+  | 'view'
+  | 'edit'
+  | 'delete'
+  | 'export'
+  | 'publish';
 export type PermissionResource =
   | 'my_assessments'
   | 'employees'
@@ -524,9 +538,7 @@ export const DEFAULT_PERMISSIONS: Record<string, PermissionItem[]> = {
     { resource: 'statistics', actions: ['view'] },
     { resource: 'team_performance', actions: ['view', 'edit'] },
   ],
-  employee: [
-    { resource: 'my_assessments', actions: ['view', 'edit'] },
-  ],
+  employee: [{ resource: 'my_assessments', actions: ['view', 'edit'] }],
 };
 export interface PermissionsConfig {
   permissions: PermissionItem[];
