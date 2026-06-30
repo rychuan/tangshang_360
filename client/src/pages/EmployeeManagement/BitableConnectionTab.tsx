@@ -36,6 +36,7 @@ import type {
 const BitableConnectionTab: React.FC = () => {
   const [connections, setConnections] = useState<BitableConnectionItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<BitableConnectionItem | null>(null);
   const [deleteTarget, setDeleteTarget] =
@@ -47,6 +48,7 @@ const BitableConnectionTab: React.FC = () => {
     updated: number;
     skipped: number;
     failed: number;
+    error?: string;
   } | null>(null);
   const [logDrawer, setLogDrawer] = useState<{
     connectionId: string;
@@ -55,9 +57,13 @@ const BitableConnectionTab: React.FC = () => {
 
   const fetchConnections = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await api.list({ page: 1, pageSize: 100 });
       setConnections(res.items);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '获取连接列表失败';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -94,6 +100,15 @@ const BitableConnectionTab: React.FC = () => {
         skipped: result.skippedCount,
         failed: result.failedCount,
       });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '导入失败';
+      setImportResult({
+        created: 0,
+        updated: 0,
+        skipped: 0,
+        failed: 0,
+        error: msg,
+      });
     } finally {
       setImportingId(null);
     }
@@ -103,6 +118,10 @@ const BitableConnectionTab: React.FC = () => {
     setExportingId(conn.id);
     try {
       await api.exportEmployees(conn.id);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '导出失败';
+      // 导出错误通过 toast 或日志显示
+      console.error(`导出失败: ${msg}`);
     } finally {
       setExportingId(null);
     }
@@ -136,6 +155,16 @@ const BitableConnectionTab: React.FC = () => {
         <Card>
           <CardContent className="flex items-center justify-center py-12 text-muted-foreground">
             加载中...
+          </CardContent>
+        </Card>
+      ) : error ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
+            <XCircle className="size-8 opacity-30 text-destructive" />
+            <p className="text-sm text-destructive">{error}</p>
+            <Button variant="outline" size="sm" onClick={fetchConnections}>
+              重试
+            </Button>
           </CardContent>
         </Card>
       ) : connections.length === 0 ? (
@@ -232,20 +261,28 @@ const BitableConnectionTab: React.FC = () => {
                   </div>
                 </div>
                 {importResult && importingId === null && (
-                  <div className="mt-3 pt-3 border-t flex items-center gap-4 text-xs text-muted-foreground">
-                    <span className="text-green-600">
-                      新增 {importResult.created}
-                    </span>
-                    <span className="text-blue-600">
-                      更新 {importResult.updated}
-                    </span>
-                    <span className="text-amber-600">
-                      跳过 {importResult.skipped}
-                    </span>
-                    {importResult.failed > 0 && (
-                      <span className="text-red-600">
-                        失败 {importResult.failed}
+                  <div className="mt-3 pt-3 border-t flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                    {importResult.error ? (
+                      <span className="text-destructive">
+                        {importResult.error}
                       </span>
+                    ) : (
+                      <>
+                        <span className="text-green-600">
+                          新增 {importResult.created}
+                        </span>
+                        <span className="text-blue-600">
+                          更新 {importResult.updated}
+                        </span>
+                        <span className="text-amber-600">
+                          跳过 {importResult.skipped}
+                        </span>
+                        {importResult.failed > 0 && (
+                          <span className="text-red-600">
+                            失败 {importResult.failed}
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
                 )}

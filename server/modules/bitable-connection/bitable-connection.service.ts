@@ -1,5 +1,11 @@
 // server/modules/bitable-connection/bitable-connection.service.ts
-import { Injectable, Logger, Inject, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  Inject,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
@@ -15,6 +21,7 @@ import {
   assessmentTemplate,
   department,
   employeeBinding,
+  auditLog,
 } from '@server/database/schema';
 import { EmployeeBindingService } from '../employee-management/employee-binding.service';
 import { RoleManagerService } from '../role-manager/role-manager.service';
@@ -29,12 +36,20 @@ import type {
   BitableExportResponse,
 } from '@shared/api.interface';
 
-const ENCRYPTION_KEY =
-  process.env.BITABLE_ENCRYPTION_KEY || 'dev-fallback-key-min-32-chars!!';
+const ENCRYPTION_KEY = process.env.BITABLE_ENCRYPTION_KEY;
 const ALGORITHM = 'aes-256-gcm';
 
+function getEncryptionKey(): Buffer {
+  if (!ENCRYPTION_KEY) {
+    throw new Error(
+      'BITABLE_ENCRYPTION_KEY not configured — encryption unavailable',
+    );
+  }
+  return Buffer.from(ENCRYPTION_KEY, 'utf8');
+}
+
 function encryptSecret(plaintext: string): string {
-  const key = Buffer.from(ENCRYPTION_KEY, 'utf8');
+  const key = getEncryptionKey();
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
   const encrypted = Buffer.concat([
@@ -50,7 +65,7 @@ function encryptSecret(plaintext: string): string {
 }
 
 function decryptSecret(encrypted: string): string {
-  const key = Buffer.from(ENCRYPTION_KEY, 'utf8');
+  const key = getEncryptionKey();
   const { iv, data, tag } = JSON.parse(encrypted);
   const decipher = crypto.createDecipheriv(
     ALGORITHM,
@@ -101,13 +116,19 @@ interface ParsedRow {
 @Injectable()
 export class BitableConnectionService {
   private readonly logger = new Logger(BitableConnectionService.name);
-  private cachedToken: { token: string; expiresAt: number } | null = null;
+  private tokenCache = new Map<string, { token: string; expiresAt: number }>();
 
   constructor(
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
     private readonly bindingService: EmployeeBindingService,
     private readonly roleManagerService: RoleManagerService,
-  ) {}
+  ) {
+    if (!ENCRYPTION_KEY) {
+      this.logger.warn(
+        '[BitableConnection] BITABLE_ENCRYPTION_KEY not set — encryption unavailable',
+      );
+    }
+  }
 
   async list(query: {
     page: number;
@@ -177,10 +198,21 @@ export class BitableConnectionService {
       })
       .returning({ id: bitableConnection.id });
 
-    this.logger.log(
-      `Bitable connection created: ${body.name} (${inserted.id})`,
-    );
-    return { id: String(inserted.id) };
+    const id = String(inserted.id);
+    await this.db.insert(auditLog).values({
+      operatorId: userId,
+      action: 'create_bitable_connection',
+      targetType: 'bitable_connection',
+      targetId: id,
+      changes: {
+        name: body.name,
+        bitableAppToken: body.bitableAppToken,
+        tableId: body.tableId,
+      },
+    });
+
+    this.logger.log(`Bitable connection created: ${body.name} (${id})`);
+    return { id };
   }
 
   async update(
@@ -189,7 +221,7 @@ export class BitableConnectionService {
     userId: string,
   ): Promise<{ success: boolean }> {
     const rows = await this.db
-      .select({ id: bitableConnection.id })
+      .select({ id: bitableConnection.id, name: bitableConnection.name })
       .from(bitableConnection)
       .where(
         and(eq(bitableConnection.id, id), isNull(bitableConnection.deletedAt)),
@@ -200,23 +232,32 @@ export class BitableConnectionService {
       throw new NotFoundException('连接不存在');
     }
 
+    const updateData: Record<string, unknown> = {
+      name: body.name,
+      bitableAppToken: body.bitableAppToken,
+      tableId: body.tableId,
+    };
+    if (body.appId) updateData.appId = body.appId;
+    if (body.appSecret) updateData.appSecret = encryptSecret(body.appSecret);
     await this.db
       .update(bitableConnection)
-      .set({
-        name: body.name,
-        appId: body.appId,
-        appSecret: encryptSecret(body.appSecret),
-        bitableAppToken: body.bitableAppToken,
-        tableId: body.tableId,
-      })
+      .set(updateData)
       .where(eq(bitableConnection.id, id));
+
+    await this.db.insert(auditLog).values({
+      operatorId: userId,
+      action: 'update_bitable_connection',
+      targetType: 'bitable_connection',
+      targetId: id,
+      changes: updateData,
+    });
 
     return { success: true };
   }
 
-  async remove(id: string): Promise<{ success: boolean }> {
+  async remove(id: string, userId: string): Promise<{ success: boolean }> {
     const rows = await this.db
-      .select({ id: bitableConnection.id })
+      .select({ id: bitableConnection.id, name: bitableConnection.name })
       .from(bitableConnection)
       .where(
         and(eq(bitableConnection.id, id), isNull(bitableConnection.deletedAt)),
@@ -231,6 +272,14 @@ export class BitableConnectionService {
       .update(bitableConnection)
       .set({ deletedAt: new Date() })
       .where(eq(bitableConnection.id, id));
+
+    await this.db.insert(auditLog).values({
+      operatorId: userId,
+      action: 'remove_bitable_connection',
+      targetType: 'bitable_connection',
+      targetId: id,
+      changes: { name: rows[0].name },
+    });
 
     return { success: true };
   }
@@ -283,8 +332,9 @@ export class BitableConnectionService {
     appId: string,
     appSecretEncrypted: string,
   ): Promise<string> {
-    if (this.cachedToken && Date.now() < this.cachedToken.expiresAt - 60_000) {
-      return this.cachedToken.token;
+    const cached = this.tokenCache.get(appId);
+    if (cached && Date.now() < cached.expiresAt - 60_000) {
+      return cached.token;
     }
 
     const decryptedSecret = decryptSecret(appSecretEncrypted);
@@ -318,10 +368,10 @@ export class BitableConnectionService {
       throw new Error(`Feishu API error: ${data.code} ${data.msg}`);
     }
 
-    this.cachedToken = {
+    this.tokenCache.set(appId, {
       token: data.tenant_access_token,
       expiresAt: Date.now() + data.expire * 1000,
-    };
+    });
 
     return data.tenant_access_token;
   }
@@ -447,12 +497,13 @@ export class BitableConnectionService {
         and(
           eq(bitableConnection.id, connectionId),
           isNull(bitableConnection.deletedAt),
+          eq(bitableConnection.isActive, true),
         ),
       )
       .limit(1);
 
     if (connRow.length === 0) {
-      throw new NotFoundException('连接不存在');
+      throw new NotFoundException('连接不存在或已停用');
     }
 
     const startedAt = new Date();
@@ -662,6 +713,20 @@ export class BitableConnectionService {
         })
         .returning({ id: bitableSyncLog.id });
 
+      await this.db.insert(auditLog).values({
+        operatorId: userId,
+        action: 'import_employees',
+        targetType: 'bitable_connection',
+        targetId: connectionId,
+        changes: {
+          totalCount: records.length,
+          createdCount,
+          updatedCount,
+          skippedCount,
+          failedCount,
+        },
+      });
+
       const connName = connRow[0].name;
       return {
         success: status === 'success',
@@ -691,6 +756,13 @@ export class BitableConnectionService {
         startedAt,
         completedAt: new Date(),
       });
+      await this.db.insert(auditLog).values({
+        operatorId: userId,
+        action: 'import_employees',
+        targetType: 'bitable_connection',
+        targetId: connectionId,
+        changes: { error: errorMessage },
+      });
       throw err;
     }
   }
@@ -706,12 +778,13 @@ export class BitableConnectionService {
         and(
           eq(bitableConnection.id, connectionId),
           isNull(bitableConnection.deletedAt),
+          eq(bitableConnection.isActive, true),
         ),
       )
       .limit(1);
 
     if (connRow.length === 0) {
-      throw new NotFoundException('连接不存在');
+      throw new NotFoundException('连接不存在或已停用');
     }
 
     const startedAt = new Date();
@@ -841,6 +914,14 @@ export class BitableConnectionService {
         })
         .returning({ id: bitableSyncLog.id });
 
+      await this.db.insert(auditLog).values({
+        operatorId: userId,
+        action: 'export_employees',
+        targetType: 'bitable_connection',
+        targetId: connectionId,
+        changes: { totalCount: employees.length, syncedCount, failedCount },
+      });
+
       return {
         success: status === 'success',
         connectionId,
@@ -865,6 +946,13 @@ export class BitableConnectionService {
         operatorId: userId,
         startedAt,
         completedAt: new Date(),
+      });
+      await this.db.insert(auditLog).values({
+        operatorId: userId,
+        action: 'export_employees',
+        targetType: 'bitable_connection',
+        targetId: connectionId,
+        changes: { error: errorMessage },
       });
       throw err;
     }

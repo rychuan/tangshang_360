@@ -63,8 +63,12 @@ export class BitableConnectionController {
   @CanRole(['admin'])
   @NeedLogin()
   @Delete(':id')
-  async remove(@Param('id') id: string): Promise<{ success: boolean }> {
-    return this.service.remove(id);
+  async remove(
+    @Req() req: any,
+    @Param('id') id: string,
+  ): Promise<{ success: boolean }> {
+    const { userId } = req.userContext as { userId: string };
+    return this.service.remove(id, userId);
   }
 
   @CanRole(['admin', 'hrd'])
