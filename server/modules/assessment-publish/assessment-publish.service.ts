@@ -771,6 +771,10 @@ export class AssessmentPublishService {
             newStatus: 'self_review',
             resetRatingType: 'self',
           },
+          self_review: {
+            newStatus: 'self_review',
+            resetRatingType: 'self',
+          },
         };
 
         const mapped = statusMap[instance.status];
@@ -799,6 +803,8 @@ export class AssessmentPublishService {
 
         const batchUpdateData: {
           status: string;
+          totalScore?: null;
+          grade?: null;
           selfSignName?: null;
           selfSignAt?: null;
           selfSignImage?: null;
@@ -807,6 +813,8 @@ export class AssessmentPublishService {
           supervisorSignImage?: null;
         } = {
           status: mapped.newStatus,
+          totalScore: null,
+          grade: null,
         };
         if (mapped.clearSigns === 'all') {
           batchUpdateData.selfSignName = null;

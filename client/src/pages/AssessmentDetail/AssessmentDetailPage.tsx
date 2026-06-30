@@ -348,12 +348,12 @@ const AssessmentDetailPage: React.FC = () => {
             <Button
               variant="outline"
               onClick={handleSaveDraft}
-              disabled={submitting}
+              disabled={submitting || signing}
             >
               <Save data-icon="inline-start" />
               保存草稿
             </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
+            <Button onClick={handleSubmit} disabled={submitting || signing}>
               <Send data-icon="inline-start" />
               提交自评
             </Button>
@@ -364,12 +364,12 @@ const AssessmentDetailPage: React.FC = () => {
             <Button
               variant="outline"
               onClick={handleSaveDraft}
-              disabled={submitting}
+              disabled={submitting || signing}
             >
               <Save data-icon="inline-start" />
               保存草稿
             </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
+            <Button onClick={handleSubmit} disabled={submitting || signing}>
               <Send data-icon="inline-start" />
               提交评分
             </Button>
@@ -378,7 +378,7 @@ const AssessmentDetailPage: React.FC = () => {
         {canSignSelf && (
           <Button
             onClick={() => handleOpenSignDialog('self')}
-            disabled={submitting}
+            disabled={submitting || signing}
           >
             <PenLine data-icon="inline-start" />
             员工签名
@@ -387,7 +387,7 @@ const AssessmentDetailPage: React.FC = () => {
         {canSignSupervisor && (
           <Button
             onClick={() => handleOpenSignDialog('supervisor')}
-            disabled={submitting}
+            disabled={submitting || signing}
           >
             <PenLine data-icon="inline-start" />
             上级签名
