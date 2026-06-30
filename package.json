@@ -169,7 +169,11 @@
     "testMatch": [
       "<rootDir>/server/**/*.spec.ts",
       "<rootDir>/test/unit/**/*.spec.ts"
-    ]
+    ],
+    "moduleNameMapper": {
+      "^@server/(.*)$": "<rootDir>/server/$1",
+      "^@shared/(.*)$": "<rootDir>/shared/$1"
+    }
   },
   "name": "fullstack-nestjs-template",
   "overrides": {
