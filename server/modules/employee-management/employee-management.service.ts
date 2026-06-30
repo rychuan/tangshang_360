@@ -95,7 +95,7 @@ export class EmployeeManagementService {
           phone: employee.phone,
           hireDate: employee.hireDate,
           supervisorName: sql`COALESCE((SELECT sup.name FROM employee sup WHERE (sup.id).user_id = (${employee.supervisorId}).user_id AND sup.deleted_at IS NULL LIMIT 1), '')`,
-          bitableConnectionId: employee.bitableConnectionId,
+          bitableConnectionId: (employee as any).bitableConnectionId, // TODO: remove cast after DB migration + schema regeneration
         })
         .from(employee)
         .where(whereClause)
