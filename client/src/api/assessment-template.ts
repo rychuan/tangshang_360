@@ -71,3 +71,13 @@ export async function deactivate(
   });
   return res.data;
 }
+
+export async function remove(
+  id: string,
+): Promise<SuccessResponse> {
+  const res = await axiosForBackend<SuccessResponse>({
+    url: `/api/assessment-templates/${id}`,
+    method: 'DELETE',
+  });
+  return res.data;
+}

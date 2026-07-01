@@ -4,9 +4,11 @@ import {
   Post,
   Put,
   Patch,
+  Delete,
   Param,
   Query,
   Body,
+  Req,
 } from '@nestjs/common';
 import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
@@ -79,5 +81,17 @@ export class AssessmentTemplateController {
   @Patch(':id/activate')
   async activate(@Param('id') id: string): Promise<SuccessResponse> {
     return this.service.activate(id);
+  }
+
+  @CanRole(['admin', 'hrd'])
+  @RequirePermission('template_management', 'delete')
+  @NeedLogin()
+  @Delete(':id')
+  async delete(
+    @Req() req: any,
+    @Param('id') id: string,
+  ): Promise<SuccessResponse> {
+    const { userId } = req.userContext as { userId: string };
+    return this.service.delete(id, userId);
   }
 }

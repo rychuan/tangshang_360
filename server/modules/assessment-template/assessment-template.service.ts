@@ -3,11 +3,13 @@ import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { eq, and, like, count, desc, sql, inArray } from 'drizzle-orm';
+import { eq, and, like, count, desc, sql, inArray, isNull } from 'drizzle-orm';
 import {
   assessmentTemplate,
   assessmentDimension,
   assessmentIndicator,
+  employeeBinding,
+  auditLog,
 } from '@server/database/schema';
 import type {
   AssessmentTemplateItem,
@@ -38,7 +40,9 @@ export class AssessmentTemplateService {
       `list: page=${page}, pageSize=${pageSize}, keyword=${keyword}, position=${position}, status=${status}`,
     );
 
-    const conditions: ReturnType<typeof eq>[] = [];
+    const conditions: ReturnType<typeof eq>[] = [
+      isNull((assessmentTemplate as any).deletedAt),
+    ];
 
     if (keyword) {
       conditions.push(like(assessmentTemplate.name, `%${keyword}%`));
@@ -336,6 +340,45 @@ export class AssessmentTemplateService {
       .update(assessmentTemplate)
       .set({ isActive: true })
       .where(eq(assessmentTemplate.id, id));
+
+    return { success: true };
+  }
+
+  async delete(id: string, userId: string): Promise<SuccessResponse> {
+    this.logger.log(`delete: id=${id}`);
+
+    const templates = await this.db
+      .select()
+      .from(assessmentTemplate)
+      .where(and(eq(assessmentTemplate.id, id), isNull((assessmentTemplate as any).deletedAt)))
+      .limit(1);
+
+    if (templates.length === 0) {
+      throw new NotFoundException('模板不存在');
+    }
+
+    // 级联停用关联的绑定关系
+    await this.db
+      .update(employeeBinding)
+      .set({ status: 'inactive' })
+      .where(eq(employeeBinding.templateId, id));
+
+    // 软删除模板
+    await this.db
+      .update(assessmentTemplate)
+      .set({ deletedAt: new Date() } as any)
+      .where(eq(assessmentTemplate.id, id));
+
+    // 审计日志
+    await this.db.insert(auditLog).values({
+      operatorId: userId,
+      action: 'delete_template',
+      targetType: 'assessment_template',
+      targetId: id,
+      changes: { before: { name: templates[0].name } },
+    });
+
+    this.logger.log(`Template deleted: ${templates[0].name} (${id})`);
 
     return { success: true };
   }

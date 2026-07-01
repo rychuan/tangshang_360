@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Plus, Eye, Pencil, Ban, Search, RotateCcw } from 'lucide-react';
+import { Plus, Eye, Pencil, Ban, Trash2, Search, RotateCcw } from 'lucide-react';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo } from '@/hooks/usePermissions';
@@ -73,6 +73,7 @@ const TemplateManagementPage: React.FC = () => {
     useState<AssessmentTemplateDetail | null>(null);
 
   const [deactivateId, setDeactivateId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [detailCache, setDetailCache] = useState<
     Record<string, AssessmentTemplateDetail>
   >({});
@@ -174,6 +175,18 @@ const TemplateManagementPage: React.FC = () => {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    try {
+      await assessmentTemplateApi.remove(deleteId);
+      toast.success('模板已删除');
+      setDeleteId(null);
+      await fetchList();
+    } catch (err: unknown) {
+      handleApiError(err);
+    }
+  };
+
   const handleOpenCreate = () => {
     setEditingTemplate(null);
     setFormOpen(true);
@@ -254,6 +267,20 @@ const TemplateManagementPage: React.FC = () => {
                 >
                   <Ban data-icon="inline-start" />
                   停用
+                </Button>
+              </CanDo>
+            </CanRole>
+          )}
+          {!item.isActive && (
+            <CanRole roles={['admin', 'hrd']}>
+              <CanDo resource="template_management" action="delete">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setDeleteId(item.id)}
+                >
+                  <Trash2 data-icon="inline-start" />
+                  删除
                 </Button>
               </CanDo>
             </CanRole>
@@ -359,6 +386,31 @@ const TemplateManagementPage: React.FC = () => {
         template={editingTemplate}
         onSave={editingTemplate ? handleUpdate : handleCreate}
       />
+
+      <AlertDialog
+        open={!!deleteId}
+        onOpenChange={(open: boolean) => {
+          if (!open) setDeleteId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              删除后模板将被移除（关联数据保留、绑定关系自动停用）。此操作不可撤销，确认删除？
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              确认删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <TemplatePreviewDialog
         open={previewOpen}
