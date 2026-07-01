@@ -30,6 +30,7 @@ import type {
   BitableSyncLogItem,
   BitableSyncLogDetail,
 } from '@shared/api.interface';
+import { logger } from '@lark-apaas/client-toolkit/logger';
 
 interface SyncLogDrawerProps {
   open: boolean;
@@ -90,7 +91,7 @@ const SyncLogDrawer: React.FC<SyncLogDrawerProps> = ({
         .getLogs(connectionId, { page: 1, pageSize: 50 })
         .then((res) => setLogs(res.items))
         .catch((err) => {
-          console.error('Failed to load sync logs:', err);
+          logger.error('Failed to load sync logs:', String(err));
         })
         .finally(() => setLoading(false));
     }
@@ -102,7 +103,7 @@ const SyncLogDrawer: React.FC<SyncLogDrawerProps> = ({
       const detail = await api.getLogDetail(connectionId, logId);
       setSelectedLog(detail);
     } catch (err) {
-      console.error('Failed to load log detail:', err);
+      logger.error('Failed to load log detail:', String(err));
     } finally {
       setLoadingDetail(false);
     }

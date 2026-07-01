@@ -32,6 +32,7 @@ import type {
   BitableConnectionItem,
   CreateBitableConnectionRequest,
 } from '@shared/api.interface';
+import { logger } from '@lark-apaas/client-toolkit/logger';
 
 const BitableConnectionTab: React.FC = () => {
   const [connections, setConnections] = useState<BitableConnectionItem[]>([]);
@@ -121,7 +122,7 @@ const BitableConnectionTab: React.FC = () => {
     } catch (err) {
       const msg = err instanceof Error ? err.message : '导出失败';
       // 导出错误通过 toast 或日志显示
-      console.error(`导出失败: ${msg}`);
+      logger.error(`导出失败: ${msg}`);
     } finally {
       setExportingId(null);
     }
