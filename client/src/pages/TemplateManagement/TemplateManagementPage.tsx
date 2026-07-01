@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Plus, Eye, Pencil, Ban, Trash2, Search, RotateCcw } from 'lucide-react';
+import {
+  Plus,
+  Eye,
+  Pencil,
+  Ban,
+  Trash2,
+  Search,
+  RotateCcw,
+} from 'lucide-react';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo } from '@/hooks/usePermissions';

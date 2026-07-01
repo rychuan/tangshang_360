@@ -66,10 +66,17 @@ const AssessmentDetailPage: React.FC = () => {
 
   const { setLabel } = useBreadcrumb();
   useEffect(() => {
+    setLabel('绩效详情');
+    document.title = '绩效详情 - 绩效考核';
     if (detail) {
-      setLabel(`${detail.employeeName} · ${detail.period}`);
+      const label = `${detail.employeeName} · ${detail.period}`;
+      setLabel(label);
+      document.title = `${label} - 绩效考核`;
     }
-    return () => setLabel(null);
+    return () => {
+      setLabel(null);
+      document.title = '绩效考核';
+    };
   }, [detail, setLabel]);
 
   const [signDialogOpen, setSignDialogOpen] = useState<boolean>(false);

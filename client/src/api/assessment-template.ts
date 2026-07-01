@@ -29,9 +29,7 @@ export async function list(params: {
   return res.data;
 }
 
-export async function detail(
-  id: string,
-): Promise<AssessmentTemplateDetail> {
+export async function detail(id: string): Promise<AssessmentTemplateDetail> {
   const res = await axiosForBackend<AssessmentTemplateDetail>({
     url: `/api/assessment-templates/${id}`,
     method: 'GET',
@@ -62,9 +60,7 @@ export async function update(
   return res.data;
 }
 
-export async function deactivate(
-  id: string,
-): Promise<SuccessResponse> {
+export async function deactivate(id: string): Promise<SuccessResponse> {
   const res = await axiosForBackend<SuccessResponse>({
     url: `/api/assessment-templates/${id}/deactivate`,
     method: 'PATCH',
@@ -72,9 +68,7 @@ export async function deactivate(
   return res.data;
 }
 
-export async function remove(
-  id: string,
-): Promise<SuccessResponse> {
+export async function remove(id: string): Promise<SuccessResponse> {
   const res = await axiosForBackend<SuccessResponse>({
     url: `/api/assessment-templates/${id}`,
     method: 'DELETE',

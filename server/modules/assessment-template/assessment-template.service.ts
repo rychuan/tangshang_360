@@ -1,4 +1,10 @@
-import { Injectable, Logger, Inject, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  Inject,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
@@ -56,8 +62,7 @@ export class AssessmentTemplateService {
       conditions.push(eq(assessmentTemplate.isActive, false));
     }
 
-    const whereClause =
-      conditions.length > 0 ? and(...conditions) : undefined;
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     const offset = (page - 1) * pageSize;
 
@@ -85,15 +90,16 @@ export class AssessmentTemplateService {
       .where(whereClause);
 
     const mapped: AssessmentTemplateItem[] = items.map(
-      (item: typeof items[number]) => ({
+      (item: (typeof items)[number]) => ({
         id: item.id,
         name: item.name,
         position: item.position,
         type: item.type as AssessmentTemplateItem['type'],
         isActive: item.isActive,
-        createdAt: item.createdAt instanceof Date
-          ? item.createdAt.toISOString()
-          : String(item.createdAt),
+        createdAt:
+          item.createdAt instanceof Date
+            ? item.createdAt.toISOString()
+            : String(item.createdAt),
         dimensionCount: Number(item.dimensionCount),
         indicatorCount: Number(item.indicatorCount),
       }),
@@ -127,7 +133,7 @@ export class AssessmentTemplateService {
       .orderBy(assessmentDimension.sortOrder);
 
     const dimensionIds: string[] = dimensions.map(
-      (d: typeof dimensions[number]) => d.id,
+      (d: (typeof dimensions)[number]) => d.id,
     );
 
     const indicators: (typeof assessmentIndicator.$inferSelect)[] =
@@ -135,9 +141,7 @@ export class AssessmentTemplateService {
         ? await this.db
             .select()
             .from(assessmentIndicator)
-            .where(
-              inArray(assessmentIndicator.dimensionId, dimensionIds),
-            )
+            .where(inArray(assessmentIndicator.dimensionId, dimensionIds))
             .orderBy(assessmentIndicator.sortOrder)
         : [];
 
@@ -158,23 +162,21 @@ export class AssessmentTemplateService {
       position: tmpl.position,
       type: tmpl.type as AssessmentTemplateDetail['type'],
       isActive: tmpl.isActive,
-      dimensions: dimensions.map(
-        (dim: typeof dimensions[number]) => ({
-          id: dim.id,
-          name: dim.name,
-          weight: Number(dim.weight),
-          indicators: (indicatorsByDim[dim.id] || []).map(
-            (ind: typeof assessmentIndicator.$inferSelect) => ({
-              id: ind.id,
-              content: ind.content,
-              description: ind.description || '',
-              algorithm: ind.algorithm || '',
-              dataSource: ind.dataSource || '',
-              weight: Number(ind.weight),
-            }),
-          ),
-        }),
-      ),
+      dimensions: dimensions.map((dim: (typeof dimensions)[number]) => ({
+        id: dim.id,
+        name: dim.name,
+        weight: Number(dim.weight),
+        indicators: (indicatorsByDim[dim.id] || []).map(
+          (ind: typeof assessmentIndicator.$inferSelect) => ({
+            id: ind.id,
+            content: ind.content,
+            description: ind.description || '',
+            algorithm: ind.algorithm || '',
+            dataSource: ind.dataSource || '',
+            weight: Number(ind.weight),
+          }),
+        ),
+      })),
     };
   }
 
@@ -350,7 +352,12 @@ export class AssessmentTemplateService {
     const templates = await this.db
       .select()
       .from(assessmentTemplate)
-      .where(and(eq(assessmentTemplate.id, id), isNull((assessmentTemplate as any).deletedAt)))
+      .where(
+        and(
+          eq(assessmentTemplate.id, id),
+          isNull((assessmentTemplate as any).deletedAt),
+        ),
+      )
       .limit(1);
 
     if (templates.length === 0) {
