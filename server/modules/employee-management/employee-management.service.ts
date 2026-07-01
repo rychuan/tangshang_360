@@ -95,7 +95,7 @@ export class EmployeeManagementService {
           phone: employee.phone,
           hireDate: employee.hireDate,
           supervisorName: sql`COALESCE((SELECT sup.name FROM employee sup WHERE (sup.id).user_id = (${employee.supervisorId}).user_id AND sup.deleted_at IS NULL LIMIT 1), '')`,
-          bitableConnectionId: sql<string | null>`bitable_connection_id`
+          bitableConnectionId: employee.bitableConnectionId
         })
         .from(employee)
         .where(whereClause)

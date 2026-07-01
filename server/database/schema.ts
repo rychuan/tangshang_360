@@ -406,6 +406,7 @@ export const employee = pgTable("employee", {
   probationMonths: integer("probation_months").default(3),
   permissions: jsonb("permissions"),
   deletedAt: customTimestamptz("deleted_at", { precision: 6 }),
+  bitableConnectionId: uuid("bitable_connection_id"),
   // System field: Creation time (auto-filled, do not modify)
   createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
   // System field: Creator (auto-filled, do not modify)
