@@ -164,6 +164,16 @@ export interface AssessmentIndicatorDetail {
   supervisorScore?: number;
   supervisorComment?: string;
 }
+
+// === Assessment Instance Status Constants ===
+export const ASSESSMENT_STATUS = {
+  SELF_REVIEW: 'self_review',
+  SUPERVISOR_REVIEW: 'supervisor_review',
+  PENDING_SIGN: 'pending_sign',
+  COMPLETED: 'completed',
+} as const;
+export type AssessmentStatus =
+  (typeof ASSESSMENT_STATUS)[keyof typeof ASSESSMENT_STATUS];
 export interface AssessmentInstanceDetail {
   id: string;
   period: string;
@@ -332,6 +342,7 @@ export interface EmployeeItem {
   phone: string;
   hireDate: string;
   currentBinding?: EmployeeCurrentBinding | null;
+  bitableConnectionId?: string | null;
 }
 export interface EmployeeDetail extends EmployeeItem {
   probationMonths: number;
@@ -463,7 +474,11 @@ export interface RemindResponse {
 }
 // === Permission Management ===
 export type PermissionAction =
-  'view' | 'edit' | 'delete' | 'export' | 'publish';
+  | 'view'
+  | 'edit'
+  | 'delete'
+  | 'export'
+  | 'publish';
 export type PermissionResource =
   | 'my_assessments'
   | 'employees'
@@ -523,9 +538,7 @@ export const DEFAULT_PERMISSIONS: Record<string, PermissionItem[]> = {
     { resource: 'statistics', actions: ['view'] },
     { resource: 'team_performance', actions: ['view', 'edit'] },
   ],
-  employee: [
-    { resource: 'my_assessments', actions: ['view', 'edit'] },
-  ],
+  employee: [{ resource: 'my_assessments', actions: ['view', 'edit'] }],
 };
 export interface PermissionsConfig {
   permissions: PermissionItem[];
@@ -684,3 +697,80 @@ export interface CreatePerformanceGradeRequest {
   isActive: boolean;
 }
 export interface UpdatePerformanceGradeRequest extends CreatePerformanceGradeRequest {}
+
+// === Bitable Connection ===
+
+export interface BitableConnectionItem {
+  id: string;
+  name: string;
+  bitableAppToken: string;
+  tableId: string;
+  isActive: boolean;
+  lastSyncAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BitableConnectionListResponse {
+  items: BitableConnectionItem[];
+  total: number;
+}
+
+export interface CreateBitableConnectionRequest {
+  name: string;
+  appId: string;
+  appSecret: string;
+  bitableAppToken: string;
+  tableId: string;
+}
+
+export interface BitableSyncLogItem {
+  id: string;
+  direction: 'import' | 'export';
+  status: 'success' | 'partial' | 'failed';
+  totalCount: number;
+  createdCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  failedCount: number;
+  errorMessage?: string;
+  operatorName: string;
+  startedAt: string;
+  completedAt?: string;
+}
+
+export interface BitableSyncLogDetail extends BitableSyncLogItem {
+  details: Array<{
+    row: number;
+    employeeNo: string;
+    name: string;
+    status: 'created' | 'updated' | 'skipped' | 'failed';
+    reason?: string;
+  }>;
+}
+
+export interface BitableSyncLogListResponse {
+  items: BitableSyncLogItem[];
+  total: number;
+}
+
+export interface BitableImportResponse {
+  success: boolean;
+  connectionId: string;
+  connectionName: string;
+  totalCount: number;
+  createdCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  failedCount: number;
+  logId: string;
+}
+
+export interface BitableExportResponse {
+  success: boolean;
+  connectionId: string;
+  totalCount: number;
+  syncedCount: number;
+  failedCount: number;
+  logId: string;
+}

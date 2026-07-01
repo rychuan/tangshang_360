@@ -95,6 +95,7 @@ export class EmployeeManagementService {
           phone: employee.phone,
           hireDate: employee.hireDate,
           supervisorName: sql`COALESCE((SELECT sup.name FROM employee sup WHERE (sup.id).user_id = (${employee.supervisorId}).user_id AND sup.deleted_at IS NULL LIMIT 1), '')`,
+          bitableConnectionId: employee.bitableConnectionId
         })
         .from(employee)
         .where(whereClause)
@@ -122,6 +123,7 @@ export class EmployeeManagementService {
         item.hireDate instanceof Date
           ? item.hireDate.toISOString()
           : item.hireDate || '',
+      bitableConnectionId: item.bitableConnectionId || null,
     }));
 
     const employeeIds: string[] = mapped.map((m: EmployeeItem) => m.id);

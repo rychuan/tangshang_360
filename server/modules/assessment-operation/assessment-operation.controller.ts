@@ -17,7 +17,7 @@ export class AssessmentOperationController {
     return this.service.detail(id, userId);
   }
 
-  @CanRole(['admin', 'supervisor', 'employee'])
+  @CanRole(['employee'])
   @RequirePermission('my_assessments', 'edit')
   @NeedLogin()
   @Post(':id/self-rating')

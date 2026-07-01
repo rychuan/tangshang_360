@@ -57,6 +57,8 @@ export class AssessmentPublishController {
     );
   }
 
+  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
+  @RequirePermission('publish_management', 'view')
   @Get('publish/statistics')
   async getStatistics(@Query('period') period: string) {
     return this.service.getPeriodStatistics(period);
@@ -71,6 +73,8 @@ export class AssessmentPublishController {
     return this.service.batchUnlock(body.instanceIds, body.reason, userId);
   }
 
+  @CanRole(['admin', 'hrd'])
+  @RequirePermission('publish_management', 'edit')
   @NeedLogin()
   @Post('assessment-instances/batch-notify')
   async batchNotify(@Req() req: any, @Body() body: BatchNotifyRequest) {
@@ -138,6 +142,8 @@ export class AssessmentPublishController {
     return this.service.getUnlockHistory(id);
   }
 
+  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
+  @RequirePermission('publish_management', 'view')
   @Get('assessment-instances/:id/indicators')
   async getInstanceIndicators(@Param('id') id: string) {
     return this.service.getInstanceIndicators(id);

@@ -18,6 +18,7 @@ import { EmployeeManagementModule } from './modules/employee-management/employee
 import { RoleManagerModule } from './modules/role-manager/role-manager.module';
 import { PerformanceGradeModule } from './modules/performance-grade/performance-grade.module';
 import { EmployeeSnapshotModule } from './modules/employee-snapshot/employee-snapshot.module';
+import { BitableConnectionModule } from './modules/bitable-connection/bitable-connection.module';
 import { ViewModule } from './modules/view/view.module';
 
 @Module({
@@ -39,6 +40,7 @@ import { ViewModule } from './modules/view/view.module';
     RoleManagerModule,
     PerformanceGradeModule,
     EmployeeSnapshotModule,
+    BitableConnectionModule,
     // ====== @route-section: business-modules END ======
 
     // ⚠️ @route-order: last
