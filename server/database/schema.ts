@@ -117,6 +117,42 @@ export const fileAttachmentArray = customType<{
   },
 });
 
+export const bitableSyncLog = pgTable("bitable_sync_log", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  connectionId: uuid("connection_id").notNull(),
+  direction: varchar("direction", { length: 20 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull(),
+  totalCount: integer("total_count").default(0),
+  createdCount: integer("created_count").default(0),
+  updatedCount: integer("updated_count").default(0),
+  skippedCount: integer("skipped_count").default(0),
+  failedCount: integer("failed_count").default(0),
+  details: jsonb("details"),
+  errorMessage: text("error_message"),
+  operatorId: userProfile("operator_id").notNull(),
+  startedAt: customTimestamptz("started_at", { precision: 6 }).notNull(),
+  completedAt: customTimestamptz("completed_at", { precision: 6 }),
+});
+
+export const bitableConnection = pgTable("bitable_connection", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 100 }).notNull(),
+  appId: varchar("app_id", { length: 100 }).notNull(),
+  appSecret: text("app_secret").notNull(),
+  bitableAppToken: varchar("bitable_app_token", { length: 200 }).notNull(),
+  tableId: varchar("table_id", { length: 200 }).notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  deletedAt: customTimestamptz("deleted_at", { precision: 6 }),
+  // System field: Creation time (auto-filled, do not modify)
+  createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Creator (auto-filled, do not modify)
+  createdBy: userProfile("_created_by"),
+  // System field: Update time (auto-filled, do not modify)
+  updatedAt: customTimestamptz("_updated_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Updater (auto-filled, do not modify)
+  updatedBy: userProfile("_updated_by"),
+});
+
 export const systemDict = pgTable("system_dict", {
   id: uuid("id").primaryKey().defaultRandom(),
   dictType: varchar("dict_type", { length: 50 }).notNull(),
@@ -427,6 +463,8 @@ export const assessmentIndicatorSnapshotTable = assessmentIndicatorSnapshot;
 export const assessmentInstanceTable = assessmentInstance;
 export const assessmentTemplateTable = assessmentTemplate;
 export const auditLogTable = auditLog;
+export const bitableConnectionTable = bitableConnection;
+export const bitableSyncLogTable = bitableSyncLog;
 export const departmentTable = department;
 export const employeeTable = employee;
 export const employeeBindingTable = employeeBinding;
