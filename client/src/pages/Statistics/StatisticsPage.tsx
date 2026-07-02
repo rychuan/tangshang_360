@@ -1,10 +1,13 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   DownloadIcon,
   SearchIcon,
   BarChart3Icon,
   PieChartIcon,
   TrendingUpIcon,
+  Eye,
+  FileDown,
 } from 'lucide-react';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { toast } from 'sonner';
@@ -12,6 +15,9 @@ import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo } from '@/hooks/usePermissions';
 import { handleApiError } from '@/utils/api-error';
 import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import { detail as getAssessmentDetail } from '@/api/assessment-operation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -116,6 +122,9 @@ const StatisticsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [charts, setCharts] = useState<ChartsResponse | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [exportingPdfId, setExportingPdfId] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const pdfRef = useRef<HTMLDivElement>(null);
 
   const buildParams = useCallback(
     (p: number): StatisticsRecordsParams => ({
@@ -224,6 +233,91 @@ const StatisticsPage: React.FC = () => {
       handleApiError(e);
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleExportPdf = async (
+    id: string,
+    employeeName: string,
+    period: string,
+  ) => {
+    try {
+      setExportingPdfId(id);
+      const detail = await getAssessmentDetail(id);
+      const pdfEl = pdfRef.current;
+      if (!pdfEl) return;
+
+      // Render detail to hidden div
+      const content = `
+        <div style="padding:20px;font-family:sans-serif;max-width:700px;">
+          <h2 style="margin-bottom:16px;">绩效详情</h2>
+          <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+            <tr><td style="padding:4px 8px;border:1px solid #ddd;font-weight:bold;">员工</td><td style="padding:4px 8px;border:1px solid #ddd;">${detail.employeeName}</td><td style="padding:4px 8px;border:1px solid #ddd;font-weight:bold;">岗位</td><td style="padding:4px 8px;border:1px solid #ddd;">${detail.position}</td></tr>
+            <tr><td style="padding:4px 8px;border:1px solid #ddd;font-weight:bold;">周期</td><td style="padding:4px 8px;border:1px solid #ddd;">${detail.period}</td><td style="padding:4px 8px;border:1px solid #ddd;font-weight:bold;">状态</td><td style="padding:4px 8px;border:1px solid #ddd;">${detail.status}</td></tr>
+            <tr><td style="padding:4px 8px;border:1px solid #ddd;font-weight:bold;">总分</td><td style="padding:4px 8px;border:1px solid #ddd;">${detail.totalScore ?? '-'}</td><td style="padding:4px 8px;border:1px solid #ddd;font-weight:bold;">等级</td><td style="padding:4px 8px;border:1px solid #ddd;">${detail.grade ?? '-'}</td></tr>
+            <tr><td style="padding:4px 8px;border:1px solid #ddd;font-weight:bold;">上级</td><td style="padding:4px 8px;border:1px solid #ddd;">${detail.supervisorName}</td><td style="padding:4px 8px;border:1px solid #ddd;font-weight:bold;">自评签名</td><td style="padding:4px 8px;border:1px solid #ddd;">${detail.selfSignName || '-'}</td></tr>
+          </table>
+          <h3 style="margin-bottom:8px;">考核指标</h3>
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr style="background:#f5f5f5;">
+                <th style="padding:6px;border:1px solid #ddd;text-align:left;">维度</th>
+                <th style="padding:6px;border:1px solid #ddd;text-align:left;">指标</th>
+                <th style="padding:6px;border:1px solid #ddd;text-align:right;">权重</th>
+                <th style="padding:6px;border:1px solid #ddd;text-align:right;">自评</th>
+                <th style="padding:6px;border:1px solid #ddd;text-align:right;">上级评分</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${detail.indicators
+                .map(
+                  (ind) => `
+                <tr>
+                  <td style="padding:6px;border:1px solid #ddd;">${ind.dimensionName}</td>
+                  <td style="padding:6px;border:1px solid #ddd;">${ind.content}</td>
+                  <td style="padding:6px;border:1px solid #ddd;text-align:right;">${ind.weight}</td>
+                  <td style="padding:6px;border:1px solid #ddd;text-align:right;">${ind.selfScore ?? '-'}</td>
+                  <td style="padding:6px;border:1px solid #ddd;text-align:right;">${ind.supervisorScore ?? '-'}</td>
+                </tr>`,
+                )
+                .join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+      pdfEl.innerHTML = content;
+
+      // Wait for render
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const canvas = await html2canvas(pdfEl, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = 210; // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= 297; // A4 height
+
+      while (heightLeft > 0) {
+        position = position - 297;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= 297;
+      }
+
+      pdf.save(`绩效详情_${employeeName}_${period}.pdf`);
+      pdfEl.innerHTML = '';
+      toast.success('PDF 导出成功');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'PDF 导出失败';
+      logger.error(`PDF export error: ${msg}`);
+      handleApiError(e);
+    } finally {
+      setExportingPdfId(null);
     }
   };
 
@@ -522,6 +616,11 @@ const StatisticsPage: React.FC = () => {
                       <TableHead className="text-left py-3 px-4 font-medium hidden lg:table-cell">
                         完成时间
                       </TableHead>
+                      <CanRole roles={['admin', 'hrd', 'dept_head']}>
+                        <TableHead className="text-center py-3 px-4 font-medium w-20">
+                          操作
+                        </TableHead>
+                      </CanRole>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -559,6 +658,35 @@ const StatisticsPage: React.FC = () => {
                               )
                             : '-'}
                         </TableCell>
+                        <CanRole roles={['admin', 'hrd', 'dept_head']}>
+                          <TableCell className="py-3 px-1 text-center">
+                            <div className="flex items-center justify-center gap-0.5">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="查看详情"
+                                onClick={() => navigate(`assessment/${r.id}`)}
+                              >
+                                <Eye className="size-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="导出PDF"
+                                disabled={exportingPdfId === r.id}
+                                onClick={() =>
+                                  handleExportPdf(
+                                    r.id,
+                                    r.employeeName,
+                                    r.period,
+                                  )
+                                }
+                              >
+                                <FileDown className="size-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </CanRole>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -595,6 +723,18 @@ const StatisticsPage: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Hidden div for PDF rendering */}
+      <div
+        ref={pdfRef}
+        style={{
+          position: 'absolute',
+          left: '-9999px',
+          top: 0,
+          width: '700px',
+          background: '#fff',
+        }}
+      />
     </div>
   );
 };
