@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createRoot, Root } from 'react-dom/client';
 import {
   DownloadIcon,
   SearchIcon,
@@ -19,7 +18,6 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { detail as getAssessmentDetail } from '@/api/assessment-operation';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -127,7 +125,6 @@ const StatisticsPage: React.FC = () => {
   const [exportingPdfId, setExportingPdfId] = useState<string | null>(null);
   const navigate = useNavigate();
   const pdfRef = useRef<HTMLDivElement>(null);
-  const pdfRootRef = useRef<Root | null>(null);
 
   const buildParams = useCallback(
     (p: number): StatisticsRecordsParams => ({
@@ -251,12 +248,7 @@ const StatisticsPage: React.FC = () => {
       setExportingPdfId(id);
       const detail = await getAssessmentDetail(id);
 
-      // Unmount previous root if any
-      if (pdfRootRef.current) {
-        pdfRootRef.current.unmount();
-      }
-
-      // Build group data like useAssessmentDetail does
+      // Build group data
       const groupMap = new Map<
         string,
         {
@@ -277,145 +269,77 @@ const StatisticsPage: React.FC = () => {
       }
       const groups = Array.from(groupMap.values());
 
-      // Render detail page replica into hidden div
-      const root = createRoot(pdfEl);
-      pdfRootRef.current = root;
-      root.render(
-        <div className="flex flex-col gap-4 p-5 bg-white" style={{ width: 760 }}>
-          {/* Header */}
-          <div className="flex items-center justify-between flex-wrap gap-3 pb-4 border-b">
-            <div className="flex items-center gap-3">
-              <h1 className="text-xl font-semibold text-gray-900">
-                {detail.period}
-              </h1>
-              <StatusBadge status={detail.status} />
-            </div>
-            {detail.totalScore != null && (
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <p className="text-xs text-gray-500">总分</p>
-                  <p className="text-2xl font-bold text-blue-600">
-                    {detail.totalScore}
-                  </p>
-                </div>
-                {detail.grade && (
-                  <GradeBadge grade={detail.grade} />
-                )}
-              </div>
-            )}
+      // Build raw HTML with inline hex colors (avoids html2canvas oklch parsing error)
+      const statusLabel: string =
+        ASSESSMENT_STATUS_LABELS[detail.status] || detail.status;
+      const html = `<div style="padding:20px;font-family:sans-serif;color:#111;background:#fff;width:720px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid #e5e7eb;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:18px;font-weight:600;">${detail.period}</span>
+            <span style="font-size:12px;padding:2px 8px;border-radius:4px;background:#e0e7ff;color:#3730a3;">${statusLabel}</span>
           </div>
+          ${detail.totalScore != null ? `<div style="display:flex;align-items:center;gap:8px;">
+            <div style="text-align:right;">
+              <div style="font-size:11px;color:#6b7280;">总分</div>
+              <div style="font-size:22px;font-weight:700;color:#2563eb;">${detail.totalScore}</div>
+            </div>
+            ${detail.grade ? `<span style="font-size:16px;font-weight:700;padding:4px 10px;border-radius:4px;background:#dbeafe;color:#1e40af;">${detail.grade}</span>` : ''}
+          </div>` : ''}
+        </div>
+        <div style="margin-top:16px;padding:12px;border:1px solid #e5e7eb;border-radius:8px;">
+          <div style="font-size:14px;font-weight:600;margin-bottom:8px;">${detail.employeeName} <span style="font-weight:400;color:#6b7280;font-size:12px;">【${detail.position}】的绩效评分</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;">
+            <div><span style="color:#6b7280;">上级：</span>${detail.supervisorName || '-'}</div>
+            <div><span style="color:#6b7280;">状态：</span>${statusLabel}</div>
+            ${detail.selfSignName ? `<div><span style="color:#6b7280;">自评签名：</span>${detail.selfSignName}${detail.selfSignAt ? ` (${new Date(detail.selfSignAt).toLocaleDateString('zh-CN')})` : ''}</div>` : ''}
+            ${detail.supervisorSignName ? `<div><span style="color:#6b7280;">上级签名：</span>${detail.supervisorSignName}${detail.supervisorSignAt ? ` (${new Date(detail.supervisorSignAt).toLocaleDateString('zh-CN')})` : ''}</div>` : ''}
+          </div>
+        </div>
+        ${groups.map((group) => `
+        <div style="margin-top:12px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+          <div style="padding:8px 12px;background:#f9fafb;font-size:13px;font-weight:600;">
+            ${group.dimensionName} <span style="font-weight:400;font-size:11px;color:#6b7280;">权重 ${group.dimensionWeight} 分</span>
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:11px;">
+            <thead>
+              <tr style="background:#f3f4f6;">
+                <th style="padding:6px 8px;text-align:left;border-bottom:1px solid #e5e7eb;">指标</th>
+                <th style="padding:6px 8px;text-align:left;border-bottom:1px solid #e5e7eb;">说明</th>
+                <th style="padding:6px 8px;text-align:right;border-bottom:1px solid #e5e7eb;width:40px;">权重</th>
+                <th style="padding:6px 8px;text-align:right;border-bottom:1px solid #e5e7eb;width:40px;">自评</th>
+                <th style="padding:6px 8px;text-align:right;border-bottom:1px solid #e5e7eb;width:50px;">上级评分</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${group.indicators.map((ind) => `
+              <tr style="border-bottom:1px solid #f3f4f6;">
+                <td style="padding:6px 8px;">${ind.content}</td>
+                <td style="padding:6px 8px;color:#6b7280;">${ind.description || '-'}</td>
+                <td style="padding:6px 8px;text-align:right;">${ind.weight}</td>
+                <td style="padding:6px 8px;text-align:right;">${ind.selfScore != null ? ind.selfScore : '-'}</td>
+                <td style="padding:6px 8px;text-align:right;">${ind.supervisorScore != null ? ind.supervisorScore : '-'}</td>
+              </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        `).join('')}
+      </div>`;
 
-          {/* Employee info card */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                {detail.employeeName}
-                <span className="text-gray-500 font-normal text-sm">
-                  【{detail.position}】的绩效评分
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-gray-500">上级：</span>
-                  {detail.supervisorName}
-                </div>
-                <div>
-                  <span className="text-gray-500">状态：</span>
-                  <StatusBadge status={detail.status} />
-                </div>
-                {detail.selfSignName && (
-                  <div>
-                    <span className="text-gray-500">自评签名：</span>
-                    {detail.selfSignName}
-                    {detail.selfSignAt
-                      ? ` (${new Date(detail.selfSignAt).toLocaleDateString('zh-CN')})`
-                      : ''}
-                  </div>
-                )}
-                {detail.supervisorSignName && (
-                  <div>
-                    <span className="text-gray-500">上级签名：</span>
-                    {detail.supervisorSignName}
-                    {detail.supervisorSignAt
-                      ? ` (${new Date(detail.supervisorSignAt).toLocaleDateString('zh-CN')})`
-                      : ''}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+      pdfEl.innerHTML = html;
 
-          {/* Indicator tables by dimension */}
-          {groups.map((group) => (
-            <Card key={group.dimensionName}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  {group.dimensionName}
-                  <Badge variant="outline" className="text-xs">
-                    权重 {group.dimensionWeight} 分
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead className="text-left py-2 px-3 text-xs font-medium">
-                        指标
-                      </TableHead>
-                      <TableHead className="text-left py-2 px-3 text-xs font-medium hidden sm:table-cell">
-                        说明
-                      </TableHead>
-                      <TableHead className="text-right py-2 px-3 text-xs font-medium w-16">
-                        权重
-                      </TableHead>
-                      <TableHead className="text-right py-2 px-3 text-xs font-medium w-16">
-                        自评
-                      </TableHead>
-                      <TableHead className="text-right py-2 px-3 text-xs font-medium w-16">
-                        上级评分
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {group.indicators.map((ind) => (
-                      <TableRow key={ind.id} className="border-b">
-                        <TableCell className="py-2 px-3 text-sm">
-                          {ind.content}
-                        </TableCell>
-                        <TableCell className="py-2 px-3 text-xs text-gray-500 hidden sm:table-cell">
-                          {ind.description || '-'}
-                        </TableCell>
-                        <TableCell className="py-2 px-3 text-sm text-right">
-                          {ind.weight}
-                        </TableCell>
-                        <TableCell className="py-2 px-3 text-sm text-right">
-                          {ind.selfScore != null ? ind.selfScore : '-'}
-                        </TableCell>
-                        <TableCell className="py-2 px-3 text-sm text-right">
-                          {ind.supervisorScore != null
-                            ? ind.supervisorScore
-                            : '-'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          ))}
-        </div>,
-      );
-
-      // Wait for render + assets
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      // Wait for render
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       const canvas = await html2canvas(pdfEl, {
         scale: 2,
         useCORS: true,
         backgroundColor: '#ffffff',
+        onclone: (clonedDoc: Document) => {
+          clonedDoc
+            .querySelectorAll('style, link[rel="stylesheet"]')
+            .forEach((el: Element) => el.remove());
+        },
       });
       const imgData = canvas.toDataURL('image/png');
       const imgWidth = 210;
@@ -439,18 +363,12 @@ const StatisticsPage: React.FC = () => {
       pdf.save(`绩效详情_${employeeName}_${period}.pdf`);
 
       // Clean up
-      root.unmount();
-      pdfRootRef.current = null;
+      pdfEl.innerHTML = '';
       toast.success('PDF 导出成功');
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'PDF 导出失败';
       logger.error(`PDF export error: ${msg}`);
       handleApiError(e);
-      // Clean up on error
-      if (pdfRootRef.current) {
-        pdfRootRef.current.unmount();
-        pdfRootRef.current = null;
-      }
     } finally {
       setExportingPdfId(null);
     }
@@ -870,6 +788,7 @@ const StatisticsPage: React.FC = () => {
           top: 0,
           width: '700px',
           background: '#fff',
+          color: '#111',
         }}
       />
     </div>
