@@ -272,7 +272,41 @@ const StatisticsPage: React.FC = () => {
       // Build raw HTML with inline hex colors (avoids html2canvas oklch parsing error)
       const statusLabel: string =
         ASSESSMENT_STATUS_LABELS[detail.status] || detail.status;
-      const html = `<div style="padding:20px;font-family:sans-serif;color:#111;background:#fff;width:720px;">
+
+      // Status helpers for process stepper
+      const selfDone = detail.status !== 'self_review';
+      const supDone =
+        detail.status === 'pending_sign' || detail.status === 'completed';
+      const selfSignDone = !!detail.selfSignName;
+      const supSignDone =
+        !!detail.supervisorSignName || detail.status === 'completed';
+
+      const stepperHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding:10px 8px;border:1px solid #e5e7eb;border-radius:8px;font-size:11px;">
+          ${[
+            { label: '员工自评', done: selfDone },
+            { label: '上级评分', done: supDone },
+            { label: '员工签名', done: selfSignDone },
+            { label: '上级签名', done: supSignDone },
+          ]
+            .map(
+              (s, i) => `
+            <div style="display:flex;align-items:center;flex:1;min-width:0;">
+              <div style="display:flex;flex-direction:column;align-items:center;width:100%;">
+                <div style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;${
+                  s.done
+                    ? 'background:#16a34a;color:#fff;'
+                    : 'background:#e5e7eb;color:#9ca3af;'
+                }">${s.done ? '✓' : i + 1}</div>
+                <span style="margin-top:4px;font-weight:${s.done ? '600' : '400'};color:${s.done ? '#111' : '#9ca3af'};">${s.label}</span>
+              </div>
+              ${i < 3 ? '<div style="flex:1;height:1px;background:#e5e7eb;margin:0 4px;margin-bottom:16px;"></div>' : ''}
+            </div>`,
+            )
+            .join('')}
+        </div>`;
+
+      const html = `<div style="padding:20px;font-family:sans-serif;color:#111;background:#fff;width:780px;">
         <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid #e5e7eb;">
           <div style="display:flex;align-items:center;gap:8px;">
             <span style="font-size:18px;font-weight:600;">${detail.period}</span>
@@ -290,14 +324,33 @@ const StatisticsPage: React.FC = () => {
               : ''
           }
         </div>
-        <div style="margin-top:16px;padding:12px;border:1px solid #e5e7eb;border-radius:8px;">
+
+        ${stepperHTML}
+
+        <div style="margin-top:12px;padding:12px;border:1px solid #e5e7eb;border-radius:8px;">
           <div style="font-size:14px;font-weight:600;margin-bottom:8px;">${detail.employeeName} <span style="font-weight:400;color:#6b7280;font-size:12px;">【${detail.position}】的绩效评分</span></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;">
             <div><span style="color:#6b7280;">上级：</span>${detail.supervisorName || '-'}</div>
             <div><span style="color:#6b7280;">状态：</span>${statusLabel}</div>
-            ${detail.selfSignName ? `<div><span style="color:#6b7280;">自评签名：</span>${detail.selfSignName}${detail.selfSignAt ? ` (${new Date(detail.selfSignAt).toLocaleDateString('zh-CN')})` : ''}</div>` : ''}
-            ${detail.supervisorSignName ? `<div><span style="color:#6b7280;">上级签名：</span>${detail.supervisorSignName}${detail.supervisorSignAt ? ` (${new Date(detail.supervisorSignAt).toLocaleDateString('zh-CN')})` : ''}</div>` : ''}
+            ${
+              detail.selfSignName
+                ? `<div><span style="color:#6b7280;">自评签名：</span>${detail.selfSignName}${detail.selfSignAt ? ` (${new Date(detail.selfSignAt).toLocaleDateString('zh-CN')})` : ''}</div>`
+                : ''
+            }
+            ${
+              detail.supervisorSignName
+                ? `<div><span style="color:#6b7280;">上级签名：</span>${detail.supervisorSignName}${detail.supervisorSignAt ? ` (${new Date(detail.supervisorSignAt).toLocaleDateString('zh-CN')})` : ''}</div>`
+                : ''
+            }
           </div>
+          ${
+            detail.selfSignImage || detail.supervisorSignImage
+              ? `<div style="display:flex;gap:16px;margin-top:8px;padding-top:8px;border-top:1px solid #f3f4f6;">
+            ${detail.selfSignImage ? `<div><div style="font-size:10px;color:#6b7280;margin-bottom:4px;">自评签名图片</div><img src="${detail.selfSignImage}" style="max-width:160px;max-height:60px;border:1px solid #e5e7eb;border-radius:4px;" /></div>` : ''}
+            ${detail.supervisorSignImage ? `<div><div style="font-size:10px;color:#6b7280;margin-bottom:4px;">上级签名图片</div><img src="${detail.supervisorSignImage}" style="max-width:160px;max-height:60px;border:1px solid #e5e7eb;border-radius:4px;" /></div>` : ''}
+          </div>`
+              : ''
+          }
         </div>
         ${groups
           .map(
@@ -306,14 +359,14 @@ const StatisticsPage: React.FC = () => {
           <div style="padding:8px 12px;background:#f9fafb;font-size:13px;font-weight:600;">
             ${group.dimensionName} <span style="font-weight:400;font-size:11px;color:#6b7280;">权重 ${group.dimensionWeight} 分</span>
           </div>
-          <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <table style="width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;">
             <thead>
               <tr style="background:#f3f4f6;">
                 <th style="padding:6px 8px;text-align:left;border-bottom:1px solid #e5e7eb;">指标</th>
                 <th style="padding:6px 8px;text-align:left;border-bottom:1px solid #e5e7eb;">说明</th>
-                <th style="padding:6px 8px;text-align:right;border-bottom:1px solid #e5e7eb;width:40px;">权重</th>
-                <th style="padding:6px 8px;text-align:right;border-bottom:1px solid #e5e7eb;width:40px;">自评</th>
-                <th style="padding:6px 8px;text-align:right;border-bottom:1px solid #e5e7eb;width:50px;">上级评分</th>
+                <th style="padding:6px 8px;text-align:right;border-bottom:1px solid #e5e7eb;width:42px;">权重</th>
+                <th style="padding:6px 8px;text-align:right;border-bottom:1px solid #e5e7eb;width:42px;">自评</th>
+                <th style="padding:6px 8px;text-align:right;border-bottom:1px solid #e5e7eb;width:52px;">上级评分</th>
               </tr>
             </thead>
             <tbody>
@@ -321,8 +374,8 @@ const StatisticsPage: React.FC = () => {
                 .map(
                   (ind) => `
               <tr style="border-bottom:1px solid #f3f4f6;">
-                <td style="padding:6px 8px;">${ind.content}</td>
-                <td style="padding:6px 8px;color:#6b7280;">${ind.description || '-'}</td>
+                <td style="padding:6px 8px;word-wrap:break-word;">${ind.content}</td>
+                <td style="padding:6px 8px;color:#6b7280;font-size:10px;">${ind.description || '-'}</td>
                 <td style="padding:6px 8px;text-align:right;">${ind.weight}</td>
                 <td style="padding:6px 8px;text-align:right;">${ind.selfScore != null ? ind.selfScore : '-'}</td>
                 <td style="padding:6px 8px;text-align:right;">${ind.supervisorScore != null ? ind.supervisorScore : '-'}</td>
@@ -798,9 +851,10 @@ const StatisticsPage: React.FC = () => {
           position: 'absolute',
           left: '-9999px',
           top: 0,
-          width: '700px',
+          width: '820px',
           background: '#fff',
           color: '#111',
+          overflow: 'hidden',
         }}
       />
     </div>
