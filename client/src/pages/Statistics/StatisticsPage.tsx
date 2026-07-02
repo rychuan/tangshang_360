@@ -278,13 +278,17 @@ const StatisticsPage: React.FC = () => {
             <span style="font-size:18px;font-weight:600;">${detail.period}</span>
             <span style="font-size:12px;padding:2px 8px;border-radius:4px;background:#e0e7ff;color:#3730a3;">${statusLabel}</span>
           </div>
-          ${detail.totalScore != null ? `<div style="display:flex;align-items:center;gap:8px;">
+          ${
+            detail.totalScore != null
+              ? `<div style="display:flex;align-items:center;gap:8px;">
             <div style="text-align:right;">
               <div style="font-size:11px;color:#6b7280;">总分</div>
               <div style="font-size:22px;font-weight:700;color:#2563eb;">${detail.totalScore}</div>
             </div>
             ${detail.grade ? `<span style="font-size:16px;font-weight:700;padding:4px 10px;border-radius:4px;background:#dbeafe;color:#1e40af;">${detail.grade}</span>` : ''}
-          </div>` : ''}
+          </div>`
+              : ''
+          }
         </div>
         <div style="margin-top:16px;padding:12px;border:1px solid #e5e7eb;border-radius:8px;">
           <div style="font-size:14px;font-weight:600;margin-bottom:8px;">${detail.employeeName} <span style="font-weight:400;color:#6b7280;font-size:12px;">【${detail.position}】的绩效评分</span></div>
@@ -295,7 +299,9 @@ const StatisticsPage: React.FC = () => {
             ${detail.supervisorSignName ? `<div><span style="color:#6b7280;">上级签名：</span>${detail.supervisorSignName}${detail.supervisorSignAt ? ` (${new Date(detail.supervisorSignAt).toLocaleDateString('zh-CN')})` : ''}</div>` : ''}
           </div>
         </div>
-        ${groups.map((group) => `
+        ${groups
+          .map(
+            (group) => `
         <div style="margin-top:12px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
           <div style="padding:8px 12px;background:#f9fafb;font-size:13px;font-weight:600;">
             ${group.dimensionName} <span style="font-weight:400;font-size:11px;color:#6b7280;">权重 ${group.dimensionWeight} 分</span>
@@ -311,7 +317,9 @@ const StatisticsPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              ${group.indicators.map((ind) => `
+              ${group.indicators
+                .map(
+                  (ind) => `
               <tr style="border-bottom:1px solid #f3f4f6;">
                 <td style="padding:6px 8px;">${ind.content}</td>
                 <td style="padding:6px 8px;color:#6b7280;">${ind.description || '-'}</td>
@@ -319,11 +327,15 @@ const StatisticsPage: React.FC = () => {
                 <td style="padding:6px 8px;text-align:right;">${ind.selfScore != null ? ind.selfScore : '-'}</td>
                 <td style="padding:6px 8px;text-align:right;">${ind.supervisorScore != null ? ind.supervisorScore : '-'}</td>
               </tr>
-              `).join('')}
+              `,
+                )
+                .join('')}
             </tbody>
           </table>
         </div>
-        `).join('')}
+        `,
+          )
+          .join('')}
       </div>`;
 
       pdfEl.innerHTML = html;
@@ -342,11 +354,11 @@ const StatisticsPage: React.FC = () => {
         },
       });
       const imgData = canvas.toDataURL('image/png');
-      const imgWidth = 210;
+      const imgWidth = 277; // A4 landscape (297mm - margins)
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageHeight = 297;
+      const pdf = new jsPDF('l', 'mm', 'a4');
+      const pageHeight = 190; // A4 landscape height (210mm - margins)
       let heightLeft = imgHeight;
       let position = 0;
 
