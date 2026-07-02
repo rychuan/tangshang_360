@@ -9,58 +9,77 @@
   "formValue": {
     "fields": [
       {
-        "bizType": "Text",
-        "id": "flduUBy8fX",
-        "readable": true,
-        "writeable": true,
-        "name": "编号",
-        "type": 1
-      },
-      {
-        "name": "姓名",
-        "type": 11,
-        "bizType": "User",
-        "readable": true,
-        "writeable": true,
-        "id": "fldP8A2RvG"
-      },
-      {
-        "bizType": "SingleSelect",
-        "id": "fldrsyn4RV",
-        "readable": true,
-        "writeable": true,
-        "name": "部门",
-        "type": 3
-      },
-      {
-        "writeable": true,
-        "id": "fldJuc1wrw",
-        "name": "岗位",
         "type": 1,
         "bizType": "Text",
-        "readable": true
+        "readable": true,
+        "writeable": true,
+        "id": "flduUBy8fX",
+        "name": "编号"
       },
       {
-        "id": "fld4lwMjAX",
+        "id": "fldP8A2RvG",
+        "name": "姓名",
+        "readable": true,
+        "writeable": true,
+        "type": 11,
+        "bizType": "User"
+      },
+      {
+        "type": 3,
+        "readable": true,
+        "writeable": true,
+        "bizType": "SingleSelect",
+        "enumValues": [
+          "技术部",
+          "总经办"
+        ],
+        "id": "fldrsyn4RV",
+        "name": "部门"
+      },
+      {
+        "id": "fldJuc1wrw",
+        "name": "岗位",
+        "readable": true,
+        "writeable": true,
+        "type": 1,
+        "bizType": "Text"
+      },
+      {
         "name": "角色",
         "type": 3,
         "bizType": "SingleSelect",
+        "enumValues": [
+          "hrd",
+          "employee"
+        ],
+        "id": "fld4lwMjAX",
         "readable": true,
         "writeable": true
       },
       {
-        "type": 3,
-        "bizType": "SingleSelect",
+        "id": "fld2xpu9li",
+        "name": "上级",
+        "type": 11,
+        "bizType": "User",
+        "readable": true,
+        "writeable": true
+      },
+      {
         "readable": true,
         "writeable": true,
+        "enumValues": [
+          "active"
+        ],
         "id": "fldaWqhUms",
-        "name": "状态"
+        "name": "状态",
+        "type": 3,
+        "bizType": "SingleSelect"
       }
     ],
     "tableID": "tblPezRDn0DRJgls",
     "appToken": "BqMLbBsfiahaaHs9L7Jc2bkFngh"
   },
   "createdAt": 1782985322551,
-  "updatedAt": 1782985818923,
+  "updatedAt": 1782986695856,
   "createdBy": 7652289183771692275
 }

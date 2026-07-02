@@ -23,6 +23,7 @@ interface BitableRecord {
     '部门'?: string;
     '角色'?: string;
     '状态'?: string;
+    '上级'?: number[];
   };
 }
 
@@ -88,6 +89,11 @@ export class BitableSyncService {
         const department = item.record['部门'] || '';
         const role = item.record['角色'] || '';
         const status = item.record['状态'] || '';
+        const supervisorIds = item.record['上级'];
+        const supervisorId =
+          Array.isArray(supervisorIds) && supervisorIds.length > 0
+            ? String(supervisorIds[0])
+            : '';
 
         const sudaUserId =
           Array.isArray(userIds) && userIds.length > 0
@@ -140,6 +146,11 @@ export class BitableSyncService {
         if (role) updateData.role = role;
         if (status) updateData.status = status;
         if (employeeNo) updateData.employeeNo = employeeNo;
+        if (supervisorId) {
+          updateData.supervisorId = supervisorId;
+        } else if (existing.supervisorId) {
+          updateData.supervisorId = null;
+        }
 
         if (Object.keys(updateData).length > 0) {
           await this.db
@@ -208,6 +219,9 @@ export class BitableSyncService {
         部门: emp.department || '',
         角色: emp.role || '',
         状态: emp.status || '',
+        上级: emp.supervisorId
+          ? [Number(emp.supervisorId)]
+          : [],
       };
 
       const existingRecordId = emp.employeeNo
