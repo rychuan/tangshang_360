@@ -9,7 +9,7 @@ import {
   CapabilityService,
 } from '@lark-apaas/fullstack-nestjs-core';
 import { eq, and, isNull, sql } from 'drizzle-orm';
-import { employee } from '@server/database/schema';
+import { employee, auditLog } from '@server/database/schema';
 import type { BitablePluginSyncResponse } from '@shared/api.interface';
 
 const PLUGIN_INSTANCE_ID = 'management_feishu_multitable_crud_analysis_1';
@@ -169,6 +169,18 @@ export class BitableSyncService {
       }
     }
 
+    await this.db.insert(auditLog).values({
+      action: 'import_from_bitable_plugin',
+      targetType: 'bitable_sync',
+      targetId: PLUGIN_INSTANCE_ID,
+      changes: {
+        total: allRecords.length,
+        updated,
+        skipped,
+        failed,
+      },
+    });
+
     return {
       total: allRecords.length,
       created: 0,
@@ -180,8 +192,19 @@ export class BitableSyncService {
   }
 
   async exportToBitable(): Promise<BitablePluginSyncResponse> {
+    // Extract user_id from userProfile composite type via SQL
     const employees = await this.db
-      .select()
+      .select({
+        userId: sql<string>`(${employee.id}).user_id`,
+        id: employee.id,
+        name: employee.name,
+        employeeNo: employee.employeeNo,
+        position: employee.position,
+        department: employee.department,
+        role: employee.role,
+        status: employee.status,
+        supervisorUserId: sql<string>`COALESCE((${employee.supervisorId}).user_id, '')`,
+      })
       .from(employee)
       .where(isNull(employee.deletedAt));
 
@@ -214,23 +237,25 @@ export class BitableSyncService {
     const toCreate: Array<{ record: Record<string, unknown> }> = [];
 
     for (const emp of employees) {
-      const numericId = Number(emp.id);
-      if (Number.isNaN(numericId)) continue;
+      if (!emp.userId) continue;
+
+      const numericUserId = Number(emp.userId);
+      if (Number.isNaN(numericUserId)) continue;
 
       const record: Record<string, unknown> = {
-        姓名: [numericId],
+        姓名: [numericUserId],
         编号: emp.employeeNo || '',
         岗位: emp.position || '',
         部门: emp.department || '',
         角色: emp.role || '',
         状态: emp.status || '',
-        上级: emp.supervisorId
-          ? [Number(emp.supervisorId)]
+        上级: emp.supervisorUserId
+          ? [Number(emp.supervisorUserId)]
           : [],
       };
 
       const existingRecordId =
-        bitableRecordByUserId.get(emp.id) ??
+        bitableRecordByUserId.get(emp.userId) ??
         (emp.employeeNo
           ? bitableRecordByEmpNo.get(emp.employeeNo)
           : undefined);
@@ -280,13 +305,23 @@ export class BitableSyncService {
       }
     }
 
-    const skipped = employees.length - created - updated - failed;
+    await this.db.insert(auditLog).values({
+      action: 'export_to_bitable_plugin',
+      targetType: 'bitable_sync',
+      targetId: PLUGIN_INSTANCE_ID,
+      changes: {
+        total: employees.length,
+        created,
+        updated,
+        failed,
+      },
+    });
 
     return {
       total: employees.length,
       created,
       updated,
-      skipped: skipped >= 0 ? skipped : 0,
+      skipped: 0, // All employees are processed (either created or updated); failures are counted in failed
       failed,
       message: `导出完成：新增 ${created} 条，更新 ${updated} 条，失败 ${failed} 条`,
     };
