@@ -1,0 +1,90 @@
+{
+  "id": "performance_template_sync_feishu_multitable_crud_analysis_2",
+  "pluginKey": "@official-plugins/feishu-bitable",
+  "pluginVersion": "1.0.22",
+  "name": "绩效考核记录",
+  "description": "管理飞书多维表格，支持数据的创建、查询、更新、删除、聚合分析",
+  "icon": "https://lf3-static.bytednsdoc.com/obj/eden-cn/fzgeh7nuhfboznulog/bitable.svg",
+  "paramsSchema": {},
+  "formValue": {
+    "fields": [
+      {
+        "id": "fldaJHhNMv",
+        "name": "绩效周期",
+        "type": 1,
+        "bizType": "Text",
+        "readable": true,
+        "writeable": true
+      },
+      {
+        "id": "fldLVYGKGf",
+        "name": "员工",
+        "type": 11,
+        "readable": true,
+        "writeable": true,
+        "bizType": "User"
+      },
+      {
+        "id": "fldjE5zLd3",
+        "name": "部门",
+        "type": 3,
+        "bizType": "SingleSelect",
+        "readable": true,
+        "writeable": true
+      },
+      {
+        "id": "fld1cRQtBG",
+        "name": "岗位",
+        "type": 3,
+        "readable": true,
+        "writeable": true,
+        "bizType": "SingleSelect"
+      },
+      {
+        "name": "上级",
+        "type": 11,
+        "bizType": "User",
+        "readable": true,
+        "writeable": true,
+        "id": "fld1Ds9HJB"
+      },
+      {
+        "writeable": true,
+        "bizType": "Number",
+        "id": "fldi2eGlqi",
+        "name": "总分",
+        "type": 2,
+        "readable": true
+      },
+      {
+        "type": 3,
+        "bizType": "SingleSelect",
+        "readable": true,
+        "writeable": true,
+        "id": "fldj4MsAKn",
+        "name": "等级"
+      },
+      {
+        "id": "fldUQdZLc4",
+        "name": "状态",
+        "type": 3,
+        "bizType": "SingleSelect",
+        "readable": true,
+        "writeable": true
+      },
+      {
+        "readable": true,
+        "writeable": true,
+        "type": 1,
+        "bizType": "Text",
+        "id": "fld3dIUT31",
+        "name": "完成时间"
+      }
+    ],
+    "appToken": "BqMLbBsfiahaaHs9L7Jc2bkFngh",
+    "tableID": "tblaEUx3K6zoy0Jk"
+  },
+  "createdAt": 1782997894332,
+  "updatedAt": 1782998559731,
+  "createdBy": 7652289183771692275
+}

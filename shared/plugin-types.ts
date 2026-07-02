@@ -135,3 +135,123 @@ export interface ManagementFeishuMultitableCrudAnalysisOneSearchrecordsOutput {
   }[];
 }
 // ---- end:management_feishu_multitable_crud_analysis_1 ----
+
+// ---- plugin:performance_template_sync_feishu_multitable_crud_analysis_2 ----
+// ============================================================
+// 插件 performance_template_sync_feishu_multitable_crud_analysis_2 (绩效考核记录) 的类型定义
+// 由 get_plugin_ai_json 自动生成
+// ============================================================
+
+export interface PerformanceTemplateSyncFeishuMultitableCrudAnalysisTwoBatchaddrecordsInput {
+  /** [object Object] */
+  records: {
+    record: {
+      '状态': string;
+      '完成时间': string;
+      '员工': number[];
+      '部门': string;
+      '上级': number[];
+      '总分': number;
+      '等级': string;
+      '绩效周期': string;
+      '岗位': string;
+    };
+  }[];
+}
+
+/**
+ * capabilityClient.load('performance_template_sync_feishu_multitable_crud_analysis_2').call<PerformanceTemplateSyncFeishuMultitableCrudAnalysisTwoBatchaddrecordsOutput>('batchAddRecords', input)
+ * 直接返回此类型，无 .data 包装，直接解构使用：
+ * const { records } = result;
+ */
+export interface PerformanceTemplateSyncFeishuMultitableCrudAnalysisTwoBatchaddrecordsOutput {
+  /** [object Object] */
+  records: {
+    id: string;
+  }[];
+}
+
+export interface PerformanceTemplateSyncFeishuMultitableCrudAnalysisTwoBatchupdaterecordsInput {
+  /** [object Object] */
+  records: {
+    id: string;
+    record: {
+      '部门': string;
+      '总分': number;
+      '状态': string;
+      '上级': number[];
+      '等级': string;
+      '完成时间': string;
+      '绩效周期': string;
+      '员工': number[];
+      '岗位': string;
+    };
+  }[];
+}
+
+/**
+ * capabilityClient.load('performance_template_sync_feishu_multitable_crud_analysis_2').call<PerformanceTemplateSyncFeishuMultitableCrudAnalysisTwoBatchupdaterecordsOutput>('batchUpdateRecords', input)
+ * 直接返回此类型，无 .data 包装，直接解构使用：
+ * const { records } = result;
+ */
+export interface PerformanceTemplateSyncFeishuMultitableCrudAnalysisTwoBatchupdaterecordsOutput {
+  /** [object Object] */
+  records: {
+    id: string;
+  }[];
+}
+
+export interface PerformanceTemplateSyncFeishuMultitableCrudAnalysisTwoSearchrecordsInput {
+  /** [object Object] */
+  pageSize?: number;
+  /** [object Object] */
+  fieldNames?: string[];
+  /** [object Object] */
+  sort?: {
+    fieldName: string;
+    desc: boolean;
+  }[];
+  /** [object Object] */
+  filter?: {
+    conjunction: string;
+    conditions: {
+      fieldName: string;
+      operator: string;
+      value: string[];
+    }[];
+  };
+  /** [object Object] */
+  pageToken?: string;
+}
+
+/**
+ * capabilityClient.load('performance_template_sync_feishu_multitable_crud_analysis_2').call<PerformanceTemplateSyncFeishuMultitableCrudAnalysisTwoSearchrecordsOutput>('searchRecords', input)
+ * 直接返回此类型，无 .data 包装，直接解构使用：
+ * const { total, records, hasMore, ... } = result;
+ */
+export interface PerformanceTemplateSyncFeishuMultitableCrudAnalysisTwoSearchrecordsOutput {
+  /** [object Object] */
+  total?: number;
+  /** [object Object] */
+  records: {
+    id: string;
+    record: {
+      '岗位': string;
+      '总分': number;
+      '等级': string;
+      '完成时间': unknown;
+      '绩效周期': {
+        text: string;
+      };
+      '员工': number[];
+      '部门': string;
+      '上级': number[];
+      '状态': string;
+    };
+  }[];
+  /** [object Object] */
+  hasMore: boolean;
+  /** [object Object] */
+  pageToken?: string;
+}
+// ---- end:performance_template_sync_feishu_multitable_crud_analysis_2 ----

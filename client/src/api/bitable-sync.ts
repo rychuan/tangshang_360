@@ -16,3 +16,19 @@ export async function exportToBitable(): Promise<BitablePluginSyncResponse> {
   });
   return data;
 }
+
+export async function exportPerformanceToBitable(): Promise<BitablePluginSyncResponse> {
+  const { data } = await axiosForBackend({
+    url: '/api/bitable-sync/performance-export',
+    method: 'POST',
+  });
+  return data;
+}
+
+export async function importPerformanceFromBitable(): Promise<BitablePluginSyncResponse> {
+  const { data } = await axiosForBackend({
+    url: '/api/bitable-sync/performance-import',
+    method: 'POST',
+  });
+  return data;
+}
