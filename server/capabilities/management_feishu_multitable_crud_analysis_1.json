@@ -1,0 +1,85 @@
+{
+  "id": "management_feishu_multitable_crud_analysis_1",
+  "pluginKey": "@official-plugins/feishu-bitable",
+  "pluginVersion": "1.0.22",
+  "name": "飞书多维表格",
+  "description": "管理飞书多维表格，支持数据的创建、查询、更新、删除、聚合分析",
+  "icon": "https://lf3-static.bytednsdoc.com/obj/eden-cn/fzgeh7nuhfboznulog/bitable.svg",
+  "paramsSchema": {},
+  "formValue": {
+    "fields": [
+      {
+        "type": 1,
+        "bizType": "Text",
+        "readable": true,
+        "writeable": true,
+        "id": "flduUBy8fX",
+        "name": "编号"
+      },
+      {
+        "id": "fldP8A2RvG",
+        "name": "姓名",
+        "readable": true,
+        "writeable": true,
+        "type": 11,
+        "bizType": "User"
+      },
+      {
+        "type": 3,
+        "readable": true,
+        "writeable": true,
+        "bizType": "SingleSelect",
+        "enumValues": [
+          "技术部",
+          "总经办"
+        ],
+        "id": "fldrsyn4RV",
+        "name": "部门"
+      },
+      {
+        "id": "fldJuc1wrw",
+        "name": "岗位",
+        "readable": true,
+        "writeable": true,
+        "type": 1,
+        "bizType": "Text"
+      },
+      {
+        "name": "角色",
+        "type": 3,
+        "bizType": "SingleSelect",
+        "enumValues": [
+          "hrd",
+          "employee"
+        ],
+        "id": "fld4lwMjAX",
+        "readable": true,
+        "writeable": true
+      },
+      {
+        "id": "fld2xpu9li",
+        "name": "上级",
+        "type": 11,
+        "bizType": "User",
+        "readable": true,
+        "writeable": true
+      },
+      {
+        "readable": true,
+        "writeable": true,
+        "enumValues": [
+          "active"
+        ],
+        "id": "fldaWqhUms",
+        "name": "状态",
+        "type": 3,
+        "bizType": "SingleSelect"
+      }
+    ],
+    "tableID": "tblPezRDn0DRJgls",
+    "appToken": "BqMLbBsfiahaaHs9L7Jc2bkFngh"
+  },
+  "createdAt": 1782985322551,
+  "updatedAt": 1782986695856,
+  "createdBy": 7652289183771692275
+}

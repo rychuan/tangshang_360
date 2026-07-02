@@ -407,11 +407,11 @@ const StatisticsPage: React.FC = () => {
         },
       });
       const imgData = canvas.toDataURL('image/png');
-      const imgWidth = 277; // A4 landscape (297mm - margins)
+      const imgWidth = 297; // A4 landscape full width
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
       const pdf = new jsPDF('l', 'mm', 'a4');
-      const pageHeight = 190; // A4 landscape height (210mm - margins)
+      const pageHeight = 210; // A4 landscape full height
       let heightLeft = imgHeight;
       let position = 0;
 
