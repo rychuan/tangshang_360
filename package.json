@@ -28,7 +28,7 @@
     "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^5.2.2",
-    "@lark-apaas/client-toolkit": "^1.2.56",
+    "@lark-apaas/client-toolkit": "^1.2.58",
     "@lark-apaas/fullstack-presets": "^1.1.0",
     "@lark-apaas/fullstack-vite-preset": "^1.0.30",
     "@nestjs/cli": "^10.4.9",
@@ -169,7 +169,11 @@
     "testMatch": [
       "<rootDir>/server/**/*.spec.ts",
       "<rootDir>/test/unit/**/*.spec.ts"
-    ]
+    ],
+    "moduleNameMapper": {
+      "^@server/(.*)$": "<rootDir>/server/$1",
+      "^@shared/(.*)$": "<rootDir>/shared/$1"
+    }
   },
   "name": "fullstack-nestjs-template",
   "overrides": {
@@ -203,6 +207,7 @@
   },
   "version": "2.2.6",
   "actionPlugins": {
-    "@official-plugins/send-feishu-message": "1.0.29"
+    "@official-plugins/send-feishu-message": "1.0.29",
+    "@official-plugins/feishu-bitable": "1.0.22"
   }
 }

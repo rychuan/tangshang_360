@@ -28,7 +28,9 @@ import PositionMultiSelect from './PositionMultiSelect';
 import EmployeeTable from './EmployeeTable';
 import EmployeeFormDialog from './EmployeeFormDialog';
 import { BindDialog, UnbindDialog, HistoryDialog } from './EmployeeDialogs';
-import { Plus, Search, Link2, Filter, Users } from 'lucide-react';
+import { Plus, Search, Link2, Filter, Users, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
+import { toast } from 'sonner';
+import { importFromBitable, exportToBitable } from '@/api/bitable-sync';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -48,6 +50,7 @@ import { useEmployeeDialogs } from './hooks/useEmployeeDialogs';
 const PAGE_SIZE = 20;
 
 const EmployeeListTab: React.FC = () => {
+  const [syncLoading, setSyncLoading] = React.useState<'' | 'import' | 'export'>('');
   const [filters, setters] = useEmployeeFilters();
   const {
     employees,
@@ -80,6 +83,21 @@ const EmployeeListTab: React.FC = () => {
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
+  const handleSync = async (direction: 'import' | 'export'): Promise<void> => {
+    setSyncLoading(direction);
+    try {
+      const fn = direction === 'import' ? importFromBitable : exportToBitable;
+      const result = await fn();
+      toast.success(result.message);
+      refetch();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '同步失败';
+      toast.error(msg);
+    } finally {
+      setSyncLoading('');
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4">
       {/* 顶部统计 + 批量操作 */}
@@ -106,6 +124,26 @@ const EmployeeListTab: React.FC = () => {
               </Button>
             </CanRole>
           )}
+          <CanRole roles={['admin', 'hrd']}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleSync('import')}
+              disabled={syncLoading !== ''}
+            >
+              <ArrowDownToLine data-icon="inline-start" />
+              {syncLoading === 'import' ? '同步中...' : '从多维表格导入'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleSync('export')}
+              disabled={syncLoading !== ''}
+            >
+              <ArrowUpFromLine data-icon="inline-start" />
+              {syncLoading === 'export' ? '同步中...' : '导出到多维表格'}
+            </Button>
+          </CanRole>
           <CanRole roles={['admin']}>
             <CanDo resource="employees" action="edit">
               <Button size="sm" onClick={dialogs.openCreateDialog}>

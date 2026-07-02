@@ -65,6 +65,8 @@ export class AssessmentStatisticsService {
     const total = Number(countResult[0].cnt);
 
     const offset = (query.page - 1) * query.pageSize;
+    // Use LEFT JOIN for supervisor to avoid N correlated subqueries
+    const supAlias = sql`sup`;
     const rows = await this.db
       .select({
         id: assessmentInstance.id,
@@ -76,12 +78,16 @@ export class AssessmentStatisticsService {
         completedAt: assessmentInstance.completedAt,
         employeeName: employee.name,
         department: employee.department,
-        supervisorName: sql<string>`(SELECT name FROM employee sup WHERE (sup.id).user_id = (${assessmentInstance.supervisorId}).user_id AND sup.deleted_at IS NULL LIMIT 1)`,
+        supervisorName: sql<string>`COALESCE(${supAlias}.name, '')`,
       })
       .from(assessmentInstance)
       .innerJoin(
         employee,
-        sql`(${assessmentInstance.employeeId}).user_id = (${employee.id}).user_id`,
+        sql`(${assessmentInstance.employeeId}).user_id = (${employee.id}).user_id AND ${employee.deletedAt} IS NULL`,
+      )
+      .leftJoin(
+        sql`employee ${supAlias}`,
+        sql`(${supAlias}.id).user_id = (${assessmentInstance.supervisorId}).user_id AND ${supAlias}.deleted_at IS NULL`,
       )
       .where(and(...conditions))
       .orderBy(desc(assessmentInstance.createdAt))
@@ -125,7 +131,8 @@ export class AssessmentStatisticsService {
       baseConditions.push(inArray(assessmentInstance.grade, query.grades));
     }
 
-    const baseWhere = baseConditions.length > 0 ? and(...baseConditions) : undefined;
+    const baseWhere =
+      baseConditions.length > 0 ? and(...baseConditions) : undefined;
 
     const empNotDeleted = sql`EXISTS(SELECT 1 FROM employee e WHERE (e.id).user_id = (${assessmentInstance.employeeId}).user_id AND e.deleted_at IS NULL)`;
 
@@ -209,7 +216,7 @@ export class AssessmentStatisticsService {
   }
 
   async exportData(query: ExportQuery): Promise<ExportResult> {
-    const conditions = this.buildExportConditions(query);
+    const conditions = this.buildConditions(query);
 
     // 先查询总数
     const countResult = await this.db
@@ -219,7 +226,7 @@ export class AssessmentStatisticsService {
         employee,
         sql`(${assessmentInstance.employeeId}).user_id = (${employee.id}).user_id`,
       )
-      .where(conditions.length > 0 ? and(...conditions) : undefined);
+      .where(and(...conditions));
     const total = Number(countResult[0].cnt);
 
     const rows = await this.db
@@ -240,7 +247,7 @@ export class AssessmentStatisticsService {
         employee,
         sql`(${assessmentInstance.employeeId}).user_id = (${employee.id}).user_id`,
       )
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .where(and(...conditions))
       .orderBy(desc(assessmentInstance.createdAt))
       .limit(500);
 
@@ -266,37 +273,7 @@ export class AssessmentStatisticsService {
   }
 
   private buildConditions(
-    query: RecordsQuery,
-  ): ReturnType<typeof and>[] {
-    const conditions: ReturnType<typeof and>[] = [isNull(employee.deletedAt)];
-    if (query.periods && query.periods.length > 0) {
-      conditions.push(inArray(assessmentInstance.period, query.periods));
-    }
-    if (query.departments && query.departments.length > 0) {
-      conditions.push(inArray(employee.department, query.departments));
-    }
-    if (query.positions && query.positions.length > 0) {
-      conditions.push(
-        or(
-          inArray(employee.position, query.positions),
-          inArray(assessmentInstance.position, query.positions),
-        ),
-      );
-    }
-    if (query.grades && query.grades.length > 0) {
-      conditions.push(inArray(assessmentInstance.grade, query.grades));
-    }
-    if (query.employeeIds && query.employeeIds.length > 0) {
-      const idChunks = query.employeeIds.map((id: string) => sql`${id}`);
-      conditions.push(
-        sql`(${assessmentInstance.employeeId}).user_id IN (${sql.join(idChunks, sql`, `)})`,
-      );
-    }
-    return conditions;
-  }
-
-  private buildExportConditions(
-    query: ExportQuery,
+    query: RecordsQuery | ExportQuery,
   ): ReturnType<typeof and>[] {
     const conditions: ReturnType<typeof and>[] = [isNull(employee.deletedAt)];
     if (query.periods && query.periods.length > 0) {

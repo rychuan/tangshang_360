@@ -28,6 +28,17 @@ import type {
   SupervisorRatingResponse,
 } from '@shared/api.interface';
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function validateUUID(id: string, label = 'id'): void {
+  if (!UUID_PATTERN.test(id)) {
+    throw new BadRequestException(`${label} 格式无效`);
+  }
+}
+
+/** 总分保留小数位数 */
+const SCORE_PRECISION = 100;
+
 @Injectable()
 export class AssessmentOperationService {
   private readonly logger = new Logger(AssessmentOperationService.name);
@@ -39,6 +50,7 @@ export class AssessmentOperationService {
   ) {}
 
   async detail(id: string, userId: string): Promise<AssessmentInstanceDetail> {
+    validateUUID(id);
     const rows = await this.db
       .select()
       .from(assessmentInstance)
@@ -196,6 +208,7 @@ export class AssessmentOperationService {
     body: RatingSubmitRequest,
     userId: string,
   ): Promise<{ success: boolean }> {
+    validateUUID(id);
     const rows = await this.db
       .select()
       .from(assessmentInstance)
@@ -219,8 +232,11 @@ export class AssessmentOperationService {
         ),
       )
       .limit(1);
-    if (empStatus.length === 0 || empStatus[0].status !== 'active') {
-      throw new BadRequestException('员工已离职或不可用，无法提交评分');
+    if (empStatus.length === 0) {
+      throw new BadRequestException('未找到员工信息，无法提交评分');
+    }
+    if (empStatus[0].status !== 'active') {
+      throw new BadRequestException('员工已离职，无法提交评分');
     }
 
     // P0: 校验当前用户是否为该员工本人
@@ -346,6 +362,7 @@ export class AssessmentOperationService {
     body: RatingSubmitRequest,
     userId: string,
   ): Promise<SupervisorRatingResponse> {
+    validateUUID(id);
     const rows = await this.db
       .select()
       .from(assessmentInstance)
@@ -532,7 +549,7 @@ export class AssessmentOperationService {
           totalScore += ratingBySnapId.get(snap.id) ?? 0;
         }
 
-        totalScore = Math.round(totalScore * 100) / 100;
+        totalScore = Math.round(totalScore * SCORE_PRECISION) / SCORE_PRECISION;
 
         grade = await this.performanceGradeService.matchGrade(totalScore);
 
@@ -569,6 +586,7 @@ export class AssessmentOperationService {
     userId: string,
     userName: string,
   ): Promise<{ success: boolean; status: string }> {
+    validateUUID(id);
     const rows = await this.db
       .select()
       .from(assessmentInstance)

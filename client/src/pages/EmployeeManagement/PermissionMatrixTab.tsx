@@ -118,6 +118,11 @@ const PermissionMatrixTab: React.FC<PermissionMatrixTabProps> = ({ role }) => {
         if (existing.actions.length === 0) {
           return copy.filter((p) => p.resource !== resource);
         }
+        // 取消「查看」时自动移除所有其他权限，防止保存为 edit 不含 view 的不一致状态
+        if (action === 'view') {
+          existing.actions = [];
+          return copy.filter((p) => p.resource !== resource);
+        }
       } else {
         existing.actions.push(action);
         if (action !== 'view' && !existing.actions.includes('view')) {

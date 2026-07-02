@@ -1,10 +1,14 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   DownloadIcon,
   SearchIcon,
   BarChart3Icon,
   PieChartIcon,
   TrendingUpIcon,
+  Eye,
+  FileDown,
+  Upload,
 } from 'lucide-react';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { toast } from 'sonner';
@@ -12,6 +16,9 @@ import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo } from '@/hooks/usePermissions';
 import { handleApiError } from '@/utils/api-error';
 import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import { detail as getAssessmentDetail } from '@/api/assessment-operation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -65,6 +72,9 @@ import {
   type StatisticsRecordsParams,
   type StatisticsChartsParams,
 } from '@/api/assessment-statistics';
+import {
+  exportPerformanceToBitable,
+} from '@/api/bitable-sync';
 import { getPositions } from '@/api/employee-management';
 import type {
   StatisticsRecordItem,
@@ -116,6 +126,10 @@ const StatisticsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [charts, setCharts] = useState<ChartsResponse | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [exportingPdfId, setExportingPdfId] = useState<string | null>(null);
+  const [syncingOut, setSyncingOut] = useState(false);
+  const navigate = useNavigate();
+  const pdfRef = useRef<HTMLDivElement>(null);
 
   const buildParams = useCallback(
     (p: number): StatisticsRecordsParams => ({
@@ -183,6 +197,21 @@ const StatisticsPage: React.FC = () => {
       );
   }, []);
 
+  const handleSyncToBitable = async () => {
+    try {
+      setSyncingOut(true);
+      const res = await exportPerformanceToBitable();
+      toast.success(res.message);
+      loadRecords();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : '同步到多维表格失败';
+      logger.error(`Sync to bitable error: ${msg}`);
+      handleApiError(e);
+    } finally {
+      setSyncingOut(false);
+    }
+  };
+
   const handleSearch = () => setPage(1);
 
   const handleExport = async () => {
@@ -224,6 +253,209 @@ const StatisticsPage: React.FC = () => {
       handleApiError(e);
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleExportPdf = async (
+    id: string,
+    employeeName: string,
+    period: string,
+  ) => {
+    const pdfEl = pdfRef.current;
+    if (!pdfEl) return;
+
+    try {
+      setExportingPdfId(id);
+      const detail = await getAssessmentDetail(id);
+
+      // Build group data
+      const groupMap = new Map<
+        string,
+        {
+          dimensionName: string;
+          dimensionWeight: number;
+          indicators: typeof detail.indicators;
+        }
+      >();
+      for (const ind of detail.indicators) {
+        if (!groupMap.has(ind.dimensionName)) {
+          groupMap.set(ind.dimensionName, {
+            dimensionName: ind.dimensionName,
+            dimensionWeight: ind.dimensionWeight,
+            indicators: [],
+          });
+        }
+        groupMap.get(ind.dimensionName)!.indicators.push(ind);
+      }
+      const groups = Array.from(groupMap.values());
+
+      // Build raw HTML with inline hex colors (avoids html2canvas oklch parsing error)
+      const statusLabel: string =
+        ASSESSMENT_STATUS_LABELS[detail.status] || detail.status;
+
+      // Status helpers for process stepper
+      const selfDone = detail.status !== 'self_review';
+      const supDone =
+        detail.status === 'pending_sign' || detail.status === 'completed';
+      const selfSignDone = !!detail.selfSignName;
+      const supSignDone =
+        !!detail.supervisorSignName || detail.status === 'completed';
+
+      const stepperHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding:10px 8px;border:1px solid #e5e7eb;border-radius:8px;font-size:11px;">
+          ${[
+            { label: '员工自评', done: selfDone },
+            { label: '上级评分', done: supDone },
+            { label: '员工签名', done: selfSignDone },
+            { label: '上级签名', done: supSignDone },
+          ]
+            .map(
+              (s, i) => `
+            <div style="display:flex;align-items:center;flex:1;min-width:0;">
+              <div style="display:flex;flex-direction:column;align-items:center;width:100%;">
+                <div style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;${
+                  s.done
+                    ? 'background:#16a34a;color:#fff;'
+                    : 'background:#e5e7eb;color:#9ca3af;'
+                }">${s.done ? '✓' : i + 1}</div>
+                <span style="margin-top:4px;font-weight:${s.done ? '600' : '400'};color:${s.done ? '#111' : '#9ca3af'};">${s.label}</span>
+              </div>
+              ${i < 3 ? '<div style="flex:1;height:1px;background:#e5e7eb;margin:0 4px;margin-bottom:16px;"></div>' : ''}
+            </div>`,
+            )
+            .join('')}
+        </div>`;
+
+      const html = `<div style="padding:20px;font-family:sans-serif;color:#111;background:#fff;width:780px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid #e5e7eb;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:18px;font-weight:600;">${detail.period}</span>
+            <span style="font-size:12px;padding:2px 8px;border-radius:4px;background:#e0e7ff;color:#3730a3;">${statusLabel}</span>
+          </div>
+          ${
+            detail.totalScore != null
+              ? `<div style="display:flex;align-items:center;gap:8px;">
+            <div style="text-align:right;">
+              <div style="font-size:11px;color:#6b7280;">总分</div>
+              <div style="font-size:22px;font-weight:700;color:#2563eb;">${detail.totalScore}</div>
+            </div>
+            ${detail.grade ? `<span style="font-size:16px;font-weight:700;padding:4px 10px;border-radius:4px;background:#dbeafe;color:#1e40af;">${detail.grade}</span>` : ''}
+          </div>`
+              : ''
+          }
+        </div>
+
+        ${stepperHTML}
+
+        <div style="margin-top:12px;padding:12px;border:1px solid #e5e7eb;border-radius:8px;">
+          <div style="font-size:14px;font-weight:600;margin-bottom:8px;">${detail.employeeName} <span style="font-weight:400;color:#6b7280;font-size:12px;">【${detail.position}】的绩效评分</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;">
+            <div><span style="color:#6b7280;">上级：</span>${detail.supervisorName || '-'}</div>
+            <div><span style="color:#6b7280;">状态：</span>${statusLabel}</div>
+            ${
+              detail.selfSignName
+                ? `<div><span style="color:#6b7280;">自评签名：</span>${detail.selfSignName}${detail.selfSignAt ? ` (${new Date(detail.selfSignAt).toLocaleDateString('zh-CN')})` : ''}</div>`
+                : ''
+            }
+            ${
+              detail.supervisorSignName
+                ? `<div><span style="color:#6b7280;">上级签名：</span>${detail.supervisorSignName}${detail.supervisorSignAt ? ` (${new Date(detail.supervisorSignAt).toLocaleDateString('zh-CN')})` : ''}</div>`
+                : ''
+            }
+          </div>
+          ${
+            detail.selfSignImage || detail.supervisorSignImage
+              ? `<div style="display:flex;gap:16px;margin-top:8px;padding-top:8px;border-top:1px solid #f3f4f6;">
+            ${detail.selfSignImage ? `<div><div style="font-size:10px;color:#6b7280;margin-bottom:4px;">自评签名图片</div><img src="${detail.selfSignImage}" style="max-width:160px;max-height:60px;border:1px solid #e5e7eb;border-radius:4px;" /></div>` : ''}
+            ${detail.supervisorSignImage ? `<div><div style="font-size:10px;color:#6b7280;margin-bottom:4px;">上级签名图片</div><img src="${detail.supervisorSignImage}" style="max-width:160px;max-height:60px;border:1px solid #e5e7eb;border-radius:4px;" /></div>` : ''}
+          </div>`
+              : ''
+          }
+        </div>
+        ${groups
+          .map(
+            (group) => `
+        <div style="margin-top:12px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+          <div style="padding:8px 12px;background:#f9fafb;font-size:13px;font-weight:600;">
+            ${group.dimensionName} <span style="font-weight:400;font-size:11px;color:#6b7280;">权重 ${group.dimensionWeight} 分</span>
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;">
+            <thead>
+              <tr style="background:#f3f4f6;">
+                <th style="padding:6px 8px;text-align:left;border-bottom:1px solid #e5e7eb;">指标</th>
+                <th style="padding:6px 8px;text-align:left;border-bottom:1px solid #e5e7eb;">说明</th>
+                <th style="padding:6px 8px;text-align:right;border-bottom:1px solid #e5e7eb;width:42px;">权重</th>
+                <th style="padding:6px 8px;text-align:right;border-bottom:1px solid #e5e7eb;width:42px;">自评</th>
+                <th style="padding:6px 8px;text-align:right;border-bottom:1px solid #e5e7eb;width:52px;">上级评分</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${group.indicators
+                .map(
+                  (ind) => `
+              <tr style="border-bottom:1px solid #f3f4f6;">
+                <td style="padding:6px 8px;word-wrap:break-word;">${ind.content}</td>
+                <td style="padding:6px 8px;color:#6b7280;font-size:10px;">${ind.description || '-'}</td>
+                <td style="padding:6px 8px;text-align:right;">${ind.weight}</td>
+                <td style="padding:6px 8px;text-align:right;">${ind.selfScore != null ? ind.selfScore : '-'}</td>
+                <td style="padding:6px 8px;text-align:right;">${ind.supervisorScore != null ? ind.supervisorScore : '-'}</td>
+              </tr>
+              `,
+                )
+                .join('')}
+            </tbody>
+          </table>
+        </div>
+        `,
+          )
+          .join('')}
+      </div>`;
+
+      pdfEl.innerHTML = html;
+
+      // Wait for render
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const canvas = await html2canvas(pdfEl, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        onclone: (clonedDoc: Document) => {
+          clonedDoc
+            .querySelectorAll('style, link[rel="stylesheet"]')
+            .forEach((el: Element) => el.remove());
+        },
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = 297; // A4 landscape full width
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      const pdf = new jsPDF('l', 'mm', 'a4');
+      const pageHeight = 210; // A4 landscape full height
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position = position - pageHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(`绩效详情_${employeeName}_${period}.pdf`);
+
+      // Clean up
+      pdfEl.innerHTML = '';
+      toast.success('PDF 导出成功');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'PDF 导出失败';
+      logger.error(`PDF export error: ${msg}`);
+      handleApiError(e);
+    } finally {
+      setExportingPdfId(null);
     }
   };
 
@@ -309,6 +541,17 @@ const StatisticsPage: React.FC = () => {
                   {exporting ? '导出中...' : '导出'}
                 </Button>
               </CanDo>
+            </CanRole>
+            <CanRole roles={['admin', 'hrd']}>
+              <Button
+                variant="outline"
+                onClick={handleSyncToBitable}
+                disabled={syncingOut}
+                className="flex items-center gap-1"
+              >
+                <Upload data-icon="inline-start" />
+                {syncingOut ? '同步中...' : '同步到多维表格'}
+              </Button>
             </CanRole>
           </div>
         </CardContent>
@@ -522,6 +765,11 @@ const StatisticsPage: React.FC = () => {
                       <TableHead className="text-left py-3 px-4 font-medium hidden lg:table-cell">
                         完成时间
                       </TableHead>
+                      <CanRole roles={['admin', 'hrd', 'dept_head']}>
+                        <TableHead className="text-center py-3 px-4 font-medium w-20">
+                          操作
+                        </TableHead>
+                      </CanRole>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -559,6 +807,37 @@ const StatisticsPage: React.FC = () => {
                               )
                             : '-'}
                         </TableCell>
+                        <CanRole roles={['admin', 'hrd', 'dept_head']}>
+                          <TableCell className="py-3 px-2 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  navigate(`../assessment/${r.id}`)
+                                }
+                              >
+                                <Eye data-icon="inline-start" />
+                                详情
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={exportingPdfId === r.id}
+                                onClick={() =>
+                                  handleExportPdf(
+                                    r.id,
+                                    r.employeeName,
+                                    r.period,
+                                  )
+                                }
+                              >
+                                <FileDown data-icon="inline-start" />
+                                导出
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </CanRole>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -595,6 +874,20 @@ const StatisticsPage: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Hidden div for PDF rendering */}
+      <div
+        ref={pdfRef}
+        style={{
+          position: 'absolute',
+          left: '-9999px',
+          top: 0,
+          width: '820px',
+          background: '#fff',
+          color: '#111',
+          overflow: 'hidden',
+        }}
+      />
     </div>
   );
 };
