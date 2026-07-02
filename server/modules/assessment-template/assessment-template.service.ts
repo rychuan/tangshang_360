@@ -47,7 +47,7 @@ export class AssessmentTemplateService {
     );
 
     const conditions: ReturnType<typeof eq>[] = [
-      isNull((assessmentTemplate as any).deletedAt),
+      isNull(assessmentTemplate.deletedAt),
     ];
 
     if (keyword) {
@@ -355,7 +355,7 @@ export class AssessmentTemplateService {
       .where(
         and(
           eq(assessmentTemplate.id, id),
-          isNull((assessmentTemplate as any).deletedAt),
+          isNull(assessmentTemplate.deletedAt),
         ),
       )
       .limit(1);
@@ -373,7 +373,7 @@ export class AssessmentTemplateService {
     // 软删除模板
     await this.db
       .update(assessmentTemplate)
-      .set({ deletedAt: new Date() } as any)
+      .set({ deletedAt: new Date() })
       .where(eq(assessmentTemplate.id, id));
 
     // 审计日志
