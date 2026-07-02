@@ -417,6 +417,7 @@ export const assessmentTemplate = pgTable("assessment_template", {
   position: varchar("position", { length: 255 }).notNull(),
   type: varchar("type", { length: 255 }).notNull().default('monthly'),
   isActive: boolean("is_active").notNull().default(true),
+  deletedAt: customTimestamptz("deleted_at", { precision: 6 }),
   // System field: Creation time (auto-filled, do not modify)
   createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
   // System field: Creator (auto-filled, do not modify)
