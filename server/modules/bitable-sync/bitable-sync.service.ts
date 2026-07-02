@@ -4,7 +4,7 @@ import {
   type PostgresJsDatabase,
   CapabilityService,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { eq, and, isNull, sql } from 'drizzle-orm';
+import { eq, and, isNull, sql, inArray } from 'drizzle-orm';
 import { employee, auditLog } from '@server/database/schema';
 import type { BitablePluginSyncResponse } from '@shared/api.interface';
 
@@ -13,13 +13,13 @@ const PLUGIN_INSTANCE_ID = 'management_feishu_multitable_crud_analysis_1';
 interface BitableRecord {
   id: string;
   record: {
-    '姓名'?: number[];
-    '编号'?: { text: string };
-    '岗位'?: string;
-    '部门'?: string;
-    '角色'?: string;
-    '状态'?: string;
-    '上级'?: number[];
+    姓名?: number[];
+    编号?: { text: string };
+    岗位?: string;
+    部门?: string;
+    角色?: string;
+    状态?: string;
+    上级?: number[];
   };
 }
 
@@ -64,86 +64,117 @@ export class BitableSyncService {
       pageToken = result.hasMore ? result.pageToken : undefined;
     } while (pageToken);
 
+    // --- Phase 1: parse all records, collect lookup keys ---
+    interface RecordToSync {
+      sudaUserId: string;
+      employeeNo: string;
+      position: string;
+      department: string;
+      role: string;
+      status: string;
+      supervisorUserId: string;
+    }
+    const parsed: RecordToSync[] = [];
+    for (const item of allRecords) {
+      const userIds = item.record['姓名'];
+      const sudaUserId =
+        Array.isArray(userIds) && userIds.length > 0
+          ? String(userIds[0])
+          : '';
+      const employeeNo = item.record['编号']?.text || '';
+      if (!sudaUserId && !employeeNo) continue;
+      const supervisorIds = item.record['上级'];
+      const supervisorUserId =
+        Array.isArray(supervisorIds) && supervisorIds.length > 0
+          ? String(supervisorIds[0])
+          : '';
+      parsed.push({
+        sudaUserId,
+        employeeNo,
+        position: item.record['岗位'] || '',
+        department: item.record['部门'] || '',
+        role: item.record['角色'] || '',
+        status: item.record['状态'] || '',
+        supervisorUserId,
+      });
+    }
+
+    // --- Phase 2: batch-query existing employees ---
+    const allUserIds = parsed
+      .filter((p) => p.sudaUserId)
+      .map((p) => p.sudaUserId);
+    const allEmpNos = parsed
+      .filter((p) => p.employeeNo)
+      .map((p) => p.employeeNo);
+
+    const userIdParts = allUserIds.map((id) => sql`${id}`);
+    const empNoParts = allEmpNos.map((no) => sql`${no}`);
+
+    const byUserId = new Map<string, typeof employee.$inferSelect>();
+    const byEmpNo = new Map<string, typeof employee.$inferSelect>();
+
+    if (userIdParts.length > 0) {
+      const rows = await this.db
+        .select()
+        .from(employee)
+        .where(
+          and(
+            // IN clause for user_ids extracted from composite id
+            sql`(${employee.id}).user_id IN (${sql.join(userIdParts, sql`, `)})`,
+            isNull(employee.deletedAt),
+          ),
+        );
+      for (const r of rows) {
+        byUserId.set(
+          String((r.id as unknown as { user_id: string }).user_id),
+          r,
+        );
+      }
+    }
+
+    if (empNoParts.length > 0) {
+      const rows = await this.db
+        .select()
+        .from(employee)
+        .where(
+          and(
+            inArray(employee.employeeNo, allEmpNos),
+            isNull(employee.deletedAt),
+          ),
+        );
+      for (const r of rows) {
+        if (r.employeeNo) byEmpNo.set(r.employeeNo, r);
+      }
+    }
+
+    // --- Phase 3: apply updates ---
     let updated = 0;
     let skipped = 0;
     let failed = 0;
 
-    for (const item of allRecords) {
+    for (const p of parsed) {
       try {
-        const userIds = item.record['姓名'];
-        const employeeNo = item.record['编号']?.text || '';
-        const position = item.record['岗位'] || '';
-        const department = item.record['部门'] || '';
-        const role = item.record['角色'] || '';
-        const status = item.record['状态'] || '';
-        const supervisorIds = item.record['上级'];
-        const supervisorId =
-          Array.isArray(supervisorIds) && supervisorIds.length > 0
-            ? String(supervisorIds[0])
-            : '';
-
-        const sudaUserId =
-          Array.isArray(userIds) && userIds.length > 0
-            ? String(userIds[0])
-            : '';
-
-        if (!sudaUserId && !employeeNo) {
-          skipped++;
-          continue;
-        }
-
-        let existing: typeof employee.$inferSelect | null = null;
-
-        if (sudaUserId) {
-          const rows = await this.db
-            .select()
-            .from(employee)
-            .where(
-              and(
-                sql`(id).user_id = ${sudaUserId}`,
-                isNull(employee.deletedAt),
-              ),
-            )
-            .limit(1);
-          if (rows.length > 0) existing = rows[0];
-        }
-
-        if (!existing && employeeNo) {
-          const rows = await this.db
-            .select()
-            .from(employee)
-            .where(
-              and(
-                eq(employee.employeeNo, employeeNo),
-                isNull(employee.deletedAt),
-              ),
-            )
-            .limit(1);
-          if (rows.length > 0) existing = rows[0];
-        }
-
+        // Match: userId first, then employeeNo fallback
+        const existing = byUserId.get(p.sudaUserId) ?? byEmpNo.get(p.employeeNo);
         if (!existing) {
           skipped++;
           continue;
         }
 
-        const updateData: Partial<typeof employee.$inferSelect> = {};
-        if (position) updateData.position = position;
-        if (department) updateData.department = department;
-        if (role) updateData.role = role;
-        if (status) updateData.status = status;
-        if (employeeNo) updateData.employeeNo = employeeNo;
-        if (supervisorId) {
-          updateData.supervisorId = supervisorId;
-        } else if (existing.supervisorId) {
-          updateData.supervisorId = null;
-        }
+        const updateData: Record<string, unknown> = {};
+        if (p.position) updateData.position = p.position;
+        if (p.department) updateData.department = p.department;
+        if (p.role) updateData.role = p.role;
+        if (p.status) updateData.status = p.status;
+        if (p.employeeNo) updateData.employeeNo = p.employeeNo;
+        // supervisorId is userProfile composite type — cannot assign plain string.
+        // Skipped here; use bitable-connection if supervisor sync via 工号 is needed.
 
         if (Object.keys(updateData).length > 0) {
           await this.db
             .update(employee)
             .set(updateData)
-            .where(sql`(id).user_id = ${existing.id}`);
+            .where(sql`(id).user_id = ${p.sudaUserId || sql`(${existing.id}).user_id`}`);
           updated++;
         } else {
           skipped++;
@@ -151,7 +182,7 @@ export class BitableSyncService {
       } catch (err) {
         failed++;
         this.logger.error(
-          `Failed to process bitable record ${item.id}: ${err instanceof Error ? err.message : String(err)}`,
+          `Failed to process bitable record: ${err instanceof Error ? err.message : String(err)}`,
         );
       }
     }
@@ -229,14 +260,15 @@ export class BitableSyncService {
       const numericUserId = Number(emp.userId);
       if (Number.isNaN(numericUserId)) continue;
 
+      const supervisorNum = emp.supervisorUserId ? Number(emp.supervisorUserId) : NaN;
       const record: Record<string, unknown> = {
-        姓名: [numericUserId],
-        编号: emp.employeeNo || '',
-        岗位: emp.position || '',
-        部门: emp.department || '',
-        角色: emp.role || '',
-        状态: emp.status || '',
-        上级: emp.supervisorUserId ? [Number(emp.supervisorUserId)] : [],
+        '姓名': [numericUserId],
+        '编号': emp.employeeNo || '',
+        '岗位': emp.position || '',
+        '部门': emp.department || '',
+        '角色': emp.role || '',
+        '状态': emp.status || '',
+        '上级': Number.isNaN(supervisorNum) ? [] : [supervisorNum],
       };
 
       const existingRecordId =
