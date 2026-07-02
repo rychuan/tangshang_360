@@ -87,14 +87,6 @@ const RoutesComponent = () => {
               }
             />
             <Route
-              path="statistics/assessment/:id"
-              element={
-                <ProtectedRoute roles={MANAGER_ROLES}>
-                  <AssessmentDetailPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="my-assessments"
               element={
                 <ProtectedRoute roles={ALL_ROLES}>
