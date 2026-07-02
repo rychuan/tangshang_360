@@ -79,9 +79,14 @@ export class PerformanceSyncService {
       lastSyncAt = new Date(Date.now() - syncDays * 24 * 60 * 60 * 1000);
     }
 
-    const conditions = [];
+    // Only sync non-completed instances (completed data never changes)
+    const conditions = [
+      sql`${assessmentInstance.status} != 'completed'`,
+    ];
     if (lastSyncAt) {
-      conditions.push(sql`${assessmentInstance.updatedAt} >= ${lastSyncAt.toISOString()}`);
+      conditions.push(
+        sql`${assessmentInstance.updatedAt} >= ${lastSyncAt.toISOString()}`,
+      );
     }
 
     const instances = await this.db
@@ -103,7 +108,9 @@ export class PerformanceSyncService {
         employee,
         sql`(${assessmentInstance.employeeId}).user_id = (${employee.id}).user_id`,
       )
-      .where(conditions.length > 0 ? sql.join(conditions, sql` AND `) : sql`TRUE`);
+      .where(
+        conditions.length > 0 ? sql.join(conditions, sql` AND `) : sql`TRUE`,
+      );
 
     const isIncremental = !!lastSyncAt;
     this.logger.log(
