@@ -665,7 +665,7 @@ const StatisticsPage: React.FC = () => {
                                 variant="ghost"
                                 size="icon"
                                 title="查看详情"
-                                onClick={() => navigate(`assessment/${r.id}`)}
+                                onClick={() => navigate(`../assessment/${r.id}`)}
                               >
                                 <Eye className="size-4" />
                               </Button>
