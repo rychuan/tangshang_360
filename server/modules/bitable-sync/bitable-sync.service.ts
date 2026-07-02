@@ -19,7 +19,7 @@ interface BitableRecord {
   record: {
     '姓名'?: number[];
     '编号'?: { text: string };
-    '岗位'?: { text: string } | string;
+    '岗位'?: string;
     '部门'?: string;
     '角色'?: string;
     '状态'?: string;
@@ -35,15 +35,6 @@ interface SearchResult {
 
 interface BatchResult {
   records: { id: string }[];
-}
-
-function getTextValue(val: unknown): string {
-  if (val == null) return '';
-  if (typeof val === 'string') return val;
-  if (typeof val === 'object' && val !== null && 'text' in val) {
-    return String((val as { text: unknown }).text);
-  }
-  return '';
 }
 
 function asSearchResult(val: unknown): SearchResult {
@@ -85,7 +76,7 @@ export class BitableSyncService {
       try {
         const userIds = item.record['姓名'];
         const employeeNo = item.record['编号']?.text || '';
-        const position = getTextValue(item.record['岗位']);
+        const position = item.record['岗位'] || '';
         const department = item.record['部门'] || '';
         const role = item.record['角色'] || '';
         const status = item.record['状态'] || '';

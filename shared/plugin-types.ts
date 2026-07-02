@@ -58,16 +58,16 @@ export interface ManagementFeishuMultitableCrudAnalysisOneBatchaddrecordsOutput 
 export interface ManagementFeishuMultitableCrudAnalysisOneBatchupdaterecordsInput {
   /** [object Object] */
   records: {
-    id: string;
     record: {
-      '岗位': string;
       '角色': string;
       '上级': number[];
       '状态': string;
       '编号': string;
       '姓名': number[];
       '部门': string;
+      '岗位': string;
     };
+    id: string;
   }[];
 }
 
@@ -99,9 +99,9 @@ export interface ManagementFeishuMultitableCrudAnalysisOneSearchrecordsInput {
   filter?: {
     conjunction: string;
     conditions: {
+      value: string[];
       fieldName: string;
       operator: string;
-      value: string[];
     }[];
   };
 }
@@ -109,9 +109,11 @@ export interface ManagementFeishuMultitableCrudAnalysisOneSearchrecordsInput {
 /**
  * capabilityClient.load('management_feishu_multitable_crud_analysis_1').call<ManagementFeishuMultitableCrudAnalysisOneSearchrecordsOutput>('searchRecords', input)
  * 直接返回此类型，无 .data 包装，直接解构使用：
- * const { pageToken, total, records, ... } = result;
+ * const { hasMore, pageToken, total, ... } = result;
  */
 export interface ManagementFeishuMultitableCrudAnalysisOneSearchrecordsOutput {
+  /** [object Object] */
+  hasMore: boolean;
   /** [object Object] */
   pageToken?: string;
   /** [object Object] */
@@ -120,18 +122,16 @@ export interface ManagementFeishuMultitableCrudAnalysisOneSearchrecordsOutput {
   records: {
     id: string;
     record: {
-      '姓名': number[];
-      '部门': string;
-      '岗位': unknown;
       '角色': string;
       '上级': number[];
       '状态': string;
       '编号': {
         text: string;
       };
+      '姓名': number[];
+      '部门': string;
+      '岗位': string;
     };
   }[];
-  /** [object Object] */
-  hasMore: boolean;
 }
 // ---- end:management_feishu_multitable_crud_analysis_1 ----

@@ -7,6 +7,7 @@
   "icon": "https://lf3-static.bytednsdoc.com/obj/eden-cn/fzgeh7nuhfboznulog/bitable.svg",
   "paramsSchema": {},
   "formValue": {
+    "appToken": "BqMLbBsfiahaaHs9L7Jc2bkFngh",
     "fields": [
       {
         "type": 1,
@@ -17,69 +18,73 @@
         "name": "编号"
       },
       {
-        "id": "fldP8A2RvG",
         "name": "姓名",
+        "type": 11,
+        "bizType": "User",
         "readable": true,
         "writeable": true,
-        "type": 11,
-        "bizType": "User"
+        "id": "fldP8A2RvG"
       },
       {
-        "type": 3,
         "readable": true,
         "writeable": true,
-        "bizType": "SingleSelect",
         "enumValues": [
           "技术部",
-          "总经办"
+          "总经办",
+          "尚书省（人力行政中心）"
         ],
         "id": "fldrsyn4RV",
-        "name": "部门"
+        "name": "部门",
+        "type": 3,
+        "bizType": "SingleSelect"
       },
       {
+        "writeable": true,
+        "enumValues": [
+          "总经理",
+          "部门经理"
+        ],
         "id": "fldJuc1wrw",
         "name": "岗位",
-        "readable": true,
-        "writeable": true,
-        "type": 1,
-        "bizType": "Text"
+        "type": 3,
+        "bizType": "SingleSelect",
+        "readable": true
       },
       {
         "name": "角色",
         "type": 3,
         "bizType": "SingleSelect",
+        "readable": true,
+        "writeable": true,
         "enumValues": [
           "hrd",
           "employee"
         ],
-        "id": "fld4lwMjAX",
-        "readable": true,
-        "writeable": true
+        "id": "fld4lwMjAX"
       },
       {
+        "bizType": "User",
         "id": "fld2xpu9li",
         "name": "上级",
         "type": 11,
-        "bizType": "User",
         "readable": true,
         "writeable": true
       },
       {
-        "readable": true,
-        "writeable": true,
+        "type": 3,
+        "bizType": "SingleSelect",
         "enumValues": [
           "active"
         ],
         "id": "fldaWqhUms",
-        "name": "状态",
-        "type": 3,
-        "bizType": "SingleSelect"
+        "readable": true,
+        "writeable": true,
+        "name": "状态"
       }
     ],
-    "tableID": "tblPezRDn0DRJgls",
-    "appToken": "BqMLbBsfiahaaHs9L7Jc2bkFngh"
+    "tableID": "tblPezRDn0DRJgls"
   },
   "createdAt": 1782985322551,
-  "updatedAt": 1782986695856,
+  "updatedAt": 1782991962577,
   "createdBy": 7652289183771692275
 }
