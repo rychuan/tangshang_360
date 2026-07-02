@@ -774,3 +774,12 @@ export interface BitableExportResponse {
   failedCount: number;
   logId: string;
 }
+
+export interface BitablePluginSyncResponse {
+  total: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+  message: string;
+}
