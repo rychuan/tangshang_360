@@ -1,0 +1,63 @@
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { Module } from '@nestjs/common';
+import { PlatformModule } from '@lark-apaas/fullstack-nestjs-core';
+
+import { GlobalExceptionFilter } from './common/filters/exception.filter';
+import { PermissionsGuard } from './common/guards/permissions.guard';
+import { AssessmentTemplateModule } from './modules/assessment-template/assessment-template.module';
+import { TeamStructureModule } from './modules/team-structure/team-structure.module';
+import { AssessmentPublishModule } from './modules/assessment-publish/assessment-publish.module';
+import { AssessmentOperationModule } from './modules/assessment-operation/assessment-operation.module';
+import { AssessmentStatisticsModule } from './modules/assessment-statistics/assessment-statistics.module';
+import { AssessmentDashboardModule } from './modules/assessment-dashboard/assessment-dashboard.module';
+import { MyAssessmentModule } from './modules/my-assessment/my-assessment.module';
+import { TeamPerformanceModule } from './modules/team-performance/team-performance.module';
+import { DepartmentModule } from './modules/department/department.module';
+import { SystemDictModule } from './modules/system-dict/system-dict.module';
+import { EmployeeManagementModule } from './modules/employee-management/employee-management.module';
+import { RoleManagerModule } from './modules/role-manager/role-manager.module';
+import { PerformanceGradeModule } from './modules/performance-grade/performance-grade.module';
+import { EmployeeSnapshotModule } from './modules/employee-snapshot/employee-snapshot.module';
+import { BitableConnectionModule } from './modules/bitable-connection/bitable-connection.module';
+import { BitableSyncModule } from './modules/bitable-sync/bitable-sync.module';
+import { ViewModule } from './modules/view/view.module';
+
+@Module({
+  imports: [
+    // 平台 Module，提供平台能力
+    PlatformModule.forRoot(),
+    // ====== @route-section: business-modules START ======
+    AssessmentDashboardModule,
+    AssessmentTemplateModule,
+    TeamStructureModule,
+    AssessmentPublishModule,
+    AssessmentOperationModule,
+    AssessmentStatisticsModule,
+    MyAssessmentModule,
+    TeamPerformanceModule,
+    DepartmentModule,
+    SystemDictModule,
+    EmployeeManagementModule,
+    RoleManagerModule,
+    PerformanceGradeModule,
+    EmployeeSnapshotModule,
+    BitableConnectionModule,
+    BitableSyncModule,
+    // ====== @route-section: business-modules END ======
+
+    // ⚠️ @route-order: last
+    // ViewModule is the fallback route module, must be registered last.
+    ViewModule,
+  ],
+  providers: [
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: PermissionsGuard,
+    },
+  ],
+})
+export class AppModule {}
