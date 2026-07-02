@@ -78,9 +78,7 @@ export class BitableSyncService {
     for (const item of allRecords) {
       const userIds = item.record['姓名'];
       const sudaUserId =
-        Array.isArray(userIds) && userIds.length > 0
-          ? String(userIds[0])
-          : '';
+        Array.isArray(userIds) && userIds.length > 0 ? String(userIds[0]) : '';
       const employeeNo = item.record['编号']?.text || '';
       if (!sudaUserId && !employeeNo) continue;
       const supervisorIds = item.record['上级'];
@@ -155,7 +153,8 @@ export class BitableSyncService {
     for (const p of parsed) {
       try {
         // Match: userId first, then employeeNo fallback
-        const existing = byUserId.get(p.sudaUserId) ?? byEmpNo.get(p.employeeNo);
+        const existing =
+          byUserId.get(p.sudaUserId) ?? byEmpNo.get(p.employeeNo);
         if (!existing) {
           skipped++;
           continue;
@@ -174,7 +173,9 @@ export class BitableSyncService {
           await this.db
             .update(employee)
             .set(updateData)
-            .where(sql`(id).user_id = ${p.sudaUserId || sql`(${existing.id}).user_id`}`);
+            .where(
+              sql`(id).user_id = ${p.sudaUserId || sql`(${existing.id}).user_id`}`,
+            );
           updated++;
         } else {
           skipped++;
@@ -260,15 +261,17 @@ export class BitableSyncService {
       const numericUserId = Number(emp.userId);
       if (Number.isNaN(numericUserId)) continue;
 
-      const supervisorNum = emp.supervisorUserId ? Number(emp.supervisorUserId) : NaN;
+      const supervisorNum = emp.supervisorUserId
+        ? Number(emp.supervisorUserId)
+        : NaN;
       const record: Record<string, unknown> = {
-        '姓名': [numericUserId],
-        '编号': emp.employeeNo || '',
-        '岗位': emp.position || '',
-        '部门': emp.department || '',
-        '角色': emp.role || '',
-        '状态': emp.status || '',
-        '上级': Number.isNaN(supervisorNum) ? [] : [supervisorNum],
+        姓名: [numericUserId],
+        编号: emp.employeeNo || '',
+        岗位: emp.position || '',
+        部门: emp.department || '',
+        角色: emp.role || '',
+        状态: emp.status || '',
+        上级: Number.isNaN(supervisorNum) ? [] : [supervisorNum],
       };
 
       const existingRecordId =
