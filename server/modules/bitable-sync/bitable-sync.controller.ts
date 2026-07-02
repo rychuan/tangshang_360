@@ -28,10 +28,4 @@ export class BitableSyncController {
   async exportPerformanceToBitable(): Promise<BitablePluginSyncResponse> {
     return this.performanceSyncService.exportToBitable();
   }
-
-  @CanRole(['admin', 'hrd'])
-  @Post('performance-import')
-  async importPerformanceFromBitable(): Promise<BitablePluginSyncResponse> {
-    return this.performanceSyncService.importFromBitable();
-  }
 }

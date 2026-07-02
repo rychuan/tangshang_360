@@ -146,15 +146,16 @@ export interface PerformanceTemplateSyncFeishuMultitableCrudAnalysisTwoBatchaddr
   /** [object Object] */
   records: {
     record: {
+      '部门': string;
       '状态': string;
       '完成时间': string;
+      ID: string;
       '员工': number[];
-      '部门': string;
+      '岗位': string;
       '上级': number[];
       '总分': number;
       '等级': string;
       '绩效周期': string;
-      '岗位': string;
     };
   }[];
 }
@@ -177,14 +178,15 @@ export interface PerformanceTemplateSyncFeishuMultitableCrudAnalysisTwoBatchupda
     id: string;
     record: {
       '部门': string;
-      '总分': number;
+      '岗位': string;
       '状态': string;
-      '上级': number[];
-      '等级': string;
       '完成时间': string;
+      ID: string;
       '绩效周期': string;
       '员工': number[];
-      '岗位': string;
+      '上级': number[];
+      '总分': number;
+      '等级': string;
     };
   }[];
 }
@@ -203,55 +205,56 @@ export interface PerformanceTemplateSyncFeishuMultitableCrudAnalysisTwoBatchupda
 
 export interface PerformanceTemplateSyncFeishuMultitableCrudAnalysisTwoSearchrecordsInput {
   /** [object Object] */
+  pageToken?: string;
+  /** [object Object] */
   pageSize?: number;
   /** [object Object] */
   fieldNames?: string[];
   /** [object Object] */
   sort?: {
-    fieldName: string;
     desc: boolean;
+    fieldName: string;
   }[];
   /** [object Object] */
   filter?: {
     conjunction: string;
     conditions: {
+      value: string[];
       fieldName: string;
       operator: string;
-      value: string[];
     }[];
   };
-  /** [object Object] */
-  pageToken?: string;
 }
 
 /**
  * capabilityClient.load('performance_template_sync_feishu_multitable_crud_analysis_2').call<PerformanceTemplateSyncFeishuMultitableCrudAnalysisTwoSearchrecordsOutput>('searchRecords', input)
  * 直接返回此类型，无 .data 包装，直接解构使用：
- * const { total, records, hasMore, ... } = result;
+ * const { hasMore, pageToken, total, ... } = result;
  */
 export interface PerformanceTemplateSyncFeishuMultitableCrudAnalysisTwoSearchrecordsOutput {
+  /** [object Object] */
+  hasMore: boolean;
+  /** [object Object] */
+  pageToken?: string;
   /** [object Object] */
   total?: number;
   /** [object Object] */
   records: {
     id: string;
     record: {
-      '岗位': string;
-      '总分': number;
-      '等级': string;
+      '上级': number[];
+      '状态': string;
       '完成时间': unknown;
-      '绩效周期': {
+      ID: {
         text: string;
       };
       '员工': number[];
       '部门': string;
-      '上级': number[];
-      '状态': string;
+      '岗位': string;
+      '绩效周期': unknown;
+      '总分': number;
+      '等级': string;
     };
   }[];
-  /** [object Object] */
-  hasMore: boolean;
-  /** [object Object] */
-  pageToken?: string;
 }
 // ---- end:performance_template_sync_feishu_multitable_crud_analysis_2 ----

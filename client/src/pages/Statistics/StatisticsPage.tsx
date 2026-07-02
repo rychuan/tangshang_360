@@ -9,7 +9,6 @@ import {
   Eye,
   FileDown,
   Upload,
-  Download,
 } from 'lucide-react';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { toast } from 'sonner';
@@ -75,7 +74,6 @@ import {
 } from '@/api/assessment-statistics';
 import {
   exportPerformanceToBitable,
-  importPerformanceFromBitable,
 } from '@/api/bitable-sync';
 import { getPositions } from '@/api/employee-management';
 import type {
@@ -130,7 +128,6 @@ const StatisticsPage: React.FC = () => {
   const [exporting, setExporting] = useState(false);
   const [exportingPdfId, setExportingPdfId] = useState<string | null>(null);
   const [syncingOut, setSyncingOut] = useState(false);
-  const [syncingIn, setSyncingIn] = useState(false);
   const navigate = useNavigate();
   const pdfRef = useRef<HTMLDivElement>(null);
 
@@ -212,21 +209,6 @@ const StatisticsPage: React.FC = () => {
       handleApiError(e);
     } finally {
       setSyncingOut(false);
-    }
-  };
-
-  const handleSyncFromBitable = async () => {
-    try {
-      setSyncingIn(true);
-      const res = await importPerformanceFromBitable();
-      toast.success(res.message);
-      loadRecords();
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : '从多维表格导入失败';
-      logger.error(`Sync from bitable error: ${msg}`);
-      handleApiError(e);
-    } finally {
-      setSyncingIn(false);
     }
   };
 
@@ -564,20 +546,11 @@ const StatisticsPage: React.FC = () => {
               <Button
                 variant="outline"
                 onClick={handleSyncToBitable}
-                disabled={syncingOut || syncingIn}
+                disabled={syncingOut}
                 className="flex items-center gap-1"
               >
                 <Upload data-icon="inline-start" />
                 {syncingOut ? '同步中...' : '同步到多维表格'}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleSyncFromBitable}
-                disabled={syncingOut || syncingIn}
-                className="flex items-center gap-1"
-              >
-                <Download data-icon="inline-start" />
-                {syncingIn ? '导入中...' : '从多维表格导入'}
               </Button>
             </CanRole>
           </div>

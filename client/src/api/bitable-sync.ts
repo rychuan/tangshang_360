@@ -24,11 +24,3 @@ export async function exportPerformanceToBitable(): Promise<BitablePluginSyncRes
   });
   return data;
 }
-
-export async function importPerformanceFromBitable(): Promise<BitablePluginSyncResponse> {
-  const { data } = await axiosForBackend({
-    url: '/api/bitable-sync/performance-import',
-    method: 'POST',
-  });
-  return data;
-}
