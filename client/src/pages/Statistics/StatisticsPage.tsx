@@ -8,6 +8,7 @@ import {
   TrendingUpIcon,
   Eye,
   FileDown,
+  Upload,
 } from 'lucide-react';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { toast } from 'sonner';
@@ -71,6 +72,9 @@ import {
   type StatisticsRecordsParams,
   type StatisticsChartsParams,
 } from '@/api/assessment-statistics';
+import {
+  exportPerformanceToBitable,
+} from '@/api/bitable-sync';
 import { getPositions } from '@/api/employee-management';
 import type {
   StatisticsRecordItem,
@@ -123,6 +127,7 @@ const StatisticsPage: React.FC = () => {
   const [charts, setCharts] = useState<ChartsResponse | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportingPdfId, setExportingPdfId] = useState<string | null>(null);
+  const [syncingOut, setSyncingOut] = useState(false);
   const navigate = useNavigate();
   const pdfRef = useRef<HTMLDivElement>(null);
 
@@ -191,6 +196,21 @@ const StatisticsPage: React.FC = () => {
         logger.error('Failed to load positions', err as Error),
       );
   }, []);
+
+  const handleSyncToBitable = async () => {
+    try {
+      setSyncingOut(true);
+      const res = await exportPerformanceToBitable();
+      toast.success(res.message);
+      loadRecords();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : '同步到多维表格失败';
+      logger.error(`Sync to bitable error: ${msg}`);
+      handleApiError(e);
+    } finally {
+      setSyncingOut(false);
+    }
+  };
 
   const handleSearch = () => setPage(1);
 
@@ -521,6 +541,17 @@ const StatisticsPage: React.FC = () => {
                   {exporting ? '导出中...' : '导出'}
                 </Button>
               </CanDo>
+            </CanRole>
+            <CanRole roles={['admin', 'hrd']}>
+              <Button
+                variant="outline"
+                onClick={handleSyncToBitable}
+                disabled={syncingOut}
+                className="flex items-center gap-1"
+              >
+                <Upload data-icon="inline-start" />
+                {syncingOut ? '同步中...' : '同步到多维表格'}
+              </Button>
             </CanRole>
           </div>
         </CardContent>

@@ -1,0 +1,123 @@
+{
+  "id": "performance_template_sync_feishu_multitable_crud_analysis_2",
+  "pluginKey": "@official-plugins/feishu-bitable",
+  "pluginVersion": "1.0.22",
+  "name": "绩效考核记录",
+  "description": "管理飞书多维表格，支持数据的创建、查询、更新、删除、聚合分析",
+  "icon": "https://lf3-static.bytednsdoc.com/obj/eden-cn/fzgeh7nuhfboznulog/bitable.svg",
+  "paramsSchema": {},
+  "formValue": {
+    "fields": [
+      {
+        "writeable": true,
+        "id": "fldaJHhNMv",
+        "name": "ID",
+        "type": 1,
+        "bizType": "Text",
+        "readable": true
+      },
+      {
+        "id": "fldnjrmVk7",
+        "name": "绩效周期",
+        "type": 1,
+        "bizType": "Text",
+        "readable": true,
+        "writeable": true
+      },
+      {
+        "bizType": "User",
+        "readable": true,
+        "writeable": true,
+        "id": "fldLVYGKGf",
+        "name": "员工",
+        "type": 11
+      },
+      {
+        "bizType": "SingleSelect",
+        "enumValues": [
+          "技术部",
+          "市场部",
+          "总经办",
+          "尚书省（人力行政中心）"
+        ],
+        "readable": true,
+        "writeable": true,
+        "id": "fldjE5zLd3",
+        "name": "部门",
+        "type": 3
+      },
+      {
+        "writeable": true,
+        "id": "fld1cRQtBG",
+        "name": "岗位",
+        "type": 3,
+        "bizType": "SingleSelect",
+        "enumValues": [
+          "开发工程师",
+          "市场经理",
+          "专员",
+          "系统管理员",
+          "11",
+          "技术总监"
+        ],
+        "readable": true
+      },
+      {
+        "bizType": "User",
+        "readable": true,
+        "writeable": true,
+        "id": "fld1Ds9HJB",
+        "name": "上级",
+        "type": 11
+      },
+      {
+        "type": 2,
+        "bizType": "Number",
+        "id": "fldi2eGlqi",
+        "name": "总分",
+        "readable": true,
+        "writeable": true
+      },
+      {
+        "bizType": "SingleSelect",
+        "enumValues": [
+          "A",
+          "S",
+          "C"
+        ],
+        "readable": true,
+        "writeable": true,
+        "id": "fldj4MsAKn",
+        "name": "等级",
+        "type": 3
+      },
+      {
+        "id": "fldUQdZLc4",
+        "name": "状态",
+        "readable": true,
+        "writeable": true,
+        "type": 3,
+        "bizType": "SingleSelect",
+        "enumValues": [
+          "completed",
+          "self_review",
+          "supervisor_review",
+          "pending_sign"
+        ]
+      },
+      {
+        "readable": true,
+        "writeable": true,
+        "id": "fld3dIUT31",
+        "name": "完成时间",
+        "type": 1,
+        "bizType": "Text"
+      }
+    ],
+    "appToken": "BqMLbBsfiahaaHs9L7Jc2bkFngh",
+    "tableID": "tblaEUx3K6zoy0Jk"
+  },
+  "createdAt": 1782997894332,
+  "updatedAt": 1782999093031,
+  "createdBy": 7652289183771692275
+}
