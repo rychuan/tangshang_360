@@ -163,8 +163,8 @@ const BitableConnectionTab: React.FC = () => {
                 功能简介
               </h4>
               <p className="text-muted-foreground leading-relaxed">
-                通过连接飞书多维表格，可以将表格中的员工数据批量导入系统，也支持将系统内的员工信息推送回多维表格。适合 HR
-                在多维表格中统一维护员工基础信息，再一键同步到考核系统。
+                通过连接飞书多维表格，可以将表格中的员工数据批量导入系统，也支持将系统内的员工信息推送回多维表格。适合
+                HR 在多维表格中统一维护员工基础信息，再一键同步到考核系统。
               </p>
             </div>
 
@@ -175,13 +175,18 @@ const BitableConnectionTab: React.FC = () => {
                 <li>在飞书开放平台创建企业自建应用，开通「多维表格」权限</li>
                 <li>在多维表格中准备好员工数据（列名需符合下方约定）</li>
                 <li>点击「新建连接」，填入应用凭据和表格 ID</li>
-                <li>App Token 在多维表格 URL 中获取（bascn 开头），子表 ID 从表格设置中获取</li>
+                <li>
+                  App Token 在多维表格 URL 中获取（bascn 开头），子表 ID
+                  从表格设置中获取
+                </li>
               </ol>
             </div>
 
             {/* 列名约定 */}
             <div>
-              <h4 className="font-medium mb-1">二、多维表格列名约定（固定映射）</h4>
+              <h4 className="font-medium mb-1">
+                二、多维表格列名约定（固定映射）
+              </h4>
               <p className="text-muted-foreground mb-2 text-xs">
                 系统按列名自动识别字段，请严格使用以下列名。标注「必填」的列缺失时将跳过该行。
               </p>
@@ -189,7 +194,9 @@ const BitableConnectionTab: React.FC = () => {
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className="bg-muted">
-                      <th className="border px-2 py-1 text-left">多维表格列名</th>
+                      <th className="border px-2 py-1 text-left">
+                        多维表格列名
+                      </th>
                       <th className="border px-2 py-1 text-left">映射字段</th>
                       <th className="border px-2 py-1 text-center">必填</th>
                       <th className="border px-2 py-1 text-left">校验规则</th>
@@ -198,20 +205,42 @@ const BitableConnectionTab: React.FC = () => {
                   <tbody>
                     {[
                       ['姓名', 'name', '是', ''],
-                      ['工号', 'employeeNo', '是', '唯一标识，用于匹配已有员工'],
+                      [
+                        '工号',
+                        'employeeNo',
+                        '是',
+                        '唯一标识，用于匹配已有员工',
+                      ],
                       ['岗位', 'position', '是', '自由文本'],
-                      ['部门', 'department', '否', '必须为系统中已存在的部门名称，否则跳过'],
+                      [
+                        '部门',
+                        'department',
+                        '否',
+                        '必须为系统中已存在的部门名称，否则跳过',
+                      ],
                       ['上级工号', '—', '否', '通过工号查找上级，找不到则为空'],
                       ['职位', 'title', '否', ''],
-                      ['角色', 'role', '否', 'admin/hrd/dept_head/supervisor/employee'],
+                      [
+                        '角色',
+                        'role',
+                        '否',
+                        'admin/hrd/dept_head/supervisor/employee',
+                      ],
                       ['手机', 'phone', '否', ''],
                       ['入职日期', 'hireDate', '否', ''],
                       ['状态', 'status', '否', 'active/inactive'],
-                      ['考核模板', '—', '否', '必须为系统中已存在的模板名称，导入后自动绑定'],
+                      [
+                        '考核模板',
+                        '—',
+                        '否',
+                        '必须为系统中已存在的模板名称，导入后自动绑定',
+                      ],
                     ].map(([col, field, required, rule]) => (
                       <tr key={col} className="hover:bg-muted/30">
                         <td className="border px-2 py-1 font-medium">{col}</td>
-                        <td className="border px-2 py-1 text-muted-foreground">{field}</td>
+                        <td className="border px-2 py-1 text-muted-foreground">
+                          {field}
+                        </td>
                         <td className="border px-2 py-1 text-center">
                           {required === '是' ? (
                             <span className="text-red-500">●</span>
@@ -219,7 +248,9 @@ const BitableConnectionTab: React.FC = () => {
                             <span className="text-muted-foreground">○</span>
                           )}
                         </td>
-                        <td className="border px-2 py-1 text-muted-foreground">{rule}</td>
+                        <td className="border px-2 py-1 text-muted-foreground">
+                          {rule}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -232,16 +263,20 @@ const BitableConnectionTab: React.FC = () => {
               <h4 className="font-medium mb-1">三、导入逻辑</h4>
               <ul className="list-disc ml-5 space-y-1 text-muted-foreground">
                 <li>
-                  <strong>匹配规则</strong>：按「工号」匹配系统已有员工。工号相同则更新，不存在则新增。
+                  <strong>匹配规则</strong>
+                  ：按「工号」匹配系统已有员工。工号相同则更新，不存在则新增。
                 </li>
                 <li>
-                  <strong>冲突处理</strong>：多维表格数据覆盖系统数据（表格为准）。
+                  <strong>冲突处理</strong>
+                  ：多维表格数据覆盖系统数据（表格为准）。
                 </li>
                 <li>
-                  <strong>部门校验</strong>：填写了部门列时，部门名称必须存在于系统部门列表中，否则该行跳过。
+                  <strong>部门校验</strong>
+                  ：填写了部门列时，部门名称必须存在于系统部门列表中，否则该行跳过。
                 </li>
                 <li>
-                  <strong>考核模板</strong>：填写了考核模板列时，导入后自动为员工绑定该模板（已有绑定则不重复绑定）。
+                  <strong>考核模板</strong>
+                  ：填写了考核模板列时，导入后自动为员工绑定该模板（已有绑定则不重复绑定）。
                 </li>
                 <li>
                   <strong>角色分配</strong>：新增员工自动加入「employee」角色。
@@ -253,8 +288,12 @@ const BitableConnectionTab: React.FC = () => {
             <div>
               <h4 className="font-medium mb-1">四、导出逻辑</h4>
               <ul className="list-disc ml-5 space-y-1 text-muted-foreground">
-                <li>仅导出通过该连接导入的员工（按 bitable_connection_id 关联）。</li>
-                <li>导出内容：基本信息（姓名、工号、岗位、部门、职位、角色、手机、入职日期、状态），不包含考核数据。</li>
+                <li>
+                  仅导出通过该连接导入的员工（按 bitable_connection_id 关联）。
+                </li>
+                <li>
+                  导出内容：基本信息（姓名、工号、岗位、部门、职位、角色、手机、入职日期、状态），不包含考核数据。
+                </li>
                 <li>多维表格中已存在同工号的行会更新，不存在的会新增。</li>
               </ul>
             </div>
@@ -263,11 +302,17 @@ const BitableConnectionTab: React.FC = () => {
             <div>
               <h4 className="font-medium mb-1">五、注意事项</h4>
               <ul className="list-disc ml-5 space-y-1 text-muted-foreground">
-                <li>飞书应用需开通「多维表格」和「通讯录」权限才能正常访问表格数据。</li>
+                <li>
+                  飞书应用需开通「多维表格」和「通讯录」权限才能正常访问表格数据。
+                </li>
                 <li>App Secret 加密存储于数据库，不会暴露到前端。</li>
-                <li>每次导入/导出操作均记录完整日志，可在「同步日志」中查看行级处理结果。</li>
+                <li>
+                  每次导入/导出操作均记录完整日志，可在「同步日志」中查看行级处理结果。
+                </li>
                 <li>已停用的连接不可执行导入/导出操作。</li>
-                <li>如导入结果有「跳过」行，请查看同步日志了解具体原因（缺少必填字段、部门不存在等）。</li>
+                <li>
+                  如导入结果有「跳过」行，请查看同步日志了解具体原因（缺少必填字段、部门不存在等）。
+                </li>
               </ul>
             </div>
           </CardContent>
