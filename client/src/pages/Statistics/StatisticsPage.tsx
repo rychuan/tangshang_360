@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { createRoot, Root } from 'react-dom/client';
 import {
   DownloadIcon,
   SearchIcon,
@@ -18,6 +19,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { detail as getAssessmentDetail } from '@/api/assessment-operation';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -125,6 +127,7 @@ const StatisticsPage: React.FC = () => {
   const [exportingPdfId, setExportingPdfId] = useState<string | null>(null);
   const navigate = useNavigate();
   const pdfRef = useRef<HTMLDivElement>(null);
+  const pdfRootRef = useRef<Root | null>(null);
 
   const buildParams = useCallback(
     (p: number): StatisticsRecordsParams => ({
@@ -241,81 +244,213 @@ const StatisticsPage: React.FC = () => {
     employeeName: string,
     period: string,
   ) => {
+    const pdfEl = pdfRef.current;
+    if (!pdfEl) return;
+
     try {
       setExportingPdfId(id);
       const detail = await getAssessmentDetail(id);
-      const pdfEl = pdfRef.current;
-      if (!pdfEl) return;
 
-      // Render detail to hidden div
-      const content = `
-        <div style="padding:20px;font-family:sans-serif;max-width:700px;">
-          <h2 style="margin-bottom:16px;">绩效详情</h2>
-          <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
-            <tr><td style="padding:4px 8px;border:1px solid #ddd;font-weight:bold;">员工</td><td style="padding:4px 8px;border:1px solid #ddd;">${detail.employeeName}</td><td style="padding:4px 8px;border:1px solid #ddd;font-weight:bold;">岗位</td><td style="padding:4px 8px;border:1px solid #ddd;">${detail.position}</td></tr>
-            <tr><td style="padding:4px 8px;border:1px solid #ddd;font-weight:bold;">周期</td><td style="padding:4px 8px;border:1px solid #ddd;">${detail.period}</td><td style="padding:4px 8px;border:1px solid #ddd;font-weight:bold;">状态</td><td style="padding:4px 8px;border:1px solid #ddd;">${detail.status}</td></tr>
-            <tr><td style="padding:4px 8px;border:1px solid #ddd;font-weight:bold;">总分</td><td style="padding:4px 8px;border:1px solid #ddd;">${detail.totalScore ?? '-'}</td><td style="padding:4px 8px;border:1px solid #ddd;font-weight:bold;">等级</td><td style="padding:4px 8px;border:1px solid #ddd;">${detail.grade ?? '-'}</td></tr>
-            <tr><td style="padding:4px 8px;border:1px solid #ddd;font-weight:bold;">上级</td><td style="padding:4px 8px;border:1px solid #ddd;">${detail.supervisorName}</td><td style="padding:4px 8px;border:1px solid #ddd;font-weight:bold;">自评签名</td><td style="padding:4px 8px;border:1px solid #ddd;">${detail.selfSignName || '-'}</td></tr>
-          </table>
-          <h3 style="margin-bottom:8px;">考核指标</h3>
-          <table style="width:100%;border-collapse:collapse;font-size:12px;">
-            <thead>
-              <tr style="background:#f5f5f5;">
-                <th style="padding:6px;border:1px solid #ddd;text-align:left;">维度</th>
-                <th style="padding:6px;border:1px solid #ddd;text-align:left;">指标</th>
-                <th style="padding:6px;border:1px solid #ddd;text-align:right;">权重</th>
-                <th style="padding:6px;border:1px solid #ddd;text-align:right;">自评</th>
-                <th style="padding:6px;border:1px solid #ddd;text-align:right;">上级评分</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${detail.indicators
-                .map(
-                  (ind) => `
-                <tr>
-                  <td style="padding:6px;border:1px solid #ddd;">${ind.dimensionName}</td>
-                  <td style="padding:6px;border:1px solid #ddd;">${ind.content}</td>
-                  <td style="padding:6px;border:1px solid #ddd;text-align:right;">${ind.weight}</td>
-                  <td style="padding:6px;border:1px solid #ddd;text-align:right;">${ind.selfScore ?? '-'}</td>
-                  <td style="padding:6px;border:1px solid #ddd;text-align:right;">${ind.supervisorScore ?? '-'}</td>
-                </tr>`,
-                )
-                .join('')}
-            </tbody>
-          </table>
-        </div>
-      `;
-      pdfEl.innerHTML = content;
+      // Unmount previous root if any
+      if (pdfRootRef.current) {
+        pdfRootRef.current.unmount();
+      }
 
-      // Wait for render
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Build group data like useAssessmentDetail does
+      const groupMap = new Map<
+        string,
+        {
+          dimensionName: string;
+          dimensionWeight: number;
+          indicators: typeof detail.indicators;
+        }
+      >();
+      for (const ind of detail.indicators) {
+        if (!groupMap.has(ind.dimensionName)) {
+          groupMap.set(ind.dimensionName, {
+            dimensionName: ind.dimensionName,
+            dimensionWeight: ind.dimensionWeight,
+            indicators: [],
+          });
+        }
+        groupMap.get(ind.dimensionName)!.indicators.push(ind);
+      }
+      const groups = Array.from(groupMap.values());
 
-      const canvas = await html2canvas(pdfEl, { scale: 2, useCORS: true });
+      // Render detail page replica into hidden div
+      const root = createRoot(pdfEl);
+      pdfRootRef.current = root;
+      root.render(
+        <div className="flex flex-col gap-4 p-5 bg-white" style={{ width: 760 }}>
+          {/* Header */}
+          <div className="flex items-center justify-between flex-wrap gap-3 pb-4 border-b">
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl font-semibold text-gray-900">
+                {detail.period}
+              </h1>
+              <StatusBadge status={detail.status} />
+            </div>
+            {detail.totalScore != null && (
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <p className="text-xs text-gray-500">总分</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {detail.totalScore}
+                  </p>
+                </div>
+                {detail.grade && (
+                  <GradeBadge grade={detail.grade} />
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Employee info card */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                {detail.employeeName}
+                <span className="text-gray-500 font-normal text-sm">
+                  【{detail.position}】的绩效评分
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="text-gray-500">上级：</span>
+                  {detail.supervisorName}
+                </div>
+                <div>
+                  <span className="text-gray-500">状态：</span>
+                  <StatusBadge status={detail.status} />
+                </div>
+                {detail.selfSignName && (
+                  <div>
+                    <span className="text-gray-500">自评签名：</span>
+                    {detail.selfSignName}
+                    {detail.selfSignAt
+                      ? ` (${new Date(detail.selfSignAt).toLocaleDateString('zh-CN')})`
+                      : ''}
+                  </div>
+                )}
+                {detail.supervisorSignName && (
+                  <div>
+                    <span className="text-gray-500">上级签名：</span>
+                    {detail.supervisorSignName}
+                    {detail.supervisorSignAt
+                      ? ` (${new Date(detail.supervisorSignAt).toLocaleDateString('zh-CN')})`
+                      : ''}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Indicator tables by dimension */}
+          {groups.map((group) => (
+            <Card key={group.dimensionName}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  {group.dimensionName}
+                  <Badge variant="outline" className="text-xs">
+                    权重 {group.dimensionWeight} 分
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="text-left py-2 px-3 text-xs font-medium">
+                        指标
+                      </TableHead>
+                      <TableHead className="text-left py-2 px-3 text-xs font-medium hidden sm:table-cell">
+                        说明
+                      </TableHead>
+                      <TableHead className="text-right py-2 px-3 text-xs font-medium w-16">
+                        权重
+                      </TableHead>
+                      <TableHead className="text-right py-2 px-3 text-xs font-medium w-16">
+                        自评
+                      </TableHead>
+                      <TableHead className="text-right py-2 px-3 text-xs font-medium w-16">
+                        上级评分
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {group.indicators.map((ind) => (
+                      <TableRow key={ind.id} className="border-b">
+                        <TableCell className="py-2 px-3 text-sm">
+                          {ind.content}
+                        </TableCell>
+                        <TableCell className="py-2 px-3 text-xs text-gray-500 hidden sm:table-cell">
+                          {ind.description || '-'}
+                        </TableCell>
+                        <TableCell className="py-2 px-3 text-sm text-right">
+                          {ind.weight}
+                        </TableCell>
+                        <TableCell className="py-2 px-3 text-sm text-right">
+                          {ind.selfScore != null ? ind.selfScore : '-'}
+                        </TableCell>
+                        <TableCell className="py-2 px-3 text-sm text-right">
+                          {ind.supervisorScore != null
+                            ? ind.supervisorScore
+                            : '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          ))}
+        </div>,
+      );
+
+      // Wait for render + assets
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      const canvas = await html2canvas(pdfEl, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+      });
       const imgData = canvas.toDataURL('image/png');
-      const imgWidth = 210; // A4 width in mm
+      const imgWidth = 210;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
       const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageHeight = 297;
       let heightLeft = imgHeight;
       let position = 0;
 
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= 297; // A4 height
+      heightLeft -= pageHeight;
 
       while (heightLeft > 0) {
-        position = position - 297;
+        position = position - pageHeight;
         pdf.addPage();
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= 297;
+        heightLeft -= pageHeight;
       }
 
       pdf.save(`绩效详情_${employeeName}_${period}.pdf`);
-      pdfEl.innerHTML = '';
+
+      // Clean up
+      root.unmount();
+      pdfRootRef.current = null;
       toast.success('PDF 导出成功');
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'PDF 导出失败';
       logger.error(`PDF export error: ${msg}`);
       handleApiError(e);
+      // Clean up on error
+      if (pdfRootRef.current) {
+        pdfRootRef.current.unmount();
+        pdfRootRef.current = null;
+      }
     } finally {
       setExportingPdfId(null);
     }
@@ -659,20 +794,21 @@ const StatisticsPage: React.FC = () => {
                             : '-'}
                         </TableCell>
                         <CanRole roles={['admin', 'hrd', 'dept_head']}>
-                          <TableCell className="py-3 px-1 text-center">
-                            <div className="flex items-center justify-center gap-0.5">
+                          <TableCell className="py-3 px-2 text-center">
+                            <div className="flex items-center justify-center gap-1">
                               <Button
                                 variant="ghost"
-                                size="icon"
-                                title="查看详情"
-                                onClick={() => navigate(`../assessment/${r.id}`)}
+                                size="sm"
+                                onClick={() =>
+                                  navigate(`../assessment/${r.id}`)
+                                }
                               >
-                                <Eye className="size-4" />
+                                <Eye data-icon="inline-start" />
+                                详情
                               </Button>
                               <Button
                                 variant="ghost"
-                                size="icon"
-                                title="导出PDF"
+                                size="sm"
                                 disabled={exportingPdfId === r.id}
                                 onClick={() =>
                                   handleExportPdf(
@@ -682,7 +818,8 @@ const StatisticsPage: React.FC = () => {
                                   )
                                 }
                               >
-                                <FileDown className="size-4" />
+                                <FileDown data-icon="inline-start" />
+                                导出
                               </Button>
                             </div>
                           </TableCell>
