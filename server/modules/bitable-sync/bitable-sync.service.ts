@@ -185,7 +185,8 @@ export class BitableSyncService {
       .from(employee)
       .where(isNull(employee.deletedAt));
 
-    const bitableRecordMap = new Map<string, string>();
+    const bitableRecordByEmpNo = new Map<string, string>();
+    const bitableRecordByUserId = new Map<string, string>();
     let pageToken: string | undefined;
     do {
       const result = asSearchResult(
@@ -196,7 +197,11 @@ export class BitableSyncService {
       for (const item of result.records) {
         const empNo = item.record['编号']?.text || '';
         if (empNo) {
-          bitableRecordMap.set(empNo, item.id);
+          bitableRecordByEmpNo.set(empNo, item.id);
+        }
+        const userIds = item.record['姓名'];
+        if (Array.isArray(userIds) && userIds.length > 0) {
+          bitableRecordByUserId.set(String(userIds[0]), item.id);
         }
       }
       pageToken = result.hasMore ? result.pageToken : undefined;
@@ -224,9 +229,11 @@ export class BitableSyncService {
           : [],
       };
 
-      const existingRecordId = emp.employeeNo
-        ? bitableRecordMap.get(emp.employeeNo)
-        : undefined;
+      const existingRecordId =
+        bitableRecordByUserId.get(emp.id) ??
+        (emp.employeeNo
+          ? bitableRecordByEmpNo.get(emp.employeeNo)
+          : undefined);
 
       if (existingRecordId) {
         toUpdate.push({ id: existingRecordId, record });
