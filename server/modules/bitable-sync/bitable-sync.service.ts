@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  Inject,
-} from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
@@ -240,16 +236,12 @@ export class BitableSyncService {
         部门: emp.department || '',
         角色: emp.role || '',
         状态: emp.status || '',
-        上级: emp.supervisorUserId
-          ? [Number(emp.supervisorUserId)]
-          : [],
+        上级: emp.supervisorUserId ? [Number(emp.supervisorUserId)] : [],
       };
 
       const existingRecordId =
         bitableRecordByUserId.get(emp.userId) ??
-        (emp.employeeNo
-          ? bitableRecordByEmpNo.get(emp.employeeNo)
-          : undefined);
+        (emp.employeeNo ? bitableRecordByEmpNo.get(emp.employeeNo) : undefined);
 
       if (existingRecordId) {
         toUpdate.push({ id: existingRecordId, record });
