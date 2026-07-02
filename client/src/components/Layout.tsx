@@ -216,6 +216,7 @@ const LayoutContent: React.FC = () => {
     allItems.find((item) => pathname.startsWith(item.path) && item.path !== '/')
       ?.label ||
     pathTitleMap[pathname] ||
+    (pathname.startsWith('/assessment/') ? '绩效详情' : '') ||
     pathname.split('/').pop() ||
     '';
 
@@ -231,7 +232,6 @@ const LayoutContent: React.FC = () => {
   }
 
   return (
-    <BreadcrumbProvider>
       <SidebarProvider
         style={{ '--sidebar-width': '220px' } as React.CSSProperties}
       >
@@ -347,8 +347,14 @@ const LayoutContent: React.FC = () => {
           </div>
         </SidebarInset>
       </SidebarProvider>
-    </BreadcrumbProvider>
   );
 };
 
-export default LayoutContent;
+/** 将 BreadcrumbProvider 放在 LayoutContent 外部，确保 useBreadcrumb 可正确获取 context */
+const LayoutWrapper: React.FC = () => (
+  <BreadcrumbProvider>
+    <LayoutContent />
+  </BreadcrumbProvider>
+);
+
+export default LayoutWrapper;
