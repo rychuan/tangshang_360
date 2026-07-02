@@ -131,7 +131,8 @@ export class AssessmentStatisticsService {
       baseConditions.push(inArray(assessmentInstance.grade, query.grades));
     }
 
-    const baseWhere = baseConditions.length > 0 ? and(...baseConditions) : undefined;
+    const baseWhere =
+      baseConditions.length > 0 ? and(...baseConditions) : undefined;
 
     const empNotDeleted = sql`EXISTS(SELECT 1 FROM employee e WHERE (e.id).user_id = (${assessmentInstance.employeeId}).user_id AND e.deleted_at IS NULL)`;
 
@@ -300,5 +301,5 @@ export class AssessmentStatisticsService {
     }
     return conditions;
   }
-
 }
+
