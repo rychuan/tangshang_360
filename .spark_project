@@ -1,5 +1,5 @@
 run = ["npm", "run", "dev"] # 默认 spark-cli dev
-hidden = [".config", ".git", "scripts", "node_modules", "dist", ".spark", ".agent", ".agents", ".claude", "tmp", ".spark_project", ".playwright-cli"]
+hidden = [".config", ".git", "scripts", "node_modules", "dist", ".spark", ".agent", ".agents", "tmp", ".spark_project", ".playwright-cli"]
 lint = ["npm", "run", "lint"]
 test = ["npm", "run", "test"]
 genDbSchema = ["npm", "run", "gen:db-schema"]
@@ -13,4 +13,4 @@ run = ["npm", "run", "start"]
 [files.restrict]
 pathPatterns = ["client/src/api/gen", "package.json", ".spark_project", ".gitignore"]
 [files.hidden]
-pathPatterns = [".config", ".git", "scripts", "node_modules", "dist", ".spark", ".agent", ".agents", ".claude", "tmp", ".spark_project", ".playwright-cli"]
+pathPatterns = [".config", ".git", "scripts", "node_modules", "dist", ".spark", ".agent", ".agents", "tmp", ".spark_project", ".playwright-cli"]
