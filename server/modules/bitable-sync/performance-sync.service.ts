@@ -4,7 +4,7 @@ import {
   type PostgresJsDatabase,
   CapabilityService,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { sql, desc } from 'drizzle-orm';
+import { sql, isNull } from 'drizzle-orm';
 import {
   assessmentInstance,
   employee,
@@ -59,32 +59,8 @@ export class PerformanceSyncService {
     private readonly capabilityService: CapabilityService,
   ) {}
 
-  async exportToBitable(
-    syncDays: number = 0, // 0 = full sync
-  ): Promise<BitablePluginSyncResponse> {
-    // Get last sync time for incremental sync
-    let lastSyncAt: Date | null = null;
-    if (syncDays <= 0) {
-      const lastLog = await this.db
-        .select({ createdAt: auditLog.createdAt })
-        .from(auditLog)
-        .where(sql`${auditLog.targetType} = 'bitable_sync_performance'`)
-        .orderBy(desc(auditLog.createdAt))
-        .limit(1);
-      if (lastLog.length > 0 && lastLog[0].createdAt) {
-        lastSyncAt = lastLog[0].createdAt as Date;
-      }
-    } else {
-      lastSyncAt = new Date(Date.now() - syncDays * 24 * 60 * 60 * 1000);
-    }
-
-    // Only sync non-completed instances (completed data never changes)
-    const conditions = [sql`${assessmentInstance.status} != 'completed'`];
-    if (lastSyncAt) {
-      conditions.push(
-        sql`${assessmentInstance.updatedAt} >= ${lastSyncAt.toISOString()}`,
-      );
-    }
+  async exportToBitable(): Promise<BitablePluginSyncResponse> {
+    const conditions = [isNull(employee.deletedAt)];
 
     const instances = await this.db
       .select({
@@ -101,7 +77,7 @@ export class PerformanceSyncService {
         department: employee.department,
       })
       .from(assessmentInstance)
-      .leftJoin(
+      .innerJoin(
         employee,
         sql`(${assessmentInstance.employeeId}).user_id = (${employee.id}).user_id`,
       )
@@ -109,10 +85,7 @@ export class PerformanceSyncService {
         conditions.length > 0 ? sql.join(conditions, sql` AND `) : sql`TRUE`,
       );
 
-    const isIncremental = !!lastSyncAt;
-    this.logger.log(
-      `Export to bitable: ${isIncremental ? 'incremental (since ' + lastSyncAt!.toISOString() + ')' : 'full sync'}, ${instances.length} instances`,
-    );
+    this.logger.log(`Export to bitable: full sync, ${instances.length} instances`);
 
     const bitableRecordById = new Map<string, string>();
     let pageToken: string | undefined;
@@ -211,9 +184,7 @@ export class PerformanceSyncService {
     }
 
     await this.db.insert(auditLog).values({
-      action: isIncremental
-        ? 'export_performance_to_bitable_incremental'
-        : 'export_performance_to_bitable_full',
+      action: 'export_performance_to_bitable',
       targetType: 'bitable_sync_performance',
       targetId: PLUGIN_INSTANCE_ID,
       changes: { total: instances.length, created, updated, failed },
