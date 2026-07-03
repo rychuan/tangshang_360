@@ -14,7 +14,7 @@ import {
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo } from '@/hooks/usePermissions';
 import { UserDisplay } from '@/components/business-ui/user-display';
-import { Unlock, Send, Download, Award } from 'lucide-react';
+import { Unlock, Send, Download, Award, Undo2 } from 'lucide-react';
 import dayjs from 'dayjs';
 import type { AssessmentInstanceItem } from '@shared/api.interface';
 import { StatusBadge } from '@/components/business-ui/status-badge';
@@ -52,10 +52,13 @@ interface PublishedAssessmentSectionProps {
   onSelectedInstancesChange: (ids: Set<string>) => void;
   onUnlock: (instance: AssessmentInstanceItem) => void;
   onHistory: (instance: AssessmentInstanceItem) => void;
+  onReturn: (instance: AssessmentInstanceItem) => void;
   onBatchUnlock: () => void;
+  onBatchReturn: () => void;
   onBatchNotify: () => void;
   onExport: () => void;
   batchUnlockLoading: boolean;
+  batchReturnLoading: boolean;
   batchNotifyLoading: boolean;
   departments: string[];
 }
@@ -77,10 +80,13 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
   onSelectedInstancesChange,
   onUnlock,
   onHistory,
+  onReturn,
   onBatchUnlock,
+  onBatchReturn,
   onBatchNotify,
   onExport,
   batchUnlockLoading,
+  batchReturnLoading,
   batchNotifyLoading,
   departments,
 }) => {
@@ -195,6 +201,15 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
             已选择 {selectedInstanceIds.size} 项
           </span>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onBatchReturn}
+              disabled={batchReturnLoading}
+            >
+              <Undo2 data-icon="inline-start" />
+              {batchReturnLoading ? '退回中...' : '批量退回'}
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -360,6 +375,19 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
                   </TableCell>
                   <TableCell className="py-3 pr-4">
                     <div className="flex items-center gap-2">
+                      {record.status === 'self_review' && (
+                        <CanRole roles={['admin', 'hrd']}>
+                          <CanDo resource="publish_management" action="edit">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onReturn(record)}
+                            >
+                              退回
+                            </Button>
+                          </CanDo>
+                        </CanRole>
+                      )}
                       {[
                         'completed',
                         'pending_sign',

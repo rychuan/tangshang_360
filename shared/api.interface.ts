@@ -255,6 +255,9 @@ export interface BatchUnlockRequest {
 export interface BatchNotifyRequest {
   instanceIds: string[];
 }
+export interface BatchReturnRequest {
+  instanceIds: string[];
+}
 export interface BatchOperationResponse {
   success: boolean;
   successCount: number;

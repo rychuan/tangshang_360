@@ -13,6 +13,7 @@ import {
   deleteEmployeeSnapshot,
   batchUnlock,
   batchResendNotification,
+  batchReturn,
   getPeriodStatistics,
 } from '@/api/assessment-publish';
 import type {
@@ -61,6 +62,7 @@ const PublishManagementPage: React.FC = () => {
     new Set(),
   );
   const [batchNotifyLoading, setBatchNotifyLoading] = useState<boolean>(false);
+  const [batchReturnLoading, setBatchReturnLoading] = useState<boolean>(false);
 
   const [adjustOpen, setAdjustOpen] = useState<boolean>(false);
   const [adjustingEmployee, setAdjustingEmployee] =
@@ -369,6 +371,75 @@ const PublishManagementPage: React.FC = () => {
     }
   };
 
+  const handleReturn = async (inst: AssessmentInstanceItem): Promise<void> => {
+    setBatchReturnLoading(true);
+    try {
+      const result: BatchOperationResponse = await batchReturn({
+        instanceIds: [inst.id],
+      });
+      if (result.failedCount === 0) {
+        toast.success('退回成功');
+      } else {
+        toast.error('退回失败');
+      }
+      setSelectedInstanceIds(new Set());
+      fetchInstances();
+      fetchStatistics(period);
+      fetchEmployees(period, pendingDeptFilter, pendingTplFilter);
+    } catch (err: unknown) {
+      logger.error('return failed', err);
+      handleApiError(err);
+    } finally {
+      setBatchReturnLoading(false);
+    }
+  };
+
+  const handleBatchReturn = async (): Promise<void> => {
+    if (selectedInstanceIds.size === 0) {
+      toast.error('请选择要退回的绩效');
+      return;
+    }
+    const selectedInstances: AssessmentInstanceItem[] = instances.filter(
+      (inst: AssessmentInstanceItem) => selectedInstanceIds.has(inst.id),
+    );
+    const returnable: AssessmentInstanceItem[] = selectedInstances.filter(
+      (inst: AssessmentInstanceItem) => inst.status === 'self_review',
+    );
+    const notReturnableCount: number =
+      selectedInstances.length - returnable.length;
+    if (returnable.length === 0) {
+      toast.error('选中的绩效均不可退回（仅支持自评中状态）');
+      return;
+    }
+    if (notReturnableCount > 0) {
+      toast.info(`已自动过滤 ${notReturnableCount} 项不可退回的绩效`);
+    }
+    setBatchReturnLoading(true);
+    try {
+      const result: BatchOperationResponse = await batchReturn({
+        instanceIds: returnable.map((inst: AssessmentInstanceItem) => inst.id),
+      });
+      if (result.failedCount === 0) {
+        toast.success(`退回成功，共 ${result.successCount} 项`);
+      } else if (result.successCount > 0) {
+        toast.warning(
+          `退回完成：成功 ${result.successCount} 项，失败 ${result.failedCount} 项`,
+        );
+      } else {
+        toast.error(`退回失败，共 ${result.failedCount} 项`);
+      }
+      setSelectedInstanceIds(new Set());
+      fetchInstances();
+      fetchStatistics(period);
+      fetchEmployees(period, pendingDeptFilter, pendingTplFilter);
+    } catch (err: unknown) {
+      logger.error('batchReturn failed', err);
+      handleApiError(err);
+    } finally {
+      setBatchReturnLoading(false);
+    }
+  };
+
   const handleExport = (): void => {
     if (instances.length === 0) {
       toast.error('暂无数据可导出');
@@ -461,10 +532,13 @@ const PublishManagementPage: React.FC = () => {
           onSelectedInstancesChange={setSelectedInstanceIds}
           onUnlock={handleOpenSingleUnlock}
           onHistory={handleOpenHistory}
+          onReturn={handleReturn}
           onBatchUnlock={handleOpenBatchUnlock}
+          onBatchReturn={handleBatchReturn}
           onBatchNotify={handleBatchNotify}
           onExport={handleExport}
           batchUnlockLoading={unlockLoading}
+          batchReturnLoading={batchReturnLoading}
           batchNotifyLoading={batchNotifyLoading}
           departments={departments}
         />

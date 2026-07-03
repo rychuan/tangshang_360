@@ -19,6 +19,7 @@ import type {
   UnlockRequest,
   BatchUnlockRequest,
   BatchNotifyRequest,
+  BatchReturnRequest,
   EmployeeSnapshotResponse,
 } from '@shared/api.interface';
 
@@ -81,6 +82,15 @@ export class AssessmentPublishController {
   async batchNotify(@Req() req: Request, @Body() body: BatchNotifyRequest) {
     const { userId } = req.userContext;
     return this.service.batchResendNotification(body.instanceIds, userId);
+  }
+
+  @CanRole(['admin', 'hrd'])
+  @RequirePermission('publish_management', 'edit')
+  @NeedLogin()
+  @Post('assessment-instances/batch-return')
+  async batchReturn(@Req() req: Request, @Body() body: BatchReturnRequest) {
+    const { userId } = req.userContext;
+    return this.service.batchReturn(body.instanceIds, userId);
   }
 
   @CanRole(['admin', 'hrd'])

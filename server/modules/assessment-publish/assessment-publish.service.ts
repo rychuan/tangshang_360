@@ -866,6 +866,87 @@ export class AssessmentPublishService {
     };
   }
 
+  async batchReturn(
+    instanceIds: string[],
+    userId: string,
+  ): Promise<BatchOperationResponse> {
+    this.logger.log(
+      `batchReturn instanceIds=${JSON.stringify(instanceIds)} userId=${userId}`,
+    );
+
+    let successCount: number = 0;
+    let failedCount: number = 0;
+
+    for (const instanceId of instanceIds) {
+      try {
+        validateUUID(instanceId, '实例ID');
+
+        await this.db.transaction(async (tx: any) => {
+          const instanceRows = await tx
+            .select()
+            .from(assessmentInstance)
+            .where(eq(assessmentInstance.id, instanceId))
+            .for('update')
+            .limit(1);
+
+          if (instanceRows.length === 0) {
+            throw new NotFoundException(`实例 ${instanceId} 不存在`);
+          }
+
+          const instance = instanceRows[0];
+
+          // 仅允许退回 self_review 状态的实例（尚未开始评分）
+          if (instance.status !== 'self_review') {
+            throw new BadRequestException(
+              `实例 ${instanceId} 状态为 ${instance.status}，仅支持退回自评中状态的绩效`,
+            );
+          }
+
+          // 删除实例级指标快照
+          await tx
+            .delete(assessmentIndicatorSnapshot)
+            .where(eq(assessmentIndicatorSnapshot.instanceId, instanceId));
+
+          // 删除评分记录（自评阶段只有草稿）
+          await tx
+            .delete(ratingRecord)
+            .where(eq(ratingRecord.instanceId, instanceId));
+
+          // 删除实例
+          await tx
+            .delete(assessmentInstance)
+            .where(eq(assessmentInstance.id, instanceId));
+
+          // 记录审计日志
+          await tx.insert(auditLog).values({
+            operatorId: userId,
+            action: 'return',
+            targetType: 'assessment_instance',
+            targetId: instanceId,
+            changes: {
+              employeeId: instance.employeeId,
+              period: instance.period,
+              fromStatus: instance.status,
+            },
+          });
+        });
+
+        successCount++;
+      } catch (err) {
+        this.logger.warn(
+          `batchReturn: failed for instance ${instanceId}: ${err}`,
+        );
+        failedCount++;
+      }
+    }
+
+    return {
+      success: failedCount === 0,
+      successCount,
+      failedCount,
+    };
+  }
+
   async batchResendNotification(
     instanceIds: string[],
     userId: string,

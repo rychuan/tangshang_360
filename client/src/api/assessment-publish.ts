@@ -12,6 +12,7 @@ import type {
   EmployeeSnapshotResponse,
   BatchUnlockRequest,
   BatchNotifyRequest,
+  BatchReturnRequest,
   BatchOperationResponse,
   UnlockHistoryItem,
 } from '@shared/api.interface';
@@ -35,9 +36,7 @@ export async function listEmployees(
   return res.data;
 }
 
-export async function publish(
-  data: PublishRequest,
-): Promise<PublishResponse> {
+export async function publish(data: PublishRequest): Promise<PublishResponse> {
   const res = await axiosForBackend({
     url: '/api/publish',
     method: 'POST',
@@ -46,9 +45,14 @@ export async function publish(
   return res.data;
 }
 
-export async function listInstances(
-  params: { period: string; page: number; pageSize: number; status?: string; department?: string; grade?: string },
-): Promise<AssessmentInstanceListResponse> {
+export async function listInstances(params: {
+  period: string;
+  page: number;
+  pageSize: number;
+  status?: string;
+  department?: string;
+  grade?: string;
+}): Promise<AssessmentInstanceListResponse> {
   const query = new URLSearchParams({
     period: params.period,
     page: String(params.page),
@@ -150,6 +154,17 @@ export async function batchResendNotification(
 ): Promise<BatchOperationResponse> {
   const res = await axiosForBackend({
     url: '/api/assessment-instances/batch-notify',
+    method: 'POST',
+    data,
+  });
+  return res.data;
+}
+
+export async function batchReturn(
+  data: BatchReturnRequest,
+): Promise<BatchOperationResponse> {
+  const res = await axiosForBackend({
+    url: '/api/assessment-instances/batch-return',
     method: 'POST',
     data,
   });
