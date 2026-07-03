@@ -173,7 +173,7 @@ export function useAssessmentDetail(
             field === 'score'
               ? value === ''
                 ? undefined
-                : Math.min(Number(value) || 0, weight ?? 100)
+                : Number(value) || 0
               : value,
         },
       }));

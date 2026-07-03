@@ -38,12 +38,12 @@ const gradeSchema = z
       .number()
       .int('最低分必须为整数')
       .min(0, '最低分不能小于0')
-      .max(100, '最低分不能大于100'),
+      .max(150, '最低分不能大于150'),
     maxScore: z.coerce
       .number()
       .int('最高分必须为整数')
       .min(1, '最高分不能小于1')
-      .max(101, '最高分不能大于101'),
+      .max(151, '最高分不能大于151'),
     sortOrder: z.coerce
       .number()
       .int('排序值必须为整数')
@@ -60,7 +60,7 @@ type GradeFormData = z.infer<typeof gradeSchema>;
 const EMPTY_DEFAULTS: GradeFormData = {
   name: '',
   minScore: 0,
-  maxScore: 100,
+  maxScore: 150,
   sortOrder: 0,
   isActive: true,
 };
@@ -150,7 +150,7 @@ export function GradeFormDialog({
                   <FormItem>
                     <FormLabel>最低分</FormLabel>
                     <FormControl>
-                      <Input type="number" min={0} max={100} {...field} />
+                      <Input type="number" min={0} max={150} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -163,7 +163,7 @@ export function GradeFormDialog({
                   <FormItem>
                     <FormLabel>最高分</FormLabel>
                     <FormControl>
-                      <Input type="number" min={1} max={101} {...field} />
+                      <Input type="number" min={1} max={151} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

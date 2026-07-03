@@ -39,10 +39,10 @@ export function checkCoverage(grades: PerformanceGradeItem[]): CoverageResult {
       };
     }
   }
-  if (active[active.length - 1].maxScore < 100) {
-    return { covered: false, message: '最高等级的截止分应至少为100' };
+  if (active[active.length - 1].maxScore < 150) {
+    return { covered: false, message: '最高等级的截止分应至少为150' };
   }
-  return { covered: true, message: '当前配置已完整覆盖0-100分区间' };
+  return { covered: true, message: '当前配置已完整覆盖0-150分区间' };
 }
 
 export function useGradeConfig() {

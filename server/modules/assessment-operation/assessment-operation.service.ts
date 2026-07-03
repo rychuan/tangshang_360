@@ -272,11 +272,6 @@ export class AssessmentOperationService {
       if (rating.score < 0 || !Number.isFinite(rating.score)) {
         throw new BadRequestException('评分不能为负数或非法数值');
       }
-      if (rating.score > Number(snapshot.weight)) {
-        throw new BadRequestException(
-          `评分不能超过指标权重分 ${snapshot.weight}`,
-        );
-      }
     }
 
     // 非草稿提交时校验所有指标均已评分，防止漏评静默计 0 分
@@ -491,11 +486,6 @@ export class AssessmentOperationService {
       }
       if (rating.score < 0 || !Number.isFinite(rating.score)) {
         throw new BadRequestException('评分不能为负数或非法数值');
-      }
-      if (rating.score > Number(snapshot.weight)) {
-        throw new BadRequestException(
-          `评分不能超过指标权重分 ${snapshot.weight}`,
-        );
       }
     }
 
