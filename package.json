@@ -208,6 +208,7 @@
   "version": "2.2.6",
   "actionPlugins": {
     "@official-plugins/send-feishu-message": "1.0.29",
-    "@official-plugins/feishu-bitable": "1.0.22"
+    "@official-plugins/feishu-bitable": "1.0.22",
+    "@official-plugins/feishu-approval": "0.0.4"
   }
 }
