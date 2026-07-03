@@ -9,7 +9,6 @@ import {
   assessmentInstance,
   employee,
   auditLog,
-  bitableSyncLog,
 } from '@server/database/schema';
 import type { BitablePluginSyncResponse } from '@shared/api.interface';
 
@@ -67,13 +66,13 @@ export class PerformanceSyncService {
     let lastSyncAt: Date | null = null;
     if (syncDays <= 0) {
       const lastLog = await this.db
-        .select({ startedAt: bitableSyncLog.startedAt })
-        .from(bitableSyncLog)
-        .where(sql`target_type = 'bitable_sync_performance'`)
-        .orderBy(desc(bitableSyncLog.startedAt))
+        .select({ createdAt: auditLog.createdAt })
+        .from(auditLog)
+        .where(sql`${auditLog.targetType} = 'bitable_sync_performance'`)
+        .orderBy(desc(auditLog.createdAt))
         .limit(1);
-      if (lastLog.length > 0 && lastLog[0].startedAt) {
-        lastSyncAt = lastLog[0].startedAt as Date;
+      if (lastLog.length > 0 && lastLog[0].createdAt) {
+        lastSyncAt = lastLog[0].createdAt as Date;
       }
     } else {
       lastSyncAt = new Date(Date.now() - syncDays * 24 * 60 * 60 * 1000);
