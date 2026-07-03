@@ -6,9 +6,7 @@ import type {
   SignRequest,
 } from '@shared/api.interface';
 
-export async function detail(
-  id: string,
-): Promise<AssessmentInstanceDetail> {
+export async function detail(id: string): Promise<AssessmentInstanceDetail> {
   const res = await axiosForBackend({
     url: `/api/assessment-instances/${id}`,
     method: 'GET',

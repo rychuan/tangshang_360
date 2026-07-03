@@ -193,7 +193,13 @@ export class EmployeeSnapshotService {
     tx?: PostgresJsDatabase,
   ): Promise<{ success: boolean }> {
     if (tx) {
-      return this._adjustSnapshot(employeeId, templateId, indicators, userId, tx);
+      return this._adjustSnapshot(
+        employeeId,
+        templateId,
+        indicators,
+        userId,
+        tx,
+      );
     }
     return this.db.transaction((innerTx: any) =>
       this._adjustSnapshot(employeeId, templateId, indicators, userId, innerTx),

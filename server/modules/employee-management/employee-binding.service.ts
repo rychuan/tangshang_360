@@ -95,61 +95,68 @@ export class EmployeeBindingService {
     const oldTemplateId: string | null =
       existing.length > 0 ? existing[0].templateId : null;
 
-    return this.db.transaction(async (tx: any) => {
-      if (existing.length > 0) {
-        await tx
-          .update(employeeBinding)
-          .set({ status: 'inactive' })
-          .where(eq(employeeBinding.employeeId, employeeId));
-        this.logger.log(
-          `Deactivated existing bindings for employee: ${employeeId}`,
-        );
-      }
-
-      const [newBinding] = await tx
-        .insert(employeeBinding)
-        .values({
-          employeeId,
-          templateId,
-          effectiveFrom,
-          status: 'active',
-        })
-        .returning();
-
-      if (!newBinding) {
-        throw new InternalServerErrorException('创建绑定记录失败');
-      }
-
-      await tx.insert(auditLog).values({
-        operatorId: userId,
-        action: 'bind',
-        targetType: 'employee_binding',
-        targetId: String(newBinding.id),
-        changes: {
-          after: { templateId, effectiveFrom },
-        },
-        reason: '员工模板绑定',
-      });
-
-      return { bindingId: newBinding.id };
-    }).then(async (result) => {
-      // 快照操作在事务提交后执行（避免事务过长），
-      // 快照失败不回滚绑定（绑定是核心数据，快照可重生成）
-      if (oldTemplateId !== templateId) {
-        await this.employeeSnapshotService.deleteSnapshot(employeeId);
-        await this.employeeSnapshotService.generateFromTemplate(
-          employeeId, templateId, userId,
-        );
-      } else {
-        const hasSnap = await this.employeeSnapshotService.hasSnapshot(employeeId);
-        if (!hasSnap) {
-          await this.employeeSnapshotService.generateFromTemplate(
-            employeeId, templateId, userId,
+    return this.db
+      .transaction(async (tx: any) => {
+        if (existing.length > 0) {
+          await tx
+            .update(employeeBinding)
+            .set({ status: 'inactive' })
+            .where(eq(employeeBinding.employeeId, employeeId));
+          this.logger.log(
+            `Deactivated existing bindings for employee: ${employeeId}`,
           );
         }
-      }
-      return result;
-    });
+
+        const [newBinding] = await tx
+          .insert(employeeBinding)
+          .values({
+            employeeId,
+            templateId,
+            effectiveFrom,
+            status: 'active',
+          })
+          .returning();
+
+        if (!newBinding) {
+          throw new InternalServerErrorException('创建绑定记录失败');
+        }
+
+        await tx.insert(auditLog).values({
+          operatorId: userId,
+          action: 'bind',
+          targetType: 'employee_binding',
+          targetId: String(newBinding.id),
+          changes: {
+            after: { templateId, effectiveFrom },
+          },
+          reason: '员工模板绑定',
+        });
+
+        return { bindingId: newBinding.id };
+      })
+      .then(async (result) => {
+        // 快照操作在事务提交后执行（避免事务过长），
+        // 快照失败不回滚绑定（绑定是核心数据，快照可重生成）
+        if (oldTemplateId !== templateId) {
+          await this.employeeSnapshotService.deleteSnapshot(employeeId);
+          await this.employeeSnapshotService.generateFromTemplate(
+            employeeId,
+            templateId,
+            userId,
+          );
+        } else {
+          const hasSnap =
+            await this.employeeSnapshotService.hasSnapshot(employeeId);
+          if (!hasSnap) {
+            await this.employeeSnapshotService.generateFromTemplate(
+              employeeId,
+              templateId,
+              userId,
+            );
+          }
+        }
+        return result;
+      });
   }
 
   /**

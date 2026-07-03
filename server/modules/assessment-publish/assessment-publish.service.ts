@@ -283,7 +283,11 @@ export class AssessmentPublishService {
         const hasSnap: boolean =
           await this.employeeSnapshotService.hasSnapshot(empId);
         if (hasSnap) {
-          await this.employeeSnapshotService.copyToInstance(empId, instanceId, tx);
+          await this.employeeSnapshotService.copyToInstance(
+            empId,
+            instanceId,
+            tx,
+          );
         } else {
           await this.employeeSnapshotService.generateFromTemplate(
             empId,
@@ -291,7 +295,11 @@ export class AssessmentPublishService {
             userId,
             tx,
           );
-          await this.employeeSnapshotService.copyToInstance(empId, instanceId, tx);
+          await this.employeeSnapshotService.copyToInstance(
+            empId,
+            instanceId,
+            tx,
+          );
         }
 
         await tx.insert(auditLog).values({
