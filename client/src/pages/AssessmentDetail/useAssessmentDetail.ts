@@ -78,9 +78,9 @@ export function useAssessmentDetail(
       }
       setRatings(initial);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '加载失败';
-      logger.error('Failed to fetch detail:', msg);
-      setError(msg);
+      logger.error('Failed to fetch detail:', err);
+      handleApiError(err);
+      setError('加载失败');
     } finally {
       setLoading(false);
     }

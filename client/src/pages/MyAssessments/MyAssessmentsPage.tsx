@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCurrentUserProfile } from '@lark-apaas/client-toolkit/hooks/useCurrentUserProfile';
 import { logger } from '@lark-apaas/client-toolkit/logger';
+import { handleApiError } from '@client/src/utils/api-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,12 +12,7 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
-import {
-  Eye,
-  ChevronLeft,
-  ChevronRight,
-  AreaChartIcon,
-} from 'lucide-react';
+import { Eye, ChevronLeft, ChevronRight, AreaChartIcon } from 'lucide-react';
 import { PageHeader } from '@/components/business-ui/page-header';
 import { StatusBadge, GradeBadge } from '@/components/business-ui/status-badge';
 import { PageTable } from '@/components/business-ui/page-table';
@@ -128,11 +124,11 @@ const MyAssessmentsPage: React.FC = () => {
       setRecords(result?.items ?? []);
       setTotal(result.total);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '加载绩效记录失败';
-      logger.error(`Failed to fetch my assessment records: ${msg}`);
+      logger.error('Failed to fetch my assessment records:', err);
+      handleApiError(err);
       setRecords([]);
       setTotal(0);
-      setRecordsError(msg);
+      setRecordsError('加载绩效记录失败');
     } finally {
       setLoading(false);
     }
@@ -145,10 +141,10 @@ const MyAssessmentsPage: React.FC = () => {
       const result = await myAssessmentApi.getTrend(yearFilter);
       setTrendItems(result?.items ?? []);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '加载趋势数据失败';
-      logger.error(`Failed to fetch my assessment trend: ${msg}`);
+      logger.error('Failed to fetch my assessment trend:', err);
+      handleApiError(err);
       setTrendItems([]);
-      setTrendError(msg);
+      setTrendError('加载趋势数据失败');
     } finally {
       setTrendLoading(false);
     }

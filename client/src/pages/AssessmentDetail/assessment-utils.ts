@@ -20,8 +20,8 @@ export function buildRatingPayload(ratings: RatingsState) {
   return {
     ratings: Object.entries(ratings).map(([indicatorSnapshotId, r]) => ({
       indicatorSnapshotId,
-      score: r.score ?? 0,
-      comment: r.comment || undefined,
+      score: r?.score ?? 0,
+      comment: r?.comment || undefined,
     })),
   };
 }
