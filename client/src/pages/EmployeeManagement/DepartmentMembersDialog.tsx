@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { employeeManagement } from '@/api';
 import type { EmployeeItem } from '@shared/api.interface';
+import { logger } from '@lark-apaas/client-toolkit/logger';
+import { handleApiError } from '@client/src/utils/api-error';
 import {
   Dialog,
   DialogContent,
@@ -45,7 +47,9 @@ const DepartmentMembersDialog: React.FC<DepartmentMembersDialogProps> = ({
       });
       setMembers(res?.items ?? []);
       setTotal(res.total);
-    } catch {
+    } catch (err: unknown) {
+      logger.error('Failed to fetch department members:', err);
+      handleApiError(err);
       setMembers([]);
       setTotal(0);
     } finally {

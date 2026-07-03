@@ -10,6 +10,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
+import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { BitableConnectionService } from './bitable-connection.service';
 import type {
   BitableConnectionListResponse,
@@ -26,6 +27,7 @@ export class BitableConnectionController {
   constructor(private readonly service: BitableConnectionService) {}
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('employees', 'view')
   @Get()
   async list(
     @Query('page') page: string,
@@ -38,6 +40,7 @@ export class BitableConnectionController {
   }
 
   @CanRole(['admin'])
+  @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Post()
   async create(
@@ -49,6 +52,7 @@ export class BitableConnectionController {
   }
 
   @CanRole(['admin'])
+  @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Put(':id')
   async update(
@@ -61,6 +65,7 @@ export class BitableConnectionController {
   }
 
   @CanRole(['admin'])
+  @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Delete(':id')
   async remove(
@@ -72,12 +77,14 @@ export class BitableConnectionController {
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('employees', 'view')
   @Get(':id')
   async detail(@Param('id') id: string): Promise<BitableConnectionItem> {
     return this.service.detail(id);
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Post(':id/import')
   async importEmployees(
@@ -89,6 +96,7 @@ export class BitableConnectionController {
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Post(':id/export')
   async exportEmployees(
@@ -100,6 +108,7 @@ export class BitableConnectionController {
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('employees', 'view')
   @Get(':id/logs')
   async getLogs(
     @Param('id') id: string,
@@ -113,6 +122,7 @@ export class BitableConnectionController {
   }
 
   @CanRole(['admin', 'hrd'])
+  @RequirePermission('employees', 'view')
   @Get(':id/logs/:logId')
   async getLogDetail(
     @Param('id') id: string,
