@@ -207,9 +207,7 @@ export class PerformanceGradeService {
 
   private validateGradeRules(rules: GradeRuleForValidation[]): void {
     if (rules.length === 0) {
-      throw new BadRequestException(
-        '至少需要一条启用的等级规则以覆盖0-100区间',
-      );
+      throw new BadRequestException('至少需要一条启用的等级规则');
     }
 
     const errors: string[] = [];
@@ -235,23 +233,6 @@ export class PerformanceGradeService {
           `等级「${curr.name}」(区间[${curr.minScore},${curr.maxScore}])与等级「${next.name}」(区间[${next.minScore},${next.maxScore}])分数区间重叠`,
         );
       }
-      if (curr.maxScore + 1 < next.minScore) {
-        errors.push(
-          `等级「${curr.name}」(最高分${curr.maxScore})与等级「${next.name}」(最低分${next.minScore})之间存在未覆盖的分数区间`,
-        );
-      }
-    }
-
-    if (sorted[0].minScore !== 0) {
-      errors.push(
-        `最低等级的最低分应为0，当前为${sorted[0].minScore}，未完整覆盖0-100区间`,
-      );
-    }
-
-    if (sorted[sorted.length - 1].maxScore < 100) {
-      errors.push(
-        `最高等级的最高分应至少为100，当前为${sorted[sorted.length - 1].maxScore}，未完整覆盖0-100区间`,
-      );
     }
 
     if (errors.length > 0) {
