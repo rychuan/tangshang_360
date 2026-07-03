@@ -14,6 +14,7 @@ import {
   calculatePreviewScore,
   matchGradeLocally,
 } from './assessment-utils';
+import { handleApiError } from '@client/src/utils/api-error';
 
 const GRADE_STYLE_TIERS = [
   'bg-destructive/10 text-destructive',
@@ -190,9 +191,8 @@ export function useAssessmentDetail(
       }
       toast.success('草稿已保存');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '保存失败';
-      logger.error('Save draft failed:', msg);
-      toast.error(msg);
+      logger.error('Save draft failed:', err);
+      handleApiError(err);
     } finally {
       setSubmitting(false);
     }
@@ -241,9 +241,8 @@ export function useAssessmentDetail(
       }
       await fetchDetail();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '提交失败';
-      logger.error('Submit failed:', msg);
-      toast.error(msg);
+      logger.error('Submit failed:', err);
+      handleApiError(err);
     } finally {
       setSubmitting(false);
     }
