@@ -19,6 +19,8 @@ import {
 @Injectable()
 export class RoleManagerService {
   private readonly logger = new Logger(RoleManagerService.name);
+  private readonly roleCache = new Map<string, { roles: string[]; expiresAt: number }>();
+  private readonly ROLE_CACHE_TTL_MS = 30_000;
 
   constructor(
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
@@ -26,6 +28,9 @@ export class RoleManagerService {
   ) {}
 
   async getUserRoles(userId: string): Promise<string[]> {
+    const cached = this.roleCache.get(userId);
+    if (cached && Date.now() < cached.expiresAt) return cached.roles;
+
     const roles: string[] = [];
     try {
       const allRoles = await this.authzSDK.roles.list();
@@ -66,6 +71,7 @@ export class RoleManagerService {
         `Failed to get user roles: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
+    this.roleCache.set(userId, { roles, expiresAt: Date.now() + this.ROLE_CACHE_TTL_MS });
     return roles;
   }
   /**
