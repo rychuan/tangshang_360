@@ -25,9 +25,6 @@ export async function submitSelfRating(
     method: 'POST',
     data,
   });
-  if (res.status === 403) {
-    throw new Error('您没有权限执行此操作');
-  }
   return res.data;
 }
 
@@ -40,9 +37,6 @@ export async function submitSupervisorRating(
     method: 'POST',
     data,
   });
-  if (res.status === 403) {
-    throw new Error('您没有权限执行此操作');
-  }
   return res.data;
 }
 
@@ -55,8 +49,5 @@ export async function sign(
     method: 'POST',
     data,
   });
-  if (res.status === 403) {
-    throw new Error('您没有权限执行此操作');
-  }
   return res.data;
 }

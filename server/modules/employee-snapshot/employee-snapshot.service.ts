@@ -192,7 +192,21 @@ export class EmployeeSnapshotService {
     userId: string,
     tx?: PostgresJsDatabase,
   ): Promise<{ success: boolean }> {
-    const db = tx ?? this.db;
+    if (tx) {
+      return this._adjustSnapshot(employeeId, templateId, indicators, userId, tx);
+    }
+    return this.db.transaction((innerTx: any) =>
+      this._adjustSnapshot(employeeId, templateId, indicators, userId, innerTx),
+    );
+  }
+
+  private async _adjustSnapshot(
+    employeeId: string,
+    templateId: string,
+    indicators: AdjustIndicatorInput[],
+    userId: string,
+    db: any,
+  ): Promise<{ success: boolean }> {
     this.logger.log(
       `adjustSnapshot employeeId=${employeeId} templateId=${templateId}`,
     );

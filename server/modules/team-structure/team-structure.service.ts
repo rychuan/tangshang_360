@@ -140,44 +140,45 @@ export class TeamStructureService {
       return { success: true, deactivatedCount: 0 };
     }
 
-    const idParams = sql.join(
-      employeeIds.map((id) => sql`${id}`),
-      sql`, `,
-    );
+    return this.db.transaction(async (tx: any) => {
+      const idParams = sql.join(
+        employeeIds.map((id) => sql`${id}`),
+        sql`, `,
+      );
 
-    // 批量更新仍需 raw SQL（Drizzle 对批量 IN 条件支持有限）
-    await this.db.execute(sql`
-      UPDATE ${employee}
-      SET status = 'inactive'
-      WHERE (id).user_id IN (${idParams}) AND deleted_at IS NULL
-    `);
+      await tx.execute(sql`
+        UPDATE ${employee}
+        SET status = 'inactive'
+        WHERE (id).user_id IN (${idParams}) AND deleted_at IS NULL
+      `);
 
-    await this.db.execute(sql`
-      UPDATE ${employeeBinding}
-      SET status = 'inactive'
-      WHERE (employee_id).user_id IN (${idParams})
-        AND status = 'active'
-    `);
+      await tx.execute(sql`
+        UPDATE ${employeeBinding}
+        SET status = 'inactive'
+        WHERE (employee_id).user_id IN (${idParams})
+          AND status = 'active'
+      `);
 
-    for (const eId of employeeIds) {
-      await this.db.insert(auditLog).values({
-        operatorId,
-        action: 'delete_employee',
-        targetType: 'employee',
-        targetId: eId,
-        changes: {
-          before: { status: 'active' },
-          after: { status: 'inactive' },
-        },
-        reason: '批量删除员工',
-      });
-    }
+      for (const eId of employeeIds) {
+        await tx.insert(auditLog).values({
+          operatorId,
+          action: 'delete_employee',
+          targetType: 'employee',
+          targetId: eId,
+          changes: {
+            before: { status: 'active' },
+            after: { status: 'inactive' },
+          },
+          reason: '批量删除员工',
+        });
+      }
 
-    this.logger.log(
-      `Batch deactivated ${employeeIds.length} employees: ${employeeIds.join(', ')}`,
-    );
+      this.logger.log(
+        `Batch deactivated ${employeeIds.length} employees: ${employeeIds.join(', ')}`,
+      );
 
-    return { success: true, deactivatedCount: employeeIds.length };
+      return { success: true, deactivatedCount: employeeIds.length };
+    });
   }
 
   /**

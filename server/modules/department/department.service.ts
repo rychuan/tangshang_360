@@ -206,40 +206,42 @@ export class DepartmentService {
     const oldHeadId = oldDept.oldHeadId || null;
     const newHeadId = body.headId || null;
 
-    await this.db
-      .update(department)
-      .set({
-        name: body.name,
-        parentId: body.parentId || null,
-        headId: newHeadId,
-        sortOrder: body.sortOrder ?? 0,
-      })
-      .where(eq(department.id, id));
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(department)
+        .set({
+          name: body.name,
+          parentId: body.parentId || null,
+          headId: newHeadId,
+          sortOrder: body.sortOrder ?? 0,
+        })
+        .where(eq(department.id, id));
 
-    await this.db.insert(auditLog).values({
-      operatorId: userId,
-      action: 'update_department',
-      targetType: 'department',
-      targetId: id,
-      changes: { after: body },
-    });
+      await tx.insert(auditLog).values({
+        operatorId: userId,
+        action: 'update_department',
+        targetType: 'department',
+        targetId: id,
+        changes: { after: body },
+      });
 
-    if (newHeadId !== oldHeadId && newHeadId) {
-      const deptName = oldDept.oldName;
-      await this.db
-        .update(employee)
-        .set({ supervisorId: newHeadId })
-        .where(
-          and(
-            eq(employee.department, deptName),
-            isNull(employee.deletedAt),
-            sql`(((${employee.supervisorId}) IS NULL) OR ((${employee.supervisorId}).user_id = ${oldHeadId}))`,
-          ),
+      if (newHeadId !== oldHeadId && newHeadId) {
+        const deptName = oldDept.oldName;
+        await tx
+          .update(employee)
+          .set({ supervisorId: newHeadId })
+          .where(
+            and(
+              eq(employee.department, deptName),
+              isNull(employee.deletedAt),
+              sql`(((${employee.supervisorId}) IS NULL) OR ((${employee.supervisorId}).user_id = ${oldHeadId}))`,
+            ),
+          );
+        this.logger.log(
+          `Department "${deptName}" head changed, synced employees supervisor to new head`,
         );
-      this.logger.log(
-        `Department "${deptName}" head changed, synced employees supervisor to new head`,
-      );
-    }
+      }
+    });
 
     return { success: true };
   }
