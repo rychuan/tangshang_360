@@ -140,7 +140,12 @@ export class AssessmentOperationService {
       userId,
     );
 
-    if (!access.isEmployee && !access.isSupervisor && !access.isDeptHead && !access.isAdmin) {
+    if (
+      !access.isEmployee &&
+      !access.isSupervisor &&
+      !access.isDeptHead &&
+      !access.isAdmin
+    ) {
       throw new ForbiddenException('无权查看该考核记录');
     }
 

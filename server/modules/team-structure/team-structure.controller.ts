@@ -63,7 +63,10 @@ export class TeamStructureController {
   @RequirePermission('organization', 'edit')
   @NeedLogin()
   @Patch('employees/deactivate')
-  async batchDeactivate(@Req() req: Request, @Body() body: BatchDeactivateRequest) {
+  async batchDeactivate(
+    @Req() req: Request,
+    @Body() body: BatchDeactivateRequest,
+  ) {
     const { userId }: { userId: string } = req.userContext;
     return this.service.batchDeactivate(body.employeeIds, userId);
   }

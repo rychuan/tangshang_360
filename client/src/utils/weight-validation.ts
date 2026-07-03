@@ -27,10 +27,7 @@ export interface IndicatorWeightsValidation {
 export function validateTotalWeight(
   dimensions: Array<{ weight?: number }>,
 ): TotalWeightValidation {
-  const totalWeight = dimensions.reduce(
-    (sum, d) => sum + (d.weight ?? 0),
-    0,
-  );
+  const totalWeight = dimensions.reduce((sum, d) => sum + (d.weight ?? 0), 0);
   return {
     totalWeight,
     isValid: Math.abs(totalWeight - 100) < 0.01,
