@@ -15,8 +15,6 @@ import * as crypto from 'crypto';
 import {
   bitableConnection,
   bitableSyncLog,
-} from '@server/database/custom/bitable-connection.schema';
-import {
   employee,
   assessmentTemplate,
   department,
@@ -582,23 +580,25 @@ export class BitableConnectionService {
 
           if (existing.length > 0) {
             // 更新已有员工
-            await this.db
-              .update(employee)
-              .set({
-                name: row.name!,
-                position: row.position!,
-                department: row.department || existing[0].department,
-                title: row.title || existing[0].title,
-                role: row.role || existing[0].role,
-                phone: row.phone || existing[0].phone,
-                hireDate: row.hireDate
-                  ? new Date(row.hireDate)
-                  : existing[0].hireDate,
-                status:
-                  (row.status as 'active' | 'inactive') || existing[0].status,
-                supervisorId: row.supervisorId || existing[0].supervisorId,
-              })
-              .where(eq(employee.id, existing[0].id));
+            await this.db.transaction(async (tx) => {
+              await tx
+                .update(employee)
+                .set({
+                  name: row.name!,
+                  position: row.position!,
+                  department: row.department || existing[0].department,
+                  title: row.title || existing[0].title,
+                  role: row.role || existing[0].role,
+                  phone: row.phone || existing[0].phone,
+                  hireDate: row.hireDate
+                    ? new Date(row.hireDate)
+                    : existing[0].hireDate,
+                  status:
+                    (row.status as 'active' | 'inactive') || existing[0].status,
+                  supervisorId: row.supervisorId || existing[0].supervisorId,
+                })
+                .where(eq(employee.id, existing[0].id));
+            });
             updatedCount++;
             details.push({
               row: i + 1,
@@ -646,10 +646,12 @@ export class BitableConnectionService {
               bitableConnectionId: connectionId,
             };
 
-            const [inserted] = await this.db
-              .insert(employee)
-              .values(values as any)
-              .returning({ id: employee.id });
+            const [inserted] = await this.db.transaction(async (tx) => {
+              return tx
+                .insert(employee)
+                .values(values as any)
+                .returning({ id: employee.id });
+            });
             createdCount++;
             details.push({
               row: i + 1,

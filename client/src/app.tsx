@@ -17,6 +17,7 @@ import EmployeeDetailPage from './pages/EmployeeManagement/EmployeeDetailPage';
 import PermissionPage from './pages/EmployeeManagement/PermissionPage';
 import GradeConfigPage from './pages/GradeConfig/GradeConfigPage';
 import DictionaryConfigPage from './pages/DictionaryConfig/DictionaryConfigPage';
+import HomePage from './pages/HomePage/HomePage';
 
 const ALL_ROLES = ['admin', 'hrd', 'dept_head', 'supervisor', 'employee'];
 const MANAGER_ROLES = ['admin', 'hrd', 'dept_head', 'supervisor'];
@@ -54,6 +55,14 @@ const RoutesComponent = () => {
         <Routes>
           <Route element={<Layout />}>
             <Route index element={<Navigate to="/my-assessments" replace />} />
+            <Route
+              path="dashboard"
+              element={
+                <ProtectedRoute roles={ALL_ROLES}>
+                  <HomePage />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="template-management"
               element={

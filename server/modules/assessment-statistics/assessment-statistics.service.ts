@@ -9,6 +9,7 @@ import type {
   StatisticsRecordsResponse,
   StatisticsRecordItem,
   ChartsResponse,
+  ExportResult,
 } from '@shared/api.interface';
 
 export interface RecordsQuery {
@@ -34,13 +35,6 @@ export interface ExportQuery {
   positions?: string[];
   grades?: string[];
   employeeIds?: string[];
-}
-
-export interface ExportResult {
-  items: StatisticsRecordItem[];
-  total: number;
-  exportedCount: number;
-  isTruncated: boolean;
 }
 
 @Injectable()

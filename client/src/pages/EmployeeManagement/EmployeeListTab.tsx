@@ -28,7 +28,15 @@ import PositionMultiSelect from './PositionMultiSelect';
 import EmployeeTable from './EmployeeTable';
 import EmployeeFormDialog from './EmployeeFormDialog';
 import { BindDialog, UnbindDialog, HistoryDialog } from './EmployeeDialogs';
-import { Plus, Search, Link2, Filter, Users, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
+import {
+  Plus,
+  Search,
+  Link2,
+  Filter,
+  Users,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { handleApiError } from '@client/src/utils/api-error';
 import { importFromBitable, exportToBitable } from '@/api/bitable-sync';
@@ -51,7 +59,9 @@ import { useEmployeeDialogs } from './hooks/useEmployeeDialogs';
 const PAGE_SIZE = 20;
 
 const EmployeeListTab: React.FC = () => {
-  const [syncLoading, setSyncLoading] = React.useState<'' | 'import' | 'export'>('');
+  const [syncLoading, setSyncLoading] = React.useState<
+    '' | 'import' | 'export'
+  >('');
   const [filters, setters] = useEmployeeFilters();
   const {
     employees,
