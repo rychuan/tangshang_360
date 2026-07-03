@@ -122,9 +122,11 @@ export function useAssessmentDetail(
       `[Permission] status=${detail.status} isEmployee=${isEmployeeCandidate} canEditSupervisor=${canEditSupervisor} userId=${currentUserId} empId=${detail.employeeId} supId=${detail.supervisorId}`,
     );
   }
+  // 只有非员工本人（上级/部门负责人/管理员）可见上级签名按钮，
+  // 最终权限由后端校验（支持发布上级/当前上级/部门负责人/admin 四种身份）
   const canSignSupervisor: boolean =
     detail?.status === 'pending_sign' &&
-    (!isEmployeeCandidate || isSupervisorCandidate) &&
+    !isEmployeeCandidate &&
     !detail.supervisorSignName;
   const canSignSelf: boolean =
     detail?.status === 'pending_sign' && isEmployee && !detail.selfSignName;

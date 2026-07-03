@@ -278,9 +278,8 @@ export class AssessmentPublishService {
 
       const instanceId: string = instance.id;
 
-      const hasSnap: boolean = await this.employeeSnapshotService.hasSnapshot(
-        empId,
-      );
+      const hasSnap: boolean =
+        await this.employeeSnapshotService.hasSnapshot(empId);
       if (hasSnap) {
         await this.employeeSnapshotService.copyToInstance(empId, instanceId);
       } else {
@@ -485,21 +484,22 @@ export class AssessmentPublishService {
     const instance = instanceRows[0];
     const statusMap: Record<
       string,
-      { newStatus: string; resetRatingType?: string; clearSigns?: 'all' }
+      { newStatus: string; resetRatingTypes?: string[]; clearSigns?: 'all' }
     > = {
       completed: { newStatus: 'pending_sign', clearSigns: 'all' },
       pending_sign: {
         newStatus: 'supervisor_review',
-        resetRatingType: 'supervisor',
+        resetRatingTypes: ['supervisor'],
         clearSigns: 'all',
       },
       supervisor_review: {
         newStatus: 'self_review',
-        resetRatingType: 'self',
+        // 同时重置 self 和 supervisor 评分：解锁后自评需重填，上级也需基于新自评重新评分
+        resetRatingTypes: ['self', 'supervisor'],
       },
       self_review: {
         newStatus: 'self_review',
-        resetRatingType: 'self',
+        resetRatingTypes: ['self'],
       },
     };
 
@@ -508,20 +508,22 @@ export class AssessmentPublishService {
       throw new BadRequestException(`当前状态 ${instance.status} 不允许解锁`);
     }
 
-    // P1: 解锁时重置对应评分的草稿状态
-    if (mapped.resetRatingType) {
-      await this.db
-        .update(ratingRecord)
-        .set({
-          isDraft: true,
-          submittedAt: null,
-        })
-        .where(
-          and(
-            eq(ratingRecord.instanceId, instanceId),
-            eq(ratingRecord.ratingType, mapped.resetRatingType),
-          ),
-        );
+    // 解锁时重置对应评分的草稿状态（支持同时重置多种评分类型）
+    if (mapped.resetRatingTypes?.length) {
+      for (const ratingType of mapped.resetRatingTypes) {
+        await this.db
+          .update(ratingRecord)
+          .set({
+            isDraft: true,
+            submittedAt: null,
+          })
+          .where(
+            and(
+              eq(ratingRecord.instanceId, instanceId),
+              eq(ratingRecord.ratingType, ratingType),
+            ),
+          );
+      }
     }
 
     const updateData: {

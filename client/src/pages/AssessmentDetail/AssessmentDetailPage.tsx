@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useCurrentUserProfile } from '@lark-apaas/client-toolkit/hooks/useCurrentUserProfile';
 import { useBreadcrumb } from '@/components/business-ui/breadcrumb-context';
 import { logger } from '@lark-apaas/client-toolkit/logger';
+import { handleApiError } from '@client/src/utils/api-error';
 import { toast } from 'sonner';
 import {
   ArrowLeft,
@@ -108,9 +109,8 @@ const AssessmentDetailPage: React.FC = () => {
       setSignDialogOpen(false);
       await fetchDetail();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '签名失败';
-      logger.error('Sign failed:', msg);
-      toast.error(msg);
+      logger.error('Sign failed:', err);
+      handleApiError(err);
     } finally {
       setSigning(false);
     }
