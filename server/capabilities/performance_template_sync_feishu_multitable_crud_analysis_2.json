@@ -9,48 +9,46 @@
   "formValue": {
     "fields": [
       {
-        "writeable": true,
+        "bizType": "Text",
         "id": "fldaJHhNMv",
         "name": "ID",
         "type": 1,
-        "bizType": "Text",
-        "readable": true
+        "readable": true,
+        "writeable": true
       },
       {
-        "id": "fldnjrmVk7",
-        "name": "绩效周期",
         "type": 1,
         "bizType": "Text",
+        "id": "fldnjrmVk7",
+        "name": "绩效周期",
         "readable": true,
         "writeable": true
       },
       {
         "bizType": "User",
-        "readable": true,
-        "writeable": true,
         "id": "fldLVYGKGf",
         "name": "员工",
-        "type": 11
+        "type": 11,
+        "readable": true,
+        "writeable": true
       },
       {
         "bizType": "SingleSelect",
+        "readable": true,
+        "writeable": true,
         "enumValues": [
           "技术部",
           "市场部",
           "总经办",
           "尚书省（人力行政中心）"
         ],
-        "readable": true,
-        "writeable": true,
         "id": "fldjE5zLd3",
         "name": "部门",
         "type": 3
       },
       {
+        "readable": true,
         "writeable": true,
-        "id": "fld1cRQtBG",
-        "name": "岗位",
-        "type": 3,
         "bizType": "SingleSelect",
         "enumValues": [
           "开发工程师",
@@ -60,42 +58,40 @@
           "11",
           "技术总监"
         ],
-        "readable": true
+        "id": "fld1cRQtBG",
+        "name": "岗位",
+        "type": 3
       },
       {
+        "type": 11,
         "bizType": "User",
+        "id": "fld1Ds9HJB",
         "readable": true,
         "writeable": true,
-        "id": "fld1Ds9HJB",
-        "name": "上级",
-        "type": 11
+        "name": "上级"
       },
       {
-        "type": 2,
-        "bizType": "Number",
         "id": "fldi2eGlqi",
-        "name": "总分",
         "readable": true,
-        "writeable": true
+        "writeable": true,
+        "name": "总分",
+        "type": 2,
+        "bizType": "Number"
       },
       {
+        "writeable": true,
         "bizType": "SingleSelect",
         "enumValues": [
           "A",
           "S",
           "C"
         ],
-        "readable": true,
-        "writeable": true,
         "id": "fldj4MsAKn",
         "name": "等级",
-        "type": 3
+        "type": 3,
+        "readable": true
       },
       {
-        "id": "fldUQdZLc4",
-        "name": "状态",
-        "readable": true,
-        "writeable": true,
         "type": 3,
         "bizType": "SingleSelect",
         "enumValues": [
@@ -103,21 +99,25 @@
           "self_review",
           "supervisor_review",
           "pending_sign"
-        ]
+        ],
+        "readable": true,
+        "writeable": true,
+        "id": "fldUQdZLc4",
+        "name": "状态"
       },
       {
+        "bizType": "DateTime",
         "readable": true,
         "writeable": true,
         "id": "fld3dIUT31",
         "name": "完成时间",
-        "type": 1,
-        "bizType": "Text"
+        "type": 5
       }
     ],
     "appToken": "BqMLbBsfiahaaHs9L7Jc2bkFngh",
     "tableID": "tblaEUx3K6zoy0Jk"
   },
   "createdAt": 1782997894332,
-  "updatedAt": 1782999093031,
+  "updatedAt": 1783048914716,
   "createdBy": 7652289183771692275
 }

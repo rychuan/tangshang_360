@@ -146,16 +146,16 @@ export interface PerformanceTemplateSyncFeishuMultitableCrudAnalysisTwoBatchaddr
   /** [object Object] */
   records: {
     record: {
-      '部门': string;
-      '状态': string;
-      '完成时间': string;
-      ID: string;
-      '员工': number[];
       '岗位': string;
+      '完成时间': number;
+      '部门': string;
       '上级': number[];
       '总分': number;
       '等级': string;
+      '状态': string;
+      ID: string;
       '绩效周期': string;
+      '员工': number[];
     };
   }[];
 }
@@ -179,14 +179,14 @@ export interface PerformanceTemplateSyncFeishuMultitableCrudAnalysisTwoBatchupda
     record: {
       '部门': string;
       '岗位': string;
-      '状态': string;
-      '完成时间': string;
+      '等级': string;
       ID: string;
       '绩效周期': string;
+      '总分': number;
+      '状态': string;
+      '完成时间': number;
       '员工': number[];
       '上级': number[];
-      '总分': number;
-      '等级': string;
     };
   }[];
 }
@@ -205,56 +205,56 @@ export interface PerformanceTemplateSyncFeishuMultitableCrudAnalysisTwoBatchupda
 
 export interface PerformanceTemplateSyncFeishuMultitableCrudAnalysisTwoSearchrecordsInput {
   /** [object Object] */
-  pageToken?: string;
-  /** [object Object] */
-  pageSize?: number;
-  /** [object Object] */
   fieldNames?: string[];
   /** [object Object] */
   sort?: {
-    desc: boolean;
     fieldName: string;
+    desc: boolean;
   }[];
   /** [object Object] */
   filter?: {
     conjunction: string;
     conditions: {
-      value: string[];
       fieldName: string;
       operator: string;
+      value: string[];
     }[];
   };
+  /** [object Object] */
+  pageToken?: string;
+  /** [object Object] */
+  pageSize?: number;
 }
 
 /**
  * capabilityClient.load('performance_template_sync_feishu_multitable_crud_analysis_2').call<PerformanceTemplateSyncFeishuMultitableCrudAnalysisTwoSearchrecordsOutput>('searchRecords', input)
  * 直接返回此类型，无 .data 包装，直接解构使用：
- * const { hasMore, pageToken, total, ... } = result;
+ * const { records, hasMore, pageToken, ... } = result;
  */
 export interface PerformanceTemplateSyncFeishuMultitableCrudAnalysisTwoSearchrecordsOutput {
+  /** [object Object] */
+  records: {
+    record: {
+      '总分': number;
+      '员工': number[];
+      '岗位': string;
+      '部门': string;
+      '上级': number[];
+      '等级': string;
+      '状态': string;
+      '完成时间': number;
+      ID: {
+        text: string;
+      };
+      '绩效周期': unknown;
+    };
+    id: string;
+  }[];
   /** [object Object] */
   hasMore: boolean;
   /** [object Object] */
   pageToken?: string;
   /** [object Object] */
   total?: number;
-  /** [object Object] */
-  records: {
-    id: string;
-    record: {
-      '上级': number[];
-      '状态': string;
-      '完成时间': unknown;
-      ID: {
-        text: string;
-      };
-      '员工': number[];
-      '部门': string;
-      '岗位': string;
-      '绩效周期': unknown;
-      '总分': number;
-      '等级': string;
-    };
-  }[];
 }
 // ---- end:performance_template_sync_feishu_multitable_crud_analysis_2 ----

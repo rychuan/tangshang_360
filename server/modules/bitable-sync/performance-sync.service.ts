@@ -20,14 +20,14 @@ interface PerformanceBitableRecord {
   record: {
     ID?: { text: string };
     员工?: number[];
-    绩效周期?: { text: string };
+    绩效周期?: { text: string } | unknown;
     岗位?: string;
     部门?: string;
     上级?: number[];
     状态?: string;
     总分?: number;
     等级?: string;
-    完成时间?: { text: string };
+    完成时间?: number;
   };
 }
 
@@ -119,9 +119,9 @@ export class PerformanceSyncService {
         ? Number(inst.supervisorUserId)
         : NaN;
       const totalScore = inst.totalScore ? Number(inst.totalScore) : 0;
-      const completedAtStr = inst.completedAt
-        ? new Date(inst.completedAt as Date | string).toISOString()
-        : '';
+      const completedAtTs = inst.completedAt
+        ? new Date(inst.completedAt as Date | string).getTime()
+        : 0;
 
       const record: Record<string, unknown> = {
         ID: inst.id,
@@ -133,7 +133,7 @@ export class PerformanceSyncService {
         状态: inst.status || '',
         总分: totalScore,
         等级: inst.grade || '',
-        完成时间: completedAtStr,
+        完成时间: completedAtTs,
       };
 
       const existingRecordId = bitableRecordById.get(inst.id);
