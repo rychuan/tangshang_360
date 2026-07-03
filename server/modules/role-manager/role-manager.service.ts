@@ -19,7 +19,10 @@ import {
 @Injectable()
 export class RoleManagerService {
   private readonly logger = new Logger(RoleManagerService.name);
-  private readonly roleCache = new Map<string, { roles: string[]; expiresAt: number }>();
+  private readonly roleCache = new Map<
+    string,
+    { roles: string[]; expiresAt: number }
+  >();
   private readonly ROLE_CACHE_TTL_MS = 30_000;
 
   constructor(
@@ -71,7 +74,10 @@ export class RoleManagerService {
         `Failed to get user roles: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
-    this.roleCache.set(userId, { roles, expiresAt: Date.now() + this.ROLE_CACHE_TTL_MS });
+    this.roleCache.set(userId, {
+      roles,
+      expiresAt: Date.now() + this.ROLE_CACHE_TTL_MS,
+    });
     return roles;
   }
   /**
