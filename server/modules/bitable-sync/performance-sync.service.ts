@@ -4,12 +4,11 @@ import {
   type PostgresJsDatabase,
   CapabilityService,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { sql, desc } from 'drizzle-orm';
+import { sql, isNull } from 'drizzle-orm';
 import {
   assessmentInstance,
   employee,
   auditLog,
-  bitableSyncLog,
 } from '@server/database/schema';
 import type { BitablePluginSyncResponse } from '@shared/api.interface';
 
@@ -21,14 +20,14 @@ interface PerformanceBitableRecord {
   record: {
     ID?: { text: string };
     员工?: number[];
-    绩效周期?: { text: string };
+    绩效周期?: { text: string } | unknown;
     岗位?: string;
     部门?: string;
     上级?: number[];
     状态?: string;
     总分?: number;
     等级?: string;
-    完成时间?: { text: string };
+    完成时间?: number;
   };
 }
 
@@ -60,32 +59,8 @@ export class PerformanceSyncService {
     private readonly capabilityService: CapabilityService,
   ) {}
 
-  async exportToBitable(
-    syncDays: number = 0, // 0 = full sync
-  ): Promise<BitablePluginSyncResponse> {
-    // Get last sync time for incremental sync
-    let lastSyncAt: Date | null = null;
-    if (syncDays <= 0) {
-      const lastLog = await this.db
-        .select({ startedAt: bitableSyncLog.startedAt })
-        .from(bitableSyncLog)
-        .where(sql`target_type = 'bitable_sync_performance'`)
-        .orderBy(desc(bitableSyncLog.startedAt))
-        .limit(1);
-      if (lastLog.length > 0 && lastLog[0].startedAt) {
-        lastSyncAt = lastLog[0].startedAt as Date;
-      }
-    } else {
-      lastSyncAt = new Date(Date.now() - syncDays * 24 * 60 * 60 * 1000);
-    }
-
-    // Only sync non-completed instances (completed data never changes)
-    const conditions = [sql`${assessmentInstance.status} != 'completed'`];
-    if (lastSyncAt) {
-      conditions.push(
-        sql`${assessmentInstance.updatedAt} >= ${lastSyncAt.toISOString()}`,
-      );
-    }
+  async exportToBitable(): Promise<BitablePluginSyncResponse> {
+    const conditions = [isNull(employee.deletedAt)];
 
     const instances = await this.db
       .select({
@@ -102,7 +77,7 @@ export class PerformanceSyncService {
         department: employee.department,
       })
       .from(assessmentInstance)
-      .leftJoin(
+      .innerJoin(
         employee,
         sql`(${assessmentInstance.employeeId}).user_id = (${employee.id}).user_id`,
       )
@@ -110,10 +85,7 @@ export class PerformanceSyncService {
         conditions.length > 0 ? sql.join(conditions, sql` AND `) : sql`TRUE`,
       );
 
-    const isIncremental = !!lastSyncAt;
-    this.logger.log(
-      `Export to bitable: ${isIncremental ? 'incremental (since ' + lastSyncAt!.toISOString() + ')' : 'full sync'}, ${instances.length} instances`,
-    );
+    this.logger.log(`Export to bitable: full sync, ${instances.length} instances`);
 
     const bitableRecordById = new Map<string, string>();
     let pageToken: string | undefined;
@@ -147,9 +119,9 @@ export class PerformanceSyncService {
         ? Number(inst.supervisorUserId)
         : NaN;
       const totalScore = inst.totalScore ? Number(inst.totalScore) : 0;
-      const completedAtStr = inst.completedAt
-        ? new Date(inst.completedAt as Date | string).toISOString()
-        : '';
+      const completedAtTs = inst.completedAt
+        ? new Date(inst.completedAt as Date | string).getTime()
+        : 0;
 
       const record: Record<string, unknown> = {
         ID: inst.id,
@@ -161,7 +133,7 @@ export class PerformanceSyncService {
         状态: inst.status || '',
         总分: totalScore,
         等级: inst.grade || '',
-        完成时间: completedAtStr,
+        完成时间: completedAtTs,
       };
 
       const existingRecordId = bitableRecordById.get(inst.id);
@@ -212,9 +184,7 @@ export class PerformanceSyncService {
     }
 
     await this.db.insert(auditLog).values({
-      action: isIncremental
-        ? 'export_performance_to_bitable_incremental'
-        : 'export_performance_to_bitable_full',
+      action: 'export_performance_to_bitable',
       targetType: 'bitable_sync_performance',
       targetId: PLUGIN_INSTANCE_ID,
       changes: { total: instances.length, created, updated, failed },
