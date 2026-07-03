@@ -262,49 +262,53 @@ export class AssessmentPublishService {
       const empPosition: string = empRecord.position;
       const empSupervisorId: string | null = empRecord.supervisorId;
 
-      const [instance] = await this.db
-        .insert(assessmentInstance)
-        .values({
-          period,
+      // 事务包裹每个员工的发布写入（实例创建 + 快照复制 + 审计日志）
+      await this.db.transaction(async (tx: any) => {
+        const [instance] = await tx
+          .insert(assessmentInstance)
+          .values({
+            period,
+            employeeId: empId,
+            supervisorId: empSupervisorId,
+            position: empPosition,
+            templateId,
+            status: 'self_review',
+            publishedBy: userId,
+            publishedAt,
+          })
+          .returning({ id: assessmentInstance.id });
+
+        const instanceId: string = instance.id;
+
+        const hasSnap: boolean =
+          await this.employeeSnapshotService.hasSnapshot(empId);
+        if (hasSnap) {
+          await this.employeeSnapshotService.copyToInstance(empId, instanceId, tx);
+        } else {
+          await this.employeeSnapshotService.generateFromTemplate(
+            empId,
+            templateId,
+            userId,
+            tx,
+          );
+          await this.employeeSnapshotService.copyToInstance(empId, instanceId, tx);
+        }
+
+        await tx.insert(auditLog).values({
+          operatorId: userId,
+          action: 'publish',
+          targetType: 'assessment_instance',
+          targetId: instanceId,
+          changes: { period, employeeId: empId, templateId },
+        });
+
+        publishedCount++;
+        publishedInstances.push({
           employeeId: empId,
-          supervisorId: empSupervisorId,
-          position: empPosition,
-          templateId,
-          status: 'self_review',
-          publishedBy: userId,
-          publishedAt,
-        })
-        .returning({ id: assessmentInstance.id });
-
-      const instanceId: string = instance.id;
-
-      const hasSnap: boolean =
-        await this.employeeSnapshotService.hasSnapshot(empId);
-      if (hasSnap) {
-        await this.employeeSnapshotService.copyToInstance(empId, instanceId);
-      } else {
-        await this.employeeSnapshotService.generateFromTemplate(
-          empId,
-          templateId,
-          userId,
-        );
-        await this.employeeSnapshotService.copyToInstance(empId, instanceId);
-      }
-
-      await this.db.insert(auditLog).values({
-        operatorId: userId,
-        action: 'publish',
-        targetType: 'assessment_instance',
-        targetId: instanceId,
-        changes: { period, employeeId: empId, templateId },
-      });
-
-      publishedCount++;
-      publishedInstances.push({
-        employeeId: empId,
-        instanceId,
-        employeeName: empRecord.name,
-        period,
+          instanceId,
+          employeeName: empRecord.name,
+          period,
+        });
       });
     }
 
