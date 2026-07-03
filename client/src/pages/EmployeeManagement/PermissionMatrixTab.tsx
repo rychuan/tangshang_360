@@ -21,6 +21,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { toast } from 'sonner';
+import { handleApiError } from '@client/src/utils/api-error';
 import { Save, RotateCcw } from 'lucide-react';
 
 interface PermissionMatrixTabProps {
@@ -86,8 +87,8 @@ const PermissionMatrixTab: React.FC<PermissionMatrixTabProps> = ({ role }) => {
     try {
       const config = await roleManager.getRolePermissions(bizID);
       setPermissions(clonePermissions(config.permissions || []));
-    } catch {
-      toast.error('获取权限配置失败');
+    } catch (err) {
+      handleApiError(err);
     } finally {
       setLoading(false);
     }
@@ -140,7 +141,7 @@ const PermissionMatrixTab: React.FC<PermissionMatrixTabProps> = ({ role }) => {
       await roleManager.updateRolePermissions(role.bizID, { permissions });
       toast.success('权限配置已保存');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '保存失败');
+      handleApiError(err);
     } finally {
       setSaving(false);
     }

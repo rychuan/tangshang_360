@@ -28,6 +28,7 @@ import {
 } from '@client/src/components/ui/select';
 import { Separator } from '@client/src/components/ui/separator';
 import { logger } from '@lark-apaas/client-toolkit/logger';
+import { handleApiError } from '@client/src/utils/api-error';
 import IndicatorsFieldArray from './TemplateIndicatorFields';
 import {
   formSchema,
@@ -161,9 +162,8 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
       await onSave(payload);
       onOpenChange(false);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '保存失败';
-      logger.error('TemplateFormDialog save error:', msg);
-      toast.error(msg);
+      logger.error('TemplateFormDialog save error:', err);
+      handleApiError(err);
     } finally {
       setSubmitting(false);
     }

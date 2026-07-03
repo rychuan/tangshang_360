@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { handleApiError } from '@client/src/utils/api-error';
 
 interface RoleFormDialogProps {
   open: boolean;
@@ -75,7 +76,7 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
       onSuccess();
       onOpenChange(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '操作失败');
+      handleApiError(err);
     } finally {
       setSubmitting(false);
     }

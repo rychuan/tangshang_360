@@ -30,6 +30,7 @@ import EmployeeFormDialog from './EmployeeFormDialog';
 import { BindDialog, UnbindDialog, HistoryDialog } from './EmployeeDialogs';
 import { Plus, Search, Link2, Filter, Users, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
 import { toast } from 'sonner';
+import { handleApiError } from '@client/src/utils/api-error';
 import { importFromBitable, exportToBitable } from '@/api/bitable-sync';
 import {
   AlertDialog,
@@ -91,8 +92,7 @@ const EmployeeListTab: React.FC = () => {
       toast.success(result.message);
       refetch();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '同步失败';
-      toast.error(msg);
+      handleApiError(err);
     } finally {
       setSyncLoading('');
     }

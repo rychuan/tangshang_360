@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ClipboardCheckIcon,
@@ -12,8 +12,10 @@ import {
 } from 'lucide-react';
 import { useCurrentUserProfile } from '@lark-apaas/client-toolkit/hooks/useCurrentUserProfile';
 import { logger } from '@lark-apaas/client-toolkit/logger';
+import { handleApiError } from '@client/src/utils/api-error';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import {
   ChartContainer,
@@ -70,27 +72,29 @@ const HomePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const loadDashboard = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [todosRes, overviewRes] = await Promise.all([
+        getTodos(),
+        getOverview(),
+      ]);
+      setTodos(todosRes?.items ?? []);
+      setOverview(overviewRes ?? null);
+    } catch (e: unknown) {
+      logger.error('Dashboard load error:', e);
+      handleApiError(e);
+      setError('加载失败');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!userInfo?.user_id) return;
-    const load = async () => {
-      try {
-        setLoading(true);
-        const [todosRes, overviewRes] = await Promise.all([
-          getTodos(),
-          getOverview(),
-        ]);
-        setTodos(todosRes?.items ?? []);
-        setOverview(overviewRes ?? null);
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : '加载失败';
-        logger.error(`Dashboard load error: ${msg}`);
-        setError(msg);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [userInfo?.user_id]);
+    loadDashboard();
+  }, [userInfo?.user_id, loadDashboard]);
 
   if (!userInfo?.user_id || loading) {
     return (
@@ -102,8 +106,11 @@ const HomePage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh] text-muted-foreground">
-        {error}
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-muted-foreground gap-4">
+        <p className="text-destructive">{error}</p>
+        <Button variant="outline" size="sm" onClick={loadDashboard}>
+          重试
+        </Button>
       </div>
     );
   }

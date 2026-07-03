@@ -56,21 +56,6 @@ export interface CreateTemplateRequest {
   }>;
 }
 export interface UpdateTemplateRequest extends CreateTemplateRequest {}
-export interface EmployeeBindingItem {
-  id: string;
-  employeeId: string;
-  employeeName: string;
-  position: string;
-  templateId: string;
-  templateName: string;
-  effectiveFrom: string;
-  status: string;
-  createdAt: string;
-}
-export interface EmployeeBindingListResponse {
-  items: EmployeeBindingItem[];
-  total: number;
-}
 export interface CreateBindingRequest {
   employeeIds: string[];
   templateId: string;
@@ -111,11 +96,6 @@ export interface PublishEmployeeItem {
   templateId: string;
   templateName: string;
   lastPeriodStatus?: string;
-}
-export interface PublishEmployeeListParams {
-  period: string;
-  department?: string;
-  templateId?: string;
 }
 export interface PublishRequest {
   period: string;
@@ -165,15 +145,6 @@ export interface AssessmentIndicatorDetail {
   supervisorComment?: string;
 }
 
-// === Assessment Instance Status Constants ===
-export const ASSESSMENT_STATUS = {
-  SELF_REVIEW: 'self_review',
-  SUPERVISOR_REVIEW: 'supervisor_review',
-  PENDING_SIGN: 'pending_sign',
-  COMPLETED: 'completed',
-} as const;
-export type AssessmentStatus =
-  (typeof ASSESSMENT_STATUS)[keyof typeof ASSESSMENT_STATUS];
 export interface AssessmentInstanceDetail {
   id: string;
   period: string;
@@ -540,12 +511,6 @@ export const DEFAULT_PERMISSIONS: Record<string, PermissionItem[]> = {
   ],
   employee: [{ resource: 'my_assessments', actions: ['view', 'edit'] }],
 };
-export interface PermissionsConfig {
-  permissions: PermissionItem[];
-}
-export interface UpdatePermissionsRequest {
-  permissions: PermissionItem[];
-}
 // === Role Management (AuthorizationSDK) ===
 export type {
   ForceRoleDTO,

@@ -76,14 +76,6 @@ export class AssessmentTemplateController {
   }
 
   @CanRole(['admin', 'hrd'])
-  @RequirePermission('template_management', 'edit')
-  @NeedLogin()
-  @Patch(':id/activate')
-  async activate(@Param('id') id: string): Promise<SuccessResponse> {
-    return this.service.activate(id);
-  }
-
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('template_management', 'delete')
   @NeedLogin()
   @Delete(':id')

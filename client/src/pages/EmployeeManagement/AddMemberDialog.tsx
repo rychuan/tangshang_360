@@ -15,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { handleApiError } from '@client/src/utils/api-error';
 import { Search, User, Building2, Users } from 'lucide-react';
 import { i18nText } from './role-utils';
 
@@ -121,8 +122,8 @@ const AddMemberDialog: React.FC<AddMemberDialogProps> = ({
         pageSize: 30,
       });
       setResult(res.result ?? null);
-    } catch {
-      toast.error('搜索失败');
+    } catch (err) {
+      handleApiError(err);
     } finally {
       setSearching(false);
     }
@@ -171,7 +172,7 @@ const AddMemberDialog: React.FC<AddMemberDialogProps> = ({
       onAdded();
       onOpenChange(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '添加失败');
+      handleApiError(err);
     } finally {
       setSubmitting(false);
     }

@@ -37,6 +37,7 @@ import type {
   CreateBitableConnectionRequest,
 } from '@shared/api.interface';
 import { logger } from '@lark-apaas/client-toolkit/logger';
+import { handleApiError } from '@client/src/utils/api-error';
 
 const BitableConnectionTab: React.FC = () => {
   const [connections, setConnections] = useState<BitableConnectionItem[]>([]);
@@ -68,8 +69,8 @@ const BitableConnectionTab: React.FC = () => {
       const res = await api.list({ page: 1, pageSize: 100 });
       setConnections(res.items);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '获取连接列表失败';
-      setError(msg);
+      handleApiError(err);
+      setError('获取连接列表失败');
     } finally {
       setLoading(false);
     }
@@ -107,13 +108,13 @@ const BitableConnectionTab: React.FC = () => {
         failed: result.failedCount,
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '导入失败';
+      handleApiError(err);
       setImportResult({
         created: 0,
         updated: 0,
         skipped: 0,
         failed: 0,
-        error: msg,
+        error: '导入失败',
       });
     } finally {
       setImportingId(null);
@@ -125,9 +126,7 @@ const BitableConnectionTab: React.FC = () => {
     try {
       await api.exportEmployees(conn.id);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '导出失败';
-      // 导出错误通过 toast 或日志显示
-      logger.error(`导出失败: ${msg}`);
+      handleApiError(err);
     } finally {
       setExportingId(null);
     }

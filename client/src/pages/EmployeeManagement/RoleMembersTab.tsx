@@ -20,6 +20,7 @@ import {
   EmptyDescription,
 } from '@/components/ui/empty';
 import { toast } from 'sonner';
+import { handleApiError } from '@client/src/utils/api-error';
 import { UserPlus, UserX, Building2, Users } from 'lucide-react';
 import { i18nText } from './role-utils';
 import AddMemberDialog from './AddMemberDialog';
@@ -124,8 +125,8 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
     try {
       const res = await roleManager.listMembers(bizID);
       setMemberData(res.members ?? null);
-    } catch {
-      toast.error('获取成员列表失败');
+    } catch (err) {
+      handleApiError(err);
     } finally {
       setLoading(false);
     }
@@ -157,7 +158,7 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
       await fetchMembers(role.bizID);
       onMembersChange?.();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '移除失败');
+      handleApiError(err);
     } finally {
       setRemoving(false);
     }

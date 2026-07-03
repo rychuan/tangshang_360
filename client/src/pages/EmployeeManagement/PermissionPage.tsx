@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/empty';
 import { PageHeader } from '@/components/business-ui/page-header';
 import { toast } from 'sonner';
+import { handleApiError } from '@client/src/utils/api-error';
 import { Shield, Lock, Users, ShieldCheck } from 'lucide-react';
 import RoleListPanel from './RoleListPanel';
 import { getRoleMemberCount } from './role-utils';
@@ -52,8 +53,8 @@ const PermissionPage: React.FC = () => {
         }
         return data[0] ?? null;
       });
-    } catch {
-      toast.error('加载角色列表失败');
+    } catch (err) {
+      handleApiError(err);
     }
   }, []);
 
@@ -94,7 +95,7 @@ const PermissionPage: React.FC = () => {
       setDeleteTarget(null);
       await refreshRoles();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '删除失败');
+      handleApiError(err);
     } finally {
       setDeleting(false);
     }

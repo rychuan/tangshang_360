@@ -130,14 +130,6 @@ export class RoleManagerController {
     return this.authzSDK.members.remove(bizID, dto);
   }
 
-  @CanRole(['admin'])
-  @RequirePermission('permission_management', 'edit')
-  @NeedLogin()
-  @Delete('roles/:bizID/members')
-  async clearMembers(@Param('bizID') bizID: string) {
-    return this.authzSDK.members.clear(bizID);
-  }
-
   @CanRole(['admin', 'hrd'])
   @RequirePermission('permission_management', 'view')
   @Post('search')

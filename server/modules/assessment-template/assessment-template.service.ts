@@ -325,28 +325,6 @@ export class AssessmentTemplateService {
     return { success: true };
   }
 
-  // 3.2: 新增启用接口
-  async activate(id: string): Promise<SuccessResponse> {
-    this.logger.log(`activate: id=${id}`);
-
-    const templates = await this.db
-      .select()
-      .from(assessmentTemplate)
-      .where(eq(assessmentTemplate.id, id))
-      .limit(1);
-
-    if (templates.length === 0) {
-      throw new NotFoundException('模板不存在');
-    }
-
-    await this.db
-      .update(assessmentTemplate)
-      .set({ isActive: true })
-      .where(eq(assessmentTemplate.id, id));
-
-    return { success: true };
-  }
-
   async delete(id: string, userId: string): Promise<SuccessResponse> {
     this.logger.log(`delete: id=${id}`);
 

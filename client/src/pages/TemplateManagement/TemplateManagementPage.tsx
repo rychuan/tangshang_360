@@ -44,6 +44,7 @@ import {
   PageTableColumn,
 } from '@/components/business-ui/page-table';
 import TemplateFormDialog from './TemplateFormDialog';
+import { POSITION_OPTIONS } from './TemplateFormDialog.types';
 import TemplatePreviewDialog from './TemplatePreviewDialog';
 import * as assessmentTemplateApi from '@client/src/api/assessment-template';
 import type {
@@ -51,15 +52,6 @@ import type {
   AssessmentTemplateDetail,
   CreateTemplateRequest,
 } from '@shared/api.interface';
-
-const POSITION_OPTIONS: string[] = [
-  '销售经理',
-  '客户成功经理',
-  '技术支持工程师',
-  '产品经理',
-  '研发工程师',
-  '市场专员',
-];
 
 const TemplateManagementPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
