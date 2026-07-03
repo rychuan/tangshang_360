@@ -11,6 +11,7 @@ import {
 import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { TeamStructureService } from './team-structure.service';
+import type { Request } from 'express';
 import type {
   CreateBindingRequest,
   BatchDeactivateRequest,
@@ -53,7 +54,7 @@ export class TeamStructureController {
   @RequirePermission('organization', 'edit')
   @NeedLogin()
   @Post()
-  async create(@Req() req: any, @Body() body: CreateBindingRequest) {
+  async create(@Req() req: Request, @Body() body: CreateBindingRequest) {
     const { userId }: { userId: string } = req.userContext;
     return this.service.create(body, userId);
   }
@@ -62,7 +63,7 @@ export class TeamStructureController {
   @RequirePermission('organization', 'edit')
   @NeedLogin()
   @Patch('employees/deactivate')
-  async batchDeactivate(@Req() req: any, @Body() body: BatchDeactivateRequest) {
+  async batchDeactivate(@Req() req: Request, @Body() body: BatchDeactivateRequest) {
     const { userId }: { userId: string } = req.userContext;
     return this.service.batchDeactivate(body.employeeIds, userId);
   }
@@ -79,7 +80,7 @@ export class TeamStructureController {
   @NeedLogin()
   @Patch('employee/:id')
   async updateEmployee(
-    @Req() req: any,
+    @Req() req: Request,
     @Param('id') id: string,
     @Body() body: PatchEmployeeRequest,
   ) {
@@ -91,7 +92,7 @@ export class TeamStructureController {
   @RequirePermission('organization', 'edit')
   @NeedLogin()
   @Patch(':id/deactivate')
-  async deactivate(@Req() req: any, @Param('id') id: string) {
+  async deactivate(@Req() req: Request, @Param('id') id: string) {
     const { userId }: { userId: string } = req.userContext;
     return this.service.deactivate(id, userId);
   }

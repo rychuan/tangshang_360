@@ -29,6 +29,10 @@ import {
 import { Separator } from '@client/src/components/ui/separator';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { handleApiError } from '@client/src/utils/api-error';
+import {
+  validateTotalWeight,
+  validateIndicatorWeights,
+} from '@client/src/utils/weight-validation';
 import IndicatorsFieldArray from './TemplateIndicatorFields';
 import {
   formSchema,
@@ -119,26 +123,21 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
   }, [open, form, buildDefault]);
 
   const handleSubmit = async (data: FormData) => {
-    const weightSum: number = data.dimensions.reduce(
-      (sum: number, d) => sum + d.weight,
-      0,
-    );
-    if (Math.abs(weightSum - 100) > 0.01) {
-      toast.error(`维度权重之和必须等于 100，当前为 ${weightSum}`);
+    const totalWeightResult = validateTotalWeight(data.dimensions);
+    if (!totalWeightResult.isValid) {
+      toast.error(
+        `维度权重之和必须等于 100，当前为 ${totalWeightResult.totalWeight}`,
+      );
       return;
     }
 
-    for (const dim of data.dimensions) {
-      const indicatorWeightSum: number = dim.indicators.reduce(
-        (sum: number, ind) => sum + ind.weight,
-        0,
+    const indicatorResult = validateIndicatorWeights(data.dimensions);
+    if (!indicatorResult.isValid) {
+      const err = indicatorResult.errors[0];
+      toast.error(
+        `维度「${err.dimensionName}」的指标权重之和必须等于维度权重 ${err.dimensionWeight}，当前为 ${err.indicatorSum}`,
       );
-      if (Math.abs(indicatorWeightSum - dim.weight) > 0.01) {
-        toast.error(
-          `维度「${dim.name}」的指标权重之和必须等于维度权重 ${dim.weight}，当前为 ${indicatorWeightSum}`,
-        );
-        return;
-      }
+      return;
     }
 
     setSubmitting(true);

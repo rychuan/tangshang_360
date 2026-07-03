@@ -25,6 +25,10 @@ import {
   Check,
 } from 'lucide-react';
 import { getEmployeeSnapshot } from '@/api/assessment-publish';
+import {
+  validateTotalWeight,
+  validateIndicatorWeights,
+} from '@/utils/weight-validation';
 import type {
   AdjustIndicatorInput,
   InstanceIndicatorItem,
@@ -134,33 +138,25 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
     return Object.values(groups);
   }, [indicators]);
 
-  const dimensionWeightValidation = useMemo(() => {
-    const totalWeight: number = dimensionGroups.reduce(
-      (sum: number, g) => sum + g.dimensionWeight,
-      0,
-    );
-    return {
-      totalWeight,
-      isValid: Math.abs(totalWeight - 100) < 0.01,
-    };
-  }, [dimensionGroups]);
+  const dimensionWeightValidation = useMemo(
+    () =>
+      validateTotalWeight(
+        dimensionGroups.map((g) => ({ weight: g.dimensionWeight })),
+      ),
+    [dimensionGroups],
+  );
 
-  const indicatorWeightValidation = useMemo(() => {
-    const invalidDims: string[] = [];
-    for (const g of dimensionGroups) {
-      const indicatorSum: number = g.indicators.reduce(
-        (sum: number, ind: AdjustIndicatorInput) => sum + (ind.weight ?? 0),
-        0,
-      );
-      if (Math.abs(indicatorSum - g.dimensionWeight) > 0.01) {
-        invalidDims.push(g.dimensionName || '未分组');
-      }
-    }
-    return {
-      invalidDims,
-      isValid: invalidDims.length === 0,
-    };
-  }, [dimensionGroups]);
+  const indicatorWeightValidation = useMemo(
+    () =>
+      validateIndicatorWeights(
+        dimensionGroups.map((g) => ({
+          name: g.dimensionName,
+          weight: g.dimensionWeight,
+          indicators: g.indicators.map((i) => ({ weight: i.weight ?? 0 })),
+        })),
+      ),
+    [dimensionGroups],
+  );
 
   const handleAddIndicator = (
     dimensionName: string,
@@ -274,7 +270,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
     }
     if (!indicatorWeightValidation.isValid) {
       toast.error(
-        `以下维度的指标权重之和不等于维度权重：${indicatorWeightValidation.invalidDims.join('、')}`,
+        `以下维度的指标权重之和不等于维度权重：${indicatorWeightValidation.errors.map((e) => e.dimensionName).join('、')}`,
       );
       return;
     }

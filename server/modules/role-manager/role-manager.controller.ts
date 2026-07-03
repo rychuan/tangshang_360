@@ -14,6 +14,7 @@ import { CanRole } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { AuthorizationSDK } from '@lark-apaas/fullstack-nestjs-core';
 import { RoleManagerService } from './role-manager.service';
+import type { Request } from 'express';
 import type {
   CreateRoleRequest,
   UpdateRoleRequest,
@@ -35,7 +36,7 @@ export class RoleManagerController {
 
   @NeedLogin()
   @Post('my-roles')
-  async getMyRoles(@Req() req: any) {
+  async getMyRoles(@Req() req: Request) {
     const userId = req.userContext?.userId || '';
     const roleList = await this.roleManagerService.getUserRoles(userId);
     return { data: { roleList } };
@@ -43,7 +44,7 @@ export class RoleManagerController {
 
   @NeedLogin()
   @Get('my-permissions')
-  async getMyPermissions(@Req() req: any) {
+  async getMyPermissions(@Req() req: Request) {
     const userId = req.userContext?.userId || '';
     const permissions =
       await this.roleManagerService.getUserEffectivePermissions(userId);

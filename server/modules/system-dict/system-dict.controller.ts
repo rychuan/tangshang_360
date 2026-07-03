@@ -12,6 +12,7 @@ import {
 import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { SystemDictService } from './system-dict.service';
+import type { Request } from 'express';
 import type {
   DictListResponse,
   CreateDictRequest,
@@ -37,7 +38,7 @@ export class SystemDictController {
   @NeedLogin()
   @Post(':type')
   async create(
-    @Req() req: any,
+    @Req() req: Request,
     @Param('type') type: string,
     @Body() body: CreateDictRequest,
   ): Promise<{ id: string }> {
@@ -50,7 +51,7 @@ export class SystemDictController {
   @NeedLogin()
   @Put(':type/:id')
   async update(
-    @Req() req: any,
+    @Req() req: Request,
     @Param('type') type: string,
     @Param('id') id: string,
     @Body() body: UpdateDictRequest,
@@ -64,7 +65,7 @@ export class SystemDictController {
   @NeedLogin()
   @Delete(':type/:id')
   async remove(
-    @Req() req: any,
+    @Req() req: Request,
     @Param('type') type: string,
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {

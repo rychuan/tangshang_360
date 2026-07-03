@@ -12,6 +12,7 @@ import {
 import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { BitableConnectionService } from './bitable-connection.service';
+import type { Request } from 'express';
 import type {
   BitableConnectionListResponse,
   BitableConnectionItem,
@@ -44,7 +45,7 @@ export class BitableConnectionController {
   @NeedLogin()
   @Post()
   async create(
-    @Req() req: any,
+    @Req() req: Request,
     @Body() body: CreateBitableConnectionRequest,
   ): Promise<{ id: string }> {
     const { userId } = req.userContext as { userId: string };
@@ -56,7 +57,7 @@ export class BitableConnectionController {
   @NeedLogin()
   @Put(':id')
   async update(
-    @Req() req: any,
+    @Req() req: Request,
     @Param('id') id: string,
     @Body() body: CreateBitableConnectionRequest,
   ): Promise<{ success: boolean }> {
@@ -69,7 +70,7 @@ export class BitableConnectionController {
   @NeedLogin()
   @Delete(':id')
   async remove(
-    @Req() req: any,
+    @Req() req: Request,
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {
     const { userId } = req.userContext as { userId: string };
@@ -88,7 +89,7 @@ export class BitableConnectionController {
   @NeedLogin()
   @Post(':id/import')
   async importEmployees(
-    @Req() req: any,
+    @Req() req: Request,
     @Param('id') id: string,
   ): Promise<BitableImportResponse> {
     const { userId } = req.userContext as { userId: string };
@@ -100,7 +101,7 @@ export class BitableConnectionController {
   @NeedLogin()
   @Post(':id/export')
   async exportEmployees(
-    @Req() req: any,
+    @Req() req: Request,
     @Param('id') id: string,
   ): Promise<BitableExportResponse> {
     const { userId } = req.userContext as { userId: string };

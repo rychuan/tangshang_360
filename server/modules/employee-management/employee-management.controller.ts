@@ -14,6 +14,7 @@ import {
 import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { EmployeeManagementService } from './employee-management.service';
+import type { Request } from 'express';
 import type {
   EmployeeListResponse,
   EmployeeDetail,
@@ -61,7 +62,7 @@ export class EmployeeManagementController {
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
   @Get('my/permissions')
-  async getMyPermissions(@Req() req: any) {
+  async getMyPermissions(@Req() req: Request) {
     const { userId } = req.userContext as { userId: string };
     return this.service.getMyPermissions(userId);
   }
@@ -71,7 +72,7 @@ export class EmployeeManagementController {
   @NeedLogin()
   @Post('bind')
   async bind(
-    @Req() req: any,
+    @Req() req: Request,
     @Body() body: CreateBindingRequest,
   ): Promise<{ success: boolean }> {
     const { userId } = req.userContext as { userId: string };
@@ -99,7 +100,7 @@ export class EmployeeManagementController {
   @NeedLogin()
   @Post()
   async create(
-    @Req() req: any,
+    @Req() req: Request,
     @Body() body: CreateEmployeeRequest,
   ): Promise<{ id: string }> {
     const { userId } = req.userContext as { userId: string };
@@ -111,7 +112,7 @@ export class EmployeeManagementController {
   @NeedLogin()
   @Put(':id')
   async update(
-    @Req() req: any,
+    @Req() req: Request,
     @Param('id') id: string,
     @Body() body: UpdateEmployeeRequest,
   ): Promise<{ success: boolean }> {
@@ -124,7 +125,7 @@ export class EmployeeManagementController {
   @NeedLogin()
   @Patch(':id/activate')
   async activate(
-    @Req() req: any,
+    @Req() req: Request,
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {
     const { userId } = req.userContext as { userId: string };
@@ -136,7 +137,7 @@ export class EmployeeManagementController {
   @NeedLogin()
   @Patch(':id/deactivate')
   async deactivate(
-    @Req() req: any,
+    @Req() req: Request,
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {
     const { userId } = req.userContext as { userId: string };
@@ -148,7 +149,7 @@ export class EmployeeManagementController {
   @NeedLogin()
   @Patch(':id/unbind')
   async unbind(
-    @Req() req: any,
+    @Req() req: Request,
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {
     const { userId } = req.userContext as { userId: string };
@@ -160,7 +161,7 @@ export class EmployeeManagementController {
   @NeedLogin()
   @Delete(':id')
   async delete(
-    @Req() req: any,
+    @Req() req: Request,
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {
     const { userId } = req.userContext as { userId: string };
@@ -172,7 +173,7 @@ export class EmployeeManagementController {
   @NeedLogin()
   @Put(':id/permissions')
   async updatePermissions(
-    @Req() req: any,
+    @Req() req: Request,
     @Param('id') id: string,
     @Body() body: { permissions: unknown[] },
   ) {

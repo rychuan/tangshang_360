@@ -49,6 +49,58 @@ export class AssessmentOperationService {
     private readonly performanceGradeService: PerformanceGradeService,
   ) {}
 
+  /** 统一的权限校验：检查当前用户是否为员工本人、上级、部门负责人或系统管理员 */
+  private async checkAssessmentAccess(
+    instanceEmployeeId: string,
+    instanceSupervisorId: string | null,
+    empSupervisorId: string,
+    empDepartment: string,
+    userId: string,
+  ): Promise<{
+    isEmployee: boolean;
+    isSupervisor: boolean;
+    isDeptHead: boolean;
+    isAdmin: boolean;
+  }> {
+    const isEmployee = instanceEmployeeId === userId;
+    const isSupervisor =
+      (!!instanceSupervisorId && instanceSupervisorId === userId) ||
+      empSupervisorId === userId;
+
+    let isDeptHead = false;
+    if (!isEmployee && !isSupervisor) {
+      const deptRows = await this.db
+        .select({ id: department.id })
+        .from(department)
+        .where(
+          and(
+            eq(department.name, empDepartment),
+            sql`(${department.headId}).user_id = ${userId}`,
+          ),
+        )
+        .limit(1);
+      isDeptHead = deptRows.length > 0;
+    }
+
+    let isAdmin = false;
+    if (!isEmployee && !isSupervisor && !isDeptHead) {
+      const adminRows = await this.db
+        .select({ id: employee.id })
+        .from(employee)
+        .where(
+          and(
+            sql`(${employee.id}).user_id = ${userId}`,
+            eq(employee.role, 'admin'),
+            isNull(employee.deletedAt),
+          ),
+        )
+        .limit(1);
+      isAdmin = adminRows.length > 0;
+    }
+
+    return { isEmployee, isSupervisor, isDeptHead, isAdmin };
+  }
+
   async detail(id: string, userId: string): Promise<AssessmentInstanceDetail> {
     validateUUID(id);
     const rows = await this.db
@@ -80,41 +132,15 @@ export class AssessmentOperationService {
       throw new NotFoundException('员工信息不存在');
     }
 
-    const isEmployee = instance.employeeId === userId;
-    const isSupervisor = empRows[0].supervisorId === userId;
-    let isDeptHead = false;
-    if (!isEmployee && !isSupervisor) {
-      const deptRows = await this.db
-        .select({ id: department.id })
-        .from(department)
-        .where(
-          and(
-            eq(department.name, empRows[0].empDepartment),
-            sql`(${department.headId}).user_id = ${userId}`,
-          ),
-        )
-        .limit(1);
-      isDeptHead = deptRows.length > 0;
-    }
+    const access = await this.checkAssessmentAccess(
+      instance.employeeId,
+      instance.supervisorId,
+      empRows[0].supervisorId,
+      empRows[0].empDepartment,
+      userId,
+    );
 
-    // 也允许系统管理员查看
-    let isAdmin = false;
-    if (!isEmployee && !isSupervisor && !isDeptHead) {
-      const adminRows = await this.db
-        .select({ id: employee.id })
-        .from(employee)
-        .where(
-          and(
-            sql`(${employee.id}).user_id = ${userId}`,
-            eq(employee.role, 'admin'),
-            isNull(employee.deletedAt),
-          ),
-        )
-        .limit(1);
-      isAdmin = adminRows.length > 0;
-    }
-
-    if (!isEmployee && !isSupervisor && !isDeptHead && !isAdmin) {
+    if (!access.isEmployee && !access.isSupervisor && !access.isDeptHead && !access.isAdmin) {
       throw new ForbiddenException('无权查看该考核记录');
     }
 
@@ -415,47 +441,16 @@ export class AssessmentOperationService {
       throw new BadRequestException('员工已离职或不可用，无法提交评分');
     }
 
-    // 身份校验
-    const isPublishedSupervisor: boolean =
-      !!instance.supervisorId && instance.supervisorId === userId;
-    const isCurrentSupervisor: boolean = empRows[0].supervisorId === userId;
-    let isDeptHead: boolean = false;
-    if (!isPublishedSupervisor && !isCurrentSupervisor) {
-      const deptRows = await this.db
-        .select({ id: department.id })
-        .from(department)
-        .where(
-          and(
-            eq(department.name, empRows[0].empDepartment),
-            sql`(${department.headId}).user_id = ${userId}`,
-          ),
-        )
-        .limit(1);
-      isDeptHead = deptRows.length > 0;
-    }
+    // 身份校验：上级评分允许发布时上级（快照）、当前上级、部门负责人或系统管理员
+    const access = await this.checkAssessmentAccess(
+      instance.employeeId,
+      instance.supervisorId,
+      empRows[0].supervisorId,
+      empRows[0].empDepartment,
+      userId,
+    );
 
-    let isAdmin = false;
-    if (!isPublishedSupervisor && !isCurrentSupervisor && !isDeptHead) {
-      const adminCheck = await this.db
-        .select({ id: employee.id })
-        .from(employee)
-        .where(
-          and(
-            sql`(${employee.id}).user_id = ${userId}`,
-            eq(employee.role, 'admin'),
-            isNull(employee.deletedAt),
-          ),
-        )
-        .limit(1);
-      isAdmin = adminCheck.length > 0;
-    }
-
-    if (
-      !isPublishedSupervisor &&
-      !isCurrentSupervisor &&
-      !isDeptHead &&
-      !isAdmin
-    ) {
+    if (!access.isSupervisor && !access.isDeptHead && !access.isAdmin) {
       throw new ForbiddenException(
         '您不是该员工的上级、部门负责人或系统管理员，无法评分',
       );
@@ -684,43 +679,16 @@ export class AssessmentOperationService {
         throw new ForbiddenException('员工信息不存在，无法签署上级签名');
       }
 
-      // P0: 上级签名身份校验 — 允许发布时上级（快照）、当前上级、或部门负责人
-      const isPublishedSup: boolean =
-        !!instance.supervisorId && instance.supervisorId === userId;
-      const isCurrentSup: boolean = supRows[0].supervisorId === userId;
-      let isHead: boolean = false;
-      if (!isPublishedSup && !isCurrentSup) {
-        const deptRows = await this.db
-          .select({ id: department.id })
-          .from(department)
-          .where(
-            and(
-              eq(department.name, supRows[0].empDepartment),
-              sql`(${department.headId}).user_id = ${userId}`,
-            ),
-          )
-          .limit(1);
-        isHead = deptRows.length > 0;
-      }
+      // P0: 上级签名身份校验 — 允许发布时上级（快照）、当前上级、部门负责人或系统管理员
+      const access = await this.checkAssessmentAccess(
+        instance.employeeId,
+        instance.supervisorId,
+        supRows[0].supervisorId,
+        supRows[0].empDepartment,
+        userId,
+      );
 
-      // P0: admin 兜底 — 无主管员工由系统管理员签署
-      let isAdminSign = false;
-      if (!isPublishedSup && !isCurrentSup && !isHead) {
-        const adminCheck = await this.db
-          .select({ id: employee.id })
-          .from(employee)
-          .where(
-            and(
-              sql`(${employee.id}).user_id = ${userId}`,
-              eq(employee.role, 'admin'),
-              isNull(employee.deletedAt),
-            ),
-          )
-          .limit(1);
-        isAdminSign = adminCheck.length > 0;
-      }
-
-      if (!isPublishedSup && !isCurrentSup && !isHead && !isAdminSign) {
+      if (!access.isSupervisor && !access.isDeptHead && !access.isAdmin) {
         throw new ForbiddenException(
           '您不是该员工的上级、部门负责人或系统管理员，无法签署上级签名',
         );
@@ -790,60 +758,8 @@ export class AssessmentOperationService {
           throw new BadRequestException('上级已签名，不可重复签名');
         }
 
-        // 身份校验
-        const supRows = await tx
-          .select({
-            supervisorId: employee.supervisorId,
-            empDepartment: employee.department,
-          })
-          .from(employee)
-          .where(
-            and(
-              sql`(${employee.id}).user_id = ${current.employeeId}`,
-              isNull(employee.deletedAt),
-            ),
-          )
-          .limit(1);
-
-        if (supRows.length === 0) {
-          throw new ForbiddenException('员工信息不存在，无法签署上级签名');
-        }
-
-        const isPublishedSup =
-          !!current.supervisorId && current.supervisorId === userId;
-        const isCurrentSup = supRows[0].supervisorId === userId;
-        let isHead = false;
-        if (!isPublishedSup && !isCurrentSup) {
-          const deptRows = await tx
-            .select({ id: department.id })
-            .from(department)
-            .where(
-              and(
-                eq(department.name, supRows[0].empDepartment),
-                sql`(${department.headId}).user_id = ${userId}`,
-              ),
-            )
-            .limit(1);
-          isHead = deptRows.length > 0;
-        }
-
-        let isAdminSign = false;
-        if (!isPublishedSup && !isCurrentSup && !isHead) {
-          const adminCheck = await tx
-            .select({ id: employee.id })
-            .from(employee)
-            .where(
-              and(
-                sql`(${employee.id}).user_id = ${userId}`,
-                eq(employee.role, 'admin'),
-                isNull(employee.deletedAt),
-              ),
-            )
-            .limit(1);
-          isAdminSign = adminCheck.length > 0;
-        }
-
-        if (!isPublishedSup && !isCurrentSup && !isHead && !isAdminSign) {
+        // 事务内身份校验（基于已锁定的实例行数据，配合预检查的 access 结果）
+        if (!access.isSupervisor && !access.isDeptHead && !access.isAdmin) {
           throw new ForbiddenException(
             '您不是该员工的上级、部门负责人或系统管理员，无法签署上级签名',
           );

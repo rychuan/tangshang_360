@@ -11,6 +11,7 @@ import {
 import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { DepartmentService } from './department.service';
+import type { Request } from 'express';
 import type {
   DepartmentListResponse,
   DepartmentTreeNode,
@@ -47,7 +48,7 @@ export class DepartmentController {
   @NeedLogin()
   @Post()
   async create(
-    @Req() req: any,
+    @Req() req: Request,
     @Body() body: CreateDepartmentRequest,
   ): Promise<{ id: string }> {
     const { userId } = req.userContext as { userId: string };
@@ -59,7 +60,7 @@ export class DepartmentController {
   @NeedLogin()
   @Put(':id')
   async update(
-    @Req() req: any,
+    @Req() req: Request,
     @Param('id') id: string,
     @Body() body: CreateDepartmentRequest,
   ): Promise<{ success: boolean }> {
@@ -72,7 +73,7 @@ export class DepartmentController {
   @NeedLogin()
   @Delete(':id')
   async remove(
-    @Req() req: any,
+    @Req() req: Request,
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {
     const { userId } = req.userContext as { userId: string };

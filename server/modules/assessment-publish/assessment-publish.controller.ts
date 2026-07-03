@@ -12,6 +12,7 @@ import {
 import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { AssessmentPublishService } from './assessment-publish.service';
+import type { Request } from 'express';
 import type {
   PublishRequest,
   AdjustRequest,
@@ -68,7 +69,7 @@ export class AssessmentPublishController {
   @RequirePermission('publish_management', 'edit')
   @NeedLogin()
   @Patch('assessment-instances/batch-unlock')
-  async batchUnlock(@Req() req: any, @Body() body: BatchUnlockRequest) {
+  async batchUnlock(@Req() req: Request, @Body() body: BatchUnlockRequest) {
     const { userId } = req.userContext;
     return this.service.batchUnlock(body.instanceIds, body.reason, userId);
   }
@@ -77,7 +78,7 @@ export class AssessmentPublishController {
   @RequirePermission('publish_management', 'edit')
   @NeedLogin()
   @Post('assessment-instances/batch-notify')
-  async batchNotify(@Req() req: any, @Body() body: BatchNotifyRequest) {
+  async batchNotify(@Req() req: Request, @Body() body: BatchNotifyRequest) {
     const { userId } = req.userContext;
     return this.service.batchResendNotification(body.instanceIds, userId);
   }
@@ -86,7 +87,7 @@ export class AssessmentPublishController {
   @RequirePermission('publish_management', 'publish')
   @NeedLogin()
   @Post('publish')
-  async publish(@Req() req: any, @Body() body: PublishRequest) {
+  async publish(@Req() req: Request, @Body() body: PublishRequest) {
     const { userId } = req.userContext;
     return this.service.publish(body, userId);
   }
@@ -96,7 +97,7 @@ export class AssessmentPublishController {
   @NeedLogin()
   @Patch('assessment-instances/:id/unlock')
   async unlock(
-    @Req() req: any,
+    @Req() req: Request,
     @Param('id') id: string,
     @Body() body: UnlockRequest,
   ) {
@@ -119,7 +120,7 @@ export class AssessmentPublishController {
   @NeedLogin()
   @Patch('publish/employees/:employeeId/indicators')
   async adjustEmployeeSnapshot(
-    @Req() req: any,
+    @Req() req: Request,
     @Param('employeeId') employeeId: string,
     @Body() body: AdjustRequest,
   ) {

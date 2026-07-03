@@ -50,7 +50,9 @@ export async function detail(id: string): Promise<EmployeeDetail> {
   return data;
 }
 
-export async function create(body: CreateEmployeeRequest): Promise<{ id: string }> {
+export async function create(
+  body: CreateEmployeeRequest,
+): Promise<{ id: string }> {
   const { data } = await axiosForBackend({
     url: '/api/employees',
     method: 'POST',
@@ -59,7 +61,10 @@ export async function create(body: CreateEmployeeRequest): Promise<{ id: string 
   return data;
 }
 
-export async function update(id: string, body: UpdateEmployeeRequest): Promise<{ success: boolean }> {
+export async function update(
+  id: string,
+  body: UpdateEmployeeRequest,
+): Promise<{ success: boolean }> {
   const { data } = await axiosForBackend({
     url: `/api/employees/${id}`,
     method: 'PUT',
@@ -84,7 +89,10 @@ export async function deactivate(id: string): Promise<{ success: boolean }> {
   return data;
 }
 
-export async function updatePermissions(employeeId: string, permissions: unknown[]): Promise<{ success: boolean }> {
+export async function updatePermissions(
+  employeeId: string,
+  permissions: unknown[],
+): Promise<{ success: boolean }> {
   const { data } = await axiosForBackend({
     url: `/api/employees/${employeeId}/permissions`,
     method: 'PUT',
@@ -93,7 +101,9 @@ export async function updatePermissions(employeeId: string, permissions: unknown
   return data;
 }
 
-export async function bind(body: CreateBindingRequest): Promise<{ success: boolean }> {
+export async function bind(
+  body: CreateBindingRequest,
+): Promise<{ success: boolean }> {
   const { data } = await axiosForBackend<{ success: boolean }>({
     url: '/api/employees/bind',
     method: 'POST',
@@ -102,7 +112,9 @@ export async function bind(body: CreateBindingRequest): Promise<{ success: boole
   return data;
 }
 
-export async function unbind(employeeId: string): Promise<{ success: boolean }> {
+export async function unbind(
+  employeeId: string,
+): Promise<{ success: boolean }> {
   const { data } = await axiosForBackend<{ success: boolean }>({
     url: `/api/employees/${employeeId}/unbind`,
     method: 'PATCH',
@@ -110,7 +122,9 @@ export async function unbind(employeeId: string): Promise<{ success: boolean }> 
   return data;
 }
 
-export async function bindingHistory(employeeId: string): Promise<{ items: BindingHistoryItem[] }> {
+export async function bindingHistory(
+  employeeId: string,
+): Promise<{ items: BindingHistoryItem[] }> {
   const { data } = await axiosForBackend<{ items: BindingHistoryItem[] }>({
     url: `/api/employees/${employeeId}/binding-history`,
     method: 'GET',

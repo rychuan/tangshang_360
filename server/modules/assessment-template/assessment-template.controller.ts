@@ -13,6 +13,7 @@ import {
 import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { AssessmentTemplateService } from './assessment-template.service';
+import type { Request } from 'express';
 import type {
   AssessmentTemplateListResponse,
   AssessmentTemplateDetail,
@@ -80,7 +81,7 @@ export class AssessmentTemplateController {
   @NeedLogin()
   @Delete(':id')
   async delete(
-    @Req() req: any,
+    @Req() req: Request,
     @Param('id') id: string,
   ): Promise<SuccessResponse> {
     const { userId } = req.userContext as { userId: string };
