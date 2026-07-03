@@ -245,60 +245,57 @@ export class AssessmentTemplateService {
 
     this.validateWeights(body.dimensions);
 
-    // P0: 使用事务包裹 delete + insert
-    await this.db.transaction(async (tx) => {
-      const existingDims = await tx
-        .select({ id: assessmentDimension.id })
-        .from(assessmentDimension)
-        .where(eq(assessmentDimension.templateId, id));
+    const existingDims = await this.db
+      .select({ id: assessmentDimension.id })
+      .from(assessmentDimension)
+      .where(eq(assessmentDimension.templateId, id));
 
-      for (const dim of existingDims) {
-        await tx
-          .delete(assessmentIndicator)
-          .where(eq(assessmentIndicator.dimensionId, dim.id));
-      }
+    for (const dim of existingDims) {
+      await this.db
+        .delete(assessmentIndicator)
+        .where(eq(assessmentIndicator.dimensionId, dim.id));
+    }
 
-      await tx
-        .delete(assessmentDimension)
-        .where(eq(assessmentDimension.templateId, id));
+    await this.db
+      .delete(assessmentDimension)
+      .where(eq(assessmentDimension.templateId, id));
 
-      await tx
-        .update(assessmentTemplate)
-        .set({
-          name: body.name,
-          position: body.position,
-          type: body.type,
+    await this.db
+      .update(assessmentTemplate)
+      .set({
+        name: body.name,
+        position: body.position,
+        type: body.type,
+      })
+      .where(eq(assessmentTemplate.id, id));
+
+    for (let i = 0; i < body.dimensions.length; i++) {
+      const dim = body.dimensions[i];
+      const [dimInserted] = await this.db
+        .insert(assessmentDimension)
+        .values({
+          templateId: id,
+          name: dim.name,
+          weight: String(dim.weight),
+          sortOrder: i,
         })
-        .where(eq(assessmentTemplate.id, id));
+        .returning({ id: assessmentDimension.id });
 
-      for (let i = 0; i < body.dimensions.length; i++) {
-        const dim = body.dimensions[i];
-        const [dimInserted] = await tx
-          .insert(assessmentDimension)
-          .values({
-            templateId: id,
-            name: dim.name,
-            weight: String(dim.weight),
-            sortOrder: i,
-          })
-          .returning({ id: assessmentDimension.id });
+      const dimensionId: string = dimInserted.id;
 
-        const dimensionId: string = dimInserted.id;
-
-        for (let j = 0; j < dim.indicators.length; j++) {
-          const ind = dim.indicators[j];
-          await tx.insert(assessmentIndicator).values({
-            dimensionId,
-            content: ind.content,
-            description: ind.description,
-            algorithm: ind.algorithm,
-            dataSource: ind.dataSource,
-            weight: String(ind.weight),
-            sortOrder: j,
-          });
-        }
+      for (let j = 0; j < dim.indicators.length; j++) {
+        const ind = dim.indicators[j];
+        await this.db.insert(assessmentIndicator).values({
+          dimensionId,
+          content: ind.content,
+          description: ind.description,
+          algorithm: ind.algorithm,
+          dataSource: ind.dataSource,
+          weight: String(ind.weight),
+          sortOrder: j,
+        });
       }
-    });
+    }
 
     return { success: true };
   }

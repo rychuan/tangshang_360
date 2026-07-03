@@ -295,59 +295,57 @@ export class AssessmentOperationService {
       }
     }
 
-    await this.db.transaction(async (tx) => {
-      for (const rating of body.ratings) {
-        const existingRows = await tx
-          .select()
-          .from(ratingRecord)
-          .where(
-            and(
-              eq(ratingRecord.instanceId, id),
-              eq(ratingRecord.indicatorSnapshotId, rating.indicatorSnapshotId),
-              eq(ratingRecord.ratingType, 'self'),
-            ),
-          )
-          .limit(1);
+    for (const rating of body.ratings) {
+      const existingRows = await this.db
+        .select()
+        .from(ratingRecord)
+        .where(
+          and(
+            eq(ratingRecord.instanceId, id),
+            eq(ratingRecord.indicatorSnapshotId, rating.indicatorSnapshotId),
+            eq(ratingRecord.ratingType, 'self'),
+          ),
+        )
+        .limit(1);
 
-        const scoreStr: string = String(rating.score);
+      const scoreStr: string = String(rating.score);
 
-        if (existingRows.length > 0) {
-          await tx
-            .update(ratingRecord)
-            .set({
-              score: scoreStr,
-              comment: rating.comment || null,
-              isDraft: body.isDraft,
-              submittedAt: body.isDraft ? null : new Date(),
-            })
-            .where(eq(ratingRecord.id, existingRows[0].id));
-        } else {
-          await tx.insert(ratingRecord).values({
-            instanceId: id,
-            indicatorSnapshotId: rating.indicatorSnapshotId,
-            ratingType: 'self',
+      if (existingRows.length > 0) {
+        await this.db
+          .update(ratingRecord)
+          .set({
             score: scoreStr,
             comment: rating.comment || null,
-            ratedBy: userId,
             isDraft: body.isDraft,
             submittedAt: body.isDraft ? null : new Date(),
-          });
-        }
+          })
+          .where(eq(ratingRecord.id, existingRows[0].id));
+      } else {
+        await this.db.insert(ratingRecord).values({
+          instanceId: id,
+          indicatorSnapshotId: rating.indicatorSnapshotId,
+          ratingType: 'self',
+          score: scoreStr,
+          comment: rating.comment || null,
+          ratedBy: userId,
+          isDraft: body.isDraft,
+          submittedAt: body.isDraft ? null : new Date(),
+        });
       }
+    }
 
-      if (!body.isDraft) {
-        await tx
-          .update(assessmentInstance)
-          .set({ status: 'supervisor_review' })
-          .where(eq(assessmentInstance.id, id));
-      }
+    if (!body.isDraft) {
+      await this.db
+        .update(assessmentInstance)
+        .set({ status: 'supervisor_review' })
+        .where(eq(assessmentInstance.id, id));
+    }
 
-      await tx.insert(auditLog).values({
-        operatorId: userId,
-        action: body.isDraft ? 'save_self_draft' : 'submit_self_rating',
-        targetType: 'assessment_instance',
-        targetId: id,
-      });
+    await this.db.insert(auditLog).values({
+      operatorId: userId,
+      action: body.isDraft ? 'save_self_draft' : 'submit_self_rating',
+      targetType: 'assessment_instance',
+      targetId: id,
     });
 
     this.logger.log(
@@ -499,78 +497,76 @@ export class AssessmentOperationService {
     let totalScore: number = 0;
     let grade: string = 'D';
 
-    await this.db.transaction(async (tx) => {
-      for (const rating of body.ratings) {
-        const existingRows = await tx
-          .select()
-          .from(ratingRecord)
-          .where(
-            and(
-              eq(ratingRecord.instanceId, id),
-              eq(ratingRecord.indicatorSnapshotId, rating.indicatorSnapshotId),
-              eq(ratingRecord.ratingType, 'supervisor'),
-            ),
-          )
-          .limit(1);
+    for (const rating of body.ratings) {
+      const existingRows = await this.db
+        .select()
+        .from(ratingRecord)
+        .where(
+          and(
+            eq(ratingRecord.instanceId, id),
+            eq(ratingRecord.indicatorSnapshotId, rating.indicatorSnapshotId),
+            eq(ratingRecord.ratingType, 'supervisor'),
+          ),
+        )
+        .limit(1);
 
-        const scoreStr: string = String(rating.score);
+      const scoreStr: string = String(rating.score);
 
-        if (existingRows.length > 0) {
-          await tx
-            .update(ratingRecord)
-            .set({
-              score: scoreStr,
-              comment: rating.comment || null,
-              isDraft: body.isDraft,
-              submittedAt: body.isDraft ? null : new Date(),
-            })
-            .where(eq(ratingRecord.id, existingRows[0].id));
-        } else {
-          await tx.insert(ratingRecord).values({
-            instanceId: id,
-            indicatorSnapshotId: rating.indicatorSnapshotId,
-            ratingType: 'supervisor',
+      if (existingRows.length > 0) {
+        await this.db
+          .update(ratingRecord)
+          .set({
             score: scoreStr,
             comment: rating.comment || null,
-            ratedBy: userId,
             isDraft: body.isDraft,
             submittedAt: body.isDraft ? null : new Date(),
-          });
-        }
-      }
-
-      if (!body.isDraft) {
-        const ratingBySnapId = new Map<string, number>();
-        for (const r of body.ratings) {
-          ratingBySnapId.set(r.indicatorSnapshotId, r.score);
-        }
-
-        for (const snap of allSnapshots) {
-          totalScore += ratingBySnapId.get(snap.id) ?? 0;
-        }
-
-        totalScore = Math.round(totalScore * SCORE_PRECISION) / SCORE_PRECISION;
-
-        grade = await this.performanceGradeService.matchGrade(totalScore);
-
-        await tx
-          .update(assessmentInstance)
-          .set({
-            totalScore: String(totalScore),
-            grade,
-            status: 'pending_sign',
           })
-          .where(eq(assessmentInstance.id, id));
+          .where(eq(ratingRecord.id, existingRows[0].id));
+      } else {
+        await this.db.insert(ratingRecord).values({
+          instanceId: id,
+          indicatorSnapshotId: rating.indicatorSnapshotId,
+          ratingType: 'supervisor',
+          score: scoreStr,
+          comment: rating.comment || null,
+          ratedBy: userId,
+          isDraft: body.isDraft,
+          submittedAt: body.isDraft ? null : new Date(),
+        });
+      }
+    }
+
+    if (!body.isDraft) {
+      const ratingBySnapId = new Map<string, number>();
+      for (const r of body.ratings) {
+        ratingBySnapId.set(r.indicatorSnapshotId, r.score);
       }
 
-      await tx.insert(auditLog).values({
-        operatorId: userId,
-        action: body.isDraft
-          ? 'save_supervisor_draft'
-          : 'submit_supervisor_rating',
-        targetType: 'assessment_instance',
-        targetId: id,
-      });
+      for (const snap of allSnapshots) {
+        totalScore += ratingBySnapId.get(snap.id) ?? 0;
+      }
+
+      totalScore = Math.round(totalScore * SCORE_PRECISION) / SCORE_PRECISION;
+
+      grade = await this.performanceGradeService.matchGrade(totalScore);
+
+      await this.db
+        .update(assessmentInstance)
+        .set({
+          totalScore: String(totalScore),
+          grade,
+          status: 'pending_sign',
+        })
+        .where(eq(assessmentInstance.id, id));
+    }
+
+    await this.db.insert(auditLog).values({
+      operatorId: userId,
+      action: body.isDraft
+        ? 'save_supervisor_draft'
+        : 'submit_supervisor_rating',
+      targetType: 'assessment_instance',
+      targetId: id,
     });
 
     this.logger.log(
@@ -698,66 +694,64 @@ export class AssessmentOperationService {
     const now: Date = new Date();
 
     // 事务保护：签名 CAS 更新 + 状态推进 + 审计日志原子化
-    await this.db.transaction(async (tx) => {
-      if (body.signType === 'self') {
-        const selfResult = await tx
-          .update(assessmentInstance)
-          .set({
-            selfSignName: effectiveSignName,
-            selfSignAt: now,
-            selfSignImage: body.signImage || null,
-          })
-          .where(
-            and(
-              eq(assessmentInstance.id, id),
-              sql`${assessmentInstance.selfSignName} IS NULL`,
-            ),
-          )
-          .returning();
-        if (selfResult.length === 0) {
-          throw new BadRequestException('本人签名已被他人抢先提交');
-        }
-      } else {
-        const supResult = await tx
-          .update(assessmentInstance)
-          .set({
-            supervisorSignName: effectiveSignName,
-            supervisorSignAt: now,
-            supervisorSignImage: body.signImage || null,
-          })
-          .where(
-            and(
-              eq(assessmentInstance.id, id),
-              sql`${assessmentInstance.supervisorSignName} IS NULL`,
-            ),
-          )
-          .returning();
-        if (supResult.length === 0) {
-          throw new BadRequestException('上级签名已被他人抢先提交');
-        }
-      }
-
-      // 原子操作：双方都已签名时将状态推进到 completed
-      await tx
+    if (body.signType === 'self') {
+      const selfResult = await this.db
         .update(assessmentInstance)
         .set({
-          status: 'completed',
-          completedAt: now,
+          selfSignName: effectiveSignName,
+          selfSignAt: now,
+          selfSignImage: body.signImage || null,
         })
         .where(
           and(
             eq(assessmentInstance.id, id),
-            sql`${assessmentInstance.selfSignName} IS NOT NULL`,
-            sql`${assessmentInstance.supervisorSignName} IS NOT NULL`,
+            sql`${assessmentInstance.selfSignName} IS NULL`,
           ),
-        );
+        )
+        .returning();
+      if (selfResult.length === 0) {
+        throw new BadRequestException('本人签名已被他人抢先提交');
+      }
+    } else {
+      const supResult = await this.db
+        .update(assessmentInstance)
+        .set({
+          supervisorSignName: effectiveSignName,
+          supervisorSignAt: now,
+          supervisorSignImage: body.signImage || null,
+        })
+        .where(
+          and(
+            eq(assessmentInstance.id, id),
+            sql`${assessmentInstance.supervisorSignName} IS NULL`,
+          ),
+        )
+        .returning();
+      if (supResult.length === 0) {
+        throw new BadRequestException('上级签名已被他人抢先提交');
+      }
+    }
 
-      await tx.insert(auditLog).values({
-        operatorId: userId,
-        action: `sign_${body.signType}`,
-        targetType: 'assessment_instance',
-        targetId: id,
-      });
+    // 原子操作：双方都已签名时将状态推进到 completed
+    await this.db
+      .update(assessmentInstance)
+      .set({
+        status: 'completed',
+        completedAt: now,
+      })
+      .where(
+        and(
+          eq(assessmentInstance.id, id),
+          sql`${assessmentInstance.selfSignName} IS NOT NULL`,
+          sql`${assessmentInstance.supervisorSignName} IS NOT NULL`,
+        ),
+      );
+
+    await this.db.insert(auditLog).values({
+      operatorId: userId,
+      action: `sign_${body.signType}`,
+      targetType: 'assessment_instance',
+      targetId: id,
     });
 
     // 读取最终状态
