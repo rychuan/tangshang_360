@@ -233,6 +233,12 @@ export class PerformanceGradeService {
           `等级「${curr.name}」(区间[${curr.minScore},${curr.maxScore}])与等级「${next.name}」(区间[${next.minScore},${next.maxScore}])分数区间重叠`,
         );
       }
+      // 检查区间间隙：maxScore+1 应等于下一个的 minScore
+      if (curr.maxScore + 1 < next.minScore) {
+        errors.push(
+          `等级「${curr.name}」(最高分${curr.maxScore})与等级「${next.name}」(最低分${next.minScore})之间存在未覆盖的分数区间(${curr.maxScore + 1}~${next.minScore - 1})`,
+        );
+      }
     }
 
     if (errors.length > 0) {

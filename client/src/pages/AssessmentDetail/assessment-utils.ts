@@ -36,7 +36,7 @@ export function matchGradeLocally(
       return rule.name;
     }
   }
-  return 'D';
+  return '未评级';
 }
 
 export function calculatePreviewScore(
