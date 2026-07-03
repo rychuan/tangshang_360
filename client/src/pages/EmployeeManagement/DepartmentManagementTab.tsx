@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { department as departmentApi } from '@/api';
+import { handleApiError } from '@client/src/utils/api-error';
 import type {
   DepartmentItem,
   DepartmentTreeNode,
@@ -86,8 +87,8 @@ const DepartmentManagementTab: React.FC = () => {
       setItems(res?.items ?? []);
       setTree(res.tree);
       setExpanded(new Set(res.tree.map((n: DepartmentTreeNode) => n.id)));
-    } catch (err) {
-      toast.error('加载部门数据失败');
+    } catch (err: unknown) {
+      handleApiError(err);
     } finally {
       setLoading(false);
     }
@@ -120,11 +121,8 @@ const DepartmentManagementTab: React.FC = () => {
       setEditingDept(null);
       setFormData({ name: '', parentId: '', headId: '', sortOrder: 0 });
       loadData();
-    } catch (err) {
-      const msg = (
-        err as { response?: { data?: { error?: { message?: string } } } }
-      )?.response?.data?.error?.message;
-      toast.error(msg || '操作失败');
+    } catch (err: unknown) {
+      handleApiError(err);
     }
   };
 
@@ -148,11 +146,8 @@ const DepartmentManagementTab: React.FC = () => {
       await departmentApi.remove(dept.id);
       toast.success('部门已删除');
       loadData();
-    } catch (err) {
-      const msg = (
-        err as { response?: { data?: { error?: { message?: string } } } }
-      )?.response?.data?.error?.message;
-      toast.error(msg || '删除失败');
+    } catch (err: unknown) {
+      handleApiError(err);
     }
   };
 
