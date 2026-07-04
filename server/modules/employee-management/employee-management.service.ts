@@ -227,23 +227,30 @@ export class EmployeeManagementService {
       throw new BadRequestException('系统中至少保留一个系统管理员，无法删除');
     }
 
-    await this.db
-      .update(employee)
-      .set({ deletedAt: new Date() })
-      .where(eq(employee.employeeId, id));
-
-    await this.db.insert(auditLog).values({
-      operatorId: userId,
-      action: 'delete_employee',
-      targetType: 'employee',
-      targetId: id,
-      changes: {
-        before: {
-          name: emp.name,
-          position: emp.position,
-          department: emp.department,
+    await this.db.transaction(async (tx) => {
+      // 事务内重新校验管理员数量
+      if (String(emp.role || 'employee') === 'admin') {
+        const adminCountRows = await tx
+          .select({ cnt: count() })
+          .from(employee)
+          .where(and(eq(employee.role, 'admin'), isNull(employee.deletedAt)));
+        if (Number(adminCountRows[0]?.cnt || 0) <= 1) {
+          throw new BadRequestException('系统中至少保留一个系统管理员，无法删除');
+        }
+      }
+      await tx
+        .update(employee)
+        .set({ deletedAt: new Date() })
+        .where(eq(employee.employeeId, id));
+      await tx.insert(auditLog).values({
+        operatorId: userId,
+        action: 'delete_employee',
+        targetType: 'employee',
+        targetId: id,
+        changes: {
+          before: { name: emp.name, position: emp.position, department: emp.department },
         },
-      },
+      });
     });
 
     this.logger.log(`Employee deleted: ${emp.name} (${id})`);
@@ -435,22 +442,24 @@ export class EmployeeManagementService {
       employeeNo: body.employeeNo || null,
     };
 
-    const [inserted] = await this.db
-      .insert(employee)
-      .values(values)
-      .returning({ id: employee.employeeId });
-
-    await this.db.insert(auditLog).values({
-      operatorId: userId,
-      action: 'create_employee',
-      targetType: 'employee',
-      targetId: String(inserted.id),
-      changes: { after: values },
+    const [inserted] = await this.db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(employee)
+        .values(values)
+        .returning({ id: employee.employeeId });
+      await tx.insert(auditLog).values({
+        operatorId: userId,
+        action: 'create_employee',
+        targetType: 'employee',
+        targetId: String(row.id),
+        changes: { after: values },
+      });
+      return [row];
     });
 
     this.logger.log(`Employee created: ${body.name} (${inserted.id})`);
 
-    // 同步角色到 AuthorizationSDK
+    // 同步角色到 AuthorizationSDK（事务外）
     const roles = (body.role || 'employee').split(',').filter(Boolean);
     await this.roleManagerService.syncUserRoles(body.id, roles);
 
@@ -524,17 +533,18 @@ export class EmployeeManagementService {
       employeeNo: body.employeeNo || null,
     };
 
-    await this.db
-      .update(employee)
-      .set(values)
-      .where(eq(employee.employeeId, id));
-
-    await this.db.insert(auditLog).values({
-      operatorId: userId,
-      action: 'update_employee',
-      targetType: 'employee',
-      targetId: id,
-      changes: { after: values },
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(employee)
+        .set(values)
+        .where(eq(employee.employeeId, id));
+      await tx.insert(auditLog).values({
+        operatorId: userId,
+        action: 'update_employee',
+        targetType: 'employee',
+        targetId: id,
+        changes: { after: values },
+      });
     });
 
     this.logger.log(`Employee updated: ${id}`);
@@ -557,16 +567,17 @@ export class EmployeeManagementService {
       throw new NotFoundException('员工不存在');
     }
 
-    await this.db
-      .update(employee)
-      .set({ status: true })
-      .where(eq(employee.employeeId, id));
-
-    await this.db.insert(auditLog).values({
-      operatorId: userId,
-      action: 'activate_employee',
-      targetType: 'employee',
-      targetId: id,
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(employee)
+        .set({ status: true })
+        .where(eq(employee.employeeId, id));
+      await tx.insert(auditLog).values({
+        operatorId: userId,
+        action: 'activate_employee',
+        targetType: 'employee',
+        targetId: id,
+      });
     });
 
     return { success: true };
@@ -583,27 +594,27 @@ export class EmployeeManagementService {
       throw new NotFoundException('员工不存在');
     }
 
-    // P1-1: 停用员工时联动停用其所有活跃绑定
-    await this.db
-      .update(employeeBinding)
-      .set({ status: false })
-      .where(
-        and(
-          eq(employeeBinding.employeeId, id),
-          eq(employeeBinding.status, true),
-        ),
-      );
-
-    await this.db
-      .update(employee)
-      .set({ status: false })
-      .where(eq(employee.employeeId, id));
-
-    await this.db.insert(auditLog).values({
-      operatorId: userId,
-      action: 'deactivate_employee',
-      targetType: 'employee',
-      targetId: id,
+    await this.db.transaction(async (tx) => {
+      // P1-1: 停用员工时联动停用其所有活跃绑定
+      await tx
+        .update(employeeBinding)
+        .set({ status: false })
+        .where(
+          and(
+            eq(employeeBinding.employeeId, id),
+            eq(employeeBinding.status, true),
+          ),
+        );
+      await tx
+        .update(employee)
+        .set({ status: false })
+        .where(eq(employee.employeeId, id));
+      await tx.insert(auditLog).values({
+        operatorId: userId,
+        action: 'deactivate_employee',
+        targetType: 'employee',
+        targetId: id,
+      });
     });
 
     return { success: true };
@@ -663,18 +674,19 @@ export class EmployeeManagementService {
       throw new NotFoundException('员工不存在');
     }
 
-    await this.db
-      .update(employee)
-      .set({ permissions })
-      .where(eq(employee.employeeId, employeeId));
-
-    await this.db.insert(auditLog).values({
-      operatorId: operatorUserId,
-      action: 'update_permissions',
-      targetType: 'employee',
-      targetId: employeeId,
-      changes: { permissions },
-      reason: `更新 ${rows[0].name} 的权限`,
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(employee)
+        .set({ permissions })
+        .where(eq(employee.employeeId, employeeId));
+      await tx.insert(auditLog).values({
+        operatorId: operatorUserId,
+        action: 'update_permissions',
+        targetType: 'employee',
+        targetId: employeeId,
+        changes: { permissions },
+        reason: `更新 ${rows[0].name} 的权限`,
+      });
     });
 
     this.logger.log(`Permissions updated for employee ${employeeId}`);

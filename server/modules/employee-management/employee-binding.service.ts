@@ -211,21 +211,22 @@ export class EmployeeBindingService {
     }
 
     for (const binding of existing) {
-      await this.db
-        .update(employeeBinding)
-        .set({ status: false })
-        .where(eq(employeeBinding.id, String(binding.id)));
-
-      await this.db.insert(auditLog).values({
-        operatorId: userId,
-        action: 'unbind',
-        targetType: 'employee_binding',
-        targetId: String(binding.id),
-        changes: {
-          before: { status: binding.status },
-          after: { status: false },
-        },
-        reason: '员工解绑',
+      await this.db.transaction(async (tx) => {
+        await tx
+          .update(employeeBinding)
+          .set({ status: false })
+          .where(eq(employeeBinding.id, String(binding.id)));
+        await tx.insert(auditLog).values({
+          operatorId: userId,
+          action: 'unbind',
+          targetType: 'employee_binding',
+          targetId: String(binding.id),
+          changes: {
+            before: { status: binding.status },
+            after: { status: false },
+          },
+          reason: '员工解绑',
+        });
       });
     }
 
@@ -255,21 +256,22 @@ export class EmployeeBindingService {
       return { success: false, message: '绑定记录不存在' };
     }
 
-    await this.db
-      .update(employeeBinding)
-      .set({ status: false })
-      .where(eq(employeeBinding.id, bindingId));
-
-    await this.db.insert(auditLog).values({
-      operatorId: userId,
-      action: 'unbind',
-      targetType: 'employee_binding',
-      targetId: bindingId,
-      changes: {
-        before: { status: existing.status },
-        after: { status: false },
-      },
-      reason: '员工解绑',
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(employeeBinding)
+        .set({ status: false })
+        .where(eq(employeeBinding.id, bindingId));
+      await tx.insert(auditLog).values({
+        operatorId: userId,
+        action: 'unbind',
+        targetType: 'employee_binding',
+        targetId: bindingId,
+        changes: {
+          before: { status: existing.status },
+          after: { status: false },
+        },
+        reason: '员工解绑',
+      });
     });
 
     this.logger.log(`Deactivated binding: ${bindingId}`);
