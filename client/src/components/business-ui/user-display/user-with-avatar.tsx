@@ -106,7 +106,7 @@ export function UserWithAvatar({
   const { user_id, avatar: propsAvatar, name: propsName } = user;
 
   // 判断是否需要从 API 获取用户信息
-  const needsFetch = !propsName && !propsAvatar && !!user_id;
+  const needsFetch = !propsAvatar && !!user_id;
 
   // 使用 react-query hook 获取用户信息
   const idsToFetch = useMemo(
