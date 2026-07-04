@@ -60,7 +60,7 @@
     {
       "id": 3,
       "name": "关联业务模块全链路代码适配",
-      "status": "in_progress",
+      "status": "completed",
       "type": "normal",
       "subtasks": [
         "读取coding-guide技能",
@@ -91,12 +91,13 @@
       "dependencies": [
         2
       ],
-      "beginTime": 1783137281757
+      "beginTime": 1783137281757,
+      "endTime": 1783137327025
     },
     {
       "id": 4,
       "name": "共享接口兼容性验证",
-      "status": "pending",
+      "status": "in_progress",
       "type": "normal",
       "subtasks": [
         "校验shared/api.interface.ts中员工相关类型定义无需修改",
@@ -115,7 +116,8 @@
       "acceptance": "所有员工相关API请求/响应结构与原有完全兼容，前端无感知",
       "dependencies": [
         3
-      ]
+      ],
+      "beginTime": 1783137327148
     },
     {
       "id": 5,
