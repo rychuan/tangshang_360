@@ -304,10 +304,7 @@ const TeamPerformancePage: React.FC = () => {
                 <p className="text-xs text-muted-foreground">暂无数据</p>
               </div>
             ) : (
-              <ChartContainer
-                config={chartConfig}
-                className="w-full h-full"
-              >
+              <ChartContainer config={chartConfig} className="w-full h-full">
                 <BarChart
                   data={scoreRankingData}
                   layout="vertical"
