@@ -154,6 +154,7 @@ export class TeamPerformanceService {
           OR ${employee.department} IN (SELECT ${department.name} FROM ${department} WHERE (${department.headId}).user_id = ${userId})
         )`,
           isNull(employee.deletedAt),
+          eq(employee.status, true),
           sql`(${employee.employeeId}).user_id != ${userId}`,
         ),
       );
@@ -195,10 +196,14 @@ export class TeamPerformanceService {
         status: assessmentInstance.status,
         totalScore: assessmentInstance.totalScore,
         grade: assessmentInstance.grade,
-        employeeName: sql<string>`(SELECT name FROM employee emp WHERE (emp.employee_id).user_id = (${assessmentInstance.employeeId}).user_id AND emp.deleted_at IS NULL LIMIT 1)`,
-        department: sql<string>`(SELECT department FROM employee emp WHERE (emp.employee_id).user_id = (${assessmentInstance.employeeId}).user_id AND emp.deleted_at IS NULL LIMIT 1)`,
+        employeeName: employee.name,
+        department: employee.department,
       })
       .from(assessmentInstance)
+      .leftJoin(
+        employee,
+        sql`(${employee.employeeId}).user_id = (${assessmentInstance.employeeId}).user_id AND ${employee.deletedAt} IS NULL`,
+      )
       .where(and(...whereConditions))
       .orderBy(desc(assessmentInstance.createdAt))
       .limit(pageSize)
@@ -213,8 +218,8 @@ export class TeamPerformanceService {
         status: string;
         totalScore: string | null;
         grade: string | null;
-        employeeName: string;
-        department: string;
+        employeeName: string | null;
+        department: string | null;
       }) => ({
         id: row.id,
         period: row.period,
@@ -240,7 +245,7 @@ export class TeamPerformanceService {
           period: assessmentInstance.period,
           status: assessmentInstance.status,
           employeeUserId: sql<string>`(${assessmentInstance.employeeId}).user_id`,
-          employeeName: sql<string>`(SELECT name FROM employee emp WHERE (emp.employee_id).user_id = (${assessmentInstance.employeeId}).user_id AND emp.deleted_at IS NULL LIMIT 1)`,
+          employeeName: sql<string>`COALESCE((SELECT name FROM employee e WHERE (e.employee_id).user_id = (${assessmentInstance.employeeId}).user_id AND e.deleted_at IS NULL LIMIT 1), '')`,
         })
         .from(assessmentInstance)
         .where(eq(assessmentInstance.id, instanceId))
