@@ -160,7 +160,7 @@ const AssessmentDetailPage: React.FC = () => {
             <>
               <div className="text-right">
                 <p className="text-xs text-muted-foreground">总分</p>
-                <p className="text-2xl font-bold text-primary">
+                <p className="text-2xl font-bold text-primary leading-8">
                   {detail.totalScore}
                 </p>
               </div>
@@ -168,7 +168,7 @@ const AssessmentDetailPage: React.FC = () => {
                 <div className="text-right">
                   <p className="text-xs text-muted-foreground">等级</p>
                   <span
-                    className={`inline-block px-3 py-1 rounded-md text-lg font-bold ${getGradeStyle(detail.grade, gradeStyleMap)}`}
+                    className={`inline-block px-3 py-1 rounded-md text-lg font-bold leading-6 ${getGradeStyle(detail.grade, gradeStyleMap)}`}
                   >
                     {detail.grade}
                   </span>
@@ -177,8 +177,8 @@ const AssessmentDetailPage: React.FC = () => {
               {detail.coefficient && (
                 <div className="text-right">
                   <p className="text-xs text-muted-foreground">系数</p>
-                  <p className="text-xl font-bold text-primary">
-                    {detail.coefficient}
+                <p className="text-xl font-bold text-primary leading-8">
+                  {detail.coefficient}
                   </p>
                 </div>
               )}
