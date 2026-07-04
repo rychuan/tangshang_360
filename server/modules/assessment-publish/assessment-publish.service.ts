@@ -281,7 +281,7 @@ export class AssessmentPublishService {
         const instanceId: string = instance.id;
 
         const hasSnap: boolean =
-          await this.employeeSnapshotService.hasSnapshot(empId);
+          await this.employeeSnapshotService.hasSnapshot(empId, tx);
         if (hasSnap) {
           await this.employeeSnapshotService.copyToInstance(
             empId,
@@ -320,26 +320,30 @@ export class AssessmentPublishService {
       });
     }
 
-    // === P1: 发布后发送飞书通知 ===
+    // === P1: 发布后异步发送飞书通知（不阻塞响应） ===
     if (publishedInstances.length > 0) {
-      for (const pi of publishedInstances) {
-        try {
-          const message = `**考核发布通知**\n\n${pi.period} 月度考核已发布，请尽快登录系统完成自评。`;
-          await this.capabilityService
-            .load('assessment_reminder_feishu_send_1')
-            .call('send_feishu_message', {
-              receiverUserList: [pi.employeeId],
-              cardContentMarkdown: message,
-            });
-          this.logger.log(
-            `Published notification sent to ${pi.employeeName} (${pi.employeeId})`,
-          );
-        } catch (err) {
-          this.logger.warn(
-            `Failed to send notification to ${pi.employeeName}: ${err}`,
-          );
-        }
-      }
+      Promise.allSettled(
+        publishedInstances.map(
+          async (pi: { employeeId: string; employeeName: string; period: string }) => {
+            try {
+              const message = `**考核发布通知**\n\n${pi.period} 月度考核已发布，请尽快登录系统完成自评。`;
+              await this.capabilityService
+                .load('assessment_reminder_feishu_send_1')
+                .call('send_feishu_message', {
+                  receiverUserList: [pi.employeeId],
+                  cardContentMarkdown: message,
+                });
+              this.logger.log(
+                `Published notification sent to ${pi.employeeName} (${pi.employeeId})`,
+              );
+            } catch (err) {
+              this.logger.warn(
+                `Failed to send notification to ${pi.employeeName}: ${err}`,
+              );
+            }
+          },
+        ),
+      ).catch(() => {});
     }
 
     return { success: true, publishedCount };

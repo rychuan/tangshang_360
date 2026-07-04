@@ -54,7 +54,7 @@ export class EmployeeSnapshotService {
       dimensionMap.set(d.id, { name: d.name, weight: Number(d.weight) });
     }
 
-    const indicators = await this.db
+    const indicators = await db
       .select()
       .from(assessmentIndicator)
       .innerJoin(
@@ -67,24 +67,28 @@ export class EmployeeSnapshotService {
         asc(assessmentIndicator.sortOrder),
       );
 
-    for (let i: number = 0; i < indicators.length; i++) {
-      const ind = indicators[i];
-      const dim = dimensionMap.get(ind.assessment_indicator.dimensionId);
-      await db.insert(employeeIndicatorSnapshot).values({
-        employeeId,
-        templateId,
-        dimensionName: dim?.name ?? '',
-        dimensionWeight: String(dim?.weight ?? 0),
-        content: ind.assessment_indicator.content,
-        description: ind.assessment_indicator.description,
-        algorithm: ind.assessment_indicator.algorithm,
-        dataSource: ind.assessment_indicator.dataSource,
-        weight: ind.assessment_indicator.weight,
-        isAdjusted: false,
-        sortOrder: i,
-        createdBy: userId,
-        updatedBy: userId,
-      });
+    if (indicators.length > 0) {
+      const snapshotValues = indicators.map(
+        (ind: (typeof indicators)[number], i: number) => {
+          const dim = dimensionMap.get(ind.assessment_indicator.dimensionId);
+          return {
+            employeeId,
+            templateId,
+            dimensionName: dim?.name ?? '',
+            dimensionWeight: String(dim?.weight ?? 0),
+            content: ind.assessment_indicator.content,
+            description: ind.assessment_indicator.description,
+            algorithm: ind.assessment_indicator.algorithm,
+            dataSource: ind.assessment_indicator.dataSource,
+            weight: ind.assessment_indicator.weight,
+            isAdjusted: false,
+            sortOrder: i,
+            createdBy: userId,
+            updatedBy: userId,
+          };
+        },
+      );
+      await db.insert(employeeIndicatorSnapshot).values(snapshotValues);
     }
   }
 
@@ -322,21 +326,24 @@ export class EmployeeSnapshotService {
       .where(eq(employeeIndicatorSnapshot.employeeId, employeeId))
       .orderBy(asc(employeeIndicatorSnapshot.sortOrder));
 
-    for (const row of snapshotRows) {
-      await db.insert(assessmentIndicatorSnapshot).values({
-        instanceId,
-        dimensionName: row.dimensionName,
-        dimensionWeight: row.dimensionWeight,
-        content: row.content,
-        description: row.description,
-        algorithm: row.algorithm,
-        dataSource: row.dataSource,
-        weight: row.weight,
-        isAdjusted: row.isAdjusted,
-        adjustedBy: row.adjustedBy,
-        adjustedAt: row.adjustedAt,
-        sortOrder: row.sortOrder,
-      });
+    if (snapshotRows.length > 0) {
+      const snapshotValues = snapshotRows.map(
+        (row: (typeof snapshotRows)[number]) => ({
+          instanceId,
+          dimensionName: row.dimensionName,
+          dimensionWeight: row.dimensionWeight,
+          content: row.content,
+          description: row.description,
+          algorithm: row.algorithm,
+          dataSource: row.dataSource,
+          weight: row.weight,
+          isAdjusted: row.isAdjusted,
+          adjustedBy: row.adjustedBy,
+          adjustedAt: row.adjustedAt,
+          sortOrder: row.sortOrder,
+        }),
+      );
+      await db.insert(assessmentIndicatorSnapshot).values(snapshotValues);
     }
   }
 
