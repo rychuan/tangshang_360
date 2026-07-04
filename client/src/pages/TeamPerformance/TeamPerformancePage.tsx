@@ -26,7 +26,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
-import { Pie, PieChart } from 'recharts';
+import { Pie, PieChart, Bar, BarChart, XAxis, YAxis, Cell } from 'recharts';
 import MultiMonthPicker from '@/components/ui/multi-month-picker';
 import { Users, TrendingUp, AlertCircle, Bell, Eye } from 'lucide-react';
 import { toast } from 'sonner';
@@ -36,6 +36,7 @@ import { CanDo } from '@/hooks/usePermissions';
 import { handleApiError } from '@/utils/api-error';
 import { PageHeader } from '@/components/business-ui/page-header';
 import { StatusBadge, GradeBadge } from '@/components/business-ui/status-badge';
+import { UserDisplay } from '@/components/business-ui/user-display';
 import { PageTable } from '@/components/business-ui/page-table';
 import type { PageTableColumn } from '@/components/business-ui/page-table';
 import * as teamPerformanceApi from '@/api/team-performance';
@@ -143,6 +144,19 @@ const TeamPerformancePage: React.FC = () => {
     return overview.totalInstanceCount - overview.completedCount;
   }, [overview]);
 
+  const scoreRankingData = useMemo(() => {
+    return subordinates
+      .filter((s) => s.totalScore != null)
+      .sort((a, b) => (b.totalScore ?? 0) - (a.totalScore ?? 0))
+      .slice(0, 20)
+      .map((s, i) => ({
+        employeeId: s.employeeId,
+        name: s.employeeName,
+        score: s.totalScore ?? 0,
+        fill: `hsl(var(--chart-${(i % 5) + 1}))`,
+      }));
+  }, [subordinates]);
+
   const teamColumns: PageTableColumn<SubordinateRecord>[] = useMemo(
     () => [
       { key: 'name', header: '姓名', render: (item) => item.employeeName },
@@ -229,43 +243,41 @@ const TeamPerformancePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Stats row — left cards + right pie */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Left — 3 stat cards stacked */}
-        <div className="lg:col-span-1 flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-4">
-            {/* 下属人数 */}
-            <Card className="rounded-xl">
-              <CardContent className="flex items-center gap-3 p-4">
-                <div className="flex items-center justify-center size-10 rounded-lg bg-primary/10 text-primary shrink-0">
-                  <Users className="size-5" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">下属人数</p>
-                  <p className="text-2xl font-bold">
-                    {overview?.totalSubordinates ?? 0}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+      {/* Stats row — 3 columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Left — 3 stacked stat cards */}
+        <div className="flex flex-col gap-4">
+          {/* 团队人数 */}
+          <Card className="rounded-xl">
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="flex items-center justify-center size-10 rounded-lg bg-primary/10 text-primary shrink-0">
+                <Users className="size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">团队人数</p>
+                <p className="text-2xl font-bold">
+                  {overview?.totalSubordinates ?? 0}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* 团队均分 */}
-            <Card className="rounded-xl">
-              <CardContent className="flex items-center gap-3 p-4">
-                <div className="flex items-center justify-center size-10 rounded-lg bg-success/10 text-success shrink-0">
-                  <TrendingUp className="size-5" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">团队均分</p>
-                  <p className="text-2xl font-bold">
-                    {overview?.avgScore != null
-                      ? overview.avgScore.toFixed(1)
-                      : '-'}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          {/* 团队均分 */}
+          <Card className="rounded-xl">
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="flex items-center justify-center size-10 rounded-lg bg-success/10 text-success shrink-0">
+                <TrendingUp className="size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">团队均分</p>
+                <p className="text-2xl font-bold">
+                  {overview?.avgScore != null
+                    ? overview.avgScore.toFixed(1)
+                    : '-'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* 未完成 */}
           <Card className="rounded-xl">
@@ -281,15 +293,77 @@ const TeamPerformancePage: React.FC = () => {
           </Card>
         </div>
 
+        {/* Middle — Score ranking bar chart */}
+        <Card className="rounded-xl flex flex-col">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">分数排名</CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 px-2 pb-2">
+            {scoreRankingData.length === 0 ? (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-xs text-muted-foreground">暂无数据</p>
+              </div>
+            ) : (
+              <ChartContainer
+                config={chartConfig}
+                className="w-full h-full"
+              >
+                <BarChart
+                  data={scoreRankingData}
+                  layout="vertical"
+                  margin={{ left: 0, top: 0, right: 8, bottom: 0 }}
+                >
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    tickLine={false}
+                    axisLine={false}
+                    tick={false}
+                    width={1}
+                  />
+                  <XAxis dataKey="score" type="number" hide domain={[0, 100]} />
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent />}
+                  />
+                  <Bar dataKey="score" radius={[0, 4, 4, 0]} barSize={18}>
+                    {scoreRankingData.map((entry, idx) => (
+                      <Cell key={entry.employeeId} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ChartContainer>
+            )}
+          </CardContent>
+          {scoreRankingData.length > 0 && (
+            <div className="px-4 pb-3 flex flex-col gap-0.5">
+              {scoreRankingData.map((entry) => (
+                <div
+                  key={entry.employeeId}
+                  className="flex items-center justify-between text-xs"
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <UserDisplay userId={entry.employeeId} size="small" showLabel />
+                  </div>
+                  <span className="font-mono font-medium">{entry.score}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+
         {/* Right — 等级分布 Pie Chart */}
         <Card className="rounded-xl flex flex-col">
-          <CardContent className="p-4 flex-1 flex flex-col items-center justify-center">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">等级分布</CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col items-center justify-center p-2">
             {gradeChartData.length === 0 ? (
               <p className="text-xs text-muted-foreground">暂无数据</p>
             ) : (
               <ChartContainer
                 config={chartConfig}
-                className="mx-auto aspect-square w-full max-h-[150px] [&_.recharts-pie-label-text]:fill-foreground"
+                className="mx-auto aspect-square w-full max-h-[180px] [&_.recharts-pie-label-text]:fill-foreground"
               >
                 <PieChart>
                   <ChartTooltip content={<ChartTooltipContent hideLabel />} />
@@ -300,7 +374,7 @@ const TeamPerformancePage: React.FC = () => {
                     label={({ grade, count }) => `${grade} (${count})`}
                     cx="50%"
                     cy="50%"
-                    outerRadius="90%"
+                    outerRadius="85%"
                   />
                 </PieChart>
               </ChartContainer>
