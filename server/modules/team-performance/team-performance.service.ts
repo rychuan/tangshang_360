@@ -165,7 +165,10 @@ export class TeamPerformanceService {
       .where(
         and(
           deptIds.length > 0
-            ? sql`((${employee.supervisorId}).user_id = ${userId} OR ${employee.departmentId} IN (${sql.join(deptIds.map((id: string) => sql`${id}`), sql`, `)}))`
+            ? sql`((${employee.supervisorId}).user_id = ${userId} OR ${employee.departmentId} IN (${sql.join(
+                deptIds.map((id: string) => sql`${id}`),
+                sql`, `,
+              )}))`
             : sql`(${employee.supervisorId}).user_id = ${userId}`,
           isNull(employee.deletedAt),
           eq(employee.status, true),

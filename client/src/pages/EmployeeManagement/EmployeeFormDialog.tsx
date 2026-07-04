@@ -143,7 +143,13 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
             </Label>
             {isEditing ? (
               <div className="flex h-10 items-center rounded-md border border-input bg-muted px-3">
-                <UserDisplay value={{ user_id: editingEmployee.id, name: editingEmployee.name }} size="small" />
+                <UserDisplay
+                  value={{
+                    user_id: editingEmployee.id,
+                    name: editingEmployee.name,
+                  }}
+                  size="small"
+                />
               </div>
             ) : (
               <UserSelect

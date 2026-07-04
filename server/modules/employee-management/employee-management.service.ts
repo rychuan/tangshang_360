@@ -391,15 +391,35 @@ export class EmployeeManagementService {
       autoSupervisorId = deptRows[0]?.headId || null;
     }
 
+    // 自动解析 departmentId / positionCode
+    let departmentId = body.departmentId ?? null;
+    let positionCode = body.positionCode ?? null;
+    if (!departmentId && body.department) {
+      const deptRow = await this.db
+        .select({ id: department.id })
+        .from(department)
+        .where(eq(department.name, body.department))
+        .limit(1);
+      departmentId = deptRow[0]?.id ?? null;
+    }
+    if (!positionCode && body.position) {
+      const dictRow = await this.db
+        .select({ code: systemDict.code })
+        .from(systemDict)
+        .where(and(eq(systemDict.dictType, 'position'), eq(systemDict.name, body.position)))
+        .limit(1);
+      positionCode = dictRow[0]?.code ?? null;
+    }
+
     const values = {
       employeeId: body.id,
       name: body.name,
       position: body.position,
-      positionCode: body.positionCode ?? null,
+      positionCode,
       title: body.title || null,
       role: body.role || 'employee',
       department: body.department || '',
-      departmentId: body.departmentId ?? null,
+      departmentId,
       supervisorId: await this.resolveSupervisor(
         body.supervisorId,
         body.department,
@@ -457,14 +477,33 @@ export class EmployeeManagementService {
       autoSupervisorId = deptRows[0]?.headId || null;
     }
 
+    let departmentId = body.departmentId ?? null;
+    let positionCode = body.positionCode ?? null;
+    if (!departmentId && body.department) {
+      const deptRow = await this.db
+        .select({ id: department.id })
+        .from(department)
+        .where(eq(department.name, body.department))
+        .limit(1);
+      departmentId = deptRow[0]?.id ?? null;
+    }
+    if (!positionCode && body.position) {
+      const dictRow = await this.db
+        .select({ code: systemDict.code })
+        .from(systemDict)
+        .where(and(eq(systemDict.dictType, 'position'), eq(systemDict.name, body.position)))
+        .limit(1);
+      positionCode = dictRow[0]?.code ?? null;
+    }
+
     const values = {
       name: body.name,
       position: body.position,
-      positionCode: body.positionCode ?? null,
+      positionCode,
       title: body.title || null,
       role: body.role || 'employee',
       department: body.department || '',
-      departmentId: body.departmentId ?? null,
+      departmentId,
       supervisorId: await this.resolveSupervisor(
         body.supervisorId,
         body.department,
