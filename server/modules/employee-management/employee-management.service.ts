@@ -309,7 +309,7 @@ export class EmployeeManagementService {
     ]);
 
     return {
-      id: String(emp.id),
+      id: String(emp.employeeId),
       employeeNo: emp.employeeNo || '',
       name: emp.name,
       position: emp.position,
