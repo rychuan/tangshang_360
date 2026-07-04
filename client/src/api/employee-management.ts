@@ -89,18 +89,6 @@ export async function deactivate(id: string): Promise<{ success: boolean }> {
   return data;
 }
 
-export async function updatePermissions(
-  employeeId: string,
-  permissions: unknown[],
-): Promise<{ success: boolean }> {
-  const { data } = await axiosForBackend({
-    url: `/api/employees/${employeeId}/permissions`,
-    method: 'PUT',
-    data: { permissions },
-  });
-  return data;
-}
-
 export async function bind(
   body: CreateBindingRequest,
 ): Promise<{ success: boolean }> {

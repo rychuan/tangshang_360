@@ -32,7 +32,6 @@ import {
   Plus,
   Search,
   Link2,
-  Filter,
   Users,
   ArrowDownToLine,
   ArrowUpFromLine,

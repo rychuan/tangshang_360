@@ -42,13 +42,7 @@ export interface EmployeeTableProps {
   onDelete: (emp: EmployeeItem) => void;
 }
 
-const roleLabels: Record<string, string> = {
-  admin: '管理员',
-  hrd: 'HRD',
-  dept_head: '部门负责人',
-  supervisor: '上级',
-  employee: '员工',
-};
+import { ROLE_LABELS as roleLabels } from './role-utils';
 
 const EmployeeTable: React.FC<EmployeeTableProps> = ({
   employees,

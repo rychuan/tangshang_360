@@ -16,3 +16,11 @@ export const getRoleMemberCount = (role: ForceRoleDTO): number => {
 
 export const isBuiltinRole = (bizID?: string): boolean =>
   !!bizID && (BUILTIN_ROLE_CODES as readonly string[]).includes(bizID);
+
+export const ROLE_LABELS: Record<string, string> = {
+  admin: '管理员',
+  hrd: 'HRD',
+  dept_head: '部门负责人',
+  supervisor: '上级',
+  employee: '员工',
+};
