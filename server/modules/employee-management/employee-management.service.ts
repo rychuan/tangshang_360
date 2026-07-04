@@ -406,7 +406,12 @@ export class EmployeeManagementService {
       const dictRow = await this.db
         .select({ code: systemDict.code })
         .from(systemDict)
-        .where(and(eq(systemDict.dictType, 'position'), eq(systemDict.name, body.position)))
+        .where(
+          and(
+            eq(systemDict.dictType, 'position'),
+            eq(systemDict.name, body.position),
+          ),
+        )
         .limit(1);
       positionCode = dictRow[0]?.code ?? null;
     }
@@ -491,7 +496,12 @@ export class EmployeeManagementService {
       const dictRow = await this.db
         .select({ code: systemDict.code })
         .from(systemDict)
-        .where(and(eq(systemDict.dictType, 'position'), eq(systemDict.name, body.position)))
+        .where(
+          and(
+            eq(systemDict.dictType, 'position'),
+            eq(systemDict.name, body.position),
+          ),
+        )
         .limit(1);
       positionCode = dictRow[0]?.code ?? null;
     }
