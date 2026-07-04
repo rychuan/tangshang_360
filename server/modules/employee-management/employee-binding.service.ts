@@ -88,7 +88,7 @@ export class EmployeeBindingService {
       .where(
         and(
           eq(employeeBinding.employeeId, employeeId),
-          eq(employeeBinding.status, 'active'),
+          eq(employeeBinding.status, true),
         ),
       );
 
@@ -100,7 +100,7 @@ export class EmployeeBindingService {
         if (existing.length > 0) {
           await tx
             .update(employeeBinding)
-            .set({ status: 'inactive' })
+            .set({ status: false })
             .where(eq(employeeBinding.employeeId, employeeId));
           this.logger.log(
             `Deactivated existing bindings for employee: ${employeeId}`,
@@ -113,7 +113,7 @@ export class EmployeeBindingService {
             employeeId,
             templateId,
             effectiveFrom,
-            status: 'active',
+            status: true,
           })
           .returning();
 
@@ -201,7 +201,7 @@ export class EmployeeBindingService {
       .where(
         and(
           eq(employeeBinding.employeeId, employeeId),
-          eq(employeeBinding.status, 'active'),
+          eq(employeeBinding.status, true),
         ),
       );
 
@@ -213,7 +213,7 @@ export class EmployeeBindingService {
     for (const binding of existing) {
       await this.db
         .update(employeeBinding)
-        .set({ status: 'inactive' })
+        .set({ status: false })
         .where(eq(employeeBinding.id, String(binding.id)));
 
       await this.db.insert(auditLog).values({
@@ -223,7 +223,7 @@ export class EmployeeBindingService {
         targetId: String(binding.id),
         changes: {
           before: { status: binding.status },
-          after: { status: 'inactive' },
+          after: { status: false },
         },
         reason: '员工解绑',
       });
@@ -257,7 +257,7 @@ export class EmployeeBindingService {
 
     await this.db
       .update(employeeBinding)
-      .set({ status: 'inactive' })
+      .set({ status: false })
       .where(eq(employeeBinding.id, bindingId));
 
     await this.db.insert(auditLog).values({
@@ -267,7 +267,7 @@ export class EmployeeBindingService {
       targetId: bindingId,
       changes: {
         before: { status: existing.status },
-        after: { status: 'inactive' },
+        after: { status: false },
       },
       reason: '员工解绑',
     });

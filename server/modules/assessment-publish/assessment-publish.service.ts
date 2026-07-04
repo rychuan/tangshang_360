@@ -82,10 +82,10 @@ export class AssessmentPublishService {
       return { items: [] };
     }
     const conditions: SQL[] = [
-      eq(employeeBinding.status, 'active'),
+      eq(employeeBinding.status, true),
       lte(employeeBinding.effectiveFrom, period),
       isNull(employee.deletedAt),
-      eq(employee.status, 'active'),
+      eq(employee.status, true),
       eq(assessmentTemplate.isActive, true),
       sql`NOT EXISTS (SELECT 1 FROM ${assessmentInstance} WHERE (${assessmentInstance.employeeId}).user_id = (${employeeBinding.employeeId}).user_id AND ${assessmentInstance.period} = ${period})`,
     ];
@@ -179,7 +179,7 @@ export class AssessmentPublishService {
         .where(
           and(
             eq(employeeBinding.employeeId, empId),
-            eq(employeeBinding.status, 'active'),
+            eq(employeeBinding.status, true),
             lte(employeeBinding.effectiveFrom, period),
           ),
         )
@@ -231,9 +231,9 @@ export class AssessmentPublishService {
 
       const empRecord = empRows[0];
 
-      if (empRecord.status !== 'active') {
+      if (!empRecord.status) {
         this.logger.warn(
-          `skip employee ${empId}: employee status is '${empRecord.status}'`,
+          `skip employee ${empId}: employee status is '${empRecord.status ? 'active' : 'inactive'}'`,
         );
         continue;
       }
@@ -454,7 +454,7 @@ export class AssessmentPublishService {
       .where(
         and(
           eq(employeeBinding.employeeId, employeeId),
-          eq(employeeBinding.status, 'active'),
+          eq(employeeBinding.status, true),
         ),
       )
       .limit(1);
@@ -647,7 +647,7 @@ export class AssessmentPublishService {
       .from(employeeBinding)
       .where(
         and(
-          eq(employeeBinding.status, 'active'),
+          eq(employeeBinding.status, true),
           lte(employeeBinding.effectiveFrom, period),
         ),
       );
@@ -1018,10 +1018,10 @@ export class AssessmentPublishService {
       .innerJoin(employee, eq(employeeBinding.employeeId, employee.employeeId))
       .where(
         and(
-          eq(employeeBinding.status, 'active'),
+          eq(employeeBinding.status, true),
           lte(employeeBinding.effectiveFrom, period),
           isNull(employee.deletedAt),
-          eq(employee.status, 'active'),
+          eq(employee.status, true),
         ),
       );
 

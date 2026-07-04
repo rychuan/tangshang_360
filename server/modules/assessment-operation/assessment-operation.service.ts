@@ -290,7 +290,7 @@ export class AssessmentOperationService {
     if (empStatus.length === 0) {
       throw new BadRequestException('未找到员工信息，无法提交评分');
     }
-    if (empStatus[0].status !== 'active') {
+    if (!empStatus[0].status) {
       throw new BadRequestException('员工已离职，无法提交评分');
     }
 
@@ -464,7 +464,7 @@ export class AssessmentOperationService {
     if (empRows.length === 0) {
       throw new NotFoundException('员工信息不存在');
     }
-    if (empRows[0].status !== 'active') {
+    if (!empRows[0].status) {
       throw new BadRequestException('员工已离职或不可用，无法提交评分');
     }
 

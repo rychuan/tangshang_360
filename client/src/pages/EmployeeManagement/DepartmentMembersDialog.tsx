@@ -122,7 +122,7 @@ const DepartmentMembersDialog: React.FC<DepartmentMembersDialogProps> = ({
                         </span>
                       </td>
                       <td className="py-3 px-4 align-middle whitespace-nowrap">
-                        {emp.status === 'active' ? (
+                        {emp.status ? (
                           <span className="text-green-600 text-xs font-medium">
                             ● 已启用
                           </span>

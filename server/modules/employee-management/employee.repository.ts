@@ -74,7 +74,7 @@ export class EmployeeRepository {
         and(
           sql`(${employee.supervisorId}).user_id = ${supervisorId}`,
           isNull(employee.deletedAt),
-          eq(employee.status, 'active'),
+          eq(employee.status, true),
         ),
       );
     return rows.map((r) => r.userId);

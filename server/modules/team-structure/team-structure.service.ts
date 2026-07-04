@@ -38,7 +38,7 @@ export class TeamStructureService {
     const offset = (pageNum - 1) * pageSizeNum;
 
     const conditions = [
-      eq(employee.status, 'active'),
+      eq(employee.status, true),
       isNull(employee.deletedAt),
     ];
 
@@ -57,7 +57,7 @@ export class TeamStructureService {
 
     const whereEmployee = and(...conditions);
 
-    const joinOn = sql`(${employeeBinding.employeeId}).user_id = (${employee.employeeId}).user_id AND ${employeeBinding.status} = 'active'`;
+    const joinOn = sql`(${employeeBinding.employeeId}).user_id = (${employee.employeeId}).user_id AND ${employeeBinding.status} = true`;
 
     const [itemsResult, countResult] = await Promise.all([
       this.db
@@ -148,15 +148,15 @@ export class TeamStructureService {
 
       await tx.execute(sql`
         UPDATE ${employee}
-        SET status = 'inactive'
+        SET status = false
         WHERE (id).user_id IN (${idParams}) AND deleted_at IS NULL
       `);
 
       await tx.execute(sql`
         UPDATE ${employeeBinding}
-        SET status = 'inactive'
+        SET status = false
         WHERE (employee_id).user_id IN (${idParams})
-          AND status = 'active'
+          AND status = true
       `);
 
       for (const eId of employeeIds) {
@@ -166,8 +166,8 @@ export class TeamStructureService {
           targetType: 'employee',
           targetId: eId,
           changes: {
-            before: { status: 'active' },
-            after: { status: 'inactive' },
+            before: { status: true },
+            after: { status: false },
           },
           reason: '批量删除员工',
         });
@@ -212,7 +212,7 @@ export class TeamStructureService {
       .from(employee)
       .leftJoin(
         employeeBinding,
-        sql`(${employeeBinding.employeeId}).user_id = (${employee.employeeId}).user_id AND ${employeeBinding.status} = 'active'`,
+        sql`(${employeeBinding.employeeId}).user_id = (${employee.employeeId}).user_id AND ${employeeBinding.status} = true`,
       )
       .leftJoin(
         assessmentTemplate,

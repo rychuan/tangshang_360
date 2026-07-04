@@ -73,8 +73,8 @@ export class EmployeeManagementService {
     if (query.role) {
       conditions.push(eq(employee.role, query.role));
     }
-    if (query.status) {
-      conditions.push(eq(employee.status, query.status));
+    if (query.status === 'true' || query.status === 'false') {
+      conditions.push(eq(employee.status, query.status === 'true'));
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -117,7 +117,7 @@ export class EmployeeManagementService {
       department: item.department,
       supervisorId: item.supervisorId || '',
       supervisorName: String(item.supervisorName || ''),
-      status: item.status as 'active' | 'inactive',
+      status: item.status,
       phone: item.phone || '',
       hireDate:
         item.hireDate instanceof Date
@@ -147,7 +147,7 @@ export class EmployeeManagementService {
             .where(
               and(
                 inArray(employeeBinding.employeeId, employeeIds),
-                eq(employeeBinding.status, 'active'),
+                eq(employeeBinding.status, true),
               ),
             )
         : [];
@@ -267,7 +267,7 @@ export class EmployeeManagementService {
         .where(
           and(
             eq(employeeBinding.employeeId, id),
-            eq(employeeBinding.status, 'active'),
+            eq(employeeBinding.status, true),
           ),
         ),
       this.db
@@ -318,7 +318,7 @@ export class EmployeeManagementService {
       department: emp.department,
       supervisorId: emp.supervisorId || '',
       supervisorName,
-      status: emp.status as 'active' | 'inactive',
+      status: emp.status,
       phone: emp.phone || '',
       hireDate:
         emp.hireDate instanceof Date
@@ -480,7 +480,7 @@ export class EmployeeManagementService {
 
     await this.db
       .update(employee)
-      .set({ status: 'active' })
+      .set({ status: true })
       .where(eq(employee.employeeId, id));
 
     await this.db.insert(auditLog).values({
@@ -507,17 +507,17 @@ export class EmployeeManagementService {
     // P1-1: 停用员工时联动停用其所有活跃绑定
     await this.db
       .update(employeeBinding)
-      .set({ status: 'inactive' })
+      .set({ status: false })
       .where(
         and(
           eq(employeeBinding.employeeId, id),
-          eq(employeeBinding.status, 'active'),
+          eq(employeeBinding.status, true),
         ),
       );
 
     await this.db
       .update(employee)
-      .set({ status: 'inactive' })
+      .set({ status: false })
       .where(eq(employee.employeeId, id));
 
     await this.db.insert(auditLog).values({
@@ -604,7 +604,7 @@ export class EmployeeManagementService {
       .where(
         and(
           eq(employee.role, 'admin'),
-          eq(employee.status, 'active'),
+          eq(employee.status, true),
           isNull(employee.deletedAt),
         ),
       );

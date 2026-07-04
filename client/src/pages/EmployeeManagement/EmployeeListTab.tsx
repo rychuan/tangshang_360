@@ -220,8 +220,8 @@ const EmployeeListTab: React.FC = () => {
               <SelectContent>
                 <SelectGroup>
                   <SelectItem value="all">全部</SelectItem>
-                  <SelectItem value="active">已启用</SelectItem>
-                  <SelectItem value="inactive">已禁用</SelectItem>
+                  <SelectItem value="true">已启用</SelectItem>
+                  <SelectItem value="false">已禁用</SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>

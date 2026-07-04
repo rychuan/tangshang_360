@@ -26,8 +26,8 @@ import type {
 } from '@shared/api.interface';
 import { Loader2Icon } from 'lucide-react';
 
-function statusBadge(status: string): React.ReactNode {
-  if (status === 'active') {
+function statusBadge(status: boolean): React.ReactNode {
+  if (status) {
     return (
       <Badge className="border-transparent bg-success text-success-foreground">
         已绑定

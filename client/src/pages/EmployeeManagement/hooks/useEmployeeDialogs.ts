@@ -191,7 +191,7 @@ export function useEmployeeDialogs(refetch: () => void) {
   const handleToggleStatus = useCallback(
     async (emp: EmployeeItem) => {
       try {
-        if (emp.status === 'active') {
+        if (emp.status) {
           await employeeManagement.deactivate(emp.id);
           toast.success('员工已停用');
         } else {

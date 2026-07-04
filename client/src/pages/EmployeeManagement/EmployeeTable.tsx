@@ -187,10 +187,10 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
       header: '状态',
       cell: ({ row }) => (
         <Badge
-          variant={row.original.status === 'active' ? 'default' : 'secondary'}
+          variant={row.original.status ? 'default' : 'secondary'}
           className="text-xs font-normal"
         >
-          {row.original.status === 'active' ? '在职' : '离职'}
+          {row.original.status ? '在职' : '离职'}
         </Badge>
       ),
     },
@@ -247,12 +247,12 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
                   <DropdownMenuItem
                     onClick={() => onToggleStatus(row.original)}
                   >
-                    {row.original.status === 'active' ? (
+                    {row.original.status ? (
                       <Ban className="size-4" />
                     ) : (
                       <CheckCircle className="size-4" />
                     )}
-                    {row.original.status === 'active' ? '禁用' : '启用'}
+                    {row.original.status ? '禁用' : '启用'}
                   </DropdownMenuItem>
                 </CanDo>
               </CanRole>

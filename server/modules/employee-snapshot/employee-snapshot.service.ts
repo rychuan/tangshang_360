@@ -108,7 +108,7 @@ export class EmployeeSnapshotService {
       .where(
         and(
           eq(employeeBinding.employeeId, employeeId),
-          eq(employeeBinding.status, 'active'),
+          eq(employeeBinding.status, true),
         ),
       )
       .limit(1);

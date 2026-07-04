@@ -64,7 +64,7 @@ export interface CreateBindingRequest {
 export interface BindingHistoryItem {
   templateName: string;
   effectiveFrom: string;
-  status: string;
+  status: boolean;
   operatedBy: string;
   operatedAt: string;
 }
@@ -301,7 +301,7 @@ export interface EmployeeCurrentBinding {
   templateId: string;
   templateName: string;
   effectiveFrom: string;
-  status: string;
+  status: boolean;
 }
 export interface EmployeeItem {
   id: string;
@@ -313,7 +313,7 @@ export interface EmployeeItem {
   department: string;
   supervisorId: string;
   supervisorName: string;
-  status: 'active' | 'inactive';
+  status: boolean;
   phone: string;
   hireDate: string;
   currentBinding?: EmployeeCurrentBinding | null;
@@ -357,7 +357,7 @@ export interface TeamEmployeeDetail {
   department: string;
   supervisorId: string;
   supervisorName: string;
-  status: string;
+  status: boolean;
   bindingId: string | null;
   templateId: string | null;
   templateName: string | null;
@@ -368,7 +368,7 @@ export interface TeamUpdateEmployeeRequest {
   position?: string;
   department?: string;
   supervisorId?: string;
-  status?: string;
+  status?: boolean;
   employeeNo?: string;
   title?: string;
   role?: string;

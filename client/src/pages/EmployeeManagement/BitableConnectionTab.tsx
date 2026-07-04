@@ -227,7 +227,7 @@ const BitableConnectionTab: React.FC = () => {
                       ],
                       ['手机', 'phone', '否', ''],
                       ['入职日期', 'hireDate', '否', ''],
-                      ['状态', 'status', '否', 'active/inactive'],
+                      ['状态', 'status', '否', 'true/false'],
                       [
                         '考核模板',
                         '—',

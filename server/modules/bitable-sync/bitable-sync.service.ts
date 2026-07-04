@@ -179,7 +179,7 @@ export class BitableSyncService {
                   position: p.position || '',
                   department: p.department || '',
                   role: p.role || 'employee',
-                  status: p.status || 'active',
+                  status: p.status !== 'inactive',
                   employeeNo: p.employeeNo || null,
                   supervisorId: p.supervisorUserId || null,
                   deletedAt: null,
@@ -192,7 +192,7 @@ export class BitableSyncService {
                 position: p.position || '',
                 department: p.department || '',
                 role: p.role || 'employee',
-                status: p.status || 'active',
+                status: p.status !== 'inactive',
                 employeeNo: p.employeeNo || null,
                 supervisorId: p.supervisorUserId || null,
               });
@@ -219,7 +219,7 @@ export class BitableSyncService {
         if (p.position) updateData.position = p.position;
         if (p.department) updateData.department = p.department;
         if (p.role) updateData.role = p.role;
-        if (p.status) updateData.status = p.status;
+        if (p.status) updateData.status = p.status !== 'inactive';
         if (p.employeeNo) updateData.employeeNo = p.employeeNo;
         // supervisorId is userProfile composite type — cannot assign plain string.
         // Skipped here; use bitable-connection if supervisor sync via 工号 is needed.
@@ -326,7 +326,7 @@ export class BitableSyncService {
         岗位: emp.position || '',
         部门: emp.department || '',
         角色: emp.role || '',
-        状态: emp.status || '',
+        状态: emp.status ? 'active' : 'inactive',
         上级: Number.isNaN(supervisorNum) ? [] : [supervisorNum],
       };
 

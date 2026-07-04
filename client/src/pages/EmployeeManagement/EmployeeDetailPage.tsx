@@ -80,12 +80,12 @@ const EmployeeDetailPage: React.FC = () => {
         </h1>
         <Badge
           className={
-            emp.status === 'active'
+            emp.status
               ? 'bg-success/10 text-success'
               : 'bg-muted text-muted-foreground'
           }
         >
-          {emp.status === 'active' ? '在职' : '已禁用'}
+          {emp.status ? '在职' : '已禁用'}
         </Badge>
       </div>
 

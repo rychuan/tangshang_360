@@ -594,7 +594,7 @@ export class BitableConnectionService {
                     ? new Date(row.hireDate)
                     : existing[0].hireDate,
                   status:
-                    (row.status as 'active' | 'inactive') || existing[0].status,
+                    row.status === 'inactive' ? false : true,
                   supervisorId: row.supervisorId || existing[0].supervisorId,
                 })
                 .where(eq(employee.employeeId, existing[0].id));
@@ -615,7 +615,7 @@ export class BitableConnectionService {
                 .where(
                   and(
                     eq(employeeBinding.employeeId, String(existing[0].id)),
-                    eq(employeeBinding.status, 'active'),
+                    eq(employeeBinding.status, true),
                   ),
                 )
                 .limit(1);
@@ -641,7 +641,7 @@ export class BitableConnectionService {
               role: row.role || 'employee',
               phone: row.phone || null,
               hireDate: row.hireDate ? new Date(row.hireDate) : null,
-              status: (row.status as 'active' | 'inactive') || 'active',
+              status: row.status === 'inactive' ? false : true,
               supervisorId: row.supervisorId || null,
               bitableConnectionId: connectionId,
             };
@@ -843,7 +843,7 @@ export class BitableConnectionService {
                 ? emp.hireDate.toISOString().substring(0, 10)
                 : emp.hireDate;
           }
-          if (emp.status) fields[reverseMap['status']] = emp.status;
+          fields[reverseMap['status']] = emp.status ? 'active' : 'inactive';
 
           // 使用已缓存的记录查找工号匹配的行
           const matched = allBitableRecords.find(

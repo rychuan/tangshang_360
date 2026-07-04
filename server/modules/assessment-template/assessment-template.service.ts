@@ -346,7 +346,7 @@ export class AssessmentTemplateService {
     // 级联停用关联的绑定关系
     await this.db
       .update(employeeBinding)
-      .set({ status: 'inactive' })
+      .set({ status: false })
       .where(eq(employeeBinding.templateId, id));
 
     // 软删除模板

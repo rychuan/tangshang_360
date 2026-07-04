@@ -369,7 +369,7 @@ export const employeeBinding = pgTable("employee_binding", {
   employeeId: userProfile("employee_id").notNull(),
   templateId: uuid("template_id").notNull(),
   effectiveFrom: varchar("effective_from", { length: 255 }).notNull(),
-  status: varchar("status", { length: 255 }).notNull().default('active'),
+  status: boolean("status").notNull().default(true),
   // System field: Creation time (auto-filled, do not modify)
   createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
   // System field: Creator (auto-filled, do not modify)
@@ -452,7 +452,7 @@ export const employee = pgTable("employee", {
   // Synced field: auto-synced, do not modify or delete
   supervisorId: userProfile("supervisor_id"),
   // Synced field: auto-synced, do not modify or delete
-  status: varchar("status", { length: 255 }).notNull().default('active'),
+  status: boolean("status").notNull().default(true),
   // Synced field: auto-synced, do not modify or delete
   employeeNo: varchar("employee_no", { length: 50 }),
   title: varchar("title", { length: 100 }),
