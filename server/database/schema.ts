@@ -474,6 +474,7 @@ export const employee = pgTable("employee", {
   status: boolean("status").notNull().default(true),
   // Synced field: auto-synced, do not modify or delete
   employeeNo: varchar("employee_no", { length: 50 }),
+  // Synced field: auto-synced, do not modify or delete
   title: varchar("title", { length: 100 }),
   // Synced field: auto-synced, do not modify or delete
   role: varchar("role", { length: 50 }).default('employee'),

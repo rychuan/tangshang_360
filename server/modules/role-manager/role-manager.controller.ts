@@ -35,7 +35,7 @@ export class RoleManagerController {
   ) {}
 
   @NeedLogin()
-  @Get('my-roles')
+  @Post('my-roles')
   async getMyRoles(@Req() req: Request) {
     const userId = req.userContext?.userId || '';
     const roleList = await this.roleManagerService.getUserRoles(userId);
