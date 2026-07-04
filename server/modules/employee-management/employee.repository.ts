@@ -107,7 +107,8 @@ export class EmployeeRepository {
    */
   nameSubquery(refColumn: Column | SQL): SQL {
     return sql<string>`(SELECT e.name FROM ${employee} e
-      WHERE (e.employee_id).user_id = (${refColumn}).user_id
+      WHERE ${refColumn} IS NOT NULL
+        AND (e.employee_id).user_id = (${refColumn}).user_id
         AND e.deleted_at IS NULL
       LIMIT 1)`;
   }
@@ -117,6 +118,6 @@ export class EmployeeRepository {
    * 消除散布各处的 `(${left}).user_id = (${right}).user_id` 模式。
    */
   joinOnUserId(leftCol: Column | SQL, rightCol: Column | SQL): SQL {
-    return sql`(${leftCol}).user_id = (${rightCol}).user_id`;
+    return sql`(${leftCol}).user_id = (${rightCol}).user_id AND ${rightCol} IS NOT NULL`;
   }
 }
