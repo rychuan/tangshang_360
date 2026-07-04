@@ -153,13 +153,21 @@ export const bitableConnection = pgTable("bitable_connection", {
   updatedBy: userProfile("_updated_by"),
 });
 
+// Synced table: data is auto-synced from external source. Do not rename or delete this table.
 export const systemDict = pgTable("system_dict", {
   id: uuid("id").primaryKey().defaultRandom(),
+  // Synced field: auto-synced, do not modify or delete
   dictType: varchar("dict_type", { length: 50 }).notNull(),
+  // Synced field: auto-synced, do not modify or delete
   code: varchar("code", { length: 100 }).notNull(),
+  // Synced field: auto-synced, do not modify or delete
   name: varchar("name", { length: 255 }).notNull(),
+  // Synced field: auto-synced, do not modify or delete
   sortOrder: integer("sort_order").notNull().default(0),
+  // Synced field: auto-synced, do not modify or delete
   isActive: boolean("is_active").notNull().default(true),
+  // Synced field: auto-synced, do not modify or delete
+  baseRecordId: varchar("base_record_id").unique(),
   // System field: Creation time (auto-filled, do not modify)
   createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
   // System field: Creator (auto-filled, do not modify)
@@ -170,7 +178,9 @@ export const systemDict = pgTable("system_dict", {
   // System field: Updater (auto-filled, do not modify)
   updatedBy: userProfile("_updated_by").default(sql`CASE
     WHEN (current_setting('app.user_id'::text, true) = ''::text) THEN NULL`),
-});
+}, (table) => [
+  uniqueIndex("unq_1869602954758378").on(table.baseRecordId),
+]);
 
 export const employeeIndicatorSnapshot = pgTable("employee_indicator_snapshot", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -345,13 +355,21 @@ export const assessmentInstance = pgTable("assessment_instance", {
   index("idx_instance_period").on(table.period),
 ]);
 
+// Synced table: data is auto-synced from external source. Do not rename or delete this table.
 export const department = pgTable("department", {
   id: uuid("id").primaryKey().defaultRandom(),
+  // Synced field: auto-synced, do not modify or delete
   name: varchar("name", { length: 255 }).notNull(),
+  // Synced field: auto-synced, do not modify or delete
   parentId: uuid("parent_id"),
+  // Synced field: auto-synced, do not modify or delete
   headId: userProfile("head_id"),
+  // Synced field: auto-synced, do not modify or delete
   sortOrder: integer("sort_order").notNull().default(0),
+  // Synced field: auto-synced, do not modify or delete
   isActive: boolean("is_active").notNull().default(true),
+  // Synced field: auto-synced, do not modify or delete
+  baseRecordId: varchar("base_record_id").unique(),
   // System field: Creation time (auto-filled, do not modify)
   createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
   // System field: Creator (auto-filled, do not modify)
@@ -362,6 +380,7 @@ export const department = pgTable("department", {
   updatedBy: userProfile("_updated_by"),
 }, (table) => [
   index("idx_department_parent").on(table.parentId),
+  uniqueIndex("unq_1869604319590532").on(table.baseRecordId),
 ]);
 
 export const employeeBinding = pgTable("employee_binding", {
