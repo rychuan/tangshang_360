@@ -188,10 +188,14 @@ export class PerformanceGradeService {
     return { success: true };
   }
 
-  async matchGrade(totalScore: number): Promise<string> {
+  async matchGrade(
+    totalScore: number,
+    tx?: PostgresJsDatabase,
+  ): Promise<string> {
     this.logger.log(`matchGrade: totalScore=${totalScore}`);
 
-    const rules = await this.db
+    const db = tx ?? this.db;
+    const rules = await db
       .select()
       .from(performanceGrade)
       .where(eq(performanceGrade.isActive, true))

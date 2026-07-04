@@ -580,7 +580,7 @@ export class AssessmentOperationService {
 
         totalScore = Math.round(totalScore * SCORE_PRECISION) / SCORE_PRECISION;
 
-        const grade = await this.performanceGradeService.matchGrade(totalScore);
+        const grade = await this.performanceGradeService.matchGrade(totalScore, tx);
 
         await tx
           .update(assessmentInstance)
