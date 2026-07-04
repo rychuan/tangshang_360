@@ -55,7 +55,10 @@ export class TeamPerformanceService {
       .where(
         and(
           deptIds.length > 0
-            ? sql`((${employee.supervisorId}).user_id = ${userId} OR ${employee.departmentId} IN (${sql.join(deptIds.map((id: string) => sql`${id}`), sql`, `)}))`
+            ? sql`((${employee.supervisorId}).user_id = ${userId} OR ${employee.departmentId} IN (${sql.join(
+                deptIds.map((id: string) => sql`${id}`),
+                sql`, `,
+              )}))`
             : sql`(${employee.supervisorId}).user_id = ${userId}`,
           isNull(employee.deletedAt),
           eq(employee.status, true),
@@ -150,15 +153,20 @@ export class TeamPerformanceService {
     status?: string,
     period?: string,
   ): Promise<SubordinatesResponse> {
+    const deptRows = await this.db
+      .select({ id: department.id })
+      .from(department)
+      .where(sql`(${department.headId}).user_id = ${userId}`);
+    const deptIds = deptRows.map((d: { id: string }) => d.id);
+
     const subRows = await this.db
       .select({ userId: sql<string>`(${employee.employeeId}).user_id` })
       .from(employee)
       .where(
         and(
-          sql`(
-          (${employee.supervisorId}).user_id = ${userId}
-          OR ${employee.department} IN (SELECT ${department.name} FROM ${department} WHERE (${department.headId}).user_id = ${userId})
-        )`,
+          deptIds.length > 0
+            ? sql`((${employee.supervisorId}).user_id = ${userId} OR ${employee.departmentId} IN (${sql.join(deptIds.map((id: string) => sql`${id}`), sql`, `)}))`
+            : sql`(${employee.supervisorId}).user_id = ${userId}`,
           isNull(employee.deletedAt),
           eq(employee.status, true),
           sql`(${employee.employeeId}).user_id != ${userId}`,

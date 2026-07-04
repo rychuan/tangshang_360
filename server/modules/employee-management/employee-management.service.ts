@@ -79,7 +79,12 @@ export class EmployeeManagementService {
       const dictRows = await this.db
         .select({ code: systemDict.code })
         .from(systemDict)
-        .where(and(eq(systemDict.dictType, 'position'), inArray(systemDict.name, query.positions)));
+        .where(
+          and(
+            eq(systemDict.dictType, 'position'),
+            inArray(systemDict.name, query.positions),
+          ),
+        );
       const codes = dictRows.map((d) => d.code).filter(Boolean);
       if (codes.length > 0) {
         conditions.push(inArray(employee.positionCode, codes));
@@ -390,9 +395,11 @@ export class EmployeeManagementService {
       employeeId: body.id,
       name: body.name,
       position: body.position,
+      positionCode: body.positionCode ?? null,
       title: body.title || null,
       role: body.role || 'employee',
       department: body.department || '',
+      departmentId: body.departmentId ?? null,
       supervisorId: await this.resolveSupervisor(
         body.supervisorId,
         body.department,
@@ -453,9 +460,11 @@ export class EmployeeManagementService {
     const values = {
       name: body.name,
       position: body.position,
+      positionCode: body.positionCode ?? null,
       title: body.title || null,
       role: body.role || 'employee',
       department: body.department || '',
+      departmentId: body.departmentId ?? null,
       supervisorId: await this.resolveSupervisor(
         body.supervisorId,
         body.department,

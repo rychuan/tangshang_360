@@ -341,9 +341,11 @@ export interface CreateEmployeeRequest {
   employeeNo?: string;
   name: string;
   position: string;
+  positionCode?: string;
   title?: string;
   role?: 'admin' | 'hrd' | 'dept_head' | 'supervisor' | 'employee';
   department?: string;
+  departmentId?: string;
   supervisorId?: string;
   phone?: string;
   hireDate?: string;

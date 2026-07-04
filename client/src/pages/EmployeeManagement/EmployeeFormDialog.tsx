@@ -31,10 +31,12 @@ export interface EmployeeFormData {
   userId: string;
   name: string;
   position: string;
+  positionCode?: string;
   employeeNo: string;
   title: string;
   role: string[];
   department: string;
+  departmentId?: string;
   supervisorId: string;
   phone: string;
 }
@@ -56,10 +58,12 @@ export function employeeToForm(emp: EmployeeItem): EmployeeFormData {
     userId: emp.id,
     name: emp.name,
     position: emp.position,
+    positionCode: (emp as any).positionCode,
     employeeNo: emp.employeeNo || '',
     title: emp.title || '',
     role: emp.role ? emp.role.split(',').filter(Boolean) : ['employee'],
     department: emp.department || '',
+    departmentId: (emp as any).departmentId,
     supervisorId: emp.supervisorId || '',
     phone: emp.phone || '',
   };
@@ -76,6 +80,8 @@ export function formToCreateRequest(
     title: data.title || undefined,
     role: data.role.join(',') as CreateEmployeeRequest['role'],
     department: data.department || undefined,
+    departmentId: data.departmentId || undefined,
+    positionCode: data.positionCode || undefined,
     supervisorId: data.supervisorId || undefined,
     phone: data.phone || undefined,
   };
