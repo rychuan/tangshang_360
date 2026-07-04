@@ -73,6 +73,14 @@ const AssessmentHeaderCard: React.FC<AssessmentHeaderCardProps> = ({
                   {detail.grade}
                 </span>
               )}
+              {detail.coefficient && (
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">系数</p>
+                  <p className="text-xl font-bold text-primary">
+                    {detail.coefficient}
+                  </p>
+                </div>
+              )}
             </div>
           )}
           {showPreview && (

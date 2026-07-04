@@ -156,6 +156,7 @@ export interface AssessmentInstanceDetail {
   status: string;
   totalScore?: number;
   grade?: string;
+  coefficient?: string;
   selfSignName?: string;
   selfSignAt?: string;
   selfSignImage?: string;

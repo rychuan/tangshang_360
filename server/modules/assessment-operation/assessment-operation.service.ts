@@ -18,6 +18,7 @@ import {
   auditLog,
   employee,
   department,
+  performanceGrade,
 } from '@server/database/schema';
 import { PerformanceGradeService } from '../performance-grade/performance-grade.service';
 import type {
@@ -209,6 +210,26 @@ export class AssessmentOperationService {
       };
     });
 
+    // 根据等级查找绩效系数
+    let coefficient: string | undefined;
+    if (instance.grade) {
+      try {
+        const gradeRows = await this.db
+          .select({ coefficient: performanceGrade.coefficient })
+          .from(performanceGrade)
+          .where(
+            and(
+              eq(performanceGrade.name, instance.grade),
+              eq(performanceGrade.isActive, true),
+            ),
+          )
+          .limit(1);
+        coefficient = gradeRows[0]?.coefficient ?? undefined;
+      } catch {
+        coefficient = undefined;
+      }
+    }
+
     return {
       id: instance.id,
       period: instance.period,
@@ -220,6 +241,7 @@ export class AssessmentOperationService {
       status: instance.status,
       totalScore: instance.totalScore ? Number(instance.totalScore) : undefined,
       grade: instance.grade || undefined,
+      coefficient,
       selfSignName: instance.selfSignName || undefined,
       selfSignAt: instance.selfSignAt
         ? instance.selfSignAt.toISOString()
@@ -580,7 +602,10 @@ export class AssessmentOperationService {
 
         totalScore = Math.round(totalScore * SCORE_PRECISION) / SCORE_PRECISION;
 
-        const grade = await this.performanceGradeService.matchGrade(totalScore, tx);
+        const grade = await this.performanceGradeService.matchGrade(
+          totalScore,
+          tx,
+        );
 
         await tx
           .update(assessmentInstance)
@@ -661,9 +686,8 @@ export class AssessmentOperationService {
     }
 
     // P0: 签名身份校验
-    let access: Awaited<
-      ReturnType<typeof this.checkAssessmentAccess>
-    > | null = null;
+    let access: Awaited<ReturnType<typeof this.checkAssessmentAccess>> | null =
+      null;
     if (body.signType === 'self') {
       if (instance.employeeId !== userId) {
         throw new ForbiddenException('只能签署自己的员工签名');
@@ -766,7 +790,12 @@ export class AssessmentOperationService {
           throw new BadRequestException('上级已签名，不可重复签名');
         }
 
-        if (access && !access.isSupervisor && !access.isDeptHead && !access.isAdmin) {
+        if (
+          access &&
+          !access.isSupervisor &&
+          !access.isDeptHead &&
+          !access.isAdmin
+        ) {
           throw new ForbiddenException(
             '您不是该员工的上级、部门负责人或系统管理员，无法签署上级签名',
           );

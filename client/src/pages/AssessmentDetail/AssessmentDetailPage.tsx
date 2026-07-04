@@ -171,6 +171,14 @@ const AssessmentDetailPage: React.FC = () => {
                   {detail.grade}
                 </span>
               )}
+              {detail.coefficient && (
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">系数</p>
+                  <p className="text-xl font-bold text-primary">
+                    {detail.coefficient}
+                  </p>
+                </div>
+              )}
             </>
           )}
           {showPreview && (

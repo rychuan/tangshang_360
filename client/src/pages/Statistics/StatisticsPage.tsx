@@ -75,15 +75,19 @@ import {
 } from '@/api/assessment-statistics';
 import { exportPerformanceToBitable } from '@/api/bitable-sync';
 import { getPositions } from '@/api/employee-management';
+import { listActive } from '@/api/performance-grade';
 import type {
   StatisticsRecordItem,
   ChartsResponse,
 } from '@shared/api.interface';
 
-const GRADE_OPTIONS = ['S', 'A', 'B', 'C', 'D'] as const;
-const GRADE_SELECT_OPTIONS: MultiSelectOption[] = GRADE_OPTIONS.map(
-  (g: string) => ({ label: g, value: g }),
-);
+const DEFAULT_GRADE_OPTIONS: MultiSelectOption[] = [
+  { label: 'S', value: 'S' },
+  { label: 'A', value: 'A' },
+  { label: 'B', value: 'B' },
+  { label: 'C', value: 'C' },
+  { label: 'D', value: 'D' },
+];
 
 const CHART_COLORS = [
   'hsl(var(--chart-1))',
@@ -127,6 +131,9 @@ const StatisticsPage: React.FC = () => {
   const [exporting, setExporting] = useState(false);
   const [exportingPdfId, setExportingPdfId] = useState<string | null>(null);
   const [syncingOut, setSyncingOut] = useState(false);
+  const [gradeSelectOptions, setGradeSelectOptions] = useState<
+    MultiSelectOption[]
+  >(DEFAULT_GRADE_OPTIONS);
   const navigate = useNavigate();
   const pdfRef = useRef<HTMLDivElement>(null);
 
@@ -194,6 +201,20 @@ const StatisticsPage: React.FC = () => {
       .catch((err: unknown) =>
         logger.error('Failed to load positions', err as Error),
       );
+  }, []);
+
+  // 从等级配置同步等级筛选选项
+  useEffect(() => {
+    listActive()
+      .then((res) => {
+        if (res?.rules?.length) {
+          const names = [...new Set(res.rules.map((r) => r.name))];
+          setGradeSelectOptions(names.map((n) => ({ label: n, value: n })));
+        }
+      })
+      .catch(() => {
+        // 非关键数据，加载失败使用默认选项
+      });
   }, []);
 
   const handleSyncToBitable = async () => {
@@ -503,7 +524,7 @@ const StatisticsPage: React.FC = () => {
             <div className="flex flex-col gap-1.5">
               <label className="text-xs text-muted-foreground">等级</label>
               <MultiSelect
-                options={GRADE_SELECT_OPTIONS}
+                options={gradeSelectOptions}
                 value={filters.grades}
                 onChange={(value: string[]) =>
                   setFilters((f: FilterState) => ({ ...f, grades: value }))
