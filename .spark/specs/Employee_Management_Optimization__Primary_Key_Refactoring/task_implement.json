@@ -30,7 +30,7 @@
     {
       "id": 2,
       "name": "员工管理核心模块代码适配",
-      "status": "in_progress",
+      "status": "completed",
       "type": "normal",
       "subtasks": [
         "读取coding-guide技能",
@@ -54,12 +54,13 @@
       "dependencies": [
         1
       ],
-      "beginTime": 1783137234381
+      "beginTime": 1783137234381,
+      "endTime": 1783137281646
     },
     {
       "id": 3,
       "name": "关联业务模块全链路代码适配",
-      "status": "pending",
+      "status": "in_progress",
       "type": "normal",
       "subtasks": [
         "读取coding-guide技能",
@@ -89,7 +90,8 @@
       "acceptance": "所有关联业务模块的员工相关功能运行正常，无数据关联错误",
       "dependencies": [
         2
-      ]
+      ],
+      "beginTime": 1783137281757
     },
     {
       "id": 4,
