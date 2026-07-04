@@ -6,8 +6,8 @@ import {
   type RecordsQuery,
   type ChartsQuery,
   type ExportQuery,
-  type ExportResult,
 } from './assessment-statistics.service';
+import type { ExportResult } from '@shared/api.interface';
 
 @Controller('api/statistics')
 export class AssessmentStatisticsController {

@@ -661,6 +661,9 @@ export class AssessmentOperationService {
     }
 
     // P0: 签名身份校验
+    let access: Awaited<
+      ReturnType<typeof this.checkAssessmentAccess>
+    > | null = null;
     if (body.signType === 'self') {
       if (instance.employeeId !== userId) {
         throw new ForbiddenException('只能签署自己的员工签名');
@@ -685,7 +688,7 @@ export class AssessmentOperationService {
       }
 
       // P0: 上级签名身份校验 — 允许发布时上级（快照）、当前上级、部门负责人或系统管理员
-      const access = await this.checkAssessmentAccess(
+      access = await this.checkAssessmentAccess(
         instance.employeeId,
         instance.supervisorId,
         supRows[0].supervisorId,
@@ -763,8 +766,7 @@ export class AssessmentOperationService {
           throw new BadRequestException('上级已签名，不可重复签名');
         }
 
-        // 事务内身份校验（基于已锁定的实例行数据，配合预检查的 access 结果）
-        if (!access.isSupervisor && !access.isDeptHead && !access.isAdmin) {
+        if (access && !access.isSupervisor && !access.isDeptHead && !access.isAdmin) {
           throw new ForbiddenException(
             '您不是该员工的上级、部门负责人或系统管理员，无法签署上级签名',
           );

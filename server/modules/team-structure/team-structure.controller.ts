@@ -55,7 +55,7 @@ export class TeamStructureController {
   @NeedLogin()
   @Post()
   async create(@Req() req: Request, @Body() body: CreateBindingRequest) {
-    const { userId }: { userId: string } = req.userContext;
+    const { userId } = req.userContext as { userId: string };
     return this.service.create(body, userId);
   }
 
@@ -67,7 +67,7 @@ export class TeamStructureController {
     @Req() req: Request,
     @Body() body: BatchDeactivateRequest,
   ) {
-    const { userId }: { userId: string } = req.userContext;
+    const { userId } = req.userContext as { userId: string };
     return this.service.batchDeactivate(body.employeeIds, userId);
   }
 
@@ -87,7 +87,7 @@ export class TeamStructureController {
     @Param('id') id: string,
     @Body() body: PatchEmployeeRequest,
   ) {
-    const { userId }: { userId: string } = req.userContext;
+    const { userId } = req.userContext as { userId: string };
     return this.service.updateEmployee(id, body, userId);
   }
 
@@ -96,7 +96,7 @@ export class TeamStructureController {
   @NeedLogin()
   @Patch(':id/deactivate')
   async deactivate(@Req() req: Request, @Param('id') id: string) {
-    const { userId }: { userId: string } = req.userContext;
+    const { userId } = req.userContext as { userId: string };
     return this.service.deactivate(id, userId);
   }
 

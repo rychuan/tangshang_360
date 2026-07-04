@@ -4,8 +4,9 @@ import {
   type PostgresJsDatabase,
   CapabilityService,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { eq, and, isNull, sql, inArray } from 'drizzle-orm';
+import { eq, and, isNull, isNotNull, sql, inArray } from 'drizzle-orm';
 import { employee, auditLog } from '@server/database/schema';
+import { RoleManagerService } from '../role-manager/role-manager.service';
 import type { BitablePluginSyncResponse } from '@shared/api.interface';
 
 const PLUGIN_INSTANCE_ID = 'management_feishu_multitable_crud_analysis_1';
@@ -49,6 +50,7 @@ export class BitableSyncService {
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
     @Inject(CapabilityService)
     private readonly capabilityService: CapabilityService,
+    private readonly roleManagerService: RoleManagerService,
   ) {}
 
   async importFromBitable(): Promise<BitablePluginSyncResponse> {
@@ -123,10 +125,7 @@ export class BitableSyncService {
           ),
         );
       for (const r of rows) {
-        byUserId.set(
-          String((r.id as unknown as { user_id: string }).user_id),
-          r,
-        );
+        byUserId.set(String(r.id), r);
       }
     }
 
@@ -145,7 +144,8 @@ export class BitableSyncService {
       }
     }
 
-    // --- Phase 3: apply updates ---
+    // --- Phase 3: apply updates / create new ---
+    let created = 0;
     let updated = 0;
     let skipped = 0;
     let failed = 0;
@@ -156,7 +156,63 @@ export class BitableSyncService {
         const existing =
           byUserId.get(p.sudaUserId) ?? byEmpNo.get(p.employeeNo);
         if (!existing) {
-          skipped++;
+          if (!p.sudaUserId) {
+            skipped++;
+            continue;
+          }
+          try {
+            const softDeleted = await this.db
+              .select()
+              .from(employee)
+              .where(
+                and(
+                  sql`(${employee.id}).user_id = ${p.sudaUserId}`,
+                  isNotNull(employee.deletedAt),
+                ),
+              )
+              .limit(1);
+
+            if (softDeleted.length > 0) {
+              await this.db
+                .update(employee)
+                .set({
+                  name: p.sudaUserId,
+                  position: p.position || '',
+                  department: p.department || '',
+                  role: p.role || 'employee',
+                  status: p.status || 'active',
+                  employeeNo: p.employeeNo || null,
+                  supervisorId: p.supervisorUserId || null,
+                  deletedAt: null,
+                })
+                .where(eq(employee.id, softDeleted[0].id));
+            } else {
+              await this.db.insert(employee).values({
+                id: p.sudaUserId,
+                name: p.sudaUserId,
+                position: p.position || '',
+                department: p.department || '',
+                role: p.role || 'employee',
+                status: p.status || 'active',
+                employeeNo: p.employeeNo || null,
+                supervisorId: p.supervisorUserId || null,
+              });
+            }
+            created++;
+            try {
+              await this.roleManagerService.addUserToEmployeeRole(p.sudaUserId);
+            } catch (err) {
+              this.logger.warn(
+                `Failed to add ${p.sudaUserId} to employee role: ${err}`,
+              );
+            }
+          } catch (err) {
+            failed++;
+            const cause = (err as { cause?: { code?: string; detail?: string; constraint?: string; message?: string } }).cause;
+            this.logger.error(
+              `Failed to insert bitable record (userId=${p.sudaUserId}): ${err instanceof Error ? err.message : String(err)}${cause ? ` | pg: code=${cause.code || ''} detail=${cause.detail || cause.message || ''} constraint=${cause.constraint || ''}` : ''}`,
+            );
+          }
           continue;
         }
 
@@ -194,6 +250,7 @@ export class BitableSyncService {
       targetId: PLUGIN_INSTANCE_ID,
       changes: {
         total: allRecords.length,
+        created,
         updated,
         skipped,
         failed,
@@ -202,11 +259,11 @@ export class BitableSyncService {
 
     return {
       total: allRecords.length,
-      created: 0,
+      created,
       updated,
       skipped,
       failed,
-      message: `导入完成：更新 ${updated} 条，跳过 ${skipped} 条，失败 ${failed} 条`,
+      message: `导入完成：新增 ${created} 条，更新 ${updated} 条，跳过 ${skipped} 条，失败 ${failed} 条`,
     };
   }
 
