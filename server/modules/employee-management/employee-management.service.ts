@@ -20,7 +20,6 @@ import {
   department,
   systemDict,
 } from '@server/database/schema';
-import { EmployeeSnapshotService } from '../employee-snapshot/employee-snapshot.service';
 import { EmployeeBindingService } from './employee-binding.service';
 import type {
   EmployeeItem,
@@ -42,7 +41,6 @@ export class EmployeeManagementService {
 
   constructor(
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
-    private readonly employeeSnapshotService: EmployeeSnapshotService,
     private readonly roleManagerService: RoleManagerService,
     private readonly bindingService: EmployeeBindingService,
   ) {}
@@ -388,40 +386,13 @@ export class EmployeeManagementService {
       throw new ConflictException('该用户已绑定员工档案');
     }
 
-    let autoSupervisorId: string | null = null;
-    if (body.department) {
-      const deptRows = await this.db
-        .select({ headId: department.headId })
-        .from(department)
-        .where(eq(department.name, body.department))
-        .limit(1);
-      autoSupervisorId = deptRows[0]?.headId || null;
-    }
-
     // 自动解析 departmentId / positionCode
-    let departmentId = body.departmentId ?? null;
-    let positionCode = body.positionCode ?? null;
-    if (!departmentId && body.department) {
-      const deptRow = await this.db
-        .select({ id: department.id })
-        .from(department)
-        .where(eq(department.name, body.department))
-        .limit(1);
-      departmentId = deptRow[0]?.id ?? null;
-    }
-    if (!positionCode && body.position) {
-      const dictRow = await this.db
-        .select({ code: systemDict.code })
-        .from(systemDict)
-        .where(
-          and(
-            eq(systemDict.dictType, 'position'),
-            eq(systemDict.name, body.position),
-          ),
-        )
-        .limit(1);
-      positionCode = dictRow[0]?.code ?? null;
-    }
+    const { departmentId, positionCode } = await this.resolveReferences(
+      body.department,
+      body.position,
+      body.departmentId,
+      body.positionCode,
+    );
 
     const values = {
       employeeId: body.id,
@@ -481,39 +452,13 @@ export class EmployeeManagementService {
       throw new NotFoundException('员工不存在');
     }
 
-    let autoSupervisorId: string | null = null;
-    if (body.department) {
-      const deptRows = await this.db
-        .select({ headId: department.headId })
-        .from(department)
-        .where(eq(department.name, body.department))
-        .limit(1);
-      autoSupervisorId = deptRows[0]?.headId || null;
-    }
-
-    let departmentId = body.departmentId ?? null;
-    let positionCode = body.positionCode ?? null;
-    if (!departmentId && body.department) {
-      const deptRow = await this.db
-        .select({ id: department.id })
-        .from(department)
-        .where(eq(department.name, body.department))
-        .limit(1);
-      departmentId = deptRow[0]?.id ?? null;
-    }
-    if (!positionCode && body.position) {
-      const dictRow = await this.db
-        .select({ code: systemDict.code })
-        .from(systemDict)
-        .where(
-          and(
-            eq(systemDict.dictType, 'position'),
-            eq(systemDict.name, body.position),
-          ),
-        )
-        .limit(1);
-      positionCode = dictRow[0]?.code ?? null;
-    }
+    // 自动解析 departmentId / positionCode
+    const { departmentId, positionCode } = await this.resolveReferences(
+      body.department,
+      body.position,
+      body.departmentId,
+      body.positionCode,
+    );
 
     const values = {
       name: body.name,
@@ -710,6 +655,39 @@ export class EmployeeManagementService {
   /**
    * 解析上级：优先使用指定的 supervisorId，否则根据部门查找部门负责人
    */
+  private async resolveReferences(
+    deptName?: string,
+    posName?: string,
+    explicitDepartmentId?: string | null,
+    explicitPositionCode?: string | null,
+  ) {
+    let departmentId: string | null =
+      explicitDepartmentId ?? null;
+    let positionCode: string | null =
+      explicitPositionCode ?? null;
+
+    if (!departmentId && deptName) {
+      const deptRow = await this.db
+        .select({ id: department.id })
+        .from(department)
+        .where(eq(department.name, deptName))
+        .limit(1);
+      departmentId = deptRow[0]?.id ?? null;
+    }
+    if (!positionCode && posName) {
+      const dictRow = await this.db
+        .select({ code: systemDict.code })
+        .from(systemDict)
+        .where(
+          and(eq(systemDict.dictType, 'position'), eq(systemDict.name, posName)),
+        )
+        .limit(1);
+      positionCode = dictRow[0]?.code ?? null;
+    }
+
+    return { departmentId, positionCode };
+  }
+
   private async resolveSupervisor(
     supervisorId?: string,
     departmentName?: string,
