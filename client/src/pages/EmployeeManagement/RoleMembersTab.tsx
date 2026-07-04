@@ -248,7 +248,7 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
                       content={
                         <div className="flex flex-1 items-center gap-3">
                           {id ? (
-                            <UserDisplay value={id} size="small" />
+                            <UserDisplay value={{ user_id: id, name: i18nText(u.name) || undefined }} size="small" />
                           ) : (
                             <span className="text-sm">
                               {i18nText(u.name) || '未知用户'}

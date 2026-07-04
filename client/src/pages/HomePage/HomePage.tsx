@@ -10,7 +10,6 @@ import {
   AreaChartIcon,
   BarChart3Icon,
 } from 'lucide-react';
-import { useCurrentUserProfile } from '@lark-apaas/client-toolkit/hooks/useCurrentUserProfile';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { handleApiError } from '@client/src/utils/api-error';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -64,7 +63,6 @@ const TODO_COLORS: Record<string, string> = {
 };
 
 const HomePage: React.FC = () => {
-  const userInfo = useCurrentUserProfile();
   const [todos, setTodos] = useState<DashboardTodosResponse['items']>([]);
   const [overview, setOverview] = useState<DashboardOverviewResponse | null>(
     null,
@@ -92,11 +90,10 @@ const HomePage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!userInfo?.user_id) return;
     loadDashboard();
-  }, [userInfo?.user_id, loadDashboard]);
+  }, [loadDashboard]);
 
-  if (!userInfo?.user_id || loading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Spinner className="size-8" />

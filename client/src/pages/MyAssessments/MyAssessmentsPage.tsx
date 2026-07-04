@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCurrentUserProfile } from '@lark-apaas/client-toolkit/hooks/useCurrentUserProfile';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { handleApiError } from '@client/src/utils/api-error';
 import { Badge } from '@/components/ui/badge';
@@ -38,7 +37,6 @@ const chartConfig = {
 };
 
 const MyAssessmentsPage: React.FC = () => {
-  const userInfo = useCurrentUserProfile();
   const navigate = useNavigate();
 
   const myAssessmentColumns: PageTableColumn<MyAssessmentRecordItem>[] = [
@@ -152,13 +150,11 @@ const MyAssessmentsPage: React.FC = () => {
   }, [yearFilter]);
 
   useEffect(() => {
-    if (!userInfo?.user_id) return;
     fetchRecords();
-  }, [fetchRecords, userInfo?.user_id]);
+  }, [fetchRecords]);
   useEffect(() => {
-    if (!userInfo?.user_id) return;
     fetchTrend();
-  }, [fetchTrend, userInfo?.user_id]);
+  }, [fetchTrend]);
 
   const handlePrevYear = () => {
     setYearFilter(String(parseInt(yearFilter, 10) - 1));
@@ -171,10 +167,10 @@ const MyAssessmentsPage: React.FC = () => {
 
   const totalPages = Math.ceil(total / pageSize);
 
-  if (!userInfo?.user_id) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-64 text-muted-foreground">
-        正在加载用户信息...
+        正在加载...
       </div>
     );
   }

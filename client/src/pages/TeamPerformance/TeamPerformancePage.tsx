@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCurrentUserProfile } from '@lark-apaas/client-toolkit/hooks/useCurrentUserProfile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ActionBadge } from '@/components/business-ui/action-badge';
@@ -64,8 +63,6 @@ function currentMonth(): string {
 
 const TeamPerformancePage: React.FC = () => {
   const navigate = useNavigate();
-  const userInfo = useCurrentUserProfile();
-
   const [overview, setOverview] = useState<TeamOverviewResponse | null>(null);
   const [subordinates, setSubordinates] = useState<SubordinateRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -121,13 +118,11 @@ const TeamPerformancePage: React.FC = () => {
   }, [page, statusFilter, activePeriod]);
 
   useEffect(() => {
-    if (!userInfo?.user_id) return;
     loadOverview();
-  }, [loadOverview, userInfo?.user_id]);
+  }, [loadOverview]);
   useEffect(() => {
-    if (!userInfo?.user_id) return;
     loadSubordinates();
-  }, [loadSubordinates, userInfo?.user_id]);
+  }, [loadSubordinates]);
 
   const gradeChartData = useMemo(() => {
     const dist = overview?.gradeDistribution;
