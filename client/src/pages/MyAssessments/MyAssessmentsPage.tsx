@@ -5,6 +5,7 @@ import { logger } from '@lark-apaas/client-toolkit/logger';
 import { handleApiError } from '@client/src/utils/api-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ActionBadge } from '@/components/business-ui/action-badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   ChartContainer,
@@ -52,7 +53,6 @@ const MyAssessmentsPage: React.FC = () => {
     {
       key: 'grade',
       header: '等级',
-      align: 'center',
       render: (item) => (item.grade ? <GradeBadge grade={item.grade} /> : '-'),
     },
     {
@@ -81,15 +81,16 @@ const MyAssessmentsPage: React.FC = () => {
     {
       key: 'actions',
       header: '操作',
+      headerClassName: 'sticky right-0 bg-background z-20 border-l',
+      className:
+        'sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l',
       render: (item) => (
-        <Button
-          variant="ghost"
-          size="sm"
+        <ActionBadge
+          actionType="view"
+          icon={<Eye className="size-3" />}
+          label="查看详情"
           onClick={() => navigate(`/assessment/${item.id}`)}
-        >
-          <Eye data-icon="inline-start" />
-          查看详情
-        </Button>
+        />
       ),
     },
   ];

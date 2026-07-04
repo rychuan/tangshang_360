@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCurrentUserProfile } from '@lark-apaas/client-toolkit/hooks/useCurrentUserProfile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { ActionBadge } from '@/components/business-ui/action-badge';
 import { Spinner } from '@/components/ui/spinner';
 import {
   Select,
@@ -194,31 +195,30 @@ const TeamPerformancePage: React.FC = () => {
       {
         key: 'actions',
         header: '操作',
+        headerClassName: 'sticky right-0 bg-background z-20 border-l',
+        className:
+          'sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l',
         render: (item) => (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             {item.status === 'self_review' && (
               <CanRole roles={['admin', 'dept_head', 'supervisor']}>
                 <CanDo resource="team_performance" action="edit">
-                  <Button
-                    size="sm"
-                    variant="ghost"
+                  <ActionBadge
+                    actionType="toggle"
+                    icon={<Bell className="size-3" />}
+                    label="催办"
                     disabled={remindingIds.has(item.id)}
                     onClick={() => handleRemind(item)}
-                  >
-                    <Bell data-icon="inline-start" />
-                    催办
-                  </Button>
+                  />
                 </CanDo>
               </CanRole>
             )}
-            <Button
-              size="sm"
-              variant="outline"
+            <ActionBadge
+              actionType="view"
+              icon={<Eye className="size-3" />}
+              label="查看/评分"
               onClick={() => navigate(`/assessment/${item.id}?view=supervisor`)}
-            >
-              <Eye data-icon="inline-start" />
-              查看/评分
-            </Button>
+            />
           </div>
         ),
       },

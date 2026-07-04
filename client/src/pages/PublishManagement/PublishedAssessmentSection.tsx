@@ -18,6 +18,7 @@ import { Unlock, Send, Download, Award, Undo2 } from 'lucide-react';
 import dayjs from 'dayjs';
 import type { AssessmentInstanceItem } from '@shared/api.interface';
 import { StatusBadge } from '@/components/business-ui/status-badge';
+import { ActionBadge } from '@/components/business-ui/action-badge';
 import { PUBLISHED_STATUS_LABELS } from './published-assessment-columns';
 import { Spinner } from '@/components/ui/spinner';
 import {
@@ -283,7 +284,7 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
                 <TableHead className="py-3 pr-4 font-medium text-right">
                   总分
                 </TableHead>
-                <TableHead className="py-3 pr-4 font-medium text-center hidden sm:table-cell">
+                <TableHead className="py-3 pr-4 font-medium text-left hidden sm:table-cell">
                   等级
                 </TableHead>
                 <TableHead className="py-3 pr-4 font-medium text-left hidden md:table-cell">
@@ -292,7 +293,7 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
                 <TableHead className="py-3 pr-4 font-medium text-left hidden md:table-cell">
                   发布人
                 </TableHead>
-                <TableHead className="py-3 pr-4 font-medium text-left">
+                <TableHead className="py-3 pr-4 font-medium text-left sticky right-0 bg-background z-20 border-l">
                   操作
                 </TableHead>
               </TableRow>
@@ -301,7 +302,7 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
               {instances.map((record: AssessmentInstanceItem) => (
                 <TableRow
                   key={record.id}
-                  className="border-b hover:bg-muted/50"
+                  className="group border-b hover:bg-muted/50"
                 >
                   <TableCell className="py-3 pr-4">
                     <Checkbox
@@ -355,7 +356,7 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
                   <TableCell className="py-3 pr-4 text-right">
                     {record.totalScore != null ? record.totalScore : '-'}
                   </TableCell>
-                  <TableCell className="py-3 pr-4 text-center hidden sm:table-cell">
+                  <TableCell className="py-3 pr-4 hidden sm:table-cell">
                     {record.grade || '-'}
                   </TableCell>
                   <TableCell className="py-3 pr-4 hidden md:table-cell">
@@ -373,18 +374,16 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
                       <span className="text-muted-foreground">-</span>
                     )}
                   </TableCell>
-                  <TableCell className="py-3 pr-4">
-                    <div className="flex items-center gap-2">
+                  <TableCell className="py-3 pr-4 sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
+                    <div className="flex items-center gap-1">
                       {record.status === 'self_review' && (
                         <CanRole roles={['admin', 'hrd']}>
                           <CanDo resource="publish_management" action="edit">
-                            <Button
-                              variant="outline"
-                              size="sm"
+                            <ActionBadge
+                              actionType="toggle"
+                              label="退回"
                               onClick={() => onReturn(record)}
-                            >
-                              退回
-                            </Button>
+                            />
                           </CanDo>
                         </CanRole>
                       )}
@@ -395,24 +394,20 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
                       ].includes(record.status) && (
                         <CanRole roles={['admin', 'hrd']}>
                           <CanDo resource="publish_management" action="edit">
-                            <Button
-                              variant="outline"
-                              size="sm"
+                            <ActionBadge
+                              actionType="toggle"
+                              label="解锁"
                               onClick={() => onUnlock(record)}
-                            >
-                              解锁
-                            </Button>
+                            />
                           </CanDo>
                         </CanRole>
                       )}
                       <CanRole roles={['admin', 'hrd']}>
-                        <Button
-                          variant="outline"
-                          size="sm"
+                        <ActionBadge
+                          actionType="history"
+                          label="解锁历史"
                           onClick={() => onHistory(record)}
-                        >
-                          解锁历史
-                        </Button>
+                        />
                       </CanRole>
                     </div>
                   </TableCell>

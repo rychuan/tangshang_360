@@ -13,6 +13,7 @@ import { logger } from '@lark-apaas/client-toolkit/logger';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo } from '@/hooks/usePermissions';
 import { Button } from '@client/src/components/ui/button';
+import { ActionBadge } from '@/components/business-ui/action-badge';
 import { handleApiError } from '@client/src/utils/api-error';
 import { Input } from '@client/src/components/ui/input';
 import { Badge } from '@client/src/components/ui/badge';
@@ -235,53 +236,48 @@ const TemplateManagementPage: React.FC = () => {
     {
       key: 'actions',
       header: '操作',
+      headerClassName: 'sticky right-0 bg-background z-20 border-l',
+      className:
+        'sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l',
       render: (item) => (
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
+          <ActionBadge
+            actionType="preview"
+            icon={<Eye className="size-3" />}
+            label="预览"
             onClick={() => handlePreview(item.id)}
-          >
-            <Eye data-icon="inline-start" />
-            预览
-          </Button>
+          />
           <CanRole roles={['admin', 'hrd']}>
             <CanDo resource="template_management" action="edit">
-              <Button
-                variant="ghost"
-                size="sm"
+              <ActionBadge
+                actionType="edit"
+                icon={<Pencil className="size-3" />}
+                label="编辑"
                 onClick={() => handleEdit(item.id)}
-              >
-                <Pencil data-icon="inline-start" />
-                编辑
-              </Button>
+              />
             </CanDo>
           </CanRole>
           {item.isActive && (
             <CanRole roles={['admin', 'hrd']}>
               <CanDo resource="template_management" action="delete">
-                <Button
-                  variant="destructive"
-                  size="sm"
+                <ActionBadge
+                  actionType="deactivate"
+                  icon={<Ban className="size-3" />}
+                  label="停用"
                   onClick={() => setDeactivateId(item.id)}
-                >
-                  <Ban data-icon="inline-start" />
-                  停用
-                </Button>
+                />
               </CanDo>
             </CanRole>
           )}
           {!item.isActive && (
             <CanRole roles={['admin', 'hrd']}>
               <CanDo resource="template_management" action="delete">
-                <Button
-                  variant="destructive"
-                  size="sm"
+                <ActionBadge
+                  actionType="delete"
+                  icon={<Trash2 className="size-3" />}
+                  label="删除"
                   onClick={() => setDeleteId(item.id)}
-                >
-                  <Trash2 data-icon="inline-start" />
-                  删除
-                </Button>
+                />
               </CanDo>
             </CanRole>
           )}

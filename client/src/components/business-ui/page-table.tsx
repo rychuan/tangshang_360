@@ -125,7 +125,7 @@ function PageTable<T>({
               </TableHeader>
               <TableBody>
                 {data.map((item, idx) => (
-                  <TableRow key={idx}>
+                  <TableRow key={idx} className="group">
                     {columns.map((col) => (
                       <TableCell
                         key={col.key}

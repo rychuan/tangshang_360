@@ -7,6 +7,7 @@ import type {
   CreateDepartmentRequest,
 } from '@shared/api.interface';
 import { Button } from '@/components/ui/button';
+import { ActionBadge } from '@/components/business-ui/action-badge';
 import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -213,20 +214,18 @@ const DepartmentManagementTab: React.FC = () => {
           <TableCell>{node.sortOrder}</TableCell>
           <TableCell className="sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
             <div className="flex items-center gap-1.5">
-              <Button
-                variant="ghost"
-                size="icon"
+              <ActionBadge
+                actionType="edit"
+                icon={<Pencil className="size-3" />}
+                label=""
                 onClick={() => handleEdit(node)}
-              >
-                <Pencil className="size-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
+              />
+              <ActionBadge
+                actionType="delete"
+                icon={<Trash2 className="size-3" />}
+                label=""
                 onClick={() => handleDelete(node)}
-              >
-                <Trash2 className="size-4 text-destructive" />
-              </Button>
+              />
             </div>
           </TableCell>
         </TableRow>

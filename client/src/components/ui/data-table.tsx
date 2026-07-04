@@ -1,5 +1,6 @@
 'use client';
 
+import { cn } from '@/lib/utils';
 import * as React from 'react';
 import {
   type ColumnDef,
@@ -115,7 +116,8 @@ export function DataTable<TData, TValue>({
             >
               {headerGroup.headers.map((header) => {
                 const meta = header.column.columnDef.meta as
-                  { headerClass?: string; cellClass?: string } | undefined;
+                  | { headerClass?: string; cellClass?: string }
+                  | undefined;
                 return (
                   <TableHead
                     key={header.id}
@@ -138,12 +140,13 @@ export function DataTable<TData, TValue>({
             <TableRow
               key={row.id}
               data-state={row.getIsSelected() && 'selected'}
-              className={onRowClick ? 'cursor-pointer' : ''}
+              className={cn('group', onRowClick && 'cursor-pointer')}
               onClick={() => onRowClick?.(row.original)}
             >
               {row.getVisibleCells().map((cell) => {
                 const meta = cell.column.columnDef.meta as
-                  { headerClass?: string; cellClass?: string } | undefined;
+                  | { headerClass?: string; cellClass?: string }
+                  | undefined;
                 return (
                   <TableCell
                     key={cell.id}

@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2, Award } from 'lucide-react';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo } from '@/hooks/usePermissions';
 import { Button } from '@client/src/components/ui/button';
+import { ActionBadge } from '@/components/business-ui/action-badge';
 import { Badge } from '@client/src/components/ui/badge';
 import { PageHeader } from '@/components/business-ui/page-header';
 import {
@@ -136,14 +137,17 @@ const GradeConfigPage: React.FC = () => {
                 <TableHead className="py-3 px-4 font-medium text-left">
                   启用状态
                 </TableHead>
-                <TableHead className="py-3 px-4 font-medium text-left">
+                <TableHead className="py-3 px-4 font-medium text-left sticky right-0 bg-background z-20 border-l">
                   操作
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedItems.map((item: PerformanceGradeItem) => (
-                <TableRow key={item.id} className="border-b hover:bg-muted/50">
+                <TableRow
+                  key={item.id}
+                  className="group border-b hover:bg-muted/50"
+                >
                   <TableCell className="py-3 px-4">{item.name}</TableCell>
                   <TableCell className="py-3 px-4">
                     {item.minScore} ~ {item.maxScore}
@@ -156,31 +160,26 @@ const GradeConfigPage: React.FC = () => {
                       <Badge variant="secondary">停用</Badge>
                     )}
                   </TableCell>
-                  <TableCell className="py-3 px-4">
+                  <TableCell className="py-3 px-4 sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
                     <div className="flex items-center gap-1">
                       <CanRole roles={['admin', 'hrd']}>
                         <CanDo resource="grade_config" action="edit">
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                          <ActionBadge
+                            actionType="edit"
+                            icon={<Pencil className="size-3" />}
+                            label="编辑"
                             onClick={() => handleOpenEdit(item)}
-                          >
-                            <Pencil data-icon="inline-start" />
-                            编辑
-                          </Button>
+                          />
                         </CanDo>
                       </CanRole>
                       <CanRole roles={['admin', 'hrd']}>
                         <CanDo resource="grade_config" action="edit">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive"
+                          <ActionBadge
+                            actionType="delete"
+                            icon={<Trash2 className="size-3" />}
+                            label="删除"
                             onClick={() => setDeleteId(item.id)}
-                          >
-                            <Trash2 data-icon="inline-start" />
-                            删除
-                          </Button>
+                          />
                         </CanDo>
                       </CanRole>
                     </div>

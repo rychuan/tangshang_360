@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { ActionBadge } from '@/components/business-ui/action-badge';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo } from '@/hooks/usePermissions';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -190,7 +191,9 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
               <TableHead className="py-3 pr-4 font-medium hidden md:table-cell">
                 上月绩效
               </TableHead>
-              <TableHead className="py-3 pr-4 font-medium">操作</TableHead>
+              <TableHead className="py-3 pr-4 font-medium sticky right-0 bg-background z-20 border-l">
+                操作
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -229,26 +232,22 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
                     <span className="text-muted-foreground">-</span>
                   )}
                 </TableCell>
-                <TableCell className="py-3 pr-4">
+                <TableCell className="py-3 pr-4 sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
                   <div className="flex items-center gap-1">
                     <CanRole roles={['admin', 'hrd']}>
                       <CanDo resource="publish_management" action="edit">
-                        <Button
-                          variant="outline"
-                          size="sm"
+                        <ActionBadge
+                          actionType="edit"
+                          label="调整"
                           onClick={() => onAdjust(emp)}
-                        >
-                          调整
-                        </Button>
+                        />
                       </CanDo>
                       <CanDo resource="publish_management" action="edit">
-                        <Button
-                          variant="destructive"
-                          size="sm"
+                        <ActionBadge
+                          actionType="delete"
+                          label="删除快照"
                           onClick={() => onDeleteSnapshot(emp)}
-                        >
-                          删除快照
-                        </Button>
+                        />
                       </CanDo>
                     </CanRole>
                   </div>

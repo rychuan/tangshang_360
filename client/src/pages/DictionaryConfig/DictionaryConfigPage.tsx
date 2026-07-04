@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import dictApi from '@/api/dictionary';
 import type { DictEntry, CreateDictRequest } from '@shared/api.interface';
 import { Button } from '@/components/ui/button';
+import { ActionBadge } from '@/components/business-ui/action-badge';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -169,7 +170,7 @@ const DictPanel: React.FC<{ dictType: string }> = ({ dictType }) => {
                   <TableHead className="h-10 px-4 text-left text-xs font-medium text-muted-foreground hidden sm:table-cell">
                     状态
                   </TableHead>
-                  <TableHead className="h-10 px-4 text-right text-xs font-medium text-muted-foreground">
+                  <TableHead className="h-10 px-4 sticky right-0 bg-background z-20 border-l text-xs font-medium text-muted-foreground">
                     操作
                   </TableHead>
                 </TableRow>
@@ -178,7 +179,7 @@ const DictPanel: React.FC<{ dictType: string }> = ({ dictType }) => {
                 {items.map((item) => (
                   <TableRow
                     key={item.id}
-                    className="border-b hover:bg-muted/30"
+                    className="group border-b hover:bg-muted/30"
                   >
                     <TableCell className="px-4 py-3 text-sm text-muted-foreground font-mono">
                       {item.code}
@@ -197,25 +198,24 @@ const DictPanel: React.FC<{ dictType: string }> = ({ dictType }) => {
                         {item.isActive ? '启用' : '停用'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEdit(item)}
-                      >
-                        <Pencil />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => {
-                          setDeleteTarget(item);
-                          setDeleteOpen(true);
-                        }}
-                      >
-                        <Trash2 />
-                      </Button>
+                    <TableCell className="px-4 py-3 sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
+                      <div className="flex items-center gap-1">
+                        <ActionBadge
+                          actionType="edit"
+                          icon={<Pencil className="size-3" />}
+                          label=""
+                          onClick={() => openEdit(item)}
+                        />
+                        <ActionBadge
+                          actionType="delete"
+                          icon={<Trash2 className="size-3" />}
+                          label=""
+                          onClick={() => {
+                            setDeleteTarget(item);
+                            setDeleteOpen(true);
+                          }}
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

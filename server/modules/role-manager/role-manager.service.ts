@@ -93,12 +93,14 @@ export class RoleManagerService {
       await this.authzSDK.members.add('employee', {
         members: { userList: [{ userID: userId }] },
       });
+      // 角色变更后清除缓存，确保后续查询获取最新角色列表
+      this.roleCache.delete(userId);
       this.logger.log(`Added user ${userId} to 'employee' role`);
     } catch (err) {
       this.logger.error(
         `Failed to add user ${userId} to 'employee' role: ${err instanceof Error ? err.message : String(err)}`,
       );
-      throw err;
+      // 不向上抛出，调用方已自行处理日志和流程
     }
   }
 

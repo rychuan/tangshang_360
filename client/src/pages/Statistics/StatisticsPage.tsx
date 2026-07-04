@@ -29,6 +29,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { ActionBadge } from '@/components/business-ui/action-badge';
 import { PageHeader } from '@/components/business-ui/page-header';
 import {
   StatusBadge,
@@ -72,9 +73,7 @@ import {
   type StatisticsRecordsParams,
   type StatisticsChartsParams,
 } from '@/api/assessment-statistics';
-import {
-  exportPerformanceToBitable,
-} from '@/api/bitable-sync';
+import { exportPerformanceToBitable } from '@/api/bitable-sync';
 import { getPositions } from '@/api/employee-management';
 import type {
   StatisticsRecordItem,
@@ -756,17 +755,17 @@ const StatisticsPage: React.FC = () => {
                       <TableHead className="text-right py-3 px-4 font-medium">
                         总分
                       </TableHead>
-                      <TableHead className="text-center py-3 px-4 font-medium hidden sm:table-cell">
+                      <TableHead className="py-3 px-4 font-medium hidden sm:table-cell">
                         等级
                       </TableHead>
-                      <TableHead className="text-center py-3 px-4 font-medium">
+                      <TableHead className="py-3 px-4 font-medium">
                         状态
                       </TableHead>
                       <TableHead className="text-left py-3 px-4 font-medium hidden lg:table-cell">
                         完成时间
                       </TableHead>
                       <CanRole roles={['admin', 'hrd', 'dept_head']}>
-                        <TableHead className="text-center py-3 px-4 font-medium w-20">
+                        <TableHead className="py-3 px-4 font-medium sticky right-0 bg-background z-20 border-l">
                           操作
                         </TableHead>
                       </CanRole>
@@ -776,7 +775,7 @@ const StatisticsPage: React.FC = () => {
                     {records.map((r: StatisticsRecordItem) => (
                       <TableRow
                         key={r.id}
-                        className="border-b hover:bg-muted/50"
+                        className="group border-b hover:bg-muted/50"
                       >
                         <TableCell className="py-3 px-4">{r.period}</TableCell>
                         <TableCell className="py-3 px-4 font-medium">
@@ -794,10 +793,10 @@ const StatisticsPage: React.FC = () => {
                         <TableCell className="py-3 px-4 text-right font-mono">
                           {r.totalScore}
                         </TableCell>
-                        <TableCell className="py-3 px-4 text-center hidden sm:table-cell">
+                        <TableCell className="py-3 px-4 hidden sm:table-cell">
                           <GradeBadge grade={r.grade} />
                         </TableCell>
-                        <TableCell className="py-3 px-4 text-center">
+                        <TableCell className="py-3 px-4">
                           <StatusBadge status={r.status} />
                         </TableCell>
                         <TableCell className="py-3 px-4 hidden lg:table-cell text-muted-foreground">
@@ -808,21 +807,20 @@ const StatisticsPage: React.FC = () => {
                             : '-'}
                         </TableCell>
                         <CanRole roles={['admin', 'hrd', 'dept_head']}>
-                          <TableCell className="py-3 px-2 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
+                          <TableCell className="py-3 px-4 sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
+                            <div className="flex items-center gap-1">
+                              <ActionBadge
+                                actionType="view"
+                                icon={<Eye className="size-3" />}
+                                label="详情"
                                 onClick={() =>
                                   navigate(`../assessment/${r.id}`)
                                 }
-                              >
-                                <Eye data-icon="inline-start" />
-                                详情
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
+                              />
+                              <ActionBadge
+                                actionType="preview"
+                                icon={<FileDown className="size-3" />}
+                                label="导出"
                                 disabled={exportingPdfId === r.id}
                                 onClick={() =>
                                   handleExportPdf(
@@ -831,10 +829,7 @@ const StatisticsPage: React.FC = () => {
                                     r.period,
                                   )
                                 }
-                              >
-                                <FileDown data-icon="inline-start" />
-                                导出
-                              </Button>
+                              />
                             </div>
                           </TableCell>
                         </CanRole>

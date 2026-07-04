@@ -7,7 +7,14 @@ import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo } from '@/hooks/usePermissions';
 import { Checkbox } from '@/components/ui/checkbox';
 import { UserDisplay } from '@/components/business-ui/user-display';
+import { ActionBadge } from '@/components/business-ui/action-badge';
 import { DataTable } from '@/components/ui/data-table';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 import type { ColumnDef } from '@tanstack/react-table';
 import {
   Pencil,
@@ -18,6 +25,7 @@ import {
   History,
   Trash2,
   Users,
+  MoreHorizontal,
 } from 'lucide-react';
 
 export interface EmployeeTableProps {
@@ -63,7 +71,8 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
   const someChecked =
     employees.some((e) => selectedRowKeys.includes(e.id)) && !allChecked;
 
-  const stickyCol =
+  const stickyHeaderCol = 'sticky right-0 z-20 bg-background border-l';
+  const stickyCellCol =
     'sticky right-0 z-10 bg-background group-hover:bg-muted/30 border-l';
   const cols: ColumnDef<EmployeeItem>[] = [
     {
@@ -187,93 +196,79 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
     },
     {
       id: 'actions',
-      meta: { headerClass: stickyCol, cellClass: stickyCol },
-      header: () => <div className="text-right">操作</div>,
+      meta: { headerClass: stickyHeaderCol, cellClass: stickyCellCol },
+      header: () => <span>操作</span>,
       cell: ({ row }) => (
         <div
-          className="flex items-center justify-end gap-0.5 sm:gap-1"
+          className="flex items-center gap-1"
           onClick={(e) => e.stopPropagation()}
         >
           <CanRole roles={['admin']}>
             <CanDo resource="employees" action="edit">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7 sm:size-8"
+              <ActionBadge
+                actionType="edit"
+                icon={<Pencil className="size-3" />}
+                label="编辑"
                 onClick={() => onEdit(row.original)}
-                title="编辑"
-              >
-                <Pencil />
-              </Button>
+              />
             </CanDo>
           </CanRole>
-          <CanRole roles={['admin', 'hrd']}>
-            <CanDo resource="employee_binding" action="edit">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7 sm:size-8 hidden sm:inline-flex"
-                onClick={() => onBind(row.original)}
-                title="绑定模板"
-              >
-                <Link2 />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="size-7">
+                <MoreHorizontal className="size-4" />
               </Button>
-            </CanDo>
-          </CanRole>
-          {row.original.currentBinding && (
-            <CanRole roles={['admin', 'hrd']}>
-              <CanDo resource="employee_binding" action="edit">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-7 sm:size-8 hidden sm:inline-flex"
-                  onClick={() => onUnbind(row.original)}
-                  title="解绑"
-                >
-                  <Unlink className="text-destructive" />
-                </Button>
-              </CanDo>
-            </CanRole>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7 sm:size-8 hidden sm:inline-flex"
-            onClick={() => onHistory(row.original)}
-            title="绑定历史"
-          >
-            <History />
-          </Button>
-          <CanRole roles={['admin']}>
-            <CanDo resource="employees" action="edit">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7 sm:size-8"
-                onClick={() => onToggleStatus(row.original)}
-                title={row.original.status === 'active' ? '禁用' : '启用'}
-              >
-                {row.original.status === 'active' ? (
-                  <Ban className="text-destructive" />
-                ) : (
-                  <CheckCircle className="text-success" />
-                )}
-              </Button>
-            </CanDo>
-          </CanRole>
-          <CanRole roles={['admin']}>
-            <CanDo resource="employees" action="delete">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7 sm:size-8"
-                onClick={() => onDelete(row.original)}
-                title="删除"
-              >
-                <Trash2 className="text-destructive" />
-              </Button>
-            </CanDo>
-          </CanRole>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[130px]">
+              <CanRole roles={['admin', 'hrd']}>
+                <CanDo resource="employee_binding" action="edit">
+                  <DropdownMenuItem onClick={() => onBind(row.original)}>
+                    <Link2 className="size-4" />
+                    绑定模板
+                  </DropdownMenuItem>
+                </CanDo>
+              </CanRole>
+              {row.original.currentBinding && (
+                <CanRole roles={['admin', 'hrd']}>
+                  <CanDo resource="employee_binding" action="edit">
+                    <DropdownMenuItem onClick={() => onUnbind(row.original)}>
+                      <Unlink className="size-4" />
+                      解绑
+                    </DropdownMenuItem>
+                  </CanDo>
+                </CanRole>
+              )}
+              <DropdownMenuItem onClick={() => onHistory(row.original)}>
+                <History className="size-4" />
+                绑定历史
+              </DropdownMenuItem>
+              <CanRole roles={['admin']}>
+                <CanDo resource="employees" action="edit">
+                  <DropdownMenuItem
+                    onClick={() => onToggleStatus(row.original)}
+                  >
+                    {row.original.status === 'active' ? (
+                      <Ban className="size-4" />
+                    ) : (
+                      <CheckCircle className="size-4" />
+                    )}
+                    {row.original.status === 'active' ? '禁用' : '启用'}
+                  </DropdownMenuItem>
+                </CanDo>
+              </CanRole>
+              <CanRole roles={['admin']}>
+                <CanDo resource="employees" action="delete">
+                  <DropdownMenuItem
+                    onClick={() => onDelete(row.original)}
+                    variant="destructive"
+                  >
+                    <Trash2 className="size-4" />
+                    删除
+                  </DropdownMenuItem>
+                </CanDo>
+              </CanRole>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       ),
       enableSorting: false,
