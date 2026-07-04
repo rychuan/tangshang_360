@@ -165,11 +165,14 @@ const AssessmentDetailPage: React.FC = () => {
                 </p>
               </div>
               {detail.grade && (
-                <span
-                  className={`px-3 py-1 rounded-md text-lg font-bold ${getGradeStyle(detail.grade, gradeStyleMap)}`}
-                >
-                  {detail.grade}
-                </span>
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">等级</p>
+                  <span
+                    className={`inline-block px-3 py-1 rounded-md text-lg font-bold ${getGradeStyle(detail.grade, gradeStyleMap)}`}
+                  >
+                    {detail.grade}
+                  </span>
+                </div>
               )}
               {detail.coefficient && (
                 <div className="text-right">
