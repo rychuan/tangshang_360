@@ -86,11 +86,11 @@ export class AssessmentOperationService {
     let isAdmin = false;
     if (!isEmployee && !isSupervisor && !isDeptHead) {
       const adminRows = await this.db
-        .select({ id: employee.id })
+        .select({ id: employee.employeeId })
         .from(employee)
         .where(
           and(
-            sql`(${employee.id}).user_id = ${userId}`,
+            sql`(${employee.employeeId}).user_id = ${userId}`,
             eq(employee.role, 'admin'),
             isNull(employee.deletedAt),
           ),
@@ -125,7 +125,7 @@ export class AssessmentOperationService {
       })
       .from(employee)
       .where(
-        and(eq(employee.id, instance.employeeId), isNull(employee.deletedAt)),
+        and(eq(employee.employeeId, instance.employeeId), isNull(employee.deletedAt)),
       )
       .limit(1);
 
@@ -159,7 +159,7 @@ export class AssessmentOperationService {
         .from(employee)
         .where(
           and(
-            eq(employee.id, instance.supervisorId),
+            eq(employee.employeeId, instance.supervisorId),
             isNull(employee.deletedAt),
           ),
         )
@@ -282,7 +282,7 @@ export class AssessmentOperationService {
       .from(employee)
       .where(
         and(
-          sql`(${employee.id}).user_id = ${instance.employeeId}`,
+          sql`(${employee.employeeId}).user_id = ${instance.employeeId}`,
           isNull(employee.deletedAt),
         ),
       )
@@ -455,7 +455,7 @@ export class AssessmentOperationService {
       .from(employee)
       .where(
         and(
-          sql`(${employee.id}).user_id = ${instance.employeeId}`,
+          sql`(${employee.employeeId}).user_id = ${instance.employeeId}`,
           isNull(employee.deletedAt),
         ),
       )
@@ -701,7 +701,7 @@ export class AssessmentOperationService {
         .from(employee)
         .where(
           and(
-            sql`(${employee.id}).user_id = ${instance.employeeId}`,
+            sql`(${employee.employeeId}).user_id = ${instance.employeeId}`,
             isNull(employee.deletedAt),
           ),
         )

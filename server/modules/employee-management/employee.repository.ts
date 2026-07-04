@@ -26,7 +26,7 @@ export class EmployeeRepository {
       .from(employee)
       .where(
         and(
-          sql`(${employee.id}).user_id = ${userId}`,
+          sql`(${employee.employeeId}).user_id = ${userId}`,
           isNull(employee.deletedAt),
         ),
       )
@@ -44,7 +44,7 @@ export class EmployeeRepository {
       .from(employee)
       .where(
         and(
-          sql`(${employee.id}).user_id IN (${sql.join(
+          sql`(${employee.employeeId}).user_id IN (${sql.join(
             userIds.map((id) => sql`${id}`),
             sql`, `,
           )})`,
@@ -67,7 +67,7 @@ export class EmployeeRepository {
   async findSubordinateIds(supervisorId: string): Promise<string[]> {
     const rows = await this.db
       .select({
-        userId: sql<string>`(${employee.id}).user_id`,
+        userId: sql<string>`(${employee.employeeId}).user_id`,
       })
       .from(employee)
       .where(
@@ -103,11 +103,11 @@ export class EmployeeRepository {
 
   /**
    * 生成员工名称解析子查询。
-   * 消除 8+ 处重复的 `(SELECT name FROM employee sup WHERE (sup.id).user_id = ...)` 模式。
+   * 消除 8+ 处重复的 `(SELECT name FROM employee sup WHERE (sup.employee_id).user_id = ...)` 模式。
    */
   nameSubquery(refColumn: Column | SQL): SQL {
     return sql<string>`(SELECT e.name FROM ${employee} e
-      WHERE (e.id).user_id = (${refColumn}).user_id
+      WHERE (e.employee_id).user_id = (${refColumn}).user_id
         AND e.deleted_at IS NULL
       LIMIT 1)`;
   }

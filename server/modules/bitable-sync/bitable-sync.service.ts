@@ -120,7 +120,7 @@ export class BitableSyncService {
         .where(
           and(
             // IN clause for user_ids extracted from composite id
-            sql`(${employee.id}).user_id IN (${sql.join(userIdParts, sql`, `)})`,
+            sql`(${employee.employeeId}).user_id IN (${sql.join(userIdParts, sql`, `)})`,
             isNull(employee.deletedAt),
           ),
         );
@@ -166,7 +166,7 @@ export class BitableSyncService {
               .from(employee)
               .where(
                 and(
-                  sql`(${employee.id}).user_id = ${p.sudaUserId}`,
+                  sql`(${employee.employeeId}).user_id = ${p.sudaUserId}`,
                   isNotNull(employee.deletedAt),
                 ),
               )
@@ -185,10 +185,10 @@ export class BitableSyncService {
                   supervisorId: p.supervisorUserId || null,
                   deletedAt: null,
                 })
-                .where(eq(employee.id, softDeleted[0].id));
+                .where(eq(employee.employeeId, softDeleted[0].id));
             } else {
               await this.db.insert(employee).values({
-                id: p.sudaUserId,
+                employeeId: p.sudaUserId,
                 name: p.sudaUserId,
                 position: p.position || '',
                 department: p.department || '',
@@ -271,8 +271,8 @@ export class BitableSyncService {
     // Extract user_id from userProfile composite type via SQL
     const employees = await this.db
       .select({
-        userId: sql<string>`(${employee.id}).user_id`,
-        id: employee.id,
+        userId: sql<string>`(${employee.employeeId}).user_id`,
+        id: employee.employeeId,
         name: employee.name,
         employeeNo: employee.employeeNo,
         position: employee.position,

@@ -57,18 +57,18 @@ export class TeamStructureService {
 
     const whereEmployee = and(...conditions);
 
-    const joinOn = sql`(${employeeBinding.employeeId}).user_id = (${employee.id}).user_id AND ${employeeBinding.status} = 'active'`;
+    const joinOn = sql`(${employeeBinding.employeeId}).user_id = (${employee.employeeId}).user_id AND ${employeeBinding.status} = 'active'`;
 
     const [itemsResult, countResult] = await Promise.all([
       this.db
         .select({
-          employeeId: sql<string>`(${employee.id}).user_id`,
+          employeeId: sql<string>`(${employee.employeeId}).user_id`,
           employeeName: employee.name,
           position: employee.position,
           department: employee.department,
           supervisorId: sql<string>`(${employee.supervisorId}).user_id`,
           supervisorName: sql<string>`(SELECT sup.name FROM ${employee} sup
-            WHERE (sup.id).user_id = (${employee.supervisorId}).user_id
+            WHERE (sup.employee_id).user_id = (${employee.supervisorId}).user_id
               AND sup.deleted_at IS NULL
             LIMIT 1)`,
           bindingId: employeeBinding.id,
@@ -194,13 +194,13 @@ export class TeamStructureService {
   async getEmployee(id: string) {
     const result = await this.db
       .select({
-        employeeId: sql<string>`(${employee.id}).user_id`,
+        employeeId: sql<string>`(${employee.employeeId}).user_id`,
         name: employee.name,
         position: employee.position,
         department: employee.department,
         supervisorId: sql<string>`(${employee.supervisorId}).user_id`,
         supervisorName: sql<string>`(SELECT sup.name FROM ${employee} sup
-          WHERE (sup.id).user_id = (${employee.supervisorId}).user_id
+          WHERE (sup.employee_id).user_id = (${employee.supervisorId}).user_id
             AND sup.deleted_at IS NULL
           LIMIT 1)`,
         status: employee.status,
@@ -212,14 +212,14 @@ export class TeamStructureService {
       .from(employee)
       .leftJoin(
         employeeBinding,
-        sql`(${employeeBinding.employeeId}).user_id = (${employee.id}).user_id AND ${employeeBinding.status} = 'active'`,
+        sql`(${employeeBinding.employeeId}).user_id = (${employee.employeeId}).user_id AND ${employeeBinding.status} = 'active'`,
       )
       .leftJoin(
         assessmentTemplate,
         eq(employeeBinding.templateId, assessmentTemplate.id),
       )
       .where(
-        and(sql`(${employee.id}).user_id = ${id}`, isNull(employee.deletedAt)),
+        and(sql`(${employee.employeeId}).user_id = ${id}`, isNull(employee.deletedAt)),
       )
       .limit(1);
 
@@ -276,7 +276,7 @@ export class TeamStructureService {
       .update(employee)
       .set(updateData as Record<string, unknown>)
       .where(
-        and(sql`(${employee.id}).user_id = ${id}`, isNull(employee.deletedAt)),
+        and(sql`(${employee.employeeId}).user_id = ${id}`, isNull(employee.deletedAt)),
       );
 
     await this.db.insert(auditLog).values({

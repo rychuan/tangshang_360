@@ -1,7 +1,7 @@
 /* eslint-disable */
 /** auto generated, do not edit */
 import { sql } from 'drizzle-orm';
-import { boolean, index, integer, jsonb, numeric, pgTable, text, uuid, varchar, customType } from "drizzle-orm/pg-core"
+import { boolean, index, integer, jsonb, numeric, pgTable, text, uniqueIndex, uuid, varchar, customType } from "drizzle-orm/pg-core"
 
 export const customTimestamptz = customType<{
   data: Date;
@@ -202,14 +202,23 @@ export const employeeIndicatorSnapshot = pgTable("employee_indicator_snapshot", 
   index("idx_emp_snapshot_template").on(table.templateId),
 ]);
 
+// Synced table: data is auto-synced from external source. Do not rename or delete this table.
 export const performanceGrade = pgTable("performance_grade", {
   id: uuid("id").primaryKey().defaultRandom(),
+  // Synced field: auto-synced, do not modify or delete
   name: varchar("name", { length: 255 }).notNull(),
+  // Synced field: auto-synced, do not modify or delete
   minScore: integer("min_score").notNull(),
+  // Synced field: auto-synced, do not modify or delete
   maxScore: integer("max_score").notNull(),
+  // Synced field: auto-synced, do not modify or delete
   sortOrder: integer("sort_order").notNull().default(0),
+  // Synced field: auto-synced, do not modify or delete
   isActive: boolean("is_active").notNull().default(true),
+  // Synced field: auto-synced, do not modify or delete
   coefficient: varchar("coefficient", { length: 255 }),
+  // Synced field: auto-synced, do not modify or delete
+  baseRecordId: varchar("base_record_id").unique(),
   // System field: Creation time (auto-filled, do not modify)
   createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
   // System field: Creator (auto-filled, do not modify)
@@ -220,6 +229,7 @@ export const performanceGrade = pgTable("performance_grade", {
   updatedBy: userProfile("_updated_by"),
 }, (table) => [
   index("idx_performance_grade_active").on(table.isActive),
+  uniqueIndex("unq_1869602962688083").on(table.baseRecordId),
 ]);
 
 export const auditLog = pgTable("audit_log", {
@@ -430,7 +440,7 @@ export const assessmentTemplate = pgTable("assessment_template", {
 });
 
 export const employee = pgTable("employee", {
-  id: userProfile("id").primaryKey(),
+  employeeId: userProfile("employee_id").notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   position: varchar("position", { length: 255 }).notNull(),
   department: varchar("department", { length: 255 }).notNull(),
@@ -445,6 +455,7 @@ export const employee = pgTable("employee", {
   permissions: jsonb("permissions"),
   deletedAt: customTimestamptz("deleted_at", { precision: 6 }),
   bitableConnectionId: uuid("bitable_connection_id"),
+  id: uuid("id").primaryKey().defaultRandom(),
   // System field: Creation time (auto-filled, do not modify)
   createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
   // System field: Creator (auto-filled, do not modify)
@@ -454,8 +465,8 @@ export const employee = pgTable("employee", {
   // System field: Updater (auto-filled, do not modify)
   updatedBy: userProfile("_updated_by"),
 }, (table) => [
-  // Complex index: CREATE UNIQUE INDEX idx_employee_pk ON employee USING btree (((id).user_id)),
   // Complex index: CREATE INDEX idx_employee_supervisor ON employee USING btree (((supervisor_id).user_id)),
+  // Complex index: CREATE UNIQUE INDEX idx_employee_pk ON employee USING btree (((employee_id).user_id)),
 ]);
 
 // table aliases

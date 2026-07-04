@@ -452,12 +452,12 @@ export class BitableConnectionService {
     supervisorNo: string,
   ): Promise<string | null> {
     const rows = await this.db
-      .select({ id: employee.id })
-      .from(employee)
-      .where(
-        and(eq(employee.employeeNo, supervisorNo), isNull(employee.deletedAt)),
-      )
-      .limit(1);
+      .select({ id: employee.employeeId })
+        .from(employee)
+        .where(
+          and(eq(employee.employeeNo, supervisorNo), isNull(employee.deletedAt)),
+        )
+        .limit(1);
     return rows.length > 0 ? String(rows[0].id) : null;
   }
 
@@ -597,7 +597,7 @@ export class BitableConnectionService {
                     (row.status as 'active' | 'inactive') || existing[0].status,
                   supervisorId: row.supervisorId || existing[0].supervisorId,
                 })
-                .where(eq(employee.id, existing[0].id));
+                .where(eq(employee.employeeId, existing[0].id));
             });
             updatedCount++;
             details.push({
@@ -650,7 +650,7 @@ export class BitableConnectionService {
               return tx
                 .insert(employee)
                 .values(values as any)
-                .returning({ id: employee.id });
+                .returning({ id: employee.employeeId });
             });
             createdCount++;
             details.push({
@@ -981,7 +981,7 @@ export class BitableConnectionService {
           operatorId: bitableSyncLog.operatorId,
           startedAt: bitableSyncLog.startedAt,
           completedAt: bitableSyncLog.completedAt,
-          operatorName: sql<string>`COALESCE((SELECT e.name FROM employee e WHERE (e.id).user_id = (${bitableSyncLog.operatorId}).user_id AND e.deleted_at IS NULL LIMIT 1), '')`,
+          operatorName: sql<string>`COALESCE((SELECT e.name FROM employee e WHERE (e.employee_id).user_id = (${bitableSyncLog.operatorId}).user_id AND e.deleted_at IS NULL LIMIT 1), '')`,
         })
         .from(bitableSyncLog)
         .where(eq(bitableSyncLog.connectionId, connectionId))
@@ -1038,7 +1038,7 @@ export class BitableConnectionService {
         operatorId: bitableSyncLog.operatorId,
         startedAt: bitableSyncLog.startedAt,
         completedAt: bitableSyncLog.completedAt,
-        operatorName: sql<string>`COALESCE((SELECT e.name FROM employee e WHERE (e.id).user_id = (${bitableSyncLog.operatorId}).user_id AND e.deleted_at IS NULL LIMIT 1), '')`,
+        operatorName: sql<string>`COALESCE((SELECT e.name FROM employee e WHERE (e.employee_id).user_id = (${bitableSyncLog.operatorId}).user_id AND e.deleted_at IS NULL LIMIT 1), '')`,
       })
       .from(bitableSyncLog)
       .where(

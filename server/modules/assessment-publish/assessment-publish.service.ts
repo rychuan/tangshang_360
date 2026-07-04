@@ -97,7 +97,7 @@ export class AssessmentPublishService {
     }
     const rows = await this.db
       .select({
-        employeeId: employee.id,
+        employeeId: employee.employeeId,
         employeeName: employee.name,
         position: employee.position,
         department: employee.department,
@@ -105,7 +105,7 @@ export class AssessmentPublishService {
         templateName: assessmentTemplate.name,
       })
       .from(employeeBinding)
-      .innerJoin(employee, eq(employeeBinding.employeeId, employee.id))
+      .innerJoin(employee, eq(employeeBinding.employeeId, employee.employeeId))
       .innerJoin(
         assessmentTemplate,
         eq(employeeBinding.templateId, assessmentTemplate.id),
@@ -221,7 +221,7 @@ export class AssessmentPublishService {
       const empRows = await this.db
         .select()
         .from(employee)
-        .where(and(eq(employee.id, empId), isNull(employee.deletedAt)))
+        .where(and(eq(employee.employeeId, empId), isNull(employee.deletedAt)))
         .limit(1);
 
       if (empRows.length === 0) {
@@ -381,7 +381,7 @@ export class AssessmentPublishService {
     const totalResult = await this.db
       .select({ count: count() })
       .from(assessmentInstance)
-      .innerJoin(employee, eq(assessmentInstance.employeeId, employee.id))
+      .innerJoin(employee, eq(assessmentInstance.employeeId, employee.employeeId))
       .where(and(...conditions));
 
     const total: number = parseInt(String(totalResult[0]?.count ?? '0'), 10);
@@ -399,14 +399,14 @@ export class AssessmentPublishService {
         grade: assessmentInstance.grade,
         publishedAt: assessmentInstance.publishedAt,
         publishedById: assessmentInstance.publishedBy,
-        publishedByName: sql<string>`COALESCE((SELECT pub.name FROM employee pub WHERE (pub.id).user_id = (${assessmentInstance.publishedBy}).user_id AND pub.deleted_at IS NULL LIMIT 1), '')`,
+        publishedByName: sql<string>`COALESCE((SELECT pub.name FROM employee pub WHERE (pub.employee_id).user_id = (${assessmentInstance.publishedBy}).user_id AND pub.deleted_at IS NULL LIMIT 1), '')`,
         selfReviewSubmitted: sql<boolean>`EXISTS(SELECT 1 FROM ${ratingRecord} WHERE ${ratingRecord.instanceId} = ${assessmentInstance.id} AND ${ratingRecord.ratingType} = 'self' AND ${ratingRecord.isDraft} = false)`,
         supervisorReviewSubmitted: sql<boolean>`EXISTS(SELECT 1 FROM ${ratingRecord} WHERE ${ratingRecord.instanceId} = ${assessmentInstance.id} AND ${ratingRecord.ratingType} = 'supervisor' AND ${ratingRecord.isDraft} = false)`,
         // 2.5: JOIN 上级姓名
-        supervisorName: sql<string>`COALESCE((SELECT sup.name FROM employee sup WHERE (sup.id).user_id = (${assessmentInstance.supervisorId}).user_id AND sup.deleted_at IS NULL LIMIT 1), '')`,
+        supervisorName: sql<string>`COALESCE((SELECT sup.name FROM employee sup WHERE (sup.employee_id).user_id = (${assessmentInstance.supervisorId}).user_id AND sup.deleted_at IS NULL LIMIT 1), '')`,
       })
       .from(assessmentInstance)
-      .innerJoin(employee, eq(assessmentInstance.employeeId, employee.id))
+      .innerJoin(employee, eq(assessmentInstance.employeeId, employee.employeeId))
       .where(and(...conditions))
       .orderBy(desc(assessmentInstance.createdAt))
       .limit(ps)
@@ -600,7 +600,7 @@ export class AssessmentPublishService {
       .from(auditLog)
       .leftJoin(
         employee,
-        sql`(${auditLog.operatorId}).user_id = (${employee.id}).user_id`,
+        sql`(${auditLog.operatorId}).user_id = (${employee.employeeId}).user_id`,
       )
       .where(
         and(eq(auditLog.targetId, instanceId), eq(auditLog.action, 'unlock')),
@@ -1015,7 +1015,7 @@ export class AssessmentPublishService {
     const rows = await this.db
       .select({ employeeId: employeeBinding.employeeId })
       .from(employeeBinding)
-      .innerJoin(employee, eq(employeeBinding.employeeId, employee.id))
+      .innerJoin(employee, eq(employeeBinding.employeeId, employee.employeeId))
       .where(
         and(
           eq(employeeBinding.status, 'active'),

@@ -83,7 +83,7 @@ export class EmployeeManagementService {
     const [items, totalResult] = await Promise.all([
       this.db
         .select({
-          id: employee.id,
+          id: employee.employeeId,
           employeeNo: employee.employeeNo,
           name: employee.name,
           position: employee.position,
@@ -94,7 +94,7 @@ export class EmployeeManagementService {
           status: employee.status,
           phone: employee.phone,
           hireDate: employee.hireDate,
-          supervisorName: sql`COALESCE((SELECT sup.name FROM employee sup WHERE (sup.id).user_id = (${employee.supervisorId}).user_id AND sup.deleted_at IS NULL LIMIT 1), '')`,
+          supervisorName: sql`COALESCE((SELECT sup.name FROM employee sup WHERE (sup.employee_id).user_id = (${employee.supervisorId}).user_id AND sup.deleted_at IS NULL LIMIT 1), '')`,
           bitableConnectionId: employee.bitableConnectionId
         })
         .from(employee)
@@ -187,7 +187,7 @@ export class EmployeeManagementService {
     const rows = await this.db
       .select()
       .from(employee)
-      .where(and(eq(employee.id, id), isNull(employee.deletedAt)))
+      .where(and(eq(employee.employeeId, id), isNull(employee.deletedAt)))
       .limit(1);
 
     if (rows.length === 0) {
@@ -205,7 +205,7 @@ export class EmployeeManagementService {
     await this.db
       .update(employee)
       .set({ deletedAt: new Date() })
-      .where(eq(employee.id, id));
+      .where(eq(employee.employeeId, id));
 
     await this.db.insert(auditLog).values({
       operatorId: userId,
@@ -230,7 +230,7 @@ export class EmployeeManagementService {
     const rows = await this.db
       .select()
       .from(employee)
-      .where(and(eq(employee.id, id), isNull(employee.deletedAt)))
+      .where(and(eq(employee.employeeId, id), isNull(employee.deletedAt)))
       .limit(1);
 
     if (rows.length === 0) {
@@ -246,7 +246,7 @@ export class EmployeeManagementService {
         .from(employee)
         .where(
           and(
-            sql`(${employee.id}).user_id = ${emp.supervisorId}`,
+            sql`(${employee.employeeId}).user_id = ${emp.supervisorId}`,
             isNull(employee.deletedAt),
           ),
         )
@@ -347,9 +347,9 @@ export class EmployeeManagementService {
     userId: string,
   ): Promise<{ id: string }> {
     const existing = await this.db
-      .select({ id: employee.id })
+      .select({ id: employee.employeeId })
       .from(employee)
-      .where(and(eq(employee.id, body.id), isNull(employee.deletedAt)))
+      .where(and(eq(employee.employeeId, body.id), isNull(employee.deletedAt)))
       .limit(1);
 
     if (existing.length > 0) {
@@ -367,7 +367,7 @@ export class EmployeeManagementService {
     }
 
     const values = {
-      id: body.id,
+      employeeId: body.id,
       name: body.name,
       position: body.position,
       title: body.title || null,
@@ -386,7 +386,7 @@ export class EmployeeManagementService {
     const [inserted] = await this.db
       .insert(employee)
       .values(values)
-      .returning({ id: employee.id });
+      .returning({ id: employee.employeeId });
 
     await this.db.insert(auditLog).values({
       operatorId: userId,
@@ -417,9 +417,9 @@ export class EmployeeManagementService {
     userId: string,
   ): Promise<{ success: boolean }> {
     const rows = await this.db
-      .select({ id: employee.id })
+      .select({ id: employee.employeeId })
       .from(employee)
-      .where(and(eq(employee.id, id), isNull(employee.deletedAt)))
+      .where(and(eq(employee.employeeId, id), isNull(employee.deletedAt)))
       .limit(1);
 
     if (rows.length === 0) {
@@ -452,7 +452,7 @@ export class EmployeeManagementService {
       employeeNo: body.employeeNo || null,
     };
 
-    await this.db.update(employee).set(values).where(eq(employee.id, id));
+    await this.db.update(employee).set(values).where(eq(employee.employeeId, id));
 
     await this.db.insert(auditLog).values({
       operatorId: userId,
@@ -469,9 +469,9 @@ export class EmployeeManagementService {
 
   async activate(id: string, userId: string): Promise<{ success: boolean }> {
     const rows = await this.db
-      .select({ id: employee.id })
+      .select({ id: employee.employeeId })
       .from(employee)
-      .where(and(eq(employee.id, id), isNull(employee.deletedAt)))
+      .where(and(eq(employee.employeeId, id), isNull(employee.deletedAt)))
       .limit(1);
 
     if (rows.length === 0) {
@@ -481,7 +481,7 @@ export class EmployeeManagementService {
     await this.db
       .update(employee)
       .set({ status: 'active' })
-      .where(eq(employee.id, id));
+      .where(eq(employee.employeeId, id));
 
     await this.db.insert(auditLog).values({
       operatorId: userId,
@@ -495,9 +495,9 @@ export class EmployeeManagementService {
 
   async deactivate(id: string, userId: string): Promise<{ success: boolean }> {
     const rows = await this.db
-      .select({ id: employee.id })
+      .select({ id: employee.employeeId })
       .from(employee)
-      .where(and(eq(employee.id, id), isNull(employee.deletedAt)))
+      .where(and(eq(employee.employeeId, id), isNull(employee.deletedAt)))
       .limit(1);
 
     if (rows.length === 0) {
@@ -518,7 +518,7 @@ export class EmployeeManagementService {
     await this.db
       .update(employee)
       .set({ status: 'inactive' })
-      .where(eq(employee.id, id));
+      .where(eq(employee.employeeId, id));
 
     await this.db.insert(auditLog).values({
       operatorId: userId,
@@ -536,7 +536,7 @@ export class EmployeeManagementService {
       .from(employee)
       .where(
         and(
-          sql`(${employee.id}).user_id = ${userId}`,
+          sql`(${employee.employeeId}).user_id = ${userId}`,
           isNull(employee.deletedAt),
         ),
       )
@@ -569,9 +569,9 @@ export class EmployeeManagementService {
     operatorUserId: string,
   ): Promise<{ success: boolean }> {
     const rows = await this.db
-      .select({ id: employee.id, role: employee.role, name: employee.name })
+      .select({ id: employee.employeeId, role: employee.role, name: employee.name })
       .from(employee)
-      .where(and(eq(employee.id, employeeId), isNull(employee.deletedAt)))
+      .where(and(eq(employee.employeeId, employeeId), isNull(employee.deletedAt)))
       .limit(1);
 
     if (rows.length === 0) {
@@ -581,7 +581,7 @@ export class EmployeeManagementService {
     await this.db
       .update(employee)
       .set({ permissions })
-      .where(eq(employee.id, employeeId));
+      .where(eq(employee.employeeId, employeeId));
 
     await this.db.insert(auditLog).values({
       operatorId: operatorUserId,

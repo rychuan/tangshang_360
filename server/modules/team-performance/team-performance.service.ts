@@ -40,7 +40,7 @@ export class TeamPerformanceService {
 
   async getOverview(userId: string): Promise<TeamOverviewResponse> {
     const subRows = await this.db
-      .select({ userId: sql<string>`(${employee.id}).user_id` })
+      .select({ userId: sql<string>`(${employee.employeeId}).user_id` })
       .from(employee)
       .where(
         and(
@@ -128,7 +128,7 @@ export class TeamPerformanceService {
     status?: string,
   ): Promise<SubordinatesResponse> {
     const subRows = await this.db
-      .select({ userId: sql<string>`(${employee.id}).user_id` })
+      .select({ userId: sql<string>`(${employee.employeeId}).user_id` })
       .from(employee)
       .where(
         and(
@@ -174,8 +174,8 @@ export class TeamPerformanceService {
         status: assessmentInstance.status,
         totalScore: assessmentInstance.totalScore,
         grade: assessmentInstance.grade,
-        employeeName: sql<string>`(SELECT name FROM employee emp WHERE (emp.id).user_id = (${assessmentInstance.employeeId}).user_id AND emp.deleted_at IS NULL LIMIT 1)`,
-        department: sql<string>`(SELECT department FROM employee emp WHERE (emp.id).user_id = (${assessmentInstance.employeeId}).user_id AND emp.deleted_at IS NULL LIMIT 1)`,
+        employeeName: sql<string>`(SELECT name FROM employee emp WHERE (emp.employee_id).user_id = (${assessmentInstance.employeeId}).user_id AND emp.deleted_at IS NULL LIMIT 1)`,
+        department: sql<string>`(SELECT department FROM employee emp WHERE (emp.employee_id).user_id = (${assessmentInstance.employeeId}).user_id AND emp.deleted_at IS NULL LIMIT 1)`,
       })
       .from(assessmentInstance)
       .where(and(...whereConditions))
@@ -219,7 +219,7 @@ export class TeamPerformanceService {
           period: assessmentInstance.period,
           status: assessmentInstance.status,
           employeeUserId: sql<string>`(${assessmentInstance.employeeId}).user_id`,
-          employeeName: sql<string>`(SELECT name FROM employee emp WHERE (emp.id).user_id = (${assessmentInstance.employeeId}).user_id AND emp.deleted_at IS NULL LIMIT 1)`,
+          employeeName: sql<string>`(SELECT name FROM employee emp WHERE (emp.employee_id).user_id = (${assessmentInstance.employeeId}).user_id AND emp.deleted_at IS NULL LIMIT 1)`,
         })
         .from(assessmentInstance)
         .where(eq(assessmentInstance.id, instanceId))
@@ -258,7 +258,7 @@ export class TeamPerformanceService {
         .from(employee)
         .where(
           and(
-            sql`(${employee.id}).user_id = ${employeeUserId}`,
+            sql`(${employee.employeeId}).user_id = ${employeeUserId}`,
             isNull(employee.deletedAt),
           ),
         )

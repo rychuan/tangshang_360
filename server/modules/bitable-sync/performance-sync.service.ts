@@ -79,7 +79,7 @@ export class PerformanceSyncService {
       .from(assessmentInstance)
       .innerJoin(
         employee,
-        sql`(${assessmentInstance.employeeId}).user_id = (${employee.id}).user_id`,
+        sql`(${assessmentInstance.employeeId}).user_id = (${employee.employeeId}).user_id`,
       )
       .where(
         conditions.length > 0 ? sql.join(conditions, sql` AND `) : sql`TRUE`,

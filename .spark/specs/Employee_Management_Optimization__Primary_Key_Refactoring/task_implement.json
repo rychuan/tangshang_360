@@ -1,0 +1,146 @@
+{
+  "tasks": [
+    {
+      "id": 1,
+      "name": "数据库employee表结构重构",
+      "status": "completed",
+      "type": "normal",
+      "subtasks": [
+        "读取coding-guide、miaoda-sql技能",
+        "修改schema.ts中employee表定义：将原id（userProfile类型）重命名为employee_id，新增UUID类型的id字段作为新主键，调整相关索引",
+        "编写数据库迁移SQL脚本，完成存量员工数据迁移：原有id值迁移到employee_id字段，新增id字段自动填充唯一UUID",
+        "验证表结构正确性与存量数据完整性"
+      ],
+      "requirements": [
+        "1.1"
+      ],
+      "write_scope": [
+        "server/database/schema.ts",
+        "server/database/migrations/**"
+      ],
+      "read_scope": [
+        "server/database/schema.ts",
+        "server/database/migrations/*"
+      ],
+      "acceptance": "employee表结构符合设计，原有员工数据完整迁移，新增id字段自动填充唯一UUID值",
+      "dependencies": [],
+      "beginTime": 1783136519083,
+      "endTime": 1783137234267
+    },
+    {
+      "id": 2,
+      "name": "员工管理核心模块代码适配",
+      "status": "in_progress",
+      "type": "normal",
+      "subtasks": [
+        "读取coding-guide技能",
+        "修改employee.repository.ts中所有employee.id字段引用为employee.employee_id，调整查询逻辑适配新字段结构",
+        "修改employee-management.service.ts中所有employee.id字段引用，调整增删改查、状态变更等业务逻辑",
+        "修改employee-binding.service.ts中员工存在性校验、绑定/解绑逻辑的字段引用",
+        "调整API层入参出参映射，保持原有接口请求/响应结构完全不变",
+        "代码级自查模块内类型一致性、契约一致性"
+      ],
+      "requirements": [
+        "1.2"
+      ],
+      "write_scope": [
+        "server/modules/employee-management/**"
+      ],
+      "read_scope": [
+        "server/modules/employee-management/*.ts",
+        "shared/api.interface.ts"
+      ],
+      "acceptance": "员工管理模块CRUD、模板绑定/解绑功能正常运行，API响应结构与原有完全一致",
+      "dependencies": [
+        1
+      ],
+      "beginTime": 1783137234381
+    },
+    {
+      "id": 3,
+      "name": "关联业务模块全链路代码适配",
+      "status": "pending",
+      "type": "normal",
+      "subtasks": [
+        "读取coding-guide技能",
+        "修改team-structure模块中employee.id字段引用",
+        "修改assessment-publish模块中员工关联查询逻辑",
+        "修改assessment-operation、assessment-statistics、team-performance模块中员工相关字段引用",
+        "修改bitable-connection、bitable-sync模块中员工字段引用",
+        "调整所有关联查询、外键关联逻辑适配新字段结构",
+        "代码级自查所有修改点的类型一致性"
+      ],
+      "requirements": [
+        "1.2"
+      ],
+      "write_scope": [
+        "server/modules/team-structure/**",
+        "server/modules/assessment-publish/**",
+        "server/modules/assessment-operation/**",
+        "server/modules/assessment-statistics/**",
+        "server/modules/team-performance/**",
+        "server/modules/bitable-connection/**",
+        "server/modules/bitable-sync/**"
+      ],
+      "read_scope": [
+        "server/database/schema.ts",
+        "shared/api.interface.ts"
+      ],
+      "acceptance": "所有关联业务模块的员工相关功能运行正常，无数据关联错误",
+      "dependencies": [
+        2
+      ]
+    },
+    {
+      "id": 4,
+      "name": "共享接口兼容性验证",
+      "status": "pending",
+      "type": "normal",
+      "subtasks": [
+        "校验shared/api.interface.ts中员工相关类型定义无需修改",
+        "验证前后端契约一致性，确保前端代码无需任何修改即可正常运行",
+        "代码级自查所有API入参出参的id字段映射正确"
+      ],
+      "requirements": [
+        "1.2"
+      ],
+      "write_scope": [
+        "shared/api.interface.ts"
+      ],
+      "read_scope": [
+        "shared/api.interface.ts"
+      ],
+      "acceptance": "所有员工相关API请求/响应结构与原有完全兼容，前端无感知",
+      "dependencies": [
+        3
+      ]
+    },
+    {
+      "id": 5,
+      "name": "功能验收测试",
+      "status": "pending",
+      "type": "normal",
+      "subtasks": [
+        "读取testing-guide技能",
+        "入口检查：员工管理页面可正常访问，无白屏或404",
+        "核心验收目标1：员工列表、详情、创建、编辑、模板绑定/解绑、状态变更功能正常运行",
+        "核心验收目标2：考核发布、评分、统计、团队结构等关联功能正常，无数据关联错误",
+        "核心验收目标3：API接口结构完全兼容原有逻辑，前端无需修改即可正常运行",
+        "非核心降级范围：不验证飞书同步等外部集成的完整链路功能"
+      ],
+      "requirements": [
+        "1.1",
+        "1.2"
+      ],
+      "write_scope": [],
+      "read_scope": [],
+      "acceptance": "员工管理全链路功能正常运行，无数据错误，API兼容原有逻辑",
+      "dependencies": [
+        1,
+        2,
+        3,
+        4
+      ]
+    }
+  ]
+}

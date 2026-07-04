@@ -71,9 +71,9 @@ export class EmployeeBindingService {
     }
 
     const empRows = await this.db
-      .select({ id: employee.id })
+      .select({ id: employee.employeeId })
       .from(employee)
-      .where(and(eq(employee.id, employeeId), isNull(employee.deletedAt)))
+      .where(and(eq(employee.employeeId, employeeId), isNull(employee.deletedAt)))
       .limit(1);
     if (empRows.length === 0) {
       throw new NotFoundException(`员工 ${employeeId} 不存在`);
@@ -295,7 +295,7 @@ export class EmployeeBindingService {
       )
       .leftJoin(
         employee,
-        sql`(${employeeBinding.createdBy}).user_id = (${employee.id}).user_id`,
+        sql`(${employeeBinding.createdBy}).user_id = (${employee.employeeId}).user_id`,
       )
       .where(eq(employeeBinding.employeeId, employeeId))
       .orderBy(desc(employeeBinding.createdAt));

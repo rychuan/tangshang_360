@@ -53,7 +53,7 @@ export class AssessmentStatisticsService {
       .from(assessmentInstance)
       .innerJoin(
         employee,
-        sql`(${assessmentInstance.employeeId}).user_id = (${employee.id}).user_id`,
+        sql`(${assessmentInstance.employeeId}).user_id = (${employee.employeeId}).user_id`,
       )
       .where(and(...conditions));
     const total = Number(countResult[0].cnt);
@@ -77,11 +77,11 @@ export class AssessmentStatisticsService {
       .from(assessmentInstance)
       .innerJoin(
         employee,
-        sql`(${assessmentInstance.employeeId}).user_id = (${employee.id}).user_id AND ${employee.deletedAt} IS NULL`,
+        sql`(${assessmentInstance.employeeId}).user_id = (${employee.employeeId}).user_id AND ${employee.deletedAt} IS NULL`,
       )
       .leftJoin(
         sql`employee ${supAlias}`,
-        sql`(${supAlias}.id).user_id = (${assessmentInstance.supervisorId}).user_id AND ${supAlias}.deleted_at IS NULL`,
+        sql`(${supAlias}.employee_id).user_id = (${assessmentInstance.supervisorId}).user_id AND ${supAlias}.deleted_at IS NULL`,
       )
       .where(and(...conditions))
       .orderBy(desc(assessmentInstance.createdAt))
@@ -128,7 +128,7 @@ export class AssessmentStatisticsService {
     const baseWhere =
       baseConditions.length > 0 ? and(...baseConditions) : undefined;
 
-    const empNotDeleted = sql`EXISTS(SELECT 1 FROM employee e WHERE (e.id).user_id = (${assessmentInstance.employeeId}).user_id AND e.deleted_at IS NULL)`;
+    const empNotDeleted = sql`EXISTS(SELECT 1 FROM employee e WHERE (e.employee_id).user_id = (${assessmentInstance.employeeId}).user_id AND e.deleted_at IS NULL)`;
 
     // 5.4: 等级分布 — 过滤 grade IS NOT NULL
     const gradeConditions = [...baseConditions, isNull(employee.deletedAt)];
@@ -142,7 +142,7 @@ export class AssessmentStatisticsService {
       .from(assessmentInstance)
       .innerJoin(
         employee,
-        sql`(${assessmentInstance.employeeId}).user_id = (${employee.id}).user_id`,
+        sql`(${assessmentInstance.employeeId}).user_id = (${employee.employeeId}).user_id`,
       )
       .where(gradeConditions.length > 0 ? and(...gradeConditions) : undefined)
       .groupBy(assessmentInstance.grade);
@@ -160,7 +160,7 @@ export class AssessmentStatisticsService {
       .from(assessmentInstance)
       .innerJoin(
         employee,
-        sql`(${assessmentInstance.employeeId}).user_id = (${employee.id}).user_id`,
+        sql`(${assessmentInstance.employeeId}).user_id = (${employee.employeeId}).user_id`,
       )
       .where(and(baseWhere || sql`TRUE`, isNull(employee.deletedAt)))
       .groupBy(employee.department);
@@ -218,7 +218,7 @@ export class AssessmentStatisticsService {
       .from(assessmentInstance)
       .innerJoin(
         employee,
-        sql`(${assessmentInstance.employeeId}).user_id = (${employee.id}).user_id`,
+        sql`(${assessmentInstance.employeeId}).user_id = (${employee.employeeId}).user_id`,
       )
       .where(and(...conditions));
     const total = Number(countResult[0].cnt);
@@ -234,12 +234,12 @@ export class AssessmentStatisticsService {
         completedAt: assessmentInstance.completedAt,
         employeeName: employee.name,
         department: employee.department,
-        supervisorName: sql<string>`(SELECT name FROM employee sup WHERE (sup.id).user_id = (${assessmentInstance.supervisorId}).user_id AND sup.deleted_at IS NULL LIMIT 1)`,
+        supervisorName: sql<string>`(SELECT name FROM employee sup WHERE (sup.employee_id).user_id = (${assessmentInstance.supervisorId}).user_id AND sup.deleted_at IS NULL LIMIT 1)`,
       })
       .from(assessmentInstance)
       .innerJoin(
         employee,
-        sql`(${assessmentInstance.employeeId}).user_id = (${employee.id}).user_id`,
+        sql`(${assessmentInstance.employeeId}).user_id = (${employee.employeeId}).user_id`,
       )
       .where(and(...conditions))
       .orderBy(desc(assessmentInstance.createdAt))
