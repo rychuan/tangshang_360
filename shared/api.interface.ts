@@ -574,6 +574,14 @@ export const BUILTIN_ROLE_CODES = [
   'employee',
 ] as const;
 
+export const ROLE_OPTIONS = [
+  'admin',
+  'hrd',
+  'dept_head',
+  'supervisor',
+  'employee',
+] as const;
+
 export const ROLE_LABELS: Record<string, string> = {
   admin: '系统管理员',
   hrd: '人力资源总监',

@@ -95,7 +95,7 @@ export class EmployeeManagementService {
           phone: employee.phone,
           hireDate: employee.hireDate,
           supervisorName: sql`COALESCE((SELECT sup.name FROM employee sup WHERE (sup.employee_id).user_id = (${employee.supervisorId}).user_id AND sup.deleted_at IS NULL LIMIT 1), '')`,
-          bitableConnectionId: employee.bitableConnectionId
+          bitableConnectionId: employee.bitableConnectionId,
         })
         .from(employee)
         .where(whereClause)
@@ -398,15 +398,9 @@ export class EmployeeManagementService {
 
     this.logger.log(`Employee created: ${body.name} (${inserted.id})`);
 
-    // P1-4: 新建员工自动加入 AuthorizationSDK 'employee' 角色
-    try {
-      await this.roleManagerService.addUserToEmployeeRole(body.id);
-      this.logger.log(`Added user ${body.id} to 'employee' role`);
-    } catch (err) {
-      this.logger.warn(
-        `Failed to add user ${body.id} to 'employee' role: ${err}`,
-      );
-    }
+    // 同步角色到 AuthorizationSDK
+    const roles = (body.role || 'employee').split(',').filter(Boolean);
+    await this.roleManagerService.syncUserRoles(body.id, roles);
 
     return { id: String(inserted.id) };
   }
@@ -452,7 +446,10 @@ export class EmployeeManagementService {
       employeeNo: body.employeeNo || null,
     };
 
-    await this.db.update(employee).set(values).where(eq(employee.employeeId, id));
+    await this.db
+      .update(employee)
+      .set(values)
+      .where(eq(employee.employeeId, id));
 
     await this.db.insert(auditLog).values({
       operatorId: userId,
@@ -463,6 +460,10 @@ export class EmployeeManagementService {
     });
 
     this.logger.log(`Employee updated: ${id}`);
+
+    // 同步角色到 AuthorizationSDK
+    const newRoles = (body.role || 'employee').split(',').filter(Boolean);
+    await this.roleManagerService.syncUserRoles(id, newRoles);
 
     return { success: true };
   }
@@ -569,9 +570,15 @@ export class EmployeeManagementService {
     operatorUserId: string,
   ): Promise<{ success: boolean }> {
     const rows = await this.db
-      .select({ id: employee.employeeId, role: employee.role, name: employee.name })
+      .select({
+        id: employee.employeeId,
+        role: employee.role,
+        name: employee.name,
+      })
       .from(employee)
-      .where(and(eq(employee.employeeId, employeeId), isNull(employee.deletedAt)))
+      .where(
+        and(eq(employee.employeeId, employeeId), isNull(employee.deletedAt)),
+      )
       .limit(1);
 
     if (rows.length === 0) {

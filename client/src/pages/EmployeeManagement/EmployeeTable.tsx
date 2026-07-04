@@ -161,9 +161,20 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
         cellClass: 'hidden md:table-cell',
       },
       cell: ({ row }) => (
-        <Badge variant="secondary" className="text-xs font-normal">
-          {roleLabels[row.original.role] || row.original.role}
-        </Badge>
+        <div className="flex items-center gap-1 flex-wrap">
+          {(row.original.role || 'employee')
+            .split(',')
+            .filter(Boolean)
+            .map((r: string) => (
+              <Badge
+                key={r}
+                variant="secondary"
+                className="text-xs font-normal"
+              >
+                {roleLabels[r.trim()] || r.trim()}
+              </Badge>
+            ))}
+        </div>
       ),
     },
     {

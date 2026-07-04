@@ -104,6 +104,78 @@ export class RoleManagerService {
     }
   }
 
+  /**
+   * 确保用户拥有指定角色（幂等）
+   */
+  async ensureUserRole(userId: string, roleBizId: string): Promise<void> {
+    try {
+      const roles = await this.getUserRoles(userId);
+      if (roles.includes(roleBizId)) {
+        return;
+      }
+      await this.authzSDK.members.add(roleBizId, {
+        members: { userList: [{ userID: userId }] },
+      });
+      this.roleCache.delete(userId);
+      this.logger.log(`Added user ${userId} to role '${roleBizId}'`);
+    } catch (err) {
+      this.logger.error(
+        `Failed to ensure user ${userId} in role '${roleBizId}': ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
+  /**
+   * 移除用户的指定角色（幂等）
+   */
+  async removeUserRole(userId: string, roleBizId: string): Promise<void> {
+    try {
+      const roles = await this.getUserRoles(userId);
+      if (!roles.includes(roleBizId)) {
+        return;
+      }
+      await this.authzSDK.members.remove(roleBizId, {
+        members: { userList: [{ userID: userId }] },
+      });
+      this.roleCache.delete(userId);
+      this.logger.log(`Removed user ${userId} from role '${roleBizId}'`);
+    } catch (err) {
+      this.logger.error(
+        `Failed to remove user ${userId} from role '${roleBizId}': ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
+  /**
+   * 同步用户角色：对比新旧角色列表，add 新增的，remove 移除的
+   */
+  async syncUserRoles(userId: string, newRoles: string[]): Promise<void> {
+    try {
+      const current = await this.getUserRoles(userId);
+      const toAdd = newRoles.filter((r: string) => !current.includes(r));
+      const toRemove = current.filter((r: string) => !newRoles.includes(r));
+
+      for (const role of toAdd) {
+        try {
+          await this.ensureUserRole(userId, role);
+        } catch {
+          // 单个角色添加失败不中断
+        }
+      }
+      for (const role of toRemove) {
+        try {
+          await this.removeUserRole(userId, role);
+        } catch {
+          // 单个角色移除失败不中断
+        }
+      }
+    } catch (err) {
+      this.logger.error(
+        `Failed to sync roles for user ${userId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
   async getPermissionConfig(
     roleBizId: string,
   ): Promise<RolePermissionConfig | null> {

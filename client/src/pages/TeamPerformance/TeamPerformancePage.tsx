@@ -28,13 +28,7 @@ import {
 } from '@/components/ui/chart';
 import { Pie, PieChart } from 'recharts';
 import MultiMonthPicker from '@/components/ui/multi-month-picker';
-import {
-  Users,
-  TrendingUp,
-  AlertCircle,
-  Bell,
-  Eye,
-} from 'lucide-react';
+import { Users, TrendingUp, AlertCircle, Bell, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';

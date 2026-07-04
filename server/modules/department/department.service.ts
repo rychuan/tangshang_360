@@ -12,6 +12,7 @@ import {
 import { eq, and, asc, count, sql, isNull } from 'drizzle-orm';
 import { department, employee, auditLog } from '@server/database/schema';
 import { EmployeeRepository } from '../employee-management/employee.repository';
+import { RoleManagerService } from '../role-manager/role-manager.service';
 import type {
   DepartmentItem,
   DepartmentTreeNode,
@@ -26,6 +27,7 @@ export class DepartmentService {
   constructor(
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
     private readonly employeeRepo: EmployeeRepository,
+    private readonly roleManagerService: RoleManagerService,
   ) {}
 
   async list(): Promise<DepartmentListResponse> {
@@ -176,6 +178,11 @@ export class DepartmentService {
       changes: { after: body },
     });
 
+    // 新部门负责人自动获得 dept_head 角色
+    if (body.headId) {
+      await this.roleManagerService.ensureUserRole(body.headId, 'dept_head');
+    }
+
     return { id: inserted.id };
   }
 
@@ -242,6 +249,22 @@ export class DepartmentService {
         );
       }
     });
+
+    // 部门负责人变更后同步角色
+    if (oldHeadId && oldHeadId !== newHeadId) {
+      // 旧负责人被移除：检查是否仍为其他部门负责人
+      const stillHead = await this.db
+        .select({ id: department.id })
+        .from(department)
+        .where(eq(department.headId, oldHeadId))
+        .limit(1);
+      if (stillHead.length === 0) {
+        await this.roleManagerService.removeUserRole(oldHeadId, 'dept_head');
+      }
+    }
+    if (newHeadId && newHeadId !== oldHeadId) {
+      await this.roleManagerService.ensureUserRole(newHeadId, 'dept_head');
+    }
 
     return { success: true };
   }

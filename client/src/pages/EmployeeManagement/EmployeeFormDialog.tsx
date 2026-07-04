@@ -33,7 +33,7 @@ export interface EmployeeFormData {
   position: string;
   employeeNo: string;
   title: string;
-  role: string;
+  role: string[];
   department: string;
   supervisorId: string;
   phone: string;
@@ -45,7 +45,7 @@ export const emptyEmployeeForm: EmployeeFormData = {
   position: '',
   employeeNo: '',
   title: '',
-  role: 'employee',
+  role: ['employee'],
   department: '',
   supervisorId: '',
   phone: '',
@@ -58,7 +58,7 @@ export function employeeToForm(emp: EmployeeItem): EmployeeFormData {
     position: emp.position,
     employeeNo: emp.employeeNo || '',
     title: emp.title || '',
-    role: emp.role || 'employee',
+    role: emp.role ? emp.role.split(',').filter(Boolean) : ['employee'],
     department: emp.department || '',
     supervisorId: emp.supervisorId || '',
     phone: emp.phone || '',
@@ -74,7 +74,7 @@ export function formToCreateRequest(
     position: data.position,
     employeeNo: data.employeeNo || undefined,
     title: data.title || undefined,
-    role: data.role as CreateEmployeeRequest['role'],
+    role: data.role.join(',') as CreateEmployeeRequest['role'],
     department: data.department || undefined,
     supervisorId: data.supervisorId || undefined,
     phone: data.phone || undefined,
@@ -202,21 +202,55 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs text-muted-foreground">角色</Label>
-              <div className="flex h-10 items-center rounded-md border border-input bg-muted px-3">
-                <span className="text-sm">
-                  {formData.role === 'admin'
-                    ? '管理员'
-                    : formData.role === 'hrd'
-                      ? 'HRD'
-                      : formData.role === 'dept_head'
-                        ? '部门负责人'
-                        : formData.role === 'supervisor'
-                          ? '上级'
-                          : '员工'}
-                </span>
-                <span className="ml-2 text-xs text-muted-foreground">
-                  （根据角色自动分配）
-                </span>
+              <div className="flex flex-col gap-1.5 rounded-md border border-input px-3 py-2">
+                {(
+                  [
+                    'employee',
+                    'supervisor',
+                    'dept_head',
+                    'hrd',
+                    'admin',
+                  ] as const
+                ).map((r) => (
+                  <label
+                    key={r}
+                    className="flex items-center gap-2 text-sm cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.role.includes(r)}
+                      disabled={r === 'employee'}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFormData({
+                            ...formData,
+                            role: [...formData.role, r],
+                          });
+                        } else {
+                          setFormData({
+                            ...formData,
+                            role: formData.role.filter((x) => x !== r),
+                          });
+                        }
+                      }}
+                      className="rounded"
+                    />
+                    {r === 'admin'
+                      ? '管理员'
+                      : r === 'hrd'
+                        ? 'HRD'
+                        : r === 'dept_head'
+                          ? '部门负责人'
+                          : r === 'supervisor'
+                            ? '上级'
+                            : '员工'}
+                    {r === 'employee' && (
+                      <span className="text-xs text-muted-foreground">
+                        （必选）
+                      </span>
+                    )}
+                  </label>
+                ))}
               </div>
             </div>
             <div className="flex flex-col gap-1.5">
