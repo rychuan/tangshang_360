@@ -9,7 +9,7 @@ import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { performanceGrade } from '@server/database/schema';
 import type {
   PerformanceGradeItem,
@@ -41,7 +41,6 @@ export class PerformanceGradeService {
     const items = await this.db
       .select()
       .from(performanceGrade)
-      .where(sql`deleted_at IS NULL`)
       .orderBy(performanceGrade.sortOrder);
 
     const mapped: PerformanceGradeItem[] = items.map(
@@ -70,7 +69,7 @@ export class PerformanceGradeService {
         maxScore: performanceGrade.maxScore,
       })
       .from(performanceGrade)
-      .where(and(eq(performanceGrade.isActive, true), sql`deleted_at IS NULL`))
+      .where(eq(performanceGrade.isActive, true))
       .orderBy(performanceGrade.sortOrder);
 
     return { rules: rows };
@@ -82,7 +81,7 @@ export class PerformanceGradeService {
     const existing = await this.db
       .select()
       .from(performanceGrade)
-      .where(and(eq(performanceGrade.isActive, true), sql`deleted_at IS NULL`));
+      .where(eq(performanceGrade.isActive, true));
 
     const rules: GradeRuleForValidation[] = existing.map(
       (r: (typeof existing)[number]) => ({
@@ -125,7 +124,7 @@ export class PerformanceGradeService {
     const targets = await this.db
       .select()
       .from(performanceGrade)
-      .where(and(eq(performanceGrade.id, id), sql`deleted_at IS NULL`))
+      .where(eq(performanceGrade.id, id))
       .limit(1);
 
     if (targets.length === 0) {
@@ -135,7 +134,7 @@ export class PerformanceGradeService {
     const allActive = await this.db
       .select()
       .from(performanceGrade)
-      .where(and(eq(performanceGrade.isActive, true), sql`deleted_at IS NULL`));
+      .where(eq(performanceGrade.isActive, true));
 
     const rules: GradeRuleForValidation[] = allActive
       .filter((r: (typeof allActive)[number]) => r.id !== id)
@@ -182,9 +181,9 @@ export class PerformanceGradeService {
       throw new NotFoundException('等级配置不存在');
     }
 
-    await this.db.execute(
-      sql`UPDATE performance_grade SET deleted_at = NOW() WHERE id = ${id}`,
-    );
+    await this.db
+      .delete(performanceGrade)
+      .where(eq(performanceGrade.id, id));
 
     return { success: true };
   }
@@ -195,7 +194,7 @@ export class PerformanceGradeService {
     const rules = await this.db
       .select()
       .from(performanceGrade)
-      .where(and(eq(performanceGrade.isActive, true), sql`deleted_at IS NULL`))
+      .where(eq(performanceGrade.isActive, true))
       .orderBy(performanceGrade.sortOrder);
 
     for (const rule of rules) {
