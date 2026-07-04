@@ -387,6 +387,7 @@ export interface TeamOverviewResponse {
   waitingSelfReview: number;
   readyForSupervisorReview: number;
   completedCount: number;
+  totalInstanceCount: number;
   avgScore?: number;
   gradeDistribution?: Record<string, number>;
   pendingSelfCount?: number;

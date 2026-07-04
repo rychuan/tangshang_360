@@ -38,7 +38,10 @@ export class TeamPerformanceService {
     private readonly capabilityService: CapabilityService,
   ) {}
 
-  async getOverview(userId: string): Promise<TeamOverviewResponse> {
+  async getOverview(
+    userId: string,
+    period?: string,
+  ): Promise<TeamOverviewResponse> {
     const subRows = await this.db
       .select({ userId: sql<string>`(${employee.employeeId}).user_id` })
       .from(employee)
@@ -61,6 +64,7 @@ export class TeamPerformanceService {
         waitingSelfReview: 0,
         readyForSupervisorReview: 0,
         completedCount: 0,
+        totalInstanceCount: 0,
       };
     }
 
@@ -69,17 +73,27 @@ export class TeamPerformanceService {
       subordinateIds,
     );
 
+    const periodCond = period
+      ? eq(assessmentInstance.period, period)
+      : undefined;
+    const statsWhere = periodCond ? and(empInCond, periodCond) : empInCond;
+
     const statsRow = await this.db
       .select({
         selfReviewCount: sql<number>`COUNT(*) FILTER (WHERE ${assessmentInstance.status} = 'self_review')::int`,
         supervisorReviewCount: sql<number>`COUNT(*) FILTER (WHERE ${assessmentInstance.status} = 'supervisor_review')::int`,
         completedCount: sql<number>`COUNT(*) FILTER (WHERE ${assessmentInstance.status} = 'completed')::int`,
+        totalCount: sql<number>`COUNT(*)::int`,
         avgScore: sql<
           number | null
         >`AVG(${assessmentInstance.totalScore}) FILTER (WHERE ${assessmentInstance.status} = 'completed' AND ${assessmentInstance.totalScore} IS NOT NULL)`,
       })
       .from(assessmentInstance)
-      .where(empInCond);
+      .where(statsWhere);
+
+    const gradeWhere = periodCond
+      ? and(empInCond, eq(assessmentInstance.status, 'completed'), periodCond)
+      : and(empInCond, eq(assessmentInstance.status, 'completed'));
 
     const gradeRows = await this.db
       .select({
@@ -89,8 +103,7 @@ export class TeamPerformanceService {
       .from(assessmentInstance)
       .where(
         and(
-          empInCond,
-          eq(assessmentInstance.status, 'completed'),
+          gradeWhere,
           sql`${assessmentInstance.totalScore} IS NOT NULL`,
           sql`${assessmentInstance.grade} IS NOT NULL`,
         ),
@@ -111,6 +124,7 @@ export class TeamPerformanceService {
       waitingSelfReview: stats.selfReviewCount,
       readyForSupervisorReview: stats.supervisorReviewCount,
       completedCount: stats.completedCount,
+      totalInstanceCount: Number(stats.totalCount),
       avgScore: stats.avgScore
         ? Math.round(Number(stats.avgScore) * 100) / 100
         : undefined,
@@ -126,6 +140,7 @@ export class TeamPerformanceService {
     page: number,
     pageSize: number,
     status?: string,
+    period?: string,
   ): Promise<SubordinatesResponse> {
     const subRows = await this.db
       .select({ userId: sql<string>`(${employee.employeeId}).user_id` })
@@ -155,6 +170,9 @@ export class TeamPerformanceService {
     const whereConditions: Parameters<typeof and> = [empInCond];
     if (status) {
       whereConditions.push(eq(assessmentInstance.status, status));
+    }
+    if (period) {
+      whereConditions.push(eq(assessmentInstance.period, period));
     }
 
     const countResult = await this.db

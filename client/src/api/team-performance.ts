@@ -6,10 +6,13 @@ import type {
   SuccessResponse,
 } from '@shared/api.interface';
 
-export async function getOverview(): Promise<TeamOverviewResponse> {
+export async function getOverview(
+  period?: string,
+): Promise<TeamOverviewResponse> {
   const res = await axiosForBackend<TeamOverviewResponse>({
     url: '/api/team-performance/overview',
     method: 'GET',
+    params: period ? { period } : undefined,
   });
   return res.data;
 }
@@ -18,6 +21,7 @@ export async function getSubordinates(params: {
   page: number;
   pageSize: number;
   status?: string;
+  period?: string;
 }): Promise<SubordinatesResponse> {
   const res = await axiosForBackend<SubordinatesResponse>({
     url: '/api/team-performance/subordinates',

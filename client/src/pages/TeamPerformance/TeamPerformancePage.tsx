@@ -26,15 +26,14 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell } from 'recharts';
+import { Pie, PieChart } from 'recharts';
+import MultiMonthPicker from '@/components/ui/multi-month-picker';
 import {
   Users,
-  Clock,
-  Star,
   TrendingUp,
-  Eye,
+  AlertCircle,
   Bell,
-  BarChart3Icon,
+  Eye,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '@lark-apaas/client-toolkit/logger';
@@ -53,55 +52,20 @@ import type {
 
 const PAGE_SIZE = 10;
 
+const GRADE_COLORS = ['S', 'A', 'B', 'C', 'D'];
+
 const chartConfig = {
-  count: { label: '人数', color: 'hsl(var(--chart-1))' },
+  S: { label: 'S', color: 'hsl(var(--chart-5))' },
+  A: { label: 'A', color: 'hsl(var(--chart-1))' },
+  B: { label: 'B', color: 'hsl(var(--chart-3))' },
+  C: { label: 'C', color: 'hsl(var(--chart-4))' },
+  D: { label: 'D', color: 'hsl(var(--chart-2))' },
 };
 
-const gradeChartColors: Record<string, string> = {
-  S: 'hsl(var(--chart-5))',
-  A: 'hsl(var(--chart-1))',
-  B: 'hsl(var(--chart-3))',
-  C: 'hsl(var(--chart-4))',
-  D: 'hsl(var(--chart-2))',
-};
-
-const cardDefs: Array<{
-  key: string;
-  icon: React.FC<{ className?: string }>;
-  label: string;
-  iconBgClass: string;
-  getValue: (o: TeamOverviewResponse | null) => string;
-}> = [
-  {
-    key: 'total',
-    icon: Users,
-    label: '下属人数',
-    iconBgClass: 'bg-primary/10 text-primary',
-    getValue: (o) => String(o?.totalSubordinates ?? 0),
-  },
-  {
-    key: 'pendingSelf',
-    icon: Clock,
-    label: '待自评',
-    iconBgClass: 'bg-info/10 text-info',
-    getValue: (o) => String(o?.waitingSelfReview ?? o?.pendingSelfCount ?? 0),
-  },
-  {
-    key: 'pendingSupervisor',
-    icon: Star,
-    label: '待评分',
-    iconBgClass: 'bg-warning/10 text-warning',
-    getValue: (o) =>
-      String(o?.readyForSupervisorReview ?? o?.pendingSupervisorCount ?? 0),
-  },
-  {
-    key: 'avgScore',
-    icon: TrendingUp,
-    label: '团队均分',
-    iconBgClass: 'bg-success/10 text-success',
-    getValue: (o) => (o?.avgScore != null ? o.avgScore.toFixed(1) : '-'),
-  },
-];
+function currentMonth(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
 
 const TeamPerformancePage: React.FC = () => {
   const navigate = useNavigate();
@@ -114,16 +78,23 @@ const TeamPerformancePage: React.FC = () => {
   const [page, setPage] = useState<number>(1);
   const [total, setTotal] = useState<number>(0);
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [selectedPeriods, setSelectedPeriods] = useState<string[]>([
+    currentMonth(),
+  ]);
   const [remindDialogOpen, setRemindDialogOpen] = useState<boolean>(false);
   const [remindTarget, setRemindTarget] = useState<SubordinateRecord | null>(
     null,
   );
   const [remindingIds, setRemindingIds] = useState<Set<string>>(new Set());
 
+  const activePeriod = selectedPeriods.length > 0 ? selectedPeriods[0] : '';
+
   const loadOverview = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await teamPerformanceApi.getOverview();
+      const result = await teamPerformanceApi.getOverview(
+        activePeriod || undefined,
+      );
       setOverview(result);
     } catch (err: unknown) {
       logger.error(`Failed to load team overview: ${JSON.stringify(err)}`);
@@ -131,7 +102,7 @@ const TeamPerformancePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activePeriod]);
 
   const loadSubordinates = useCallback(async () => {
     setLoadingList(true);
@@ -140,6 +111,7 @@ const TeamPerformancePage: React.FC = () => {
         page,
         pageSize: PAGE_SIZE,
         status: statusFilter || undefined,
+        period: activePeriod || undefined,
       });
       setSubordinates(result?.items ?? []);
       setTotal(result.total);
@@ -151,7 +123,7 @@ const TeamPerformancePage: React.FC = () => {
     } finally {
       setLoadingList(false);
     }
-  }, [page, statusFilter]);
+  }, [page, statusFilter, activePeriod]);
 
   useEffect(() => {
     if (!userInfo?.user_id) return;
@@ -165,9 +137,16 @@ const TeamPerformancePage: React.FC = () => {
   const gradeChartData = useMemo(() => {
     const dist = overview?.gradeDistribution;
     if (!dist || Object.keys(dist).length === 0) return [];
-    return ['S', 'A', 'B', 'C', 'D']
-      .filter((g) => dist[g] != null)
-      .map((g) => ({ grade: g, count: dist[g] }));
+    return GRADE_COLORS.filter((g) => dist[g] != null).map((g) => ({
+      grade: g,
+      count: dist[g],
+      fill: chartConfig[g]?.color || 'hsl(var(--chart-1))',
+    }));
+  }, [overview]);
+
+  const incompleteCount = useMemo(() => {
+    if (!overview) return 0;
+    return overview.totalInstanceCount - overview.completedCount;
   }, [overview]);
 
   const teamColumns: PageTableColumn<SubordinateRecord>[] = useMemo(
@@ -217,7 +196,9 @@ const TeamPerformancePage: React.FC = () => {
               actionType="view"
               icon={<Eye className="size-3" />}
               label="查看/评分"
-              onClick={() => navigate(`/assessment/${item.id}?view=supervisor`)}
+              onClick={() =>
+                navigate(`../assessment/${item.id}?view=supervisor`)
+              }
             />
           </div>
         ),
@@ -238,87 +219,101 @@ const TeamPerformancePage: React.FC = () => {
 
   return (
     <div className="@container/main flex flex-1 flex-col gap-4 md:gap-6">
-      <PageHeader title="团队绩效" visuallyHidden />
-
-      {/* Stats and Chart Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-        {/* Section Cards - Left Side */}
-        <div className="grid grid-cols-2 grid-rows-2 gap-4 h-full">
-          {cardDefs.map((def) => {
-            const Icon = def.icon;
-            return (
-              <Card key={def.key} className="rounded-xl">
-                <CardContent className="flex items-center gap-4 p-6">
-                  <div
-                    className={`flex items-center justify-center size-12 rounded-lg ${def.iconBgClass}`}
-                  >
-                    <Icon className="size-6" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">{def.label}</p>
-                    <p className="text-3xl font-bold text-foreground">
-                      {def.getValue(overview)}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+      {/* Header + Period Filter */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <PageHeader title="团队绩效" visuallyHidden />
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted-foreground">考核周期</span>
+          <MultiMonthPicker
+            value={selectedPeriods}
+            onChange={(value: string[]) => {
+              setSelectedPeriods(value.length > 0 ? [value[0]] : []);
+              setPage(1);
+            }}
+            className="w-40"
+          />
         </div>
-
-        {/* Grade Distribution Chart - Right Side */}
-        {gradeChartData.length > 0 && (
-          <Card className="rounded-xl h-full flex flex-col">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
-                <BarChart3Icon className="size-4 text-muted-foreground" />
-                等级分布
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col">
-              <ChartContainer
-                config={chartConfig}
-                className="flex-1 w-full min-h-0"
-              >
-                <BarChart data={gradeChartData}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    className="stroke-muted"
-                  />
-                  <XAxis
-                    dataKey="grade"
-                    tickLine={false}
-                    axisLine={false}
-                    className="text-xs text-muted-foreground"
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    className="text-xs text-muted-foreground"
-                    allowDecimals={false}
-                  />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                    {gradeChartData.map((entry, idx) => (
-                      <Cell
-                        key={entry.grade}
-                        fill={
-                          gradeChartColors[entry.grade] || 'hsl(var(--chart-1))'
-                        }
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        )}
       </div>
 
-      {/* Subordinates Table */}
+      {/* 4 Cards in one row: subordinates, avg score, incomplete, grade pie */}
+      <div className="grid grid-cols-4 gap-4">
+        {/* 下属人数 */}
+        <Card className="rounded-xl">
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="flex items-center justify-center size-10 rounded-lg bg-primary/10 text-primary shrink-0">
+              <Users className="size-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">下属人数</p>
+              <p className="text-2xl font-bold">
+                {overview?.totalSubordinates ?? 0}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 团队均分 */}
+        <Card className="rounded-xl">
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="flex items-center justify-center size-10 rounded-lg bg-success/10 text-success shrink-0">
+              <TrendingUp className="size-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">团队均分</p>
+              <p className="text-2xl font-bold">
+                {overview?.avgScore != null
+                  ? overview.avgScore.toFixed(1)
+                  : '-'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 未完成 */}
+        <Card className="rounded-xl">
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="flex items-center justify-center size-10 rounded-lg bg-warning/10 text-warning shrink-0">
+              <AlertCircle className="size-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">未完成</p>
+              <p className="text-2xl font-bold">{incompleteCount}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 等级分布 Pie Chart */}
+        <Card className="rounded-xl flex flex-col">
+          <CardContent className="p-3 flex-1 flex flex-col items-center justify-center">
+            {gradeChartData.length === 0 ? (
+              <p className="text-xs text-muted-foreground">暂无数据</p>
+            ) : (
+              <ChartContainer
+                config={chartConfig}
+                className="mx-auto aspect-square max-h-[100px] [&_.recharts-pie-label-text]:fill-foreground"
+              >
+                <PieChart>
+                  <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                  <Pie
+                    data={gradeChartData}
+                    dataKey="count"
+                    nameKey="grade"
+                    label={({ grade, count }) => `${grade} (${count})`}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius="90%"
+                  />
+                </PieChart>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Team Performance List */}
       <Card className="rounded-xl">
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="text-base">下属绩效列表</CardTitle>
+          <CardTitle className="text-base">团队绩效列表</CardTitle>
           <Select
             value={statusFilter || '__all'}
             onValueChange={(val: string) => {
