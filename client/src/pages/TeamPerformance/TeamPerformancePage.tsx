@@ -229,62 +229,67 @@ const TeamPerformancePage: React.FC = () => {
         </div>
       </div>
 
-      {/* 4 Cards in one row: subordinates, avg score, incomplete, grade pie */}
-      <div className="grid grid-cols-4 gap-4">
-        {/* 下属人数 */}
-        <Card className="rounded-xl">
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex items-center justify-center size-10 rounded-lg bg-primary/10 text-primary shrink-0">
-              <Users className="size-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">下属人数</p>
-              <p className="text-2xl font-bold">
-                {overview?.totalSubordinates ?? 0}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Stats row — left cards + right pie */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Left — 3 stat cards stacked */}
+        <div className="lg:col-span-2 flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-4">
+            {/* 下属人数 */}
+            <Card className="rounded-xl">
+              <CardContent className="flex items-center gap-3 p-4">
+                <div className="flex items-center justify-center size-10 rounded-lg bg-primary/10 text-primary shrink-0">
+                  <Users className="size-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">下属人数</p>
+                  <p className="text-2xl font-bold">
+                    {overview?.totalSubordinates ?? 0}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
 
-        {/* 团队均分 */}
-        <Card className="rounded-xl">
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex items-center justify-center size-10 rounded-lg bg-success/10 text-success shrink-0">
-              <TrendingUp className="size-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">团队均分</p>
-              <p className="text-2xl font-bold">
-                {overview?.avgScore != null
-                  ? overview.avgScore.toFixed(1)
-                  : '-'}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+            {/* 团队均分 */}
+            <Card className="rounded-xl">
+              <CardContent className="flex items-center gap-3 p-4">
+                <div className="flex items-center justify-center size-10 rounded-lg bg-success/10 text-success shrink-0">
+                  <TrendingUp className="size-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">团队均分</p>
+                  <p className="text-2xl font-bold">
+                    {overview?.avgScore != null
+                      ? overview.avgScore.toFixed(1)
+                      : '-'}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* 未完成 */}
-        <Card className="rounded-xl">
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex items-center justify-center size-10 rounded-lg bg-warning/10 text-warning shrink-0">
-              <AlertCircle className="size-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">未完成</p>
-              <p className="text-2xl font-bold">{incompleteCount}</p>
-            </div>
-          </CardContent>
-        </Card>
+          {/* 未完成 */}
+          <Card className="rounded-xl">
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="flex items-center justify-center size-10 rounded-lg bg-warning/10 text-warning shrink-0">
+                <AlertCircle className="size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">未完成</p>
+                <p className="text-2xl font-bold">{incompleteCount}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* 等级分布 Pie Chart */}
+        {/* Right — 等级分布 Pie Chart */}
         <Card className="rounded-xl flex flex-col">
-          <CardContent className="p-3 flex-1 flex flex-col items-center justify-center">
+          <CardContent className="p-4 flex-1 flex flex-col items-center justify-center">
             {gradeChartData.length === 0 ? (
               <p className="text-xs text-muted-foreground">暂无数据</p>
             ) : (
               <ChartContainer
                 config={chartConfig}
-                className="mx-auto aspect-square max-h-[100px] [&_.recharts-pie-label-text]:fill-foreground"
+                className="mx-auto aspect-square w-full max-h-[150px] [&_.recharts-pie-label-text]:fill-foreground"
               >
                 <PieChart>
                   <ChartTooltip content={<ChartTooltipContent hideLabel />} />
