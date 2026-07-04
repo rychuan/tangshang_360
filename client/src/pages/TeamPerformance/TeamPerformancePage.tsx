@@ -340,7 +340,11 @@ const TeamPerformancePage: React.FC = () => {
                   className="flex items-center justify-between text-xs"
                 >
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <UserDisplay value={{ user_id: entry.employeeId, name: entry.name }} size="small" showLabel />
+                    <UserDisplay
+                      value={{ user_id: entry.employeeId, name: entry.name }}
+                      size="small"
+                      showLabel
+                    />
                   </div>
                   <span className="font-mono font-medium">{entry.score}</span>
                 </div>

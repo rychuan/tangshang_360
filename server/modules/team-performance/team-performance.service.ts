@@ -52,6 +52,7 @@ export class TeamPerformanceService {
           OR ${employee.department} IN (SELECT ${department.name} FROM ${department} WHERE (${department.headId}).user_id = ${userId})
         )`,
           isNull(employee.deletedAt),
+          eq(employee.status, true),
           sql`(${employee.employeeId}).user_id != ${userId}`,
         ),
       );
