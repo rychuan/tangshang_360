@@ -114,7 +114,7 @@ const AssessmentHeaderCard: React.FC<AssessmentHeaderCardProps> = ({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <p className="text-sm text-muted-foreground">员工</p>
-            <UserDisplay userId={detail.employeeId} size="medium" />
+            <UserDisplay value={{ user_id: detail.employeeId, name: detail.employeeName }} size="medium" />
           </div>
           <div>
             <p className="text-sm text-muted-foreground">岗位</p>
@@ -123,7 +123,7 @@ const AssessmentHeaderCard: React.FC<AssessmentHeaderCardProps> = ({
           <div>
             <p className="text-sm text-muted-foreground">上级</p>
             {detail.supervisorId ? (
-              <UserDisplay userId={detail.supervisorId} size="medium" />
+              <UserDisplay value={{ user_id: detail.supervisorId, name: detail.supervisorName }} size="medium" />
             ) : (
               <p className="text-sm text-muted-foreground">-</p>
             )}

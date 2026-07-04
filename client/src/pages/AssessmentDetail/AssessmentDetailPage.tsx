@@ -208,7 +208,7 @@ const AssessmentDetailPage: React.FC = () => {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            <UserDisplay userId={detail.employeeId} size="small" showLabel />
+            <UserDisplay value={{ user_id: detail.employeeId, name: detail.employeeName }} size="small" showLabel />
             <span className="text-muted-foreground font-normal text-sm">
               【{detail.position}】的绩效评分
             </span>

@@ -300,7 +300,7 @@ const LayoutContent: React.FC = () => {
                   }}
                 >
                   <UserDisplay
-                    userId={userInfo?.user_id}
+                    value={{ user_id: userInfo?.user_id, name: userInfo?.name }}
                     size="medium"
                     showLabel
                   />
