@@ -439,15 +439,24 @@ export const assessmentTemplate = pgTable("assessment_template", {
   updatedBy: userProfile("_updated_by"),
 });
 
+// Synced table: data is auto-synced from external source. Do not rename or delete this table.
 export const employee = pgTable("employee", {
+  // Synced field: auto-synced, do not modify or delete
   employeeId: userProfile("employee_id").notNull(),
-  name: varchar("name", { length: 255 }).notNull(),
+  // Synced field: auto-synced, do not modify or delete
+  name: varchar("name", { length: 255 }),
+  // Synced field: auto-synced, do not modify or delete
   position: varchar("position", { length: 255 }).notNull(),
+  // Synced field: auto-synced, do not modify or delete
   department: varchar("department", { length: 255 }).notNull(),
+  // Synced field: auto-synced, do not modify or delete
   supervisorId: userProfile("supervisor_id"),
+  // Synced field: auto-synced, do not modify or delete
   status: varchar("status", { length: 255 }).notNull().default('active'),
+  // Synced field: auto-synced, do not modify or delete
   employeeNo: varchar("employee_no", { length: 50 }),
   title: varchar("title", { length: 100 }),
+  // Synced field: auto-synced, do not modify or delete
   role: varchar("role", { length: 50 }).default('employee'),
   phone: varchar("phone", { length: 50 }),
   hireDate: customTimestamptz("hire_date", { precision: 6 }),
@@ -456,6 +465,8 @@ export const employee = pgTable("employee", {
   deletedAt: customTimestamptz("deleted_at", { precision: 6 }),
   bitableConnectionId: uuid("bitable_connection_id"),
   id: uuid("id").primaryKey().defaultRandom(),
+  // Synced field: auto-synced, do not modify or delete
+  baseRecordId: varchar("base_record_id").unique(),
   // System field: Creation time (auto-filled, do not modify)
   createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
   // System field: Creator (auto-filled, do not modify)
@@ -467,6 +478,7 @@ export const employee = pgTable("employee", {
 }, (table) => [
   // Complex index: CREATE INDEX idx_employee_supervisor ON employee USING btree (((supervisor_id).user_id)),
   // Complex index: CREATE UNIQUE INDEX idx_employee_pk ON employee USING btree (((employee_id).user_id)),
+  uniqueIndex("unq_1869605213955370").on(table.baseRecordId),
 ]);
 
 // table aliases

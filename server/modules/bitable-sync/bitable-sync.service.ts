@@ -176,7 +176,6 @@ export class BitableSyncService {
               await this.db
                 .update(employee)
                 .set({
-                  name: p.sudaUserId,
                   position: p.position || '',
                   department: p.department || '',
                   role: p.role || 'employee',
@@ -185,11 +184,11 @@ export class BitableSyncService {
                   supervisorId: p.supervisorUserId || null,
                   deletedAt: null,
                 })
-                .where(eq(employee.employeeId, softDeleted[0].id));
+                .where(eq(employee.id, softDeleted[0].id));
             } else {
               await this.db.insert(employee).values({
                 employeeId: p.sudaUserId,
-                name: p.sudaUserId,
+                name: null,
                 position: p.position || '',
                 department: p.department || '',
                 role: p.role || 'employee',
