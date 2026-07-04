@@ -5,7 +5,7 @@ import {
   CapabilityService,
 } from '@lark-apaas/fullstack-nestjs-core';
 import { eq, and, isNull, isNotNull, sql, inArray } from 'drizzle-orm';
-import { employee, auditLog } from '@server/database/schema';
+import { employee, auditLog, department, systemDict } from '@server/database/schema';
 import { RoleManagerService } from '../role-manager/role-manager.service';
 import type { BitablePluginSyncResponse } from '@shared/api.interface';
 
@@ -52,6 +52,27 @@ export class BitableSyncService {
     private readonly capabilityService: CapabilityService,
     private readonly roleManagerService: RoleManagerService,
   ) {}
+
+  private async resolveReferences(departmentName?: string, positionName?: string) {
+    const result: { departmentId?: string | null; positionCode?: string | null } = {};
+    if (departmentName) {
+      const deptRow = await this.db
+        .select({ id: department.id })
+        .from(department)
+        .where(eq(department.name, departmentName))
+        .limit(1);
+      result.departmentId = deptRow[0]?.id ?? null;
+    }
+    if (positionName) {
+      const dictRow = await this.db
+        .select({ code: systemDict.code })
+        .from(systemDict)
+        .where(and(eq(systemDict.dictType, 'position'), eq(systemDict.name, positionName)))
+        .limit(1);
+      result.positionCode = dictRow[0]?.code ?? null;
+    }
+    return result;
+  }
 
   async importFromBitable(): Promise<BitablePluginSyncResponse> {
     const allRecords: BitableRecord[] = [];
@@ -173,11 +194,14 @@ export class BitableSyncService {
               .limit(1);
 
             if (softDeleted.length > 0) {
+              const refs = await this.resolveReferences(p.department, p.position);
               await this.db
                 .update(employee)
                 .set({
                   position: p.position || '',
+                  positionCode: refs.positionCode ?? null,
                   department: p.department || '',
+                  departmentId: refs.departmentId,
                   role: p.role || 'employee',
                   status: p.status !== 'inactive',
                   employeeNo: p.employeeNo || null,
@@ -186,11 +210,14 @@ export class BitableSyncService {
                 })
                 .where(eq(employee.id, softDeleted[0].id));
             } else {
+              const refs = await this.resolveReferences(p.department, p.position);
               await this.db.insert(employee).values({
                 employeeId: p.sudaUserId,
                 name: null,
                 position: p.position || '',
+                positionCode: refs.positionCode ?? null,
                 department: p.department || '',
+                departmentId: refs.departmentId,
                 role: p.role || 'employee',
                 status: p.status !== 'inactive',
                 employeeNo: p.employeeNo || null,
@@ -215,9 +242,10 @@ export class BitableSyncService {
           continue;
         }
 
+        const refs = await this.resolveReferences(p.department, p.position);
         const updateData: Record<string, unknown> = {};
-        if (p.position) updateData.position = p.position;
-        if (p.department) updateData.department = p.department;
+        if (p.position) { updateData.position = p.position; updateData.positionCode = refs.positionCode ?? null; }
+        if (p.department) { updateData.department = p.department; updateData.departmentId = refs.departmentId; }
         if (p.role) updateData.role = p.role;
         if (p.status) updateData.status = p.status !== 'inactive';
         if (p.employeeNo) updateData.employeeNo = p.employeeNo;

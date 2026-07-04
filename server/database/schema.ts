@@ -466,8 +466,10 @@ export const employee = pgTable("employee", {
   name: varchar("name", { length: 255 }),
   // Synced field: auto-synced, do not modify or delete
   position: varchar("position", { length: 255 }).notNull(),
+  positionCode: varchar("position_code", { length: 100 }),
   // Synced field: auto-synced, do not modify or delete
   department: varchar("department", { length: 255 }).notNull(),
+  departmentId: uuid("department_id"),
   // Synced field: auto-synced, do not modify or delete
   supervisorId: userProfile("supervisor_id"),
   // Synced field: auto-synced, do not modify or delete

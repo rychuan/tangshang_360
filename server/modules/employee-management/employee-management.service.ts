@@ -18,6 +18,7 @@ import {
   assessmentTemplate,
   auditLog,
   department,
+  systemDict,
 } from '@server/database/schema';
 import { EmployeeSnapshotService } from '../employee-snapshot/employee-snapshot.service';
 import { EmployeeBindingService } from './employee-binding.service';
@@ -62,10 +63,29 @@ export class EmployeeManagementService {
       conditions.push(like(employee.name, `%${query.keyword}%`));
     }
     if (query.department) {
-      conditions.push(eq(employee.department, query.department));
+      // 优先用 departmentId 匹配
+      const deptRow = await this.db
+        .select({ id: department.id })
+        .from(department)
+        .where(eq(department.name, query.department))
+        .limit(1);
+      if (deptRow[0]?.id) {
+        conditions.push(eq(employee.departmentId, deptRow[0].id));
+      } else {
+        conditions.push(eq(employee.department, query.department));
+      }
     }
     if (query.positions && query.positions.length > 0) {
-      conditions.push(inArray(employee.position, query.positions));
+      const dictRows = await this.db
+        .select({ code: systemDict.code })
+        .from(systemDict)
+        .where(and(eq(systemDict.dictType, 'position'), inArray(systemDict.name, query.positions)));
+      const codes = dictRows.map((d) => d.code).filter(Boolean);
+      if (codes.length > 0) {
+        conditions.push(inArray(employee.positionCode, codes));
+      } else {
+        conditions.push(inArray(employee.position, query.positions));
+      }
     }
     if (query.title) {
       conditions.push(eq(employee.title, query.title));
