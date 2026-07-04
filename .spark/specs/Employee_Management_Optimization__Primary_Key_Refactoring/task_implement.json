@@ -97,7 +97,7 @@
     {
       "id": 4,
       "name": "共享接口兼容性验证",
-      "status": "in_progress",
+      "status": "completed",
       "type": "normal",
       "subtasks": [
         "校验shared/api.interface.ts中员工相关类型定义无需修改",
@@ -117,12 +117,13 @@
       "dependencies": [
         3
       ],
-      "beginTime": 1783137327148
+      "beginTime": 1783137327148,
+      "endTime": 1783137365869
     },
     {
       "id": 5,
       "name": "功能验收测试",
-      "status": "pending",
+      "status": "in_progress",
       "type": "normal",
       "subtasks": [
         "读取testing-guide技能",
@@ -144,7 +145,8 @@
         2,
         3,
         4
-      ]
+      ],
+      "beginTime": 1783137365988
     }
   ]
 }
