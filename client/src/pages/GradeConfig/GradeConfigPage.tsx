@@ -135,6 +135,9 @@ const GradeConfigPage: React.FC = () => {
                   排序值
                 </TableHead>
                 <TableHead className="py-3 px-4 font-medium text-left">
+                  绩效系数
+                </TableHead>
+                <TableHead className="py-3 px-4 font-medium text-left">
                   启用状态
                 </TableHead>
                 <TableHead className="py-3 px-4 font-medium text-left sticky right-0 bg-background z-20 border-l">
@@ -153,6 +156,9 @@ const GradeConfigPage: React.FC = () => {
                     {item.minScore} ~ {item.maxScore}
                   </TableCell>
                   <TableCell className="py-3 px-4">{item.sortOrder}</TableCell>
+                  <TableCell className="py-3 px-4 text-muted-foreground">
+                    {item.coefficient || '-'}
+                  </TableCell>
                   <TableCell className="py-3 px-4">
                     {item.isActive ? (
                       <Badge variant="default">启用</Badge>

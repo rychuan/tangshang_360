@@ -49,6 +49,7 @@ export class PerformanceGradeService {
         name: item.name,
         minScore: item.minScore,
         maxScore: item.maxScore,
+        coefficient: item.coefficient ?? undefined,
         sortOrder: item.sortOrder,
         isActive: item.isActive,
         createdAt:
@@ -107,6 +108,7 @@ export class PerformanceGradeService {
         name: body.name,
         minScore: body.minScore,
         maxScore: body.maxScore,
+        coefficient: body.coefficient ?? null,
         sortOrder: body.sortOrder,
         isActive: body.isActive,
       })
@@ -160,6 +162,7 @@ export class PerformanceGradeService {
         name: body.name,
         minScore: body.minScore,
         maxScore: body.maxScore,
+        coefficient: body.coefficient ?? null,
         sortOrder: body.sortOrder,
         isActive: body.isActive,
       })
@@ -181,9 +184,7 @@ export class PerformanceGradeService {
       throw new NotFoundException('等级配置不存在');
     }
 
-    await this.db
-      .delete(performanceGrade)
-      .where(eq(performanceGrade.id, id));
+    await this.db.delete(performanceGrade).where(eq(performanceGrade.id, id));
 
     return { success: true };
   }

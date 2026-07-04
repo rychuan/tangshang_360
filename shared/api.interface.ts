@@ -642,6 +642,7 @@ export interface PerformanceGradeItem {
   name: string;
   minScore: number;
   maxScore: number;
+  coefficient?: string;
   sortOrder: number;
   isActive: boolean;
   createdAt: string;
@@ -661,6 +662,7 @@ export interface CreatePerformanceGradeRequest {
   name: string;
   minScore: number;
   maxScore: number;
+  coefficient?: string;
   sortOrder: number;
   isActive: boolean;
 }

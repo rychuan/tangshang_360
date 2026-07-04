@@ -44,6 +44,7 @@ const gradeSchema = z
       .int('最高分必须为整数')
       .min(1, '最高分不能小于1')
       .max(151, '最高分不能大于151'),
+    coefficient: z.string().optional(),
     sortOrder: z.coerce
       .number()
       .int('排序值必须为整数')
@@ -61,6 +62,7 @@ const EMPTY_DEFAULTS: GradeFormData = {
   name: '',
   minScore: 0,
   maxScore: 150,
+  coefficient: '',
   sortOrder: 0,
   isActive: true,
 };
@@ -92,6 +94,7 @@ export function GradeFormDialog({
           name: editingGrade.name,
           minScore: editingGrade.minScore,
           maxScore: editingGrade.maxScore,
+          coefficient: editingGrade.coefficient ?? '',
           sortOrder: editingGrade.sortOrder,
           isActive: editingGrade.isActive,
         });
@@ -106,6 +109,7 @@ export function GradeFormDialog({
       name: data.name,
       minScore: data.minScore,
       maxScore: data.maxScore,
+      coefficient: data.coefficient || undefined,
       sortOrder: data.sortOrder,
       isActive: data.isActive,
     });
@@ -170,6 +174,19 @@ export function GradeFormDialog({
                 )}
               />
             </div>
+            <FormField
+              control={form.control}
+              name="coefficient"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>绩效系数</FormLabel>
+                  <FormControl>
+                    <Input placeholder="如：1.0" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="sortOrder"
