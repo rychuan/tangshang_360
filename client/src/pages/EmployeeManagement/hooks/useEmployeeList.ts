@@ -56,6 +56,7 @@ export function useEmployeeList(
             : undefined,
         role: filters.role || undefined,
         status: filters.status || undefined,
+        binding: filters.binding || undefined,
       });
       setEmployees(res.items);
       setTotal(res.total);

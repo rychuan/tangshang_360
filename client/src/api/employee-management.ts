@@ -17,6 +17,7 @@ export async function list(params: {
   title?: string;
   role?: string;
   status?: string;
+  binding?: string;
 }): Promise<EmployeeListResponse> {
   const { data } = await axiosForBackend({
     url: '/api/employees',

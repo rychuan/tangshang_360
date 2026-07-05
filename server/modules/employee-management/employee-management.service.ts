@@ -54,6 +54,7 @@ export class EmployeeManagementService {
     title?: string;
     role?: string;
     status?: string;
+    binding?: string; // 'bound' | 'unbound'
   }): Promise<EmployeeListResponse> {
     const conditions: ReturnType<typeof eq>[] = [isNull(employee.deletedAt)];
 
@@ -98,6 +99,15 @@ export class EmployeeManagementService {
     }
     if (query.status === 'true' || query.status === 'false') {
       conditions.push(eq(employee.status, query.status === 'true'));
+    }
+    if (query.binding === 'bound') {
+      conditions.push(
+        sql`EXISTS (SELECT 1 FROM ${employeeBinding} WHERE ${employeeBinding.employeeId} = ${employee.employeeId} AND ${employeeBinding.status} = true)`,
+      );
+    } else if (query.binding === 'unbound') {
+      conditions.push(
+        sql`NOT EXISTS (SELECT 1 FROM ${employeeBinding} WHERE ${employeeBinding.employeeId} = ${employee.employeeId} AND ${employeeBinding.status} = true)`,
+      );
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
