@@ -25,7 +25,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
-import { Pie, PieChart, Bar, BarChart, XAxis, YAxis, Cell } from 'recharts';
+import { Pie, PieChart } from 'recharts';
 import MultiMonthPicker from '@/components/ui/multi-month-picker';
 import { Users, TrendingUp, AlertCircle, Bell, Eye } from 'lucide-react';
 import { toast } from 'sonner';
@@ -288,64 +288,50 @@ const TeamPerformancePage: React.FC = () => {
           </Card>
         </div>
 
-        {/* Middle — Score ranking bar chart */}
+        {/* Middle — Score ranking bars */}
         <Card className="rounded-xl flex flex-col">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">分数排名</CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 px-2 pb-2">
+          <CardContent className="flex-1 px-3 pb-3">
             {scoreRankingData.length === 0 ? (
               <div className="flex items-center justify-center h-full">
                 <p className="text-xs text-muted-foreground">暂无数据</p>
               </div>
             ) : (
-              <ChartContainer config={chartConfig} className="w-full h-full">
-                <BarChart
-                  data={scoreRankingData}
-                  layout="vertical"
-                  margin={{ left: 0, top: 0, right: 8, bottom: 0 }}
-                >
-                  <YAxis
-                    dataKey="name"
-                    type="category"
-                    tickLine={false}
-                    axisLine={false}
-                    tick={false}
-                    width={1}
-                  />
-                  <XAxis dataKey="score" type="number" hide domain={[0, 100]} />
-                  <ChartTooltip
-                    cursor={false}
-                    content={<ChartTooltipContent />}
-                  />
-                  <Bar dataKey="score" radius={[0, 4, 4, 0]} barSize={18}>
-                    {scoreRankingData.map((entry, idx) => (
-                      <Cell key={entry.employeeId} fill={entry.fill} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ChartContainer>
+              <div className="flex flex-col gap-1.5">
+                {scoreRankingData.map((entry) => {
+                  const maxScore = scoreRankingData[0]?.score || 100;
+                  const pct = Math.max((entry.score / maxScore) * 100, 4);
+                  return (
+                    <div
+                      key={entry.employeeId}
+                      className="flex items-center gap-1.5 text-xs"
+                    >
+                      <div
+                        className="relative h-6 rounded-r-sm flex items-center justify-end pr-1.5 min-w-[28px]"
+                        style={{
+                          width: `${pct}%`,
+                          backgroundColor: entry.fill,
+                        }}
+                      >
+                        <span className="text-xs font-mono font-bold text-white drop-shadow-sm">
+                          {entry.score}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <UserDisplay
+                          value={{ user_id: entry.employeeId, name: entry.name }}
+                          size="small"
+                          showLabel
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </CardContent>
-          {scoreRankingData.length > 0 && (
-            <div className="px-4 pb-3 flex flex-col gap-0.5">
-              {scoreRankingData.map((entry) => (
-                <div
-                  key={entry.employeeId}
-                  className="flex items-center justify-between text-xs"
-                >
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <UserDisplay
-                      value={{ user_id: entry.employeeId, name: entry.name }}
-                      size="small"
-                      showLabel
-                    />
-                  </div>
-                  <span className="font-mono font-medium">{entry.score}</span>
-                </div>
-              ))}
-            </div>
-          )}
         </Card>
 
         {/* Right — 等级分布 Pie Chart */}
