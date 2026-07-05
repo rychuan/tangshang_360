@@ -91,7 +91,18 @@ const EmployeeListTab: React.FC = () => {
     );
   };
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  // 参与绩效筛选：客户端过滤
+  const filteredEmployees = React.useMemo(() => {
+    if (!filters.binding) return employees;
+    return employees.filter((e) =>
+      filters.binding === 'bound'
+        ? e.currentBinding != null
+        : e.currentBinding == null,
+    );
+  }, [employees, filters.binding]);
+  const filteredTotal = filters.binding ? filteredEmployees.length : total;
+
+  const totalPages = Math.max(1, Math.ceil(filteredTotal / PAGE_SIZE));
 
   const handleSync = async (direction: 'import' | 'export'): Promise<void> => {
     setSyncLoading(direction);
@@ -113,7 +124,7 @@ const EmployeeListTab: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Users className="size-4" />共{' '}
-          <span className="font-semibold text-foreground">{total}</span> 条
+          <span className="font-semibold text-foreground">{filteredTotal}</span> 条
           {selectedRowKeys.length > 0 && (
             <span className="ml-1 text-primary font-medium">
               · 已选 {selectedRowKeys.length} 项
@@ -224,6 +235,21 @@ const EmployeeListTab: React.FC = () => {
                 </SelectGroup>
               </SelectContent>
             </Select>
+            <Select
+              value={filters.binding || 'all'}
+              onValueChange={(v) => setters.setBinding(v === 'all' ? '' : v)}
+            >
+              <SelectTrigger className="w-30 h-9 text-sm">
+                <SelectValue placeholder="参与绩效" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">全部</SelectItem>
+                  <SelectItem value="bound">已参与</SelectItem>
+                  <SelectItem value="unbound">未参与</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -232,7 +258,7 @@ const EmployeeListTab: React.FC = () => {
       <Card>
         <CardContent className="p-0">
           <EmployeeTable
-            employees={employees}
+            employees={filteredEmployees}
             loading={loading}
             selectedRowKeys={selectedRowKeys}
             onToggleAll={toggleAll}

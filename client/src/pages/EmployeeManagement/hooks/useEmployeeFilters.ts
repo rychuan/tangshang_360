@@ -8,6 +8,7 @@ export interface EmployeeFilters {
   positions: string[];
   role: string;
   status: string;
+  binding: string; // ''=全部, 'bound'=已参与, 'unbound'=未参与
 }
 
 export interface EmployeeFiltersSetters {
@@ -17,6 +18,7 @@ export interface EmployeeFiltersSetters {
   setPositions: (v: string[]) => void;
   setRole: (v: string) => void;
   setStatus: (v: string) => void;
+  setBinding: (v: string) => void;
   resetFilters: () => void;
 }
 
@@ -42,7 +44,8 @@ export function useEmployeeFilters(): [
         ? getParam('positions', '').split(',')
         : [],
       role: getParam('role', ''),
-      status: getParam('status', ''),
+      status: getParam('status', 'true'),
+      binding: getParam('binding', ''),
     }),
     [searchParams],
   );
@@ -77,6 +80,7 @@ export function useEmployeeFilters(): [
         updateParam('positions', v.length > 0 ? v.join(',') : ''),
       setRole: (v: string) => updateParam('role', v),
       setStatus: (v: string) => updateParam('status', v),
+      setBinding: (v: string) => updateParam('binding', v),
       resetFilters: () =>
         setSearchParams(new URLSearchParams(), { replace: true }),
     }),
