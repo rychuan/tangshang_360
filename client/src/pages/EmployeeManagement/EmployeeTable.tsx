@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { EmployeeItem } from '@shared/api.interface';
+import { ROLE_LABELS as roleLabels } from './role-utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
@@ -42,8 +43,6 @@ export interface EmployeeTableProps {
   onDelete: (emp: EmployeeItem) => void;
 }
 
-import { ROLE_LABELS as roleLabels } from './role-utils';
-
 const EmployeeTable: React.FC<EmployeeTableProps> = ({
   employees,
   loading,
@@ -68,7 +67,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
   const stickyHeaderCol = 'sticky right-0 z-20 bg-background border-l';
   const stickyCellCol =
     'sticky right-0 z-10 bg-background group-hover:bg-muted/30 border-l';
-  const cols: ColumnDef<EmployeeItem>[] = [
+  const cols: ColumnDef<EmployeeItem>[] = React.useMemo(() => [
     {
       id: 'select',
       header: () => (
@@ -287,7 +286,19 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
       ),
       enableSorting: false,
     },
-  ];
+  ], [
+    allChecked,
+    someChecked,
+    onEdit,
+    onBind,
+    onUnbind,
+    onHistory,
+    onToggleStatus,
+    onDelete,
+    selectedRowKeys,
+    onToggleAll,
+    onToggleRow,
+  ]);
 
   return (
     <DataTable
