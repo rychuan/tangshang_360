@@ -384,7 +384,9 @@ const TemplateManagementPage: React.FC = () => {
         </div>
         <FilterBarActions>
           <div className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground invisible">占位</span>
+            <span className="text-xs text-muted-foreground invisible">
+              占位
+            </span>
             <div className="flex gap-2">
               <Button variant="secondary" size="sm" onClick={handleSearch}>
                 <Search data-icon="inline-start" />

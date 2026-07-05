@@ -321,7 +321,10 @@ const TeamPerformancePage: React.FC = () => {
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <UserDisplay
-                          value={{ user_id: entry.employeeId, name: entry.name }}
+                          value={{
+                            user_id: entry.employeeId,
+                            name: entry.name,
+                          }}
                           size="small"
                           showLabel
                         />
