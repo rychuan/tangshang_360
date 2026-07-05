@@ -37,8 +37,8 @@ const IndicatorsFieldArray: React.FC<IndicatorsFieldArrayProps> = ({
         <span className="text-sm font-medium">绩效指标</span>
         <Button
           type="button"
-          variant="ghost"
           size="sm"
+          className="bg-blue-500 hover:bg-blue-600 text-white dark:bg-blue-400 dark:hover:bg-blue-500"
           onClick={() =>
             appendInd({
               content: '',
@@ -57,7 +57,7 @@ const IndicatorsFieldArray: React.FC<IndicatorsFieldArrayProps> = ({
       {indFields.map((indField, indIdx: number) => (
         <div
           key={indField.id}
-          className="rounded-md border border-emerald-200 bg-emerald-50/40 p-3 flex flex-col gap-3"
+          className="rounded-md border border-slate-300 bg-slate-100 p-3 flex flex-col gap-3 dark:border-slate-600 dark:bg-slate-700/50"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">

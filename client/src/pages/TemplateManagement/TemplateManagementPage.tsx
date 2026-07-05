@@ -113,7 +113,9 @@ const TemplateManagementPage: React.FC = () => {
     setPositionsLoading(true);
     dictionaryApi('position')
       .list()
-      .then((res) => setPositions(res.items?.map((p) => p.name) ?? POSITION_OPTIONS))
+      .then((res) =>
+        setPositions(res.items?.map((p) => p.name) ?? POSITION_OPTIONS),
+      )
       .catch(() => {})
       .finally(() => setPositionsLoading(false));
   }, []);
@@ -381,14 +383,19 @@ const TemplateManagementPage: React.FC = () => {
           </Select>
         </div>
         <FilterBarActions>
-          <Button variant="secondary" onClick={handleSearch}>
-            <Search data-icon="inline-start" />
-            搜索
-          </Button>
-          <Button variant="outline" onClick={handleReset}>
-            <RotateCcw data-icon="inline-start" />
-            重置
-          </Button>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground invisible">占位</span>
+            <div className="flex gap-2">
+              <Button variant="secondary" size="sm" onClick={handleSearch}>
+                <Search data-icon="inline-start" />
+                搜索
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleReset}>
+                <RotateCcw data-icon="inline-start" />
+                重置
+              </Button>
+            </div>
+          </div>
         </FilterBarActions>
       </FilterBar>
 
