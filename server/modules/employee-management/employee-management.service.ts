@@ -102,11 +102,11 @@ export class EmployeeManagementService {
     }
     if (query.binding === 'bound') {
       conditions.push(
-        sql`EXISTS (SELECT 1 FROM ${employeeBinding} WHERE ${employeeBinding.employeeId} = ${employee.employeeId} AND ${employeeBinding.status} = true)`,
+        sql`EXISTS (SELECT 1 FROM ${employeeBinding} WHERE (${employeeBinding.employeeId}).user_id = (${employee.employeeId}).user_id AND ${employeeBinding.status} = true)`,
       );
     } else if (query.binding === 'unbound') {
       conditions.push(
-        sql`NOT EXISTS (SELECT 1 FROM ${employeeBinding} WHERE ${employeeBinding.employeeId} = ${employee.employeeId} AND ${employeeBinding.status} = true)`,
+        sql`NOT EXISTS (SELECT 1 FROM ${employeeBinding} WHERE (${employeeBinding.employeeId}).user_id = (${employee.employeeId}).user_id AND ${employeeBinding.status} = true)`,
       );
     }
 

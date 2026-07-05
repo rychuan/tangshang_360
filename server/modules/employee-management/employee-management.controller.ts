@@ -40,6 +40,7 @@ export class EmployeeManagementController {
     @Query('title') title?: string,
     @Query('role') role?: string,
     @Query('status') status?: string,
+    @Query('binding') binding?: string,
   ): Promise<EmployeeListResponse> {
     return this.service.list({
       page: parseInt(page, 10) || 1,
@@ -50,6 +51,7 @@ export class EmployeeManagementController {
       title,
       role,
       status,
+      binding,
     });
   }
 
