@@ -117,7 +117,7 @@ export class EmployeeManagementService {
           status: employee.status,
           phone: employee.phone,
           hireDate: employee.hireDate,
-          supervisorName: sql`COALESCE((SELECT sup.name FROM employee sup WHERE (sup.employee_id).user_id = (${employee.supervisorId}).user_id AND sup.deleted_at IS NULL LIMIT 1), '')`,
+          supervisorName: sql`COALESCE((SELECT sup.name FROM employee sup WHERE (sup.employee_id).user_id = (employee.supervisor_id).user_id AND sup.deleted_at IS NULL LIMIT 1), '')`,
           bitableConnectionId: employee.bitableConnectionId,
         })
         .from(employee)
@@ -279,7 +279,7 @@ export class EmployeeManagementService {
         probationMonths: employee.probationMonths,
         createdAt: employee.createdAt,
         permissions: employee.permissions,
-        supervisorName: sql<string>`COALESCE((SELECT sup.name FROM employee sup WHERE (sup.employee_id).user_id = (${employee.supervisorId}).user_id AND sup.deleted_at IS NULL LIMIT 1), '')`,
+        supervisorName: sql<string>`COALESCE((SELECT sup.name FROM employee sup WHERE (sup.employee_id).user_id = (employee.supervisor_id).user_id AND sup.deleted_at IS NULL LIMIT 1), '')`,
       })
       .from(employee)
       .where(and(eq(employee.employeeId, id), isNull(employee.deletedAt)))

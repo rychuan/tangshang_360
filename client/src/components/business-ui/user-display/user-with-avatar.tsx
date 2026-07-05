@@ -126,7 +126,9 @@ export function UserWithAvatar({
   }, [response, needsFetch, user_id, accountType]);
 
   const avatar = propsAvatar || fetchedUser?.avatar;
-  const name = propsName || fetchedUser?.name;
+  const name = needsFetch
+    ? (fetchedUser?.name || propsName || '')
+    : (propsName || fetchedUser?.name || '');
 
   // 直接使用已合并的 name，通过 getI18nText 处理国际化
   const displayName = isLoading ? '' : (getI18nText(name) || '无效人员');

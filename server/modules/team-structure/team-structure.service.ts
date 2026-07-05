@@ -66,9 +66,9 @@ export class TeamStructureService {
           employeeName: employee.name,
           position: employee.position,
           department: employee.department,
-          supervisorId: sql<string>`(${employee.supervisorId}).user_id`,
+          supervisorId: sql<string>`(employee.supervisor_id).user_id`,
           supervisorName: sql<string>`(SELECT sup.name FROM ${employee} sup
-            WHERE (sup.employee_id).user_id = (${employee.supervisorId}).user_id
+            WHERE (sup.employee_id).user_id = (employee.supervisor_id).user_id
               AND sup.deleted_at IS NULL
             LIMIT 1)`,
           bindingId: employeeBinding.id,
@@ -198,9 +198,9 @@ export class TeamStructureService {
         name: employee.name,
         position: employee.position,
         department: employee.department,
-        supervisorId: sql<string>`(${employee.supervisorId}).user_id`,
+        supervisorId: sql<string>`(employee.supervisor_id).user_id`,
         supervisorName: sql<string>`(SELECT sup.name FROM ${employee} sup
-          WHERE (sup.employee_id).user_id = (${employee.supervisorId}).user_id
+          WHERE (sup.employee_id).user_id = (employee.supervisor_id).user_id
             AND sup.deleted_at IS NULL
           LIMIT 1)`,
         status: employee.status,
