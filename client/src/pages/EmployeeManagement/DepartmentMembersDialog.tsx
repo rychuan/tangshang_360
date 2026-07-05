@@ -10,6 +10,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import { UserDisplay } from '@/components/business-ui/user-display';
 
 import { ROLE_LABELS as roleLabels } from './role-utils';
@@ -74,51 +83,51 @@ const DepartmentMembersDialog: React.FC<DepartmentMembersDialogProps> = ({
             </p>
           ) : (
             <div className="border rounded-lg overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/30">
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30">
+                    <TableHead>
                       姓名
-                    </th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
+                    </TableHead>
+                    <TableHead>
                       编号
-                    </th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
+                    </TableHead>
+                    <TableHead>
                       岗位
-                    </th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
+                    </TableHead>
+                    <TableHead>
                       角色
-                    </th>
-                    <th className="text-muted-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap">
+                    </TableHead>
+                    <TableHead>
                       状态
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {members.map((emp) => (
-                    <tr
+                    <TableRow
                       key={emp.id}
                       className="border-b hover:bg-muted/50 transition-colors cursor-pointer"
                       onClick={() => navigate(`/employees/${emp.id}`)}
                     >
-                      <td className="py-3 px-4 align-middle whitespace-nowrap font-medium">
+                      <TableCell className="py-3 px-4 align-middle whitespace-nowrap font-medium">
                         <UserDisplay
                           value={{ user_id: emp.id, name: emp.name }}
                           size="small"
                         />
-                      </td>
-                      <td className="py-3 px-4 align-middle whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="py-3 px-4 align-middle whitespace-nowrap">
                         {emp.employeeNo || '-'}
-                      </td>
-                      <td className="py-3 px-4 align-middle whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="py-3 px-4 align-middle whitespace-nowrap">
                         {emp.position}
-                      </td>
-                      <td className="py-3 px-4 align-middle whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="py-3 px-4 align-middle whitespace-nowrap">
                         <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                           {roleLabels[emp.role] || emp.role}
                         </span>
-                      </td>
-                      <td className="py-3 px-4 align-middle whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="py-3 px-4 align-middle whitespace-nowrap">
                         {emp.status ? (
                           <span className="text-green-600 text-xs font-medium">
                             ● 已启用
@@ -128,11 +137,11 @@ const DepartmentMembersDialog: React.FC<DepartmentMembersDialogProps> = ({
                             ● 已禁用
                           </span>
                         )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
         </div>
