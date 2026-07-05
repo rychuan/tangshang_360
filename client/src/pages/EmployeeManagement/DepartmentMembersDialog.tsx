@@ -102,7 +102,10 @@ const DepartmentMembersDialog: React.FC<DepartmentMembersDialogProps> = ({
                       onClick={() => navigate(`/employees/${emp.id}`)}
                     >
                       <td className="py-3 px-4 align-middle whitespace-nowrap font-medium">
-                        <UserDisplay value={{ user_id: emp.id, name: emp.name }} size="small" />
+                        <UserDisplay
+                          value={{ user_id: emp.id, name: emp.name }}
+                          size="small"
+                        />
                       </td>
                       <td className="py-3 px-4 align-middle whitespace-nowrap">
                         {emp.employeeNo || '-'}

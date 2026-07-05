@@ -92,7 +92,10 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
       header: '姓名',
       cell: ({ row }) => (
         <div className="font-medium">
-          <UserDisplay value={{ user_id: row.original.id, name: row.original.name }} size="small" />
+          <UserDisplay
+            value={{ user_id: row.original.id, name: row.original.name }}
+            size="small"
+          />
         </div>
       ),
     },
@@ -142,7 +145,13 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
       },
       cell: ({ row }) =>
         row.original.supervisorId ? (
-          <UserDisplay value={{ user_id: row.original.supervisorId, name: row.original.supervisorName }} size="small" />
+          <UserDisplay
+            value={{
+              user_id: row.original.supervisorId,
+              name: row.original.supervisorName,
+            }}
+            size="small"
+          />
         ) : (
           <span className="text-muted-foreground">-</span>
         ),

@@ -73,7 +73,9 @@ export class EmployeeBindingService {
     const empRows = await this.db
       .select({ id: employee.employeeId })
       .from(employee)
-      .where(and(eq(employee.employeeId, employeeId), isNull(employee.deletedAt)))
+      .where(
+        and(eq(employee.employeeId, employeeId), isNull(employee.deletedAt)),
+      )
       .limit(1);
     if (empRows.length === 0) {
       throw new NotFoundException(`员工 ${employeeId} 不存在`);

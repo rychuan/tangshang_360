@@ -233,7 +233,9 @@ export class EmployeeManagementService {
           .from(employee)
           .where(and(eq(employee.role, 'admin'), isNull(employee.deletedAt)));
         if (Number(adminCountRows[0]?.cnt || 0) <= 1) {
-          throw new BadRequestException('系统中至少保留一个系统管理员，无法删除');
+          throw new BadRequestException(
+            '系统中至少保留一个系统管理员，无法删除',
+          );
         }
       }
       await tx
@@ -246,7 +248,11 @@ export class EmployeeManagementService {
         targetType: 'employee',
         targetId: id,
         changes: {
-          before: { name: emp.name, position: emp.position, department: emp.department },
+          before: {
+            name: emp.name,
+            position: emp.position,
+            department: emp.department,
+          },
         },
       });
     });
@@ -258,7 +264,23 @@ export class EmployeeManagementService {
 
   async detail(id: string): Promise<EmployeeDetail> {
     const rows = await this.db
-      .select()
+      .select({
+        employeeId: employee.employeeId,
+        employeeNo: employee.employeeNo,
+        name: employee.name,
+        position: employee.position,
+        title: employee.title,
+        role: employee.role,
+        department: employee.department,
+        supervisorId: employee.supervisorId,
+        status: employee.status,
+        phone: employee.phone,
+        hireDate: employee.hireDate,
+        probationMonths: employee.probationMonths,
+        createdAt: employee.createdAt,
+        permissions: employee.permissions,
+        supervisorName: sql<string>`COALESCE((SELECT sup.name FROM employee sup WHERE (sup.employee_id).user_id = (${employee.supervisorId}).user_id AND sup.deleted_at IS NULL LIMIT 1), '')`,
+      })
       .from(employee)
       .where(and(eq(employee.employeeId, id), isNull(employee.deletedAt)))
       .limit(1);
@@ -268,21 +290,6 @@ export class EmployeeManagementService {
     }
 
     const emp = rows[0];
-
-    let supervisorName = '';
-    if (emp.supervisorId) {
-      const supRows = await this.db
-        .select({ name: employee.name })
-        .from(employee)
-        .where(
-          and(
-            sql`(${employee.employeeId}).user_id = ${emp.supervisorId}`,
-            isNull(employee.deletedAt),
-          ),
-        )
-        .limit(1);
-      supervisorName = supRows.length > 0 ? supRows[0].name : '';
-    }
 
     const [
       activeBindingRows,
@@ -347,7 +354,7 @@ export class EmployeeManagementService {
       role: (emp.role || 'employee') as EmployeeDetail['role'],
       department: emp.department,
       supervisorId: emp.supervisorId || '',
-      supervisorName,
+      supervisorName: emp.supervisorName || '',
       status: emp.status,
       phone: emp.phone || '',
       hireDate:
@@ -479,10 +486,7 @@ export class EmployeeManagementService {
     };
 
     await this.db.transaction(async (tx) => {
-      await tx
-        .update(employee)
-        .set(values)
-        .where(eq(employee.employeeId, id));
+      await tx.update(employee).set(values).where(eq(employee.employeeId, id));
       await tx.insert(auditLog).values({
         operatorId: userId,
         action: 'update_employee',
@@ -619,6 +623,16 @@ export class EmployeeManagementService {
       throw new NotFoundException('员工不存在');
     }
 
+    // 防止移除最后一个管理员的权限
+    if (String(rows[0].role || 'employee') === 'admin') {
+      const adminCount = await this.validateAdminsExist();
+      if (adminCount <= 1) {
+        throw new BadRequestException(
+          '系统中至少保留一个系统管理员，无法移除其权限',
+        );
+      }
+    }
+
     await this.db.transaction(async (tx) => {
       await tx
         .update(employee)
@@ -661,10 +675,8 @@ export class EmployeeManagementService {
     explicitDepartmentId?: string | null,
     explicitPositionCode?: string | null,
   ) {
-    let departmentId: string | null =
-      explicitDepartmentId ?? null;
-    let positionCode: string | null =
-      explicitPositionCode ?? null;
+    let departmentId: string | null = explicitDepartmentId ?? null;
+    let positionCode: string | null = explicitPositionCode ?? null;
 
     if (!departmentId && deptName) {
       const deptRow = await this.db
@@ -679,7 +691,10 @@ export class EmployeeManagementService {
         .select({ code: systemDict.code })
         .from(systemDict)
         .where(
-          and(eq(systemDict.dictType, 'position'), eq(systemDict.name, posName)),
+          and(
+            eq(systemDict.dictType, 'position'),
+            eq(systemDict.name, posName),
+          ),
         )
         .limit(1);
       positionCode = dictRow[0]?.code ?? null;

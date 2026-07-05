@@ -178,15 +178,6 @@ export class EmployeeManagementController {
     @Body() body: { permissions: unknown[] },
   ) {
     const { userId } = req.userContext as { userId: string };
-    const emp = await this.service.detail(id);
-    if ((emp.role as string) === 'admin') {
-      const adminCount = await this.service.validateAdminsExist();
-      if (adminCount <= 1) {
-        throw new BadRequestException(
-          '系统中至少保留一个系统管理员，无法移除其权限',
-        );
-      }
-    }
     return this.service.updatePermissions(id, body.permissions, userId);
   }
 }
