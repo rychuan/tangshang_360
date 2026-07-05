@@ -86,21 +86,11 @@ const DepartmentMembersDialog: React.FC<DepartmentMembersDialogProps> = ({
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/30">
-                    <TableHead>
-                      姓名
-                    </TableHead>
-                    <TableHead>
-                      编号
-                    </TableHead>
-                    <TableHead>
-                      岗位
-                    </TableHead>
-                    <TableHead>
-                      角色
-                    </TableHead>
-                    <TableHead>
-                      状态
-                    </TableHead>
+                    <TableHead>姓名</TableHead>
+                    <TableHead>编号</TableHead>
+                    <TableHead>岗位</TableHead>
+                    <TableHead>角色</TableHead>
+                    <TableHead>状态</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

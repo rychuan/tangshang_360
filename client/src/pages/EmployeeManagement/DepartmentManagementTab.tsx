@@ -62,6 +62,30 @@ interface DeptFormData {
   sortOrder: number;
 }
 
+function renderTreeOptions(
+  nodes: DepartmentTreeNode[],
+  excludeId?: string,
+  depth = 0,
+): React.ReactNode[] {
+  return nodes.flatMap((node) => {
+    const items: React.ReactNode[] = [];
+    if (node.id !== excludeId) {
+      items.push(
+        <SelectItem key={node.id} value={node.id}>
+          <span style={{ paddingLeft: `${depth * 1.25}rem` }}>
+            {depth > 0 && '├ '}
+            {node.name}
+          </span>
+        </SelectItem>,
+      );
+    }
+    if (node.children?.length) {
+      items.push(...renderTreeOptions(node.children, excludeId, depth + 1));
+    }
+    return items;
+  });
+}
+
 const DepartmentManagementTab: React.FC = () => {
   const [items, setItems] = useState<DepartmentItem[]>([]);
   const [tree, setTree] = useState<DepartmentTreeNode[]>([]);
@@ -221,6 +245,21 @@ const DepartmentManagementTab: React.FC = () => {
                 onClick={() => handleEdit(node)}
               />
               <ActionBadge
+                actionType="bind"
+                icon={<Plus className="size-3" />}
+                label=""
+                onClick={() => {
+                  setEditingDept(null);
+                  setFormData({
+                    name: '',
+                    parentId: node.id,
+                    headId: '',
+                    sortOrder: 0,
+                  });
+                  setDialogOpen(true);
+                }}
+              />
+              <ActionBadge
                 actionType="delete"
                 icon={<Trash2 className="size-3" />}
                 label=""
@@ -293,13 +332,7 @@ const DepartmentManagementTab: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none">无（一级部门）</SelectItem>
-                    {items
-                      .filter((d) => d.id !== editingDept?.id)
-                      .map((d) => (
-                        <SelectItem key={d.id} value={d.id}>
-                          {d.name}
-                        </SelectItem>
-                      ))}
+                    {renderTreeOptions(tree, editingDept?.id)}
                   </SelectContent>
                 </Select>
               </div>

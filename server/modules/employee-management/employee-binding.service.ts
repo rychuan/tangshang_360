@@ -171,47 +171,83 @@ export class EmployeeBindingService {
     userId: string,
   ): Promise<{ ids: string[] }> {
     if (!this.isValidPeriod(effectiveFrom)) {
-      throw new BadRequestException(`生效期间格式错误（应为 YYYY-MM）：${effectiveFrom}`);
+      throw new BadRequestException(
+        `生效期间格式错误（应为 YYYY-MM）：${effectiveFrom}`,
+      );
     }
     if (employeeIds.length === 0) return { ids: [] };
 
     // 1. 批量验证模板
     const tplRows = await this.db
-      .select({ id: assessmentTemplate.id, isActive: assessmentTemplate.isActive })
+      .select({
+        id: assessmentTemplate.id,
+        isActive: assessmentTemplate.isActive,
+      })
       .from(assessmentTemplate)
       .where(eq(assessmentTemplate.id, templateId))
       .limit(1);
-    if (tplRows.length === 0) throw new NotFoundException(`考核模板 ${templateId} 不存在`);
+    if (tplRows.length === 0)
+      throw new NotFoundException(`考核模板 ${templateId} 不存在`);
     if (!tplRows[0].isActive) throw new BadRequestException(`考核模板已停用`);
 
     // 2. 批量验证员工存在
     const empRows = await this.db
       .select({ employeeId: employee.employeeId })
       .from(employee)
-      .where(and(inArray(employee.employeeId, employeeIds), isNull(employee.deletedAt)));
+      .where(
+        and(
+          inArray(employee.employeeId, employeeIds),
+          isNull(employee.deletedAt),
+        ),
+      );
     const validIds = new Set(empRows.map((e) => String(e.employeeId)));
     const invalidIds = employeeIds.filter((id) => !validIds.has(id));
-    if (invalidIds.length > 0) throw new NotFoundException(`员工不存在：${invalidIds.join(', ')}`);
+    if (invalidIds.length > 0)
+      throw new NotFoundException(`员工不存在：${invalidIds.join(', ')}`);
 
     // 3. 批量查现有绑定
     const existingBindings = await this.db
       .select()
       .from(employeeBinding)
-      .where(and(inArray(employeeBinding.employeeId, employeeIds), eq(employeeBinding.status, true)));
+      .where(
+        and(
+          inArray(employeeBinding.employeeId, employeeIds),
+          eq(employeeBinding.status, true),
+        ),
+      );
 
     // 4. 单个事务：停旧→插新→日志
     const ids = await this.db.transaction(async (tx) => {
       if (existingBindings.length > 0) {
-        await tx.update(employeeBinding).set({ status: false })
+        await tx
+          .update(employeeBinding)
+          .set({ status: false })
           .where(inArray(employeeBinding.employeeId, employeeIds));
       }
-      const inserted = await tx.insert(employeeBinding).values(
-        employeeIds.map((eId) => ({ employeeId: eId, templateId, effectiveFrom, status: true })),
-      ).returning();
+      const inserted = await tx
+        .insert(employeeBinding)
+        .values(
+          employeeIds.map((eId) => ({
+            employeeId: eId,
+            templateId,
+            effectiveFrom,
+            status: true,
+          })),
+        )
+        .returning();
       if (inserted.length > 0) {
-        await tx.insert(auditLog).values(
-          inserted.map((b) => ({ operatorId: userId, action: 'bind', targetType: 'employee_binding', targetId: String(b.id), changes: { after: { templateId, effectiveFrom } }, reason: '员工模板批量绑定' })),
-        );
+        await tx
+          .insert(auditLog)
+          .values(
+            inserted.map((b) => ({
+              operatorId: userId,
+              action: 'bind',
+              targetType: 'employee_binding',
+              targetId: String(b.id),
+              changes: { after: { templateId, effectiveFrom } },
+              reason: '员工模板批量绑定',
+            })),
+          );
       }
       return inserted.map((b) => String(b.id));
     });
@@ -219,13 +255,24 @@ export class EmployeeBindingService {
     // 5. 快照并行处理（事务外）
     await Promise.allSettled(
       employeeIds.map((eId) =>
-        this.employeeSnapshotService.deleteSnapshot(eId)
-          .then(() => this.employeeSnapshotService.generateFromTemplate(eId, templateId, userId))
-          .catch((err) => this.logger.warn(`Snapshot failed for ${eId}: ${err}`)),
+        this.employeeSnapshotService
+          .deleteSnapshot(eId)
+          .then(() =>
+            this.employeeSnapshotService.generateFromTemplate(
+              eId,
+              templateId,
+              userId,
+            ),
+          )
+          .catch((err) =>
+            this.logger.warn(`Snapshot failed for ${eId}: ${err}`),
+          ),
       ),
     );
 
-    this.logger.log(`Batch bind: ${ids.length} employees to template ${templateId}`);
+    this.logger.log(
+      `Batch bind: ${ids.length} employees to template ${templateId}`,
+    );
     return { ids };
   }
 
