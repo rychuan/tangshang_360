@@ -298,6 +298,7 @@ const EmployeeListTab: React.FC = () => {
         formData={dialogs.formDialog.formData}
         setFormData={dialogs.formDialog.setFormData}
         onSave={dialogs.formDialog.onSave}
+        positions={positions}
       />
 
       {/* 绑定对话框 */}

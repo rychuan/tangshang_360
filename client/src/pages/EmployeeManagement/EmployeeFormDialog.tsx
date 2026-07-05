@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import type {
   EmployeeItem,
   CreateEmployeeRequest,
-  DictEntry,
 } from '@shared/api.interface';
-import dictionaryApi from '@/api/dictionary';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -94,6 +92,7 @@ export interface EmployeeFormDialogProps {
   formData: EmployeeFormData;
   setFormData: React.Dispatch<React.SetStateAction<EmployeeFormData>>;
   onSave: () => void;
+  positions?: string[];
 }
 
 const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
@@ -103,20 +102,17 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
   formData,
   setFormData,
   onSave,
+  positions: positionNames = [],
 }) => {
   const isEditing = !!editingEmployee;
   const { data: usersResponse } = useUsersByIds(
     !isEditing && formData.userId ? [formData.userId] : [],
   );
 
-  const [positions, setPositions] = useState<DictEntry[]>([]);
-
-  useEffect(() => {
-    dictionaryApi('position')
-      .list()
-      .then((res) => setPositions(res.items || []))
-      .catch(() => {});
-  }, []);
+  const positions: { id?: string; name: string }[] = React.useMemo(
+    () => positionNames.map((n) => ({ name: n })),
+    [positionNames],
+  );
 
   React.useEffect(() => {
     if (isEditing || !formData.userId) return;
@@ -182,7 +178,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   {positions.map((p) => (
-                    <SelectItem key={p.id} value={p.name}>
+                    <SelectItem key={p.name} value={p.name}>
                       {p.name}
                     </SelectItem>
                   ))}
