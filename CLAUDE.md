@@ -194,3 +194,69 @@ Key points:
 - Re-validate critical state (status, sign name) inside the transaction after acquiring the lock
 - Use `inArray()` for batch queries instead of N+1 per-indicator SELECTs
 - `DRIZZLE_DATABASE` is a standard `PostgresJsDatabase` — `db.transaction()` is fully supported
+
+## Transaction Requirement (CRITICAL)
+
+**ALL write operations that modify multiple tables MUST use `db.transaction()`.** This was audited and enforced across the entire codebase in a P0 fix session. No exceptions:
+
+```typescript
+// Pattern for deactivate/activate/delete/update + audit log:
+await this.db.transaction(async (tx) => {
+  await tx.update(...).set(...).where(...);
+  await tx.insert(auditLog).values(...);
+});
+// Role sync / snapshot operations go OUTSIDE the transaction (external API calls)
+```
+
+## Employee Table: Logical Foreign Keys
+
+`employee` table uses text fields + logical FK columns instead of DB-level FK constraints (because data comes from external sync):
+
+| Field | Type | References | Notes |
+|-------|------|-----------|-------|
+| `department` | varchar | legacy text | Display only, backward compat |
+| `departmentId` | uuid | `department.id` | **Use this for queries** |
+| `position` | varchar | legacy text | Display only |
+| `positionCode` | varchar(100) | `system_dict.code` (dictType='position') | **Use this for queries** |
+| `role` | text | comma-separated | `employee,supervisor,dept_head,hrd,admin` |
+
+**Always resolve new columns on create/update** — if frontend only sends text values, backend must auto-resolve `departmentId` from `department.name` and `positionCode` from `system_dict.name`.
+
+## Multi-Role Support
+
+`employee.role` is now a comma-separated text field (e.g., `"employee,dept_head"`). Sync to AuthorizationSDK via `RoleManagerService.syncUserRoles()` on create/update. Frontend displays as multiple `Badge` components (split by comma). `employee` role is always required (checkbox disabled in form).
+
+## Role Manager Service
+
+Key methods in `server/modules/role-manager/role-manager.service.ts`:
+
+- `ensureUserRole(userId, roleBizId)` — idempotent, adds user to role if not present
+- `removeUserRole(userId, roleBizId)` — idempotent, removes user from role
+- `syncUserRoles(userId, newRoles[])` — diffs current vs new, adds/removes as needed
+- `addUserToEmployeeRole(userId)` — convenience for adding 'employee' role on creation
+
+## Department Head Auto-Role
+
+When department headId changes (create/update), `department.service.ts` automatically:
+- Adds `dept_head` role to new head via `ensureUserRole(..., 'dept_head')`
+- Removes `dept_head` from old head if they no longer head any department
+
+## Frontend Table Conventions
+
+All tables across the application follow these standards:
+- **Left alignment**: All columns `text-left` except `totalScore` (financial convention: `text-right`)
+- **Sticky action column**: `sticky right-0 bg-background z-20 border-l` (header) / `z-10` (cell) with `group-hover:bg-muted/50`
+- **Badge action buttons**: Use `ActionBadge` component (`@/components/business-ui/action-badge`) — auto-maps actionType to variant
+- **Crowded actions**: Use `DropdownMenu` with `MoreHorizontal` trigger to collapse 5+ buttons
+- **Table rows must have `className="group"`** for sticky column hover to work
+
+## UserDisplay Component
+
+**CRITICAL platform requirement**: `UserDisplay` now requires `value={{ user_id, name }}` format. The old `userId={id}` prop is deprecated and shows "无效人员":
+
+```tsx
+// ✅ Correct
+<UserDisplay value={{ user_id: id, name: name }} size="small" />
+// ❌ Deprecated — shows "无效人员"
+<UserDisplay userId={id} size="small" />
+```
