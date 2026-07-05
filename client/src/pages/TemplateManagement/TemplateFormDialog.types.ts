@@ -23,11 +23,5 @@ export const formSchema = z.object({
 
 export type FormData = z.infer<typeof formSchema>;
 
-export const POSITION_OPTIONS: string[] = [
-  '销售经理',
-  '客户成功经理',
-  '技术支持工程师',
-  '产品经理',
-  '研发工程师',
-  '市场专员',
-];
+// 岗位选项从字段管理-岗位管理获取，此处仅作为硬编码兜底
+export const POSITION_OPTIONS: string[] = [];

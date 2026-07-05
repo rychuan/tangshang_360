@@ -13,10 +13,13 @@ import { logger } from '@lark-apaas/client-toolkit/logger';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo } from '@/hooks/usePermissions';
 import { Button } from '@client/src/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ActionBadge } from '@/components/business-ui/action-badge';
 import { handleApiError } from '@client/src/utils/api-error';
 import { Input } from '@client/src/components/ui/input';
 import { Badge } from '@client/src/components/ui/badge';
+import dictionaryApi from '@/api/dictionary';
 import {
   Select,
   SelectContent,
@@ -75,6 +78,8 @@ const TemplateManagementPage: React.FC = () => {
 
   const [deactivateId, setDeactivateId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [positions, setPositions] = useState<string[]>(POSITION_OPTIONS);
+  const [positionsLoading, setPositionsLoading] = useState(false);
   const [detailCache, setDetailCache] = useState<
     Record<string, AssessmentTemplateDetail>
   >({});
@@ -103,6 +108,15 @@ const TemplateManagementPage: React.FC = () => {
   useEffect(() => {
     fetchList();
   }, [fetchList]);
+
+  useEffect(() => {
+    setPositionsLoading(true);
+    dictionaryApi('position')
+      .list()
+      .then((res) => setPositions(res.items?.map((p) => p.name) ?? POSITION_OPTIONS))
+      .catch(() => {})
+      .finally(() => setPositionsLoading(false));
+  }, []);
 
   const handleSearch = () => {
     setPage(1);
@@ -303,56 +317,69 @@ const TemplateManagementPage: React.FC = () => {
       />
 
       <FilterBar data-ai-section-type="card-list">
-        <Input
-          placeholder="搜索模板名称..."
-          value={keyword}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setKeyword(e.target.value)
-          }
-          onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-            if (e.key === 'Enter') handleSearch();
-          }}
-          className="w-56"
-        />
-        <Select
-          value={filterPosition}
-          onValueChange={(v: string) => {
-            setFilterPosition(v === 'all' ? '' : v);
-            setPage(1);
-          }}
-        >
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="岗位筛选" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value="all">全部岗位</SelectItem>
-              {POSITION_OPTIONS.map((pos: string) => (
-                <SelectItem key={pos} value={pos}>
-                  {pos}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        <Select
-          value={filterStatus}
-          onValueChange={(v: string) => {
-            setFilterStatus(v === 'all' ? '' : v);
-            setPage(1);
-          }}
-        >
-          <SelectTrigger className="w-32">
-            <SelectValue placeholder="状态" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value="all">全部</SelectItem>
-              <SelectItem value="active">启用</SelectItem>
-              <SelectItem value="inactive">停用</SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs text-muted-foreground">搜索</Label>
+          <Input
+            placeholder="搜索模板名称..."
+            value={keyword}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setKeyword(e.target.value)
+            }
+            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+              if (e.key === 'Enter') handleSearch();
+            }}
+            className="w-56"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs text-muted-foreground">岗位</Label>
+          {positionsLoading ? (
+            <Skeleton className="w-40 h-10" />
+          ) : (
+            <Select
+              value={filterPosition}
+              onValueChange={(v: string) => {
+                setFilterPosition(v === 'all' ? '' : v);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="全部岗位" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">全部岗位</SelectItem>
+                  {positions.map((pos: string) => (
+                    <SelectItem key={pos} value={pos}>
+                      {pos}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs text-muted-foreground">状态</Label>
+          <Select
+            value={filterStatus}
+            onValueChange={(v: string) => {
+              setFilterStatus(v === 'all' ? '' : v);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="all">全部</SelectItem>
+                <SelectItem value="active">启用</SelectItem>
+                <SelectItem value="inactive">停用</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
         <FilterBarActions>
           <Button variant="secondary" onClick={handleSearch}>
             <Search data-icon="inline-start" />
@@ -381,6 +408,7 @@ const TemplateManagementPage: React.FC = () => {
         onOpenChange={setFormOpen}
         template={editingTemplate}
         onSave={editingTemplate ? handleUpdate : handleCreate}
+        positions={positions}
       />
 
       <AlertDialog

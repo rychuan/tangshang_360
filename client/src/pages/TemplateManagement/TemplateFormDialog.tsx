@@ -36,7 +36,6 @@ import {
 import IndicatorsFieldArray from './TemplateIndicatorFields';
 import {
   formSchema,
-  POSITION_OPTIONS,
   type FormData,
 } from './TemplateFormDialog.types';
 import type {
@@ -49,6 +48,7 @@ interface TemplateFormDialogProps {
   onOpenChange: (open: boolean) => void;
   template: AssessmentTemplateDetail | null;
   onSave: (data: CreateTemplateRequest) => Promise<void>;
+  positions?: string[];
 }
 
 const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
@@ -56,6 +56,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
   onOpenChange,
   template,
   onSave,
+  positions = [],
 }) => {
   const [submitting, setSubmitting] = useState(false);
 
@@ -231,7 +232,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {POSITION_OPTIONS.map((pos: string) => (
+                        {positions.map((pos: string) => (
                           <SelectItem key={pos} value={pos}>
                             {pos}
                           </SelectItem>
@@ -312,7 +313,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                 return (
                   <div
                     key={dimField.id}
-                    className="rounded-md border p-4 flex flex-col gap-3"
+                    className="rounded-md border border-blue-200 bg-blue-50/40 p-4 flex flex-col gap-3"
                   >
                     <div className="flex items-center gap-3">
                       <Button

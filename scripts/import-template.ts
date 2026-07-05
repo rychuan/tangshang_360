@@ -16,32 +16,58 @@ if (!filePath) {
 const workbook = XLSX.readFile(filePath);
 const sheet = workbook.Sheets[workbook.SheetNames[0]];
 const rows: (string | null)[][] = XLSX.utils.sheet_to_json(sheet, {
-  header: 1, defval: null,
+  header: 1,
+  defval: null,
 });
 
 const metaRow = rows[2] || [];
-const position = String(metaRow[4] || '未知岗位').replace('岗位：', '').trim();
+const position = String(metaRow[4] || '未知岗位')
+  .replace('岗位：', '')
+  .trim();
 
-interface Indicator { content: string; description: string; algorithm: string; dataSource: string; weight: number }
-interface Dimension { name: string; weight: number; indicators: Indicator[] }
+interface Indicator {
+  content: string;
+  description: string;
+  algorithm: string;
+  dataSource: string;
+  weight: number;
+}
+interface Dimension {
+  name: string;
+  weight: number;
+  indicators: Indicator[];
+}
 
 const dimensions: Dimension[] = [];
 let currentDim: Dimension | null = null;
 
 for (let i = 4; i < rows.length; i++) {
-  const row = rows[i]; if (!row) continue;
+  const row = rows[i];
+  if (!row) continue;
   const rawDimName = String(row[0] || '').trim();
   const content = String(row[2] || '').trim();
-  if (rawDimName.includes('合计') || rawDimName.includes('说明') || rawDimName.startsWith('本人已知晓')) break;
+  if (
+    rawDimName.includes('合计') ||
+    rawDimName.includes('说明') ||
+    rawDimName.startsWith('本人已知晓')
+  )
+    break;
   if (rawDimName && content) {
     const m = rawDimName.match(/（(\d+)%）/);
-    currentDim = { name: rawDimName.replace(/（\d+%）/, '').trim(), weight: m ? parseInt(m[1]) : 0, indicators: [] };
+    currentDim = {
+      name: rawDimName.replace(/（\d+%）/, '').trim(),
+      weight: m ? parseInt(m[1]) : 0,
+      indicators: [],
+    };
     dimensions.push(currentDim);
   }
   if (currentDim && content) {
     currentDim.indicators.push({
-      content, description: String(row[3] || '').trim(), algorithm: String(row[4] || '').trim(),
-      dataSource: String(row[5] || '').trim(), weight: parseFloat(String(row[7] || '0')),
+      content,
+      description: String(row[3] || '').trim(),
+      algorithm: String(row[4] || '').trim(),
+      dataSource: String(row[5] || '').trim(),
+      weight: parseFloat(String(row[7] || '0')),
     });
   }
 }
@@ -83,7 +109,12 @@ for (let di = 0; di < dimensions.length; di++) {
 
 sql += `END $$;\n`;
 
-const outPath = resolve(process.cwd(), 'server/database/migrations/009_import_template_主播.sql');
+const outPath = resolve(
+  process.cwd(),
+  'server/database/migrations/009_import_template_主播.sql',
+);
 writeFileSync(outPath, sql);
 console.log(`✅ 已生成: ${outPath}`);
-console.log(`${dimensions.length} 维度, ${dimensions.reduce((s, d) => s + d.indicators.length, 0)} 指标`);
+console.log(
+  `${dimensions.length} 维度, ${dimensions.reduce((s, d) => s + d.indicators.length, 0)} 指标`,
+);
