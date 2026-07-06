@@ -489,7 +489,7 @@ const StatisticsPage: React.FC = () => {
       {/* Filters */}
       <Card className="rounded-xl">
         <CardContent className="p-4">
-          <div className="flex items-start gap-2 flex-wrap">
+          <div className="flex items-end gap-3 flex-wrap">
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs text-muted-foreground">绩效周期</Label>
               <MultiMonthPicker
@@ -507,7 +507,7 @@ const StatisticsPage: React.FC = () => {
                 onChange={(value: string[]) =>
                   setFilters((f: FilterState) => ({ ...f, departments: value }))
                 }
-                className="w-32"
+                className="w-44"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -518,8 +518,8 @@ const StatisticsPage: React.FC = () => {
                 onChange={(value: string[]) =>
                   setFilters((f: FilterState) => ({ ...f, positions: value }))
                 }
-                placeholder="岗位"
-                className="w-28"
+                placeholder="选择岗位"
+                className="w-44"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -530,42 +530,45 @@ const StatisticsPage: React.FC = () => {
                 onChange={(value: string[]) =>
                   setFilters((f: FilterState) => ({ ...f, grades: value }))
                 }
-                placeholder="等级"
-                className="w-24"
+                placeholder="选择等级"
+                className="w-44"
               />
             </div>
-            <div className="flex items-end gap-2 ml-auto">
-              <Button size="sm" onClick={handleSearch} className="shrink-0">
-                <SearchIcon data-icon="inline-start" />
-                查询
-              </Button>
-              <CanRole roles={['admin', 'hrd', 'dept_head']}>
-                <CanDo resource="statistics" action="export">
+            <div className="flex flex-col gap-1.5 ml-auto">
+              <Label className="text-xs text-muted-foreground invisible">&nbsp;</Label>
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={handleSearch} className="shrink-0">
+                  <SearchIcon data-icon="inline-start" />
+                  查询
+                </Button>
+                <CanRole roles={['admin', 'hrd', 'dept_head']}>
+                  <CanDo resource="statistics" action="export">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExport}
+                      disabled={exporting}
+                      className="shrink-0"
+                    >
+                      <DownloadIcon data-icon="inline-start" />
+                      {exporting && <Spinner className="mr-2 size-4" />}导出
+                    </Button>
+                  </CanDo>
+                </CanRole>
+                <CanRole roles={['admin', 'hrd']}>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleExport}
-                    disabled={exporting}
+                    onClick={handleSyncToBitable}
+                    disabled={syncingOut}
                     className="shrink-0"
                   >
-                    <DownloadIcon data-icon="inline-start" />
-                    {exporting && <Spinner className="mr-2 size-4" />}导出
+                    <Upload data-icon="inline-start" />
+                    {syncingOut && <Spinner className="mr-2 size-4" />}
+                    同步
                   </Button>
-                </CanDo>
-              </CanRole>
-              <CanRole roles={['admin', 'hrd']}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSyncToBitable}
-                  disabled={syncingOut}
-                  className="shrink-0"
-                >
-                  <Upload data-icon="inline-start" />
-                  {syncingOut && <Spinner className="mr-2 size-4" />}
-                  同步
-                </Button>
-              </CanRole>
+                </CanRole>
+              </div>
             </div>
           </div>
         </CardContent>
