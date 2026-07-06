@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from '@client/src/components/ui/select';
 import { Separator } from '@client/src/components/ui/separator';
+import { Spinner } from '@client/src/components/ui/spinner';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { handleApiError } from '@client/src/utils/api-error';
 import {
@@ -272,7 +273,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                 <div className="flex items-center gap-3">
                   <h3 className="text-base font-medium">绩效维度</h3>
                   <span
-                    className={`text-sm font-medium ${dimWeightValid ? 'text-green-600' : 'text-destructive'}`}
+                    className={`text-sm font-medium ${dimWeightValid ? 'text-success' : 'text-destructive'}`}
                   >
                     维度权重总和：{totalDimWeight} / 100
                     {!dimWeightValid && ' （必须等于100）'}
@@ -281,7 +282,6 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                 <Button
                   type="button"
                   size="sm"
-                  className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600"
                   onClick={() =>
                     appendDim({
                       name: '',
@@ -310,7 +310,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                 return (
                   <div
                     key={dimField.id}
-                    className="rounded-md border border-gray-300 bg-gray-400/20 p-4 flex flex-col gap-3 dark:border-gray-600 dark:bg-gray-800 [&_input]:border-gray-300 [&_textarea]:border-gray-300 [&_[data-slot=select-trigger]]:border-gray-300 dark:[&_input]:border-gray-600 dark:[&_textarea]:border-gray-600 dark:[&_[data-slot=select-trigger]]:border-gray-600"
+                    className="rounded-md border bg-muted/30 p-4 flex flex-col gap-3"
                   >
                     <div className="flex items-center gap-3">
                       <Button
@@ -410,7 +410,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                               Math.abs(indSum - (dimData.weight || 0)) < 0.01;
                             return (
                               <div
-                                className={`text-xs font-medium ${indValid ? 'text-green-600' : 'text-destructive'}`}
+                                className={`text-xs font-medium ${indValid ? 'text-success' : 'text-destructive'}`}
                               >
                                 指标权重总和：{indSum} / {dimData.weight || 0}
                                 {!indValid && ' （必须等于维度权重）'}
@@ -433,7 +433,8 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                 取消
               </Button>
               <Button type="submit" disabled={submitting || !canSubmit}>
-                {submitting ? '保存中...' : '保存'}
+                {submitting && <Spinner className="mr-2 size-4" />}
+                保存
               </Button>
             </div>
           </form>

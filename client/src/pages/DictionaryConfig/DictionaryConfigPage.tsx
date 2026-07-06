@@ -282,7 +282,8 @@ const DictPanel: React.FC<{ dictType: string }> = ({ dictType }) => {
               取消
             </Button>
             <Button onClick={handleSave} disabled={saving}>
-              {saving ? '保存中...' : editingItem ? '保存' : '创建'}
+              {saving && <Spinner className="mr-2 size-4" />}
+              {editingItem ? '保存' : '创建'}
             </Button>
           </DialogFooter>
         </DialogContent>

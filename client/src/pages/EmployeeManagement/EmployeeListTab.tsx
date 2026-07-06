@@ -1,6 +1,7 @@
 import React from 'react';
 import type { EmployeeItem } from '@shared/api.interface';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import {
@@ -142,7 +143,8 @@ const EmployeeListTab: React.FC = () => {
               disabled={syncLoading !== ''}
             >
               <ArrowDownToLine data-icon="inline-start" />
-              {syncLoading === 'import' ? '同步中...' : '从多维表格导入'}
+              {syncLoading === 'import' && <Spinner className="mr-2 size-4" />}
+              从多维表格导入
             </Button>
             <Button
               variant="outline"
@@ -151,7 +153,8 @@ const EmployeeListTab: React.FC = () => {
               disabled={syncLoading !== ''}
             >
               <ArrowUpFromLine data-icon="inline-start" />
-              {syncLoading === 'export' ? '同步中...' : '导出到多维表格'}
+              {syncLoading === 'export' && <Spinner className="mr-2 size-4" />}
+              导出到多维表格
             </Button>
           </CanRole>
           <CanRole roles={['admin']}>

@@ -4,9 +4,22 @@ import type {
   AssessmentDimensionDef,
   AssessmentTemplateDetail,
 } from '@shared/api.interface';
-import { Dialog, DialogContent } from '@client/src/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@client/src/components/ui/dialog';
 import { Badge } from '@client/src/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@client/src/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@client/src/components/ui/table';
 
 interface TemplatePreviewDialogProps {
   open: boolean;
@@ -24,18 +37,18 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{template.name}</DialogTitle>
+        </DialogHeader>
         <div className="flex flex-col gap-4">
-          <div>
-            <h2 className="text-lg font-semibold">{template.name}</h2>
-            <div className="flex flex-wrap gap-2 mt-2">
-              <Badge variant="secondary">{template.position}</Badge>
-              <Badge variant="outline">
-                {template.type === 'monthly' ? '月度绩效' : '试用期绩效'}
-              </Badge>
-              <Badge variant={template.isActive ? 'default' : 'secondary'}>
-                {template.isActive ? '启用' : '已停用'}
-              </Badge>
-            </div>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="secondary">{template.position}</Badge>
+            <Badge variant="outline">
+              {template.type === 'monthly' ? '月度绩效' : '试用期绩效'}
+            </Badge>
+            <Badge variant={template.isActive ? 'default' : 'secondary'}>
+              {template.isActive ? '启用' : '已停用'}
+            </Badge>
           </div>
 
           {template.dimensions.map(
@@ -49,50 +62,50 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b text-muted-foreground">
-                          <th className="text-left py-3 px-2 font-medium text-muted-foreground w-1/4">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/30">
+                          <TableHead className="whitespace-nowrap w-1/4">
                             指标
-                          </th>
-                          <th className="text-left py-3 px-2 font-medium text-muted-foreground">
+                          </TableHead>
+                          <TableHead className="whitespace-nowrap">
                             说明
-                          </th>
-                          <th className="text-left py-3 px-2 font-medium text-muted-foreground">
+                          </TableHead>
+                          <TableHead className="whitespace-nowrap">
                             指标算法/描述
-                          </th>
-                          <th className="text-left py-3 px-2 font-medium text-muted-foreground">
+                          </TableHead>
+                          <TableHead className="whitespace-nowrap">
                             数据来源
-                          </th>
-                          <th className="text-center py-3 px-2 font-medium text-muted-foreground w-20">
+                          </TableHead>
+                          <TableHead className="text-center w-20">
                             权重(分)
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {dim.indicators.map(
                           (ind: AssessmentIndicatorDef, indIdx: number) => (
-                            <tr key={ind.id || indIdx} className="border-b">
-                              <td className="py-3 px-2 font-medium">
+                            <TableRow key={ind.id || indIdx}>
+                              <TableCell className="font-medium">
                                 {ind.content}
-                              </td>
-                              <td className="py-3 px-2 text-muted-foreground">
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">
                                 {ind.description || '-'}
-                              </td>
-                              <td className="py-3 px-2 text-muted-foreground">
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">
                                 {ind.algorithm || '-'}
-                              </td>
-                              <td className="py-3 px-2 text-muted-foreground">
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">
                                 {ind.dataSource || '-'}
-                              </td>
-                              <td className="py-3 px-2 text-center">
+                              </TableCell>
+                              <TableCell className="text-center">
                                 {ind.weight}
-                              </td>
-                            </tr>
+                              </TableCell>
+                            </TableRow>
                           ),
                         )}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 </CardContent>
               </Card>

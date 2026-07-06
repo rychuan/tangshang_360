@@ -69,18 +69,18 @@ const AssessmentHeaderCard: React.FC<AssessmentHeaderCardProps> = ({
               {detail.grade && (
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">等级</p>
-                  <span
-                    className={`inline-block px-3 py-1 rounded-md text-lg font-bold leading-6 ${getGradeStyle(detail.grade, gradeStyleMap)}`}
+                  <Badge
+                    className={`text-lg font-bold ${getGradeStyle(detail.grade, gradeStyleMap)}`}
                   >
                     {detail.grade}
-                  </span>
+                  </Badge>
                 </div>
               )}
               {detail.coefficient && (
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">系数</p>
-                <p className="text-xl font-bold text-primary leading-8">
-                  {detail.coefficient}
+                  <p className="text-xl font-bold text-primary leading-8">
+                    {detail.coefficient}
                   </p>
                 </div>
               )}
@@ -96,11 +96,11 @@ const AssessmentHeaderCard: React.FC<AssessmentHeaderCardProps> = ({
               </div>
               {previewGrade && (
                 <div className="flex flex-col items-center gap-0.5">
-                  <span
-                    className={`px-3 py-1 rounded-md text-lg font-bold ${getGradeStyle(previewGrade, gradeStyleMap)}`}
+                  <Badge
+                    className={`text-lg font-bold ${getGradeStyle(previewGrade, gradeStyleMap)}`}
                   >
                     {previewGrade}
-                  </span>
+                  </Badge>
                   <span className="text-[10px] text-muted-foreground">
                     仅供参考
                   </span>
@@ -114,7 +114,10 @@ const AssessmentHeaderCard: React.FC<AssessmentHeaderCardProps> = ({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <p className="text-sm text-muted-foreground">员工</p>
-            <UserDisplay value={{ user_id: detail.employeeId, name: detail.employeeName }} size="medium" />
+            <UserDisplay
+              value={{ user_id: detail.employeeId, name: detail.employeeName }}
+              size="medium"
+            />
           </div>
           <div>
             <p className="text-sm text-muted-foreground">岗位</p>
@@ -123,7 +126,13 @@ const AssessmentHeaderCard: React.FC<AssessmentHeaderCardProps> = ({
           <div>
             <p className="text-sm text-muted-foreground">上级</p>
             {detail.supervisorId ? (
-              <UserDisplay value={{ user_id: detail.supervisorId, name: detail.supervisorName }} size="medium" />
+              <UserDisplay
+                value={{
+                  user_id: detail.supervisorId,
+                  name: detail.supervisorName,
+                }}
+                size="medium"
+              />
             ) : (
               <p className="text-sm text-muted-foreground">-</p>
             )}

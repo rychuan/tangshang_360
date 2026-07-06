@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
   Table,
@@ -9,7 +10,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ChevronDown } from 'lucide-react';
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
+import { ChevronDown, BarChart3 } from 'lucide-react';
 import type { AssessmentIndicatorDetail } from '@shared/api.interface';
 import type { RatingsState, DimensionGroup } from './assessment-utils';
 
@@ -69,7 +76,20 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     return <span className="text-muted-foreground">-</span>;
   };
 
-  if (groups.length === 0) return null;
+  if (groups.length === 0) {
+    return (
+      <div className="py-12">
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <BarChart3 className="size-6" />
+            </EmptyMedia>
+            <EmptyTitle>暂无指标数据</EmptyTitle>
+          </EmptyHeader>
+        </Empty>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col">
@@ -83,14 +103,17 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           )}
 
           <Card>
-            <CardHeader className="pb-4 bg-slate-300 dark:bg-slate-800/40">
+            <CardHeader className="pb-4 bg-muted">
               <div className="flex items-center gap-3">
                 <h3 className="text-base font-semibold">
                   {group.dimensionName}
                 </h3>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-bold border border-primary/20">
+                <Badge
+                  variant="outline"
+                  className="bg-primary/10 text-primary border-primary/20 text-xs font-bold"
+                >
                   权重 {group.dimensionWeight}%
-                </span>
+                </Badge>
               </div>
             </CardHeader>
             <CardContent>

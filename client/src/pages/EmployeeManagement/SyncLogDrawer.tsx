@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Sheet,
@@ -17,7 +18,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  Loader2,
   Download,
   Upload,
   ChevronRight,
@@ -25,6 +25,13 @@ import {
   AlertTriangle,
   XCircle,
 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 import * as api from '@/api/bitable-connection';
 import type {
   BitableSyncLogItem,
@@ -65,10 +72,10 @@ const statusConfig: Record<
 };
 
 const rowStatusConfig: Record<string, { label: string; className: string }> = {
-  created: { label: '新增', className: 'text-green-600' },
-  updated: { label: '更新', className: 'text-blue-600' },
-  skipped: { label: '跳过', className: 'text-amber-600' },
-  failed: { label: '失败', className: 'text-red-600' },
+  created: { label: '新增', className: 'text-success' },
+  updated: { label: '更新', className: 'text-primary' },
+  skipped: { label: '跳过', className: 'text-warning' },
+  failed: { label: '失败', className: 'text-destructive' },
 };
 
 const SyncLogDrawer: React.FC<SyncLogDrawerProps> = ({
@@ -135,33 +142,37 @@ const SyncLogDrawer: React.FC<SyncLogDrawerProps> = ({
                 {statusConfig[selectedLog.status]?.label}
               </Badge>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-sm mb-4 p-3 rounded-lg bg-muted/50">
-              <div>
-                <span className="text-muted-foreground">总计</span>{' '}
-                {selectedLog.totalCount}
-              </div>
-              <div>
-                <span className="text-muted-foreground">新增</span>{' '}
-                {selectedLog.createdCount}
-              </div>
-              <div>
-                <span className="text-muted-foreground">更新</span>{' '}
-                {selectedLog.updatedCount}
-              </div>
-              <div>
-                <span className="text-muted-foreground">跳过</span>{' '}
-                {selectedLog.skippedCount}
-              </div>
-              <div className="col-span-2">
-                <span className="text-muted-foreground">失败</span>{' '}
-                {selectedLog.failedCount}
-              </div>
-              {selectedLog.errorMessage && (
-                <div className="col-span-2 text-red-600">
-                  {selectedLog.errorMessage}
+            <Card className="mb-4">
+              <CardContent className="p-3">
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">总计</span>{' '}
+                    {selectedLog.totalCount}
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">新增</span>{' '}
+                    {selectedLog.createdCount}
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">更新</span>{' '}
+                    {selectedLog.updatedCount}
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">跳过</span>{' '}
+                    {selectedLog.skippedCount}
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground">失败</span>{' '}
+                    {selectedLog.failedCount}
+                  </div>
+                  {selectedLog.errorMessage && (
+                    <div className="col-span-2 text-destructive">
+                      {selectedLog.errorMessage}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </CardContent>
+            </Card>
             <ScrollArea className="h-[calc(100vh-300px)]">
               <Table>
                 <TableHeader>
@@ -199,12 +210,19 @@ const SyncLogDrawer: React.FC<SyncLogDrawerProps> = ({
           <ScrollArea className="flex-1 min-h-0 mt-2">
             {loading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                <Spinner className="size-5" />
               </div>
             ) : logs.length === 0 ? (
-              <p className="text-center text-muted-foreground py-12 text-sm">
-                暂无同步记录
-              </p>
+              <div className="py-12">
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <Download className="size-6" />
+                    </EmptyMedia>
+                    <EmptyTitle>暂无同步记录</EmptyTitle>
+                  </EmptyHeader>
+                </Empty>
+              </div>
             ) : (
               <div className="flex flex-col gap-2">
                 {logs.map((log) => (
@@ -215,9 +233,9 @@ const SyncLogDrawer: React.FC<SyncLogDrawerProps> = ({
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       {log.direction === 'import' ? (
-                        <Download className="size-4 text-blue-500 shrink-0" />
+                        <Download className="size-4 text-primary shrink-0" />
                       ) : (
-                        <Upload className="size-4 text-green-500 shrink-0" />
+                        <Upload className="size-4 text-success shrink-0" />
                       )}
                       <div className="min-w-0">
                         <p className="text-sm font-medium">

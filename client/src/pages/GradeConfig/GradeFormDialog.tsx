@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@client/src/components/ui/button';
+import { Spinner } from '@client/src/components/ui/spinner';
 import { Input } from '@client/src/components/ui/input';
 import {
   Select,
@@ -236,7 +237,8 @@ export function GradeFormDialog({
             取消
           </Button>
           <Button type="submit" form="grade-form" disabled={submitting}>
-            {submitting ? '保存中...' : '保存'}
+            {submitting && <Spinner className="mr-2 size-4" />}
+            保存
           </Button>
         </DialogFooter>
       </DialogContent>

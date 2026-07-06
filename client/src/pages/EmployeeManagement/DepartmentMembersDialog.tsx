@@ -19,7 +19,15 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Spinner } from '@/components/ui/spinner';
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 import { UserDisplay } from '@/components/business-ui/user-display';
+import { Users } from 'lucide-react';
 
 import { ROLE_LABELS as roleLabels } from './role-utils';
 
@@ -76,11 +84,20 @@ const DepartmentMembersDialog: React.FC<DepartmentMembersDialogProps> = ({
         </DialogHeader>
         <div className="flex-1 overflow-auto">
           {loading ? (
-            <p className="py-8 text-center text-muted-foreground">加载中...</p>
+            <div className="flex items-center justify-center py-8">
+              <Spinner className="size-5" />
+            </div>
           ) : members.length === 0 ? (
-            <p className="py-8 text-center text-muted-foreground">
-              该部门暂无成员
-            </p>
+            <div className="py-8">
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <Users className="size-6" />
+                  </EmptyMedia>
+                  <EmptyTitle>该部门暂无成员</EmptyTitle>
+                </EmptyHeader>
+              </Empty>
+            </div>
           ) : (
             <div className="border rounded-lg overflow-x-auto">
               <Table>
@@ -113,19 +130,22 @@ const DepartmentMembersDialog: React.FC<DepartmentMembersDialogProps> = ({
                         {emp.position}
                       </TableCell>
                       <TableCell className="py-3 px-4 align-middle whitespace-nowrap">
-                        <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                        <Badge variant="secondary" className="text-xs">
                           {roleLabels[emp.role] || emp.role}
-                        </span>
+                        </Badge>
                       </TableCell>
                       <TableCell className="py-3 px-4 align-middle whitespace-nowrap">
                         {emp.status ? (
-                          <span className="text-green-600 text-xs font-medium">
-                            ● 已启用
-                          </span>
+                          <Badge
+                            variant="default"
+                            className="bg-success/10 text-success border-transparent text-xs"
+                          >
+                            已启用
+                          </Badge>
                         ) : (
-                          <span className="text-muted-foreground text-xs">
-                            ● 已禁用
-                          </span>
+                          <Badge variant="secondary" className="text-xs">
+                            已禁用
+                          </Badge>
                         )}
                       </TableCell>
                     </TableRow>

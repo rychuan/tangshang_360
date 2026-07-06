@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
 import {
   Dialog,
@@ -133,7 +134,7 @@ function BitableConnectionDialog({
             取消
           </Button>
           <Button onClick={handleSave} disabled={saving}>
-            {saving ? '保存中...' : '保存'}
+            {saving && <Spinner className="mr-2 size-4" />}保存
           </Button>
         </DialogFooter>
       </DialogContent>

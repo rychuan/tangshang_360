@@ -3,6 +3,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
   AlertDialog,
   AlertDialogContent,
   AlertDialogHeader,
@@ -136,8 +144,9 @@ const BitableConnectionTab: React.FC = () => {
     <div className="flex flex-col gap-4">
       {/* 使用说明 */}
       <Card className={showGuide ? '' : 'border-dashed'}>
-        <button
-          className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/30 transition-colors"
+        <Button
+          variant="ghost"
+          className="w-full flex items-center justify-between p-4 text-left h-auto"
           onClick={() => setShowGuide(!showGuide)}
         >
           <div className="flex items-center gap-2">
@@ -152,7 +161,7 @@ const BitableConnectionTab: React.FC = () => {
           ) : (
             <ChevronDown className="size-4 text-muted-foreground" />
           )}
-        </button>
+        </Button>
         {showGuide && (
           <CardContent className="px-4 pb-4 pt-0 space-y-4 text-sm">
             {/* 功能简介 */}
@@ -190,18 +199,16 @@ const BitableConnectionTab: React.FC = () => {
                 系统按列名自动识别字段，请严格使用以下列名。标注「必填」的列缺失时将跳过该行。
               </p>
               <div className="overflow-x-auto">
-                <table className="w-full text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-muted">
-                      <th className="border px-2 py-1 text-left">
-                        多维表格列名
-                      </th>
-                      <th className="border px-2 py-1 text-left">映射字段</th>
-                      <th className="border px-2 py-1 text-center">必填</th>
-                      <th className="border px-2 py-1 text-left">校验规则</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted">
+                      <TableHead className="text-left">多维表格列名</TableHead>
+                      <TableHead className="text-left">映射字段</TableHead>
+                      <TableHead className="text-center">必填</TableHead>
+                      <TableHead className="text-left">校验规则</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {[
                       ['姓名', 'name', '是', ''],
                       [
@@ -235,25 +242,25 @@ const BitableConnectionTab: React.FC = () => {
                         '必须为系统中已存在的模板名称，导入后自动绑定',
                       ],
                     ].map(([col, field, required, rule]) => (
-                      <tr key={col} className="hover:bg-muted/30">
-                        <td className="border px-2 py-1 font-medium">{col}</td>
-                        <td className="border px-2 py-1 text-muted-foreground">
+                      <TableRow key={col}>
+                        <TableCell className="font-medium">{col}</TableCell>
+                        <TableCell className="text-muted-foreground">
                           {field}
-                        </td>
-                        <td className="border px-2 py-1 text-center">
+                        </TableCell>
+                        <TableCell className="text-center">
                           {required === '是' ? (
-                            <span className="text-red-500">●</span>
+                            <span className="text-destructive">●</span>
                           ) : (
                             <span className="text-muted-foreground">○</span>
                           )}
-                        </td>
-                        <td className="border px-2 py-1 text-muted-foreground">
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
                           {rule}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </div>
 
@@ -457,17 +464,17 @@ const BitableConnectionTab: React.FC = () => {
                       </span>
                     ) : (
                       <>
-                        <span className="text-green-600">
+                        <span className="text-success font-medium">
                           新增 {importResult.created}
                         </span>
-                        <span className="text-blue-600">
+                        <span className="text-primary font-medium">
                           更新 {importResult.updated}
                         </span>
-                        <span className="text-amber-600">
+                        <span className="text-warning font-medium">
                           跳过 {importResult.skipped}
                         </span>
                         {importResult.failed > 0 && (
-                          <span className="text-red-600">
+                          <span className="text-destructive font-medium">
                             失败 {importResult.failed}
                           </span>
                         )}
@@ -505,6 +512,7 @@ const BitableConnectionTab: React.FC = () => {
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-variant="destructive"
             >
               确认删除
             </AlertDialogAction>

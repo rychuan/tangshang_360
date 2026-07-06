@@ -5,6 +5,7 @@ import type {
 } from '@shared/api.interface';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -224,12 +225,11 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
                     key={r}
                     className="flex items-center gap-2 text-sm cursor-pointer"
                   >
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={formData.role.includes(r)}
                       disabled={r === 'employee'}
-                      onChange={(e) => {
-                        if (e.target.checked) {
+                      onCheckedChange={(checked) => {
+                        if (checked) {
                           setFormData({
                             ...formData,
                             role: [...formData.role, r],
@@ -241,7 +241,6 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
                           });
                         }
                       }}
-                      className="rounded"
                     />
                     {r === 'admin'
                       ? '管理员'

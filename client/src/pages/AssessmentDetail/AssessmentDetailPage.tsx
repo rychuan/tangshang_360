@@ -167,18 +167,18 @@ const AssessmentDetailPage: React.FC = () => {
               {detail.grade && (
                 <div className="text-right">
                   <p className="text-xs text-muted-foreground">等级</p>
-                  <span
-                    className={`inline-block px-3 py-1 rounded-md text-lg font-bold leading-6 ${getGradeStyle(detail.grade, gradeStyleMap)}`}
+                  <Badge
+                    className={`text-lg font-bold ${getGradeStyle(detail.grade, gradeStyleMap)}`}
                   >
                     {detail.grade}
-                  </span>
+                  </Badge>
                 </div>
               )}
               {detail.coefficient && (
                 <div className="text-right">
                   <p className="text-xs text-muted-foreground">系数</p>
-                <p className="text-xl font-bold text-primary leading-8">
-                  {detail.coefficient}
+                  <p className="text-xl font-bold text-primary leading-8">
+                    {detail.coefficient}
                   </p>
                 </div>
               )}
@@ -193,11 +193,11 @@ const AssessmentDetailPage: React.FC = () => {
                 </p>
               </div>
               {previewGrade && (
-                <span
-                  className={`px-2 py-0.5 rounded text-sm font-bold ${getGradeStyle(previewGrade, gradeStyleMap)}`}
+                <Badge
+                  className={`text-sm font-bold ${getGradeStyle(previewGrade, gradeStyleMap)}`}
                 >
                   {previewGrade}
-                </span>
+                </Badge>
               )}
             </div>
           )}
@@ -208,7 +208,11 @@ const AssessmentDetailPage: React.FC = () => {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            <UserDisplay value={{ user_id: detail.employeeId, name: detail.employeeName }} size="small" showLabel />
+            <UserDisplay
+              value={{ user_id: detail.employeeId, name: detail.employeeName }}
+              size="small"
+              showLabel
+            />
             <span className="text-muted-foreground font-normal text-sm">
               【{detail.position}】的绩效评分
             </span>

@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
 import { toast } from 'sonner';
 import { handleApiError } from '@client/src/utils/api-error';
 import { Search, User, Building2, Users } from 'lucide-react';
@@ -313,7 +314,7 @@ const AddMemberDialog: React.FC<AddMemberDialogProps> = ({
               onClick={handleAdd}
               disabled={submitting || totalSelected === 0}
             >
-              {submitting ? '添加中...' : '添加选中'}
+              {submitting && <Spinner className="mr-2 size-4" />}添加选中
             </Button>
           </div>
         </DialogFooter>

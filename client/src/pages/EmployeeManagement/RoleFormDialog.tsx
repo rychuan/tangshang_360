@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { toast } from 'sonner';
 import { handleApiError } from '@client/src/utils/api-error';
 
@@ -154,7 +155,7 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
             取消
           </Button>
           <Button onClick={handleSubmit} disabled={submitting}>
-            {submitting ? '保存中...' : '保存'}
+            {submitting && <Spinner className="mr-2 size-4" />}保存
           </Button>
         </DialogFooter>
       </DialogContent>

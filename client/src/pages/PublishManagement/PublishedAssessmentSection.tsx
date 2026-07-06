@@ -35,6 +35,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationPrevious,
+  PaginationNext,
+} from '@/components/ui/pagination';
 
 interface PublishedAssessmentSectionProps {
   instances: AssessmentInstanceItem[];
@@ -420,24 +427,22 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
               <span className="text-sm text-muted-foreground">
                 共 {total} 条
               </span>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => onPageChange(page - 1)}
-                >
-                  上一页
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages}
-                  onClick={() => onPageChange(page + 1)}
-                >
-                  下一页
-                </Button>
-              </div>
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      disabled={page <= 1}
+                      onClick={() => onPageChange(page - 1)}
+                    />
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationNext
+                      disabled={page >= totalPages}
+                      onClick={() => onPageChange(page + 1)}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             </div>
           )}
         </>

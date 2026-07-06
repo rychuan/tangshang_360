@@ -17,6 +17,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
+import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
@@ -244,8 +250,15 @@ const HomePage: React.FC = () => {
           </CardHeader>
           <CardContent>
             {gradeData.length === 0 ? (
-              <div className="flex items-center justify-center h-[250px] text-sm text-muted-foreground">
-                暂无数据
+              <div className="flex items-center justify-center h-[250px]">
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <BarChart3Icon className="size-6" />
+                    </EmptyMedia>
+                    <EmptyTitle>暂无数据</EmptyTitle>
+                  </EmptyHeader>
+                </Empty>
               </div>
             ) : (
               <ChartContainer config={chartConfig} className="h-[250px] w-full">
@@ -288,8 +301,15 @@ const HomePage: React.FC = () => {
           </CardHeader>
           <CardContent>
             {(todos ?? []).length === 0 ? (
-              <div className="flex items-center justify-center h-[250px] text-sm text-muted-foreground">
-                暂无待办任务 🎉
+              <div className="flex items-center justify-center h-[250px]">
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <CheckCircleIcon className="size-6" />
+                    </EmptyMedia>
+                    <EmptyTitle>暂无待办任务</EmptyTitle>
+                  </EmptyHeader>
+                </Empty>
               </div>
             ) : (
               <div className="flex flex-col gap-2">

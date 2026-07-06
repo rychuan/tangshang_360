@@ -5,6 +5,12 @@ import { Button } from '@/components/ui/button';
 import { ActionBadge } from '@/components/business-ui/action-badge';
 import { Spinner } from '@/components/ui/spinner';
 import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
+import {
   Select,
   SelectContent,
   SelectGroup,
@@ -297,7 +303,14 @@ const TeamPerformancePage: React.FC = () => {
           <CardContent className="flex-1 px-3 pb-3">
             {scoreRankingData.length === 0 ? (
               <div className="flex items-center justify-center h-full">
-                <p className="text-xs text-muted-foreground">暂无数据</p>
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <TrendingUp className="size-6" />
+                    </EmptyMedia>
+                    <EmptyTitle>暂无数据</EmptyTitle>
+                  </EmptyHeader>
+                </Empty>
               </div>
             ) : (
               <div className="flex flex-col gap-1.5">
@@ -345,7 +358,14 @@ const TeamPerformancePage: React.FC = () => {
           </CardHeader>
           <CardContent className="flex-1 flex flex-col items-center justify-center p-2">
             {gradeChartData.length === 0 ? (
-              <p className="text-xs text-muted-foreground">暂无数据</p>
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <TrendingUp className="size-6" />
+                  </EmptyMedia>
+                  <EmptyTitle>暂无数据</EmptyTitle>
+                </EmptyHeader>
+              </Empty>
             ) : (
               <ChartContainer
                 config={chartConfig}

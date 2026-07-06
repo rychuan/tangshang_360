@@ -6,10 +6,18 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { handleApiError } from '@/utils/api-error';
 import { getUnlockHistory } from '@/api/assessment-publish';
 import { PUBLISHED_STATUS_LABELS } from './published-assessment-columns';
+import { Clock } from 'lucide-react';
 import dayjs from 'dayjs';
 import type { UnlockHistoryItem } from '@shared/api.interface';
 
@@ -61,12 +69,19 @@ const UnlockHistoryDialog: React.FC<UnlockHistoryDialogProps> = ({
         </DialogHeader>
         <div className="max-h-[60vh] overflow-y-auto">
           {loading ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">
-              加载中...
+            <div className="flex items-center justify-center py-8">
+              <Spinner className="size-5" />
             </div>
           ) : history.length === 0 ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">
-              暂无解锁记录
+            <div className="py-8">
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <Clock className="size-6" />
+                  </EmptyMedia>
+                  <EmptyTitle>暂无解锁记录</EmptyTitle>
+                </EmptyHeader>
+              </Empty>
             </div>
           ) : (
             <div className="flex flex-col gap-3">

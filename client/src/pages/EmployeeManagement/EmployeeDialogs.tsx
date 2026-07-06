@@ -23,15 +23,11 @@ import type {
   BindingHistoryItem,
   AssessmentTemplateItem,
 } from '@shared/api.interface';
-import { Loader2Icon } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 
 function statusBadge(status: boolean): React.ReactNode {
   if (status) {
-    return (
-      <Badge className="border-transparent bg-success text-success-foreground">
-        已绑定
-      </Badge>
-    );
+    return <Badge variant="default">已绑定</Badge>;
   }
   return <Badge variant="secondary">已解绑</Badge>;
 }
@@ -122,9 +118,7 @@ const BindDialog: React.FC<BindDialogProps> = ({
             取消
           </Button>
           <Button onClick={handleConfirm} disabled={bindSubmitting}>
-            {bindSubmitting && (
-              <Loader2Icon className="mr-1 size-4 animate-spin" />
-            )}
+            {bindSubmitting && <Spinner className="mr-1 size-4" />}
             确认绑定
           </Button>
         </DialogFooter>
@@ -191,7 +185,7 @@ const HistoryDialog: React.FC<HistoryDialogProps> = ({
         <div className="max-h-80 overflow-y-auto py-2">
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2Icon className="size-6 animate-spin text-muted-foreground" />
+              <Spinner className="size-6" />
             </div>
           ) : historyItems.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">

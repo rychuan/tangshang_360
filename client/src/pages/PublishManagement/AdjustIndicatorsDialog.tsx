@@ -11,8 +11,24 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Spinner } from '@/components/ui/spinner';
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   Eye,
   Pencil,
@@ -291,55 +307,54 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
           <h3 className="text-lg font-semibold">
             {group.dimensionName || '未分组'}
           </h3>
-          <span className="inline-flex items-center px-3 py-1 rounded-md bg-primary/10 text-primary text-sm font-bold border border-primary/20">
+          <Badge
+            variant="outline"
+            className="bg-primary/10 text-primary border-primary/20 text-sm font-bold"
+          >
             权重 {group.dimensionWeight}%
-          </span>
+          </Badge>
         </div>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-muted-foreground">
-                <th className="text-left py-3 px-2 font-medium whitespace-nowrap">
-                  指标
-                </th>
-                <th className="text-left py-3 px-2 font-medium whitespace-nowrap max-w-[120px]">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/30">
+                <TableHead className="whitespace-nowrap">指标</TableHead>
+                <TableHead className="whitespace-nowrap max-w-[120px]">
                   说明
-                </th>
-                <th className="text-left py-3 px-2 font-medium whitespace-nowrap max-w-[120px]">
+                </TableHead>
+                <TableHead className="whitespace-nowrap max-w-[120px]">
                   指标算法/描述
-                </th>
-                <th className="text-left py-3 px-2 font-medium whitespace-nowrap max-w-[120px]">
+                </TableHead>
+                <TableHead className="whitespace-nowrap max-w-[120px]">
                   数据来源
-                </th>
-                <th className="text-center py-3 px-2 font-medium w-16">
-                  权重(分)
-                </th>
-              </tr>
-            </thead>
-            <tbody>
+                </TableHead>
+                <TableHead className="text-center w-16">权重(分)</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {group.indicators.map(
                 (ind: AdjustIndicatorInput, idx: number) => (
-                  <tr key={idx} className="border-b last:border-0">
-                    <td className="py-2 px-2 font-medium whitespace-nowrap">
+                  <TableRow key={idx}>
+                    <TableCell className="font-medium">
                       {ind.content || '-'}
-                    </td>
-                    <td className="py-2 px-2 text-muted-foreground max-w-[120px] break-words">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground max-w-[120px] break-words">
                       {ind.description || '-'}
-                    </td>
-                    <td className="py-2 px-2 text-muted-foreground max-w-[120px] break-words">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground max-w-[120px] break-words">
                       {ind.algorithm || '-'}
-                    </td>
-                    <td className="py-2 px-2 text-muted-foreground max-w-[120px] break-words">
+                    </TableCell>
+                    <TableCell className="text-muted-foreground max-w-[120px] break-words">
                       {ind.dataSource || '-'}
-                    </td>
-                    <td className="py-2 px-2 text-center">{ind.weight}</td>
-                  </tr>
+                    </TableCell>
+                    <TableCell className="text-center">{ind.weight}</TableCell>
+                  </TableRow>
                 ),
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </CardContent>
     </Card>
@@ -619,8 +634,8 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
         </div>
 
         {loadingIndicators ? (
-          <div className="flex items-center justify-center py-12 text-muted-foreground">
-            加载中...
+          <div className="flex items-center justify-center py-12">
+            <Spinner className="size-6" />
           </div>
         ) : (
           <div className="flex flex-col gap-4">
@@ -637,7 +652,14 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
 
             {dimensionGroups.length === 0 && !addingDimension ? (
               <div className="flex flex-col items-center justify-center py-12 gap-4">
-                <span className="text-muted-foreground">暂无指标数据</span>
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <FolderPlus className="size-6" />
+                    </EmptyMedia>
+                    <EmptyTitle>暂无指标数据</EmptyTitle>
+                  </EmptyHeader>
+                </Empty>
                 {!previewMode && (
                   <Button
                     variant="outline"
@@ -691,7 +713,8 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
                   !indicatorWeightValidation.isValid
                 }
               >
-                {loading ? '调整中...' : '确认调整'}
+                {loading && <Spinner className="mr-2 size-4" />}
+                确认调整
               </Button>
             </div>
           </div>

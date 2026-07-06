@@ -200,16 +200,18 @@ const DepartmentManagementTab: React.FC = () => {
               style={{ paddingLeft: depth * 20 }}
             >
               {hasChildren ? (
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-6"
                   onClick={() => toggleExpand(node.id)}
-                  className="p-0.5 hover:bg-muted rounded"
                 >
                   {isOpen ? (
                     <ChevronDown className="size-4" />
                   ) : (
                     <ChevronRight className="size-4" />
                   )}
-                </button>
+                </Button>
               ) : (
                 <span className="w-5" />
               )}
@@ -224,16 +226,18 @@ const DepartmentManagementTab: React.FC = () => {
             {node.headName || '-'}
           </TableCell>
           <TableCell>
-            <button
-              className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+            <Button
+              variant="link"
+              size="sm"
+              className="text-primary p-0 h-auto"
               onClick={() => {
                 setMembersDeptName(node.name);
                 setMembersDialogOpen(true);
               }}
             >
-              <Users className="h-3.5 w-3.5" />
+              <Users className="size-3.5" />
               {node.memberCount}
-            </button>
+            </Button>
           </TableCell>
           <TableCell>{node.sortOrder}</TableCell>
           <TableCell className="sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">

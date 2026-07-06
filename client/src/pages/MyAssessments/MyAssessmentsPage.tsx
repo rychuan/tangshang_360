@@ -4,6 +4,13 @@ import { logger } from '@lark-apaas/client-toolkit/logger';
 import { handleApiError } from '@client/src/utils/api-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 import { ActionBadge } from '@/components/business-ui/action-badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -169,8 +176,8 @@ const MyAssessmentsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64 text-muted-foreground">
-        正在加载...
+      <div className="flex items-center justify-center h-64">
+        <Spinner className="size-8" />
       </div>
     );
   }
@@ -220,16 +227,23 @@ const MyAssessmentsPage: React.FC = () => {
         </CardHeader>
         <CardContent>
           {trendLoading ? (
-            <div className="flex items-center justify-center h-[300px] text-muted-foreground text-sm">
-              加载中...
+            <div className="flex items-center justify-center h-[300px]">
+              <Spinner className="size-6" />
             </div>
           ) : trendError ? (
             <div className="flex items-center justify-center h-[300px] text-sm text-destructive">
               趋势数据加载失败：{trendError}
             </div>
           ) : trendItems.length === 0 ? (
-            <div className="flex items-center justify-center h-[300px] text-muted-foreground text-sm">
-              暂无趋势数据
+            <div className="flex items-center justify-center h-[300px]">
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <AreaChartIcon className="size-6" />
+                  </EmptyMedia>
+                  <EmptyTitle>暂无趋势数据</EmptyTitle>
+                </EmptyHeader>
+              </Empty>
             </div>
           ) : (
             <ChartContainer config={chartConfig} className="h-[300px] w-full">

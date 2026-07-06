@@ -29,6 +29,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { ActionBadge } from '@/components/business-ui/action-badge';
 import { PageHeader } from '@/components/business-ui/page-header';
 import {
@@ -490,7 +491,7 @@ const StatisticsPage: React.FC = () => {
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-3 items-end">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs text-muted-foreground">绩效周期</label>
+              <Label className="text-xs text-muted-foreground">绩效周期</Label>
               <MultiMonthPicker
                 value={filters.periods}
                 onChange={(value: string[]) =>
@@ -500,7 +501,7 @@ const StatisticsPage: React.FC = () => {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs text-muted-foreground">部门</label>
+              <Label className="text-xs text-muted-foreground">部门</Label>
               <MultiDepartmentTreeSelect
                 value={filters.departments}
                 onChange={(value: string[]) =>
@@ -510,7 +511,7 @@ const StatisticsPage: React.FC = () => {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs text-muted-foreground">岗位</label>
+              <Label className="text-xs text-muted-foreground">岗位</Label>
               <MultiSelect
                 options={positionOptions}
                 value={filters.positions}
@@ -522,7 +523,7 @@ const StatisticsPage: React.FC = () => {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs text-muted-foreground">等级</label>
+              <Label className="text-xs text-muted-foreground">等级</Label>
               <MultiSelect
                 options={gradeSelectOptions}
                 value={filters.grades}
@@ -534,7 +535,7 @@ const StatisticsPage: React.FC = () => {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs text-muted-foreground">选择员工</label>
+              <Label className="text-xs text-muted-foreground">选择员工</Label>
               <UserSelect
                 multiple
                 placeholder="选择员工"
@@ -558,7 +559,7 @@ const StatisticsPage: React.FC = () => {
                   className="flex items-center gap-1"
                 >
                   <DownloadIcon data-icon="inline-start" />
-                  {exporting ? '导出中...' : '导出'}
+                  {exporting && <Spinner className="mr-2 size-4" />}导出
                 </Button>
               </CanDo>
             </CanRole>
@@ -570,7 +571,8 @@ const StatisticsPage: React.FC = () => {
                 className="flex items-center gap-1"
               >
                 <Upload data-icon="inline-start" />
-                {syncingOut ? '同步中...' : '同步到多维表格'}
+                {syncingOut && <Spinner className="mr-2 size-4" />}
+                同步到多维表格
               </Button>
             </CanRole>
           </div>
