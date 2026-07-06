@@ -93,14 +93,12 @@ export function useEmployeeDialogs(refetch: () => void) {
   const openBindDialog = useCallback((emp?: EmployeeItem) => {
     setBindEmployeeIds(emp ? [emp.id] : []);
     setBindTemplateId('');
-    setBindEffectiveFrom([]);
     setBindOpen(true);
   }, []);
 
   const openBatchBindDialog = useCallback((ids: string[]) => {
     setBindEmployeeIds(ids);
     setBindTemplateId('');
-    setBindEffectiveFrom([]);
     setBindOpen(true);
   }, []);
 

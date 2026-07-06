@@ -343,8 +343,6 @@ const EmployeeListTab: React.FC = () => {
         setBindEmployeeIds={dialogs.bindDialog.setBindEmployeeIds}
         bindTemplateId={dialogs.bindDialog.bindTemplateId}
         setBindTemplateId={dialogs.bindDialog.setBindTemplateId}
-        bindEffectiveFrom={dialogs.bindDialog.bindEffectiveFrom}
-        setBindEffectiveFrom={dialogs.bindDialog.setBindEffectiveFrom}
         bindSubmitting={dialogs.bindDialog.bindSubmitting}
         onConfirm={dialogs.bindDialog.onConfirm}
         templates={templates}
