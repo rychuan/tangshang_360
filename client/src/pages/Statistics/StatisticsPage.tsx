@@ -489,7 +489,7 @@ const StatisticsPage: React.FC = () => {
       {/* Filters */}
       <Card className="rounded-xl">
         <CardContent className="p-4">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs text-muted-foreground">绩效周期</Label>
               <MultiMonthPicker
@@ -534,21 +534,9 @@ const StatisticsPage: React.FC = () => {
                 className="w-full"
               />
             </div>
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs text-muted-foreground">选择员工</Label>
-              <UserSelect
-                multiple
-                placeholder="选择员工"
-                value={filters.employeeIds}
-                onChange={(value: string[]) =>
-                  setFilters((f: FilterState) => ({ ...f, employeeIds: value }))
-                }
-                className="w-full"
-              />
-            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t">
-            <Button onClick={handleSearch} className="flex items-center gap-1">
+            <Button size="sm" onClick={handleSearch}>
               <SearchIcon data-icon="inline-start" />
               查询
             </Button>
@@ -556,9 +544,9 @@ const StatisticsPage: React.FC = () => {
               <CanDo resource="statistics" action="export">
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={handleExport}
                   disabled={exporting}
-                  className="flex items-center gap-1"
                 >
                   <DownloadIcon data-icon="inline-start" />
                   {exporting && <Spinner className="mr-2 size-4" />}导出
@@ -568,9 +556,9 @@ const StatisticsPage: React.FC = () => {
             <CanRole roles={['admin', 'hrd']}>
               <Button
                 variant="outline"
+                size="sm"
                 onClick={handleSyncToBitable}
                 disabled={syncingOut}
-                className="flex items-center gap-1"
               >
                 <Upload data-icon="inline-start" />
                 {syncingOut && <Spinner className="mr-2 size-4" />}

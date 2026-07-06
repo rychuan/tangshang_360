@@ -88,7 +88,7 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
                             <TableCell className="font-medium text-xs whitespace-normal break-words">
                               {ind.content}
                             </TableCell>
-                            <TableCell className="text-muted-foreground text-xs whitespace-normal break-words hidden md:table-cell">
+                            <TableCell className="text-muted-foreground text-xs whitespace-pre-wrap break-words hidden md:table-cell">
                               {ind.description || '-'}
                             </TableCell>
                             <TableCell className="text-muted-foreground text-xs whitespace-normal break-words hidden lg:table-cell">
