@@ -494,7 +494,7 @@ const StatisticsPage: React.FC = () => {
       {/* Filters */}
       <Card className="rounded-xl">
         <CardContent className="p-4">
-          <div className="flex items-end gap-3 flex-wrap">
+          <div className="flex items-start gap-3 flex-wrap">
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs text-muted-foreground h-4 leading-4">
                 绩效周期
