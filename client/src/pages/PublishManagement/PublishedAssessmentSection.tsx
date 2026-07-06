@@ -431,15 +431,13 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
                 <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious
-                      aria-disabled={page <= 1}
-                      className={page <= 1 ? 'pointer-events-none opacity-50' : ''}
+                      disabled={page <= 1}
                       onClick={() => onPageChange(page - 1)}
                     />
                   </PaginationItem>
                   <PaginationItem>
                     <PaginationNext
-                      aria-disabled={page >= totalPages}
-                      className={page >= totalPages ? 'pointer-events-none opacity-50' : ''}
+                      disabled={page >= totalPages}
                       onClick={() => onPageChange(page + 1)}
                     />
                   </PaginationItem>

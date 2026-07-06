@@ -3,8 +3,8 @@ import { useFieldArray, type UseFormReturn } from 'react-hook-form';
 import { Plus, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@client/src/components/ui/card';
 import { Button } from '@client/src/components/ui/button';
-import { Badge } from '@client/src/components/ui/badge';
 import { Input } from '@client/src/components/ui/input';
+import { Textarea } from '@client/src/components/ui/textarea';
 import {
   Table,
   TableBody,
@@ -49,22 +49,26 @@ const DimensionCard: React.FC<DimensionCardProps> = ({
 
   return (
     <Card>
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-2 bg-muted/20">
         <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground shrink-0">
+            维度 {dimIdx + 1}：
+          </span>
           <Input
             placeholder="维度名称"
-            className="flex-1 text-base font-semibold h-8"
+            className="flex-1 text-sm font-semibold h-8"
             value={dimData?.name || ''}
             onChange={(e) =>
               form.setValue(`dimensions.${dimIdx}.name`, e.target.value)
             }
           />
+          <span className="text-xs text-muted-foreground shrink-0">权重分</span>
           <Input
             type="number"
             min="0"
             max="100"
-            placeholder="权重"
-            className="w-16 h-8 text-center"
+            placeholder="0"
+            className="w-14 h-8 text-center text-sm"
             value={dimData?.weight || ''}
             onChange={(e) =>
               form.setValue(
@@ -74,9 +78,6 @@ const DimensionCard: React.FC<DimensionCardProps> = ({
             }
           />
           <span className="text-xs text-muted-foreground">%</span>
-          <Badge variant="secondary" className="text-xs">
-            权重 {dimData?.weight || 0}%
-          </Badge>
           {canRemove && (
             <Button
               type="button"
@@ -107,7 +108,7 @@ const DimensionCard: React.FC<DimensionCardProps> = ({
                 数据来源
               </TableHead>
               <TableHead className="text-center w-[60px] text-xs">
-                权重
+                权重分
               </TableHead>
               <TableHead className="w-[40px] text-xs" />
             </TableRow>
@@ -116,8 +117,9 @@ const DimensionCard: React.FC<DimensionCardProps> = ({
             {indFields.map((indField, indIdx: number) => (
               <TableRow key={indField.id}>
                 <TableCell className="p-1">
-                  <Input
-                    className="h-8 text-xs"
+                  <Textarea
+                    className="text-xs min-h-[32px] resize-none"
+                    rows={2}
                     placeholder="指标名称"
                     value={
                       form.watch(
@@ -133,8 +135,9 @@ const DimensionCard: React.FC<DimensionCardProps> = ({
                   />
                 </TableCell>
                 <TableCell className="p-1 hidden md:table-cell">
-                  <Input
-                    className="h-8 text-xs"
+                  <Textarea
+                    className="text-xs min-h-[32px] resize-none"
+                    rows={2}
                     placeholder="说明"
                     value={
                       form.watch(
@@ -150,8 +153,9 @@ const DimensionCard: React.FC<DimensionCardProps> = ({
                   />
                 </TableCell>
                 <TableCell className="p-1 hidden lg:table-cell">
-                  <Input
-                    className="h-8 text-xs"
+                  <Textarea
+                    className="text-xs min-h-[32px] resize-none"
+                    rows={2}
                     placeholder="算法"
                     value={
                       form.watch(
@@ -223,13 +227,12 @@ const DimensionCard: React.FC<DimensionCardProps> = ({
           <span
             className={`text-xs font-medium ${indValid ? 'text-success' : 'text-destructive'}`}
           >
-            指标权重总和：{indSum} / {dimData?.weight || 0}
-            {!indValid && ' （必须等于维度权重）'}
+            权重分总和：{indSum} / {dimData?.weight || 0}
+            {!indValid && ' （必须等于维度权重分）'}
           </span>
           <Button
             type="button"
             size="sm"
-            variant="outline"
             onClick={() =>
               appendInd({
                 content: '',

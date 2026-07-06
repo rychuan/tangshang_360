@@ -112,7 +112,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
     const totalWeightResult = validateTotalWeight(data.dimensions);
     if (!totalWeightResult.isValid) {
       toast.error(
-        `维度权重之和必须等于 100，当前为 ${totalWeightResult.totalWeight}`,
+        `权重分总和必须等于 100，当前为 ${totalWeightResult.totalWeight}`,
       );
       return;
     }
@@ -120,7 +120,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
     if (!indicatorResult.isValid) {
       const err = indicatorResult.errors[0];
       toast.error(
-        `维度「${err.dimensionName}」的指标权重之和必须等于维度权重 ${err.dimensionWeight}，当前为 ${err.indicatorSum}`,
+        `维度「${err.dimensionName}」的权重分总和必须等于维度权重分 ${err.dimensionWeight}，当前为 ${err.indicatorSum}`,
       );
       return;
     }
@@ -175,13 +175,10 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            {watchedName || '新建绩效模板'}
-          </DialogTitle>
+          <DialogTitle>{watchedName || '新建绩效模板'}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
-          {/* Badge row */}
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary">
               {watchedPosition || '未选择岗位'}
@@ -191,7 +188,6 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
             </Badge>
           </div>
 
-          {/* Basic info fields */}
           <div className="flex flex-wrap gap-3 items-end">
             <div className="flex-1 min-w-[200px]">
               <label className="text-xs text-muted-foreground block mb-1">
@@ -242,7 +238,6 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
             </div>
           </div>
 
-          {/* Dimension cards */}
           {dimFields.map((dimField, dimIdx: number) => (
             <DimensionCard
               key={dimField.id}
@@ -254,13 +249,11 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
             />
           ))}
 
-          {/* Bottom bar */}
           <div className="flex items-center justify-between pt-2 border-t">
             <div className="flex items-center gap-3">
               <Button
                 type="button"
                 size="sm"
-                variant="outline"
                 onClick={() =>
                   appendDim({
                     name: '',
@@ -277,7 +270,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
               <span
                 className={`text-sm font-medium ${dimWeightValid ? 'text-success' : 'text-destructive'}`}
               >
-                维度权重总和：{totalDimWeight} / 100
+                权重分总和：{totalDimWeight} / 100
                 {!dimWeightValid && ' （必须等于100）'}
               </span>
             </div>
