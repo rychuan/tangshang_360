@@ -422,25 +422,25 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
               </AlertDescription>
             </Alert>
           )}
-          <Table>
+          <Table className="table-fixed w-full">
             <TableHeader>
               <TableRow className="bg-muted/30">
-                <TableHead className="w-[120px] text-xs">
+                <TableHead className="w-[20%] text-[11px]">
                   指标 <span className="text-destructive">*</span>
                 </TableHead>
-                <TableHead className="w-[140px] hidden md:table-cell text-xs">
+                <TableHead className="w-[30%] hidden md:table-cell text-[11px]">
                   说明
                 </TableHead>
-                <TableHead className="w-[120px] hidden lg:table-cell text-xs">
+                <TableHead className="w-[20%] hidden lg:table-cell text-[11px]">
                   算法/描述
                 </TableHead>
-                <TableHead className="w-[100px] hidden lg:table-cell text-xs">
+                <TableHead className="w-[18%] hidden lg:table-cell text-[11px]">
                   数据来源
                 </TableHead>
-                <TableHead className="text-center w-[80px] text-xs">
+                <TableHead className="text-center w-[12%] text-[11px]">
                   权重分
                 </TableHead>
-                <TableHead className="w-[40px] text-xs" />
+                <TableHead className="w-[0%] text-xs" />
               </TableRow>
             </TableHeader>
             <TableBody>
