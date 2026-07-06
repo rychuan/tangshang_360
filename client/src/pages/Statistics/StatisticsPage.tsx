@@ -489,19 +489,22 @@ const StatisticsPage: React.FC = () => {
       {/* Filters */}
       <Card className="rounded-xl">
         <CardContent className="p-4">
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(176px,1fr))] gap-3 items-end">
+          <div className="flex items-end gap-3 flex-wrap">
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs text-muted-foreground h-4 leading-4">绩效周期</Label>
+              <Label className="text-xs text-muted-foreground h-4 leading-4">
+                绩效周期
+              </Label>
               <MultiMonthPicker
                 value={filters.periods}
                 onChange={(value: string[]) =>
                   setFilters((f: FilterState) => ({ ...f, periods: value }))
                 }
-                className="w-full"
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs text-muted-foreground h-4 leading-4">部门</Label>
+              <Label className="text-xs text-muted-foreground h-4 leading-4">
+                部门
+              </Label>
               <MultiDepartmentTreeSelect
                 value={filters.departments}
                 onChange={(value: string[]) =>
@@ -511,7 +514,9 @@ const StatisticsPage: React.FC = () => {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs text-muted-foreground h-4 leading-4">岗位</Label>
+              <Label className="text-xs text-muted-foreground h-4 leading-4">
+                岗位
+              </Label>
               <MultiSelect
                 options={positionOptions}
                 value={filters.positions}
@@ -523,7 +528,9 @@ const StatisticsPage: React.FC = () => {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs text-muted-foreground h-4 leading-4">等级</Label>
+              <Label className="text-xs text-muted-foreground h-4 leading-4">
+                等级
+              </Label>
               <MultiSelect
                 options={gradeSelectOptions}
                 value={filters.grades}
@@ -534,9 +541,11 @@ const StatisticsPage: React.FC = () => {
                 className="w-full"
               />
             </div>
-            <div className="flex flex-col gap-1.5 justify-end" style={{ gridColumn: '1 / -1' }}>
-              <Label className="text-xs text-muted-foreground h-4 leading-4 invisible">&nbsp;</Label>
-              <div className="flex items-center justify-end gap-2">
+            <div className="flex flex-col gap-1.5 ml-auto">
+              <Label className="text-xs text-muted-foreground h-4 leading-4 invisible">
+                &nbsp;
+              </Label>
+              <div className="flex items-center gap-2">
                 <Button size="sm" onClick={handleSearch} className="shrink-0">
                   <SearchIcon data-icon="inline-start" />
                   查询
