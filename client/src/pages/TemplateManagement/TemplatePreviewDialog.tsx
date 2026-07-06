@@ -66,17 +66,17 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
                   <Table className="table-fixed w-full">
                     <TableHeader>
                       <TableRow className="bg-muted/30">
-                        <TableHead className="w-[25%] text-xs">指标</TableHead>
-                        <TableHead className="w-[20%] text-xs hidden md:table-cell">
+                        <TableHead className="w-[20%] text-xs">指标</TableHead>
+                        <TableHead className="w-[30%] text-xs hidden md:table-cell">
                           说明
                         </TableHead>
-                        <TableHead className="w-[22%] text-xs hidden lg:table-cell">
+                        <TableHead className="w-[20%] text-xs hidden lg:table-cell">
                           算法/描述
                         </TableHead>
-                        <TableHead className="w-[20%] text-xs hidden lg:table-cell">
+                        <TableHead className="w-[18%] text-xs hidden lg:table-cell">
                           数据来源
                         </TableHead>
-                        <TableHead className="text-center w-[13%] text-xs">
+                        <TableHead className="text-center w-[12%] text-xs">
                           权重分
                         </TableHead>
                       </TableRow>
