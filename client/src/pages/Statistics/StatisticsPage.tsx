@@ -489,7 +489,7 @@ const StatisticsPage: React.FC = () => {
       {/* Filters */}
       <Card className="rounded-xl">
         <CardContent className="p-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="flex items-end gap-2 flex-wrap">
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs text-muted-foreground">绩效周期</Label>
               <MultiMonthPicker
@@ -497,7 +497,7 @@ const StatisticsPage: React.FC = () => {
                 onChange={(value: string[]) =>
                   setFilters((f: FilterState) => ({ ...f, periods: value }))
                 }
-                className="w-full"
+                className="w-44"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -507,7 +507,7 @@ const StatisticsPage: React.FC = () => {
                 onChange={(value: string[]) =>
                   setFilters((f: FilterState) => ({ ...f, departments: value }))
                 }
-                className="w-full"
+                className="w-32"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -518,8 +518,8 @@ const StatisticsPage: React.FC = () => {
                 onChange={(value: string[]) =>
                   setFilters((f: FilterState) => ({ ...f, positions: value }))
                 }
-                placeholder="选择岗位"
-                className="w-full"
+                placeholder="岗位"
+                className="w-28"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -530,13 +530,11 @@ const StatisticsPage: React.FC = () => {
                 onChange={(value: string[]) =>
                   setFilters((f: FilterState) => ({ ...f, grades: value }))
                 }
-                placeholder="选择等级"
-                className="w-full"
+                placeholder="等级"
+                className="w-24"
               />
             </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t">
-            <Button size="sm" onClick={handleSearch}>
+            <Button size="sm" onClick={handleSearch} className="shrink-0">
               <SearchIcon data-icon="inline-start" />
               查询
             </Button>
@@ -547,6 +545,7 @@ const StatisticsPage: React.FC = () => {
                   size="sm"
                   onClick={handleExport}
                   disabled={exporting}
+                  className="shrink-0"
                 >
                   <DownloadIcon data-icon="inline-start" />
                   {exporting && <Spinner className="mr-2 size-4" />}导出
@@ -559,10 +558,11 @@ const StatisticsPage: React.FC = () => {
                 size="sm"
                 onClick={handleSyncToBitable}
                 disabled={syncingOut}
+                className="shrink-0"
               >
                 <Upload data-icon="inline-start" />
                 {syncingOut && <Spinner className="mr-2 size-4" />}
-                同步到多维表格
+                同步
               </Button>
             </CanRole>
           </div>
