@@ -82,6 +82,11 @@ import type {
   ChartsResponse,
 } from '@shared/api.interface';
 
+function currentMonth(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
 const DEFAULT_GRADE_OPTIONS: MultiSelectOption[] = [
   { label: 'S', value: 'S' },
   { label: 'A', value: 'A' },
@@ -114,7 +119,7 @@ const chartConfig = {
 
 const StatisticsPage: React.FC = () => {
   const [filters, setFilters] = useState<FilterState>({
-    periods: [],
+    periods: [currentMonth()],
     departments: [],
     positions: [],
     grades: [],
@@ -510,7 +515,7 @@ const StatisticsPage: React.FC = () => {
                 onChange={(value: string[]) =>
                   setFilters((f: FilterState) => ({ ...f, departments: value }))
                 }
-                className="w-full"
+                className="h-8 text-xs w-36"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -524,7 +529,7 @@ const StatisticsPage: React.FC = () => {
                   setFilters((f: FilterState) => ({ ...f, positions: value }))
                 }
                 placeholder="选择岗位"
-                className="w-full"
+                className="h-8 text-xs w-32"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -538,7 +543,7 @@ const StatisticsPage: React.FC = () => {
                   setFilters((f: FilterState) => ({ ...f, grades: value }))
                 }
                 placeholder="选择等级"
-                className="w-full"
+                className="h-8 text-xs w-28"
               />
             </div>
             <div className="flex flex-col gap-1.5 ml-auto">
