@@ -635,7 +635,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
 
         <div className="flex items-center gap-2">
           <Button
-            variant={previewMode ? 'outline' : 'secondary'}
+            variant={previewMode ? 'outline' : 'default'}
             size="sm"
             onClick={() => setPreviewMode(false)}
           >
@@ -643,7 +643,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
             编辑模式
           </Button>
           <Button
-            variant={!previewMode ? 'outline' : 'secondary'}
+            variant={!previewMode ? 'outline' : 'default'}
             size="sm"
             onClick={() => setPreviewMode(true)}
           >

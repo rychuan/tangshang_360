@@ -254,7 +254,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
 
           <div className="flex items-center gap-2">
             <Button
-              variant={previewMode ? 'outline' : 'secondary'}
+              variant={previewMode ? 'outline' : 'default'}
               size="sm"
               onClick={() => setPreviewMode(false)}
             >
@@ -262,7 +262,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
               编辑模式
             </Button>
             <Button
-              variant={!previewMode ? 'outline' : 'secondary'}
+              variant={!previewMode ? 'outline' : 'default'}
               size="sm"
               onClick={() => setPreviewMode(true)}
             >
