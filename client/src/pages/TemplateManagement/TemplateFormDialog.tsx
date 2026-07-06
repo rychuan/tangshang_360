@@ -281,7 +281,10 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                       <h3 className="text-base font-semibold">
                         {dimData?.name || '未命名维度'}
                       </h3>
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge
+                        variant="outline"
+                        className="bg-primary/10 text-primary border-primary/20 text-xs font-bold"
+                      >
                         权重分 {dimData?.weight || 0}%
                       </Badge>
                     </div>

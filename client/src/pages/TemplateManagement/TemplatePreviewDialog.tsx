@@ -57,7 +57,10 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
                 <CardHeader className="pb-2 bg-muted">
                   <div className="flex items-center gap-2">
                     <h3 className="text-base font-semibold">{dim.name}</h3>
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge
+                      variant="outline"
+                      className="bg-primary/10 text-primary border-primary/20 text-xs font-bold"
+                    >
                       权重分 {dim.weight}%
                     </Badge>
                   </div>

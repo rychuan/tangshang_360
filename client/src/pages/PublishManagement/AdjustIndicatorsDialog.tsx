@@ -306,7 +306,10 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
           <h3 className="text-base font-semibold">
             {group.dimensionName || '未分组'}
           </h3>
-          <Badge variant="secondary" className="text-xs">
+          <Badge
+            variant="outline"
+            className="bg-primary/10 text-primary border-primary/20 text-xs font-bold"
+          >
             权重分 {group.dimensionWeight}%
           </Badge>
         </div>
