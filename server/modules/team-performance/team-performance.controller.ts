@@ -14,10 +14,7 @@ export class TeamPerformanceController {
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('team_performance', 'view')
   @Get('overview')
-  async getOverview(
-    @Req() req: Request,
-    @Query('periods') periods?: string,
-  ) {
+  async getOverview(@Req() req: Request, @Query('periods') periods?: string) {
     const { userId } = req.userContext;
     return this.teamPerformanceService.getOverview(
       userId,
