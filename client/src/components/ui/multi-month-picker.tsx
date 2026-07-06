@@ -186,8 +186,12 @@ const MultiMonthPicker: React.FC<MultiMonthPickerProps> = ({
           >
             <CalendarIcon className="size-3.5" />
             {single
-              ? (value[0] ? dayjs(value[0] + '-01').format('YYYY年MM月') : placeholder)
-              : (value.length > 0 ? `${value.length}个周期` : placeholder)}
+              ? value[0]
+                ? dayjs(value[0] + '-01').format('YYYY年MM月')
+                : placeholder
+              : value.length > 0
+                ? `${value.length}个周期`
+                : placeholder}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-4" align="start">
@@ -237,10 +241,12 @@ const MultiMonthPicker: React.FC<MultiMonthPickerProps> = ({
               <Label className="text-xs text-muted-foreground">
                 月份 ({tempMonths.size}/12)
               </Label>
-              {!single && <div className="flex items-center gap-2 mt-1 mb-2">
-                <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
-                <span className="text-xs text-muted-foreground">全选</span>
-              </div>}
+              {!single && (
+                <div className="flex items-center gap-2 mt-1 mb-2">
+                  <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
+                  <span className="text-xs text-muted-foreground">全选</span>
+                </div>
+              )}
               <div className="grid grid-cols-4 gap-1.5">
                 {MONTH_LABELS.map((label, i) => {
                   const m = i + 1;
@@ -252,7 +258,9 @@ const MultiMonthPicker: React.FC<MultiMonthPickerProps> = ({
                     >
                       <Checkbox
                         checked={checked}
-                        onCheckedChange={() => single ? handleSingleMonth(m) : toggleMonth(m)}
+                        onCheckedChange={() =>
+                          single ? handleSingleMonth(m) : toggleMonth(m)
+                        }
                       />
                       {label}
                     </label>
@@ -261,7 +269,11 @@ const MultiMonthPicker: React.FC<MultiMonthPickerProps> = ({
               </div>
             </div>
             {!single && (
-              <Button size="sm" onClick={handleConfirm} disabled={tempMonths.size === 0}>
+              <Button
+                size="sm"
+                onClick={handleConfirm}
+                disabled={tempMonths.size === 0}
+              >
                 添加选中月份
               </Button>
             )}

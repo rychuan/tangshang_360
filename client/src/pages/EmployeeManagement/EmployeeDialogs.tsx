@@ -3,7 +3,6 @@ import { toast } from 'sonner';
 import { UserSelect } from '@client/src/components/business-ui/user-select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import MultiMonthPicker from '@/components/ui/multi-month-picker';
 import {
   Dialog,
   DialogContent,
@@ -44,8 +43,6 @@ export interface BindDialogProps {
   setBindEmployeeIds: (v: string[]) => void;
   bindTemplateId: string;
   setBindTemplateId: (v: string) => void;
-  bindEffectiveFrom: string[];
-  setBindEffectiveFrom: (v: string[]) => void;
   bindSubmitting: boolean;
   onConfirm: () => void;
   templates: AssessmentTemplateItem[];
@@ -58,8 +55,6 @@ const BindDialog: React.FC<BindDialogProps> = ({
   setBindEmployeeIds,
   bindTemplateId,
   setBindTemplateId,
-  bindEffectiveFrom,
-  setBindEffectiveFrom,
   bindSubmitting,
   onConfirm,
   templates,
@@ -71,10 +66,6 @@ const BindDialog: React.FC<BindDialogProps> = ({
     }
     if (!bindTemplateId) {
       toast.error('请选择绩效模板');
-      return;
-    }
-    if (!bindEffectiveFrom.length) {
-      toast.error('请选择生效月份');
       return;
     }
     onConfirm();
@@ -120,16 +111,6 @@ const BindDialog: React.FC<BindDialogProps> = ({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label className="text-xs text-muted-foreground mb-1.5">
-              生效月份
-            </Label>
-            <MultiMonthPicker
-              value={bindEffectiveFrom}
-              onChange={setBindEffectiveFrom}
-              single
-            />
           </div>
         </div>
         <DialogFooter>

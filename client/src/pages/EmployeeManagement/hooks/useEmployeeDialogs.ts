@@ -30,7 +30,6 @@ export function useEmployeeDialogs(refetch: () => void) {
   const [bindOpen, setBindOpen] = useState(false);
   const [bindEmployeeIds, setBindEmployeeIds] = useState<string[]>([]);
   const [bindTemplateId, setBindTemplateId] = useState('');
-  const [bindEffectiveFrom, setBindEffectiveFrom] = useState<string[]>([]);
   const [bindSubmitting, setBindSubmitting] = useState(false);
 
   // ---- 解绑对话框 ----
@@ -106,20 +105,18 @@ export function useEmployeeDialogs(refetch: () => void) {
   }, []);
 
   const handleBindConfirm = useCallback(async () => {
-    if (
-      !bindEmployeeIds.length ||
-      !bindTemplateId ||
-      !bindEffectiveFrom.length
-    ) {
-      toast.error('请填写完整的绑定信息');
+    if (!bindEmployeeIds.length || !bindTemplateId) {
+      toast.error('请选择员工和模板');
       return;
     }
     setBindSubmitting(true);
     try {
+      const now = new Date();
+      const m = now.getMonth() + 1;
       await employeeManagement.bind({
         employeeIds: bindEmployeeIds,
         templateId: bindTemplateId,
-        effectiveFrom: bindEffectiveFrom[0],
+        effectiveFrom: `${now.getFullYear()}-${String(m).padStart(2, '0')}`,
       });
       toast.success('绑定成功');
       setBindOpen(false);
@@ -129,7 +126,7 @@ export function useEmployeeDialogs(refetch: () => void) {
     } finally {
       setBindSubmitting(false);
     }
-  }, [bindEmployeeIds, bindTemplateId, bindEffectiveFrom, refetch]);
+  }, [bindEmployeeIds, bindTemplateId, refetch]);
 
   // ---- 解绑操作 ----
   const openUnbindDialog = useCallback((emp: EmployeeItem) => {
@@ -225,8 +222,6 @@ export function useEmployeeDialogs(refetch: () => void) {
       setBindEmployeeIds,
       bindTemplateId,
       setBindTemplateId,
-      bindEffectiveFrom,
-      setBindEffectiveFrom,
       bindSubmitting,
       onConfirm: handleBindConfirm,
     },
