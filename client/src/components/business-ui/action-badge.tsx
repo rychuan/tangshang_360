@@ -21,7 +21,7 @@ const VARIANT_MAP: Record<
   delete: 'destructive',
   unbind: 'destructive',
   deactivate: 'destructive',
-  view: 'secondary',
+  view: 'default',
   history: 'secondary',
   preview: 'secondary',
   toggle: 'outline',

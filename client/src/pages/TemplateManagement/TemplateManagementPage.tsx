@@ -1,13 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import {
-  Plus,
-  Eye,
-  Ban,
-  Trash2,
-  Search,
-  RotateCcw,
-} from 'lucide-react';
+import { Plus, Eye, Ban, Trash2, Search, RotateCcw } from 'lucide-react';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo } from '@/hooks/usePermissions';
@@ -256,14 +249,12 @@ const TemplateManagementPage: React.FC = () => {
         'sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l',
       render: (item) => (
         <div className="flex items-center gap-1">
-          <Button
-            variant="default"
-            size="sm"
+          <ActionBadge
+            actionType="view"
+            icon={<Eye className="size-3" />}
+            label="查看"
             onClick={() => handleEdit(item.id)}
-          >
-            <Eye data-icon="inline-start" />
-            查看
-          </Button>
+          />
           {item.isActive && (
             <CanRole roles={['admin', 'hrd']}>
               <CanDo resource="template_management" action="delete">
