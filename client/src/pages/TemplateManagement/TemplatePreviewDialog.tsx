@@ -54,30 +54,30 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
           {template.dimensions.map(
             (dim: AssessmentDimensionDef, dimIdx: number) => (
               <Card key={dim.id || dimIdx}>
-                <CardHeader className="pb-2">
+                <CardHeader className="pb-2 bg-muted">
                   <div className="flex items-center gap-2">
                     <h3 className="text-base font-semibold">{dim.name}</h3>
                     <Badge variant="secondary" className="text-xs">
-                      权重 {dim.weight}%
+                      权重分 {dim.weight}%
                     </Badge>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <Table>
+                  <Table className="table-fixed w-full">
                     <TableHeader>
                       <TableRow className="bg-muted/30">
-                        <TableHead className="w-[120px]">指标</TableHead>
-                        <TableHead className="w-[140px] hidden md:table-cell">
+                        <TableHead className="w-[25%] text-xs">指标</TableHead>
+                        <TableHead className="w-[20%] text-xs hidden md:table-cell">
                           说明
                         </TableHead>
-                        <TableHead className="w-[140px] hidden lg:table-cell">
-                          指标算法/描述
+                        <TableHead className="w-[22%] text-xs hidden lg:table-cell">
+                          算法/描述
                         </TableHead>
-                        <TableHead className="w-[100px] hidden lg:table-cell">
+                        <TableHead className="w-[20%] text-xs hidden lg:table-cell">
                           数据来源
                         </TableHead>
-                        <TableHead className="text-center w-[70px]">
-                          权重(分)
+                        <TableHead className="text-center w-[13%] text-xs">
+                          权重分
                         </TableHead>
                       </TableRow>
                     </TableHeader>
@@ -85,16 +85,16 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
                       {dim.indicators.map(
                         (ind: AssessmentIndicatorDef, indIdx: number) => (
                           <TableRow key={ind.id || indIdx}>
-                            <TableCell className="font-medium text-xs whitespace-normal break-words">
+                            <TableCell className="text-xs whitespace-pre-wrap break-words">
                               {ind.content}
                             </TableCell>
                             <TableCell className="text-muted-foreground text-xs whitespace-pre-wrap break-words hidden md:table-cell">
                               {ind.description || '-'}
                             </TableCell>
-                            <TableCell className="text-muted-foreground text-xs whitespace-normal break-words hidden lg:table-cell">
+                            <TableCell className="text-muted-foreground text-xs whitespace-pre-wrap break-words hidden lg:table-cell">
                               {ind.algorithm || '-'}
                             </TableCell>
-                            <TableCell className="text-muted-foreground text-xs whitespace-normal break-words hidden lg:table-cell">
+                            <TableCell className="text-muted-foreground text-xs whitespace-pre-wrap break-words hidden lg:table-cell">
                               {ind.dataSource || '-'}
                             </TableCell>
                             <TableCell className="text-center text-xs">
