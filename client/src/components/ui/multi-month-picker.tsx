@@ -100,9 +100,10 @@ const MultiMonthPicker: React.FC<MultiMonthPickerProps> = ({
         periods = [now.subtract(1, 'month').format('YYYY-MM')];
         break;
       case 'this-quarter': {
-        const qStart = now.startOf('quarter');
+        const m = now.month();
+        const qStartMonth = Math.floor(m / 3) * 3;
         for (let i = 0; i < 3; i++) {
-          periods.push(qStart.add(i, 'month').format('YYYY-MM'));
+          periods.push(now.month(qStartMonth + i).date(1).format('YYYY-MM'));
         }
         break;
       }
