@@ -128,6 +128,7 @@ const BindDialog: React.FC<BindDialogProps> = ({
             <MultiMonthPicker
               value={bindEffectiveFrom}
               onChange={setBindEffectiveFrom}
+              single
             />
           </div>
         </div>

@@ -30,6 +30,7 @@ interface MultiMonthPickerProps {
   onChange: (value: string[]) => void;
   placeholder?: string;
   className?: string;
+  single?: boolean; // 单选模式，只保留最后一个值
 }
 
 const MONTH_LABELS = [
@@ -57,6 +58,7 @@ const MultiMonthPicker: React.FC<MultiMonthPickerProps> = ({
   onChange,
   placeholder = '自定义',
   className,
+  single,
 }) => {
   const [open, setOpen] = useState(false);
   const currentYear = dayjs().year();
@@ -117,8 +119,14 @@ const MultiMonthPicker: React.FC<MultiMonthPickerProps> = ({
 
   const handleQuick = (key: string) => {
     const periods = quickPeriods(key);
-    onChange(periods.sort().reverse());
+    onChange(single ? [periods[periods.length - 1]] : periods.sort().reverse());
     setActiveQuick(key);
+  };
+
+  const handleSingleMonth = (month: number) => {
+    const period = `${selectedYear}-${String(month).padStart(2, '0')}`;
+    onChange([period]);
+    setOpen(false);
   };
 
   const handleConfirm = () => {
@@ -157,26 +165,29 @@ const MultiMonthPicker: React.FC<MultiMonthPickerProps> = ({
 
   return (
     <div className={`flex items-center gap-1.5 ${className ?? ''}`}>
-      {QUICK_OPTIONS.map((opt) => (
-        <Button
-          key={opt.key}
-          size="sm"
-          variant={activeQuick === opt.key ? 'default' : 'outline'}
-          onClick={() => handleQuick(opt.key)}
-          className="h-8 text-xs"
-        >
-          {opt.label}
-        </Button>
-      ))}
+      {!single &&
+        QUICK_OPTIONS.map((opt) => (
+          <Button
+            key={opt.key}
+            size="sm"
+            variant={activeQuick === opt.key ? 'default' : 'outline'}
+            onClick={() => handleQuick(opt.key)}
+            className="h-8 text-xs"
+          >
+            {opt.label}
+          </Button>
+        ))}
       <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           <Button
             size="sm"
-            variant={activeQuick ? 'outline' : 'default'}
-            className={`h-8 gap-1 text-xs ${!activeQuick ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}`}
+            variant={!single && activeQuick ? 'outline' : 'default'}
+            className={`h-8 gap-1 text-xs ${single || !activeQuick ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}`}
           >
             <CalendarIcon className="size-3.5" />
-            {value.length > 0 ? `${value.length}个周期` : placeholder}
+            {single
+              ? (value[0] ? dayjs(value[0] + '-01').format('YYYY年MM月') : placeholder)
+              : (value.length > 0 ? `${value.length}个周期` : placeholder)}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-4" align="start">
@@ -226,10 +237,10 @@ const MultiMonthPicker: React.FC<MultiMonthPickerProps> = ({
               <Label className="text-xs text-muted-foreground">
                 月份 ({tempMonths.size}/12)
               </Label>
-              <div className="flex items-center gap-2 mt-1 mb-2">
+              {!single && <div className="flex items-center gap-2 mt-1 mb-2">
                 <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
                 <span className="text-xs text-muted-foreground">全选</span>
-              </div>
+              </div>}
               <div className="grid grid-cols-4 gap-1.5">
                 {MONTH_LABELS.map((label, i) => {
                   const m = i + 1;
@@ -241,7 +252,7 @@ const MultiMonthPicker: React.FC<MultiMonthPickerProps> = ({
                     >
                       <Checkbox
                         checked={checked}
-                        onCheckedChange={() => toggleMonth(m)}
+                        onCheckedChange={() => single ? handleSingleMonth(m) : toggleMonth(m)}
                       />
                       {label}
                     </label>
@@ -249,13 +260,11 @@ const MultiMonthPicker: React.FC<MultiMonthPickerProps> = ({
                 })}
               </div>
             </div>
-            <Button
-              size="sm"
-              onClick={handleConfirm}
-              disabled={tempMonths.size === 0}
-            >
-              添加选中月份
-            </Button>
+            {!single && (
+              <Button size="sm" onClick={handleConfirm} disabled={tempMonths.size === 0}>
+                添加选中月份
+              </Button>
+            )}
           </div>
         </PopoverContent>
       </Popover>
