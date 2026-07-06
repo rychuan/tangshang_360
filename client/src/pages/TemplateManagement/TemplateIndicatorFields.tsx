@@ -57,7 +57,7 @@ const IndicatorsFieldArray: React.FC<IndicatorsFieldArrayProps> = ({
       {indFields.map((indField, indIdx: number) => (
         <div
           key={indField.id}
-          className="rounded-md border border-blue-300 bg-blue-300/20 p-3 flex flex-col gap-3 dark:border-blue-700 dark:bg-blue-900/30"
+          className="rounded-md border border-blue-300 bg-blue-300/20 p-3 flex flex-col gap-3 dark:border-blue-700 dark:bg-blue-900/30 [&_input]:border-blue-300 [&_textarea]:border-blue-300 [&_[data-slot=select-trigger]]:border-blue-300 dark:[&_input]:border-blue-700 dark:[&_textarea]:border-blue-700 dark:[&_[data-slot=select-trigger]]:border-blue-700"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">
