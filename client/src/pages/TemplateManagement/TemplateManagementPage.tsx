@@ -47,6 +47,7 @@ import {
   PageTableColumn,
 } from '@/components/business-ui/page-table';
 import TemplateFormDialog from './TemplateFormDialog';
+import TemplatePreviewDialog from './TemplatePreviewDialog';
 import { POSITION_OPTIONS } from './TemplateFormDialog.types';
 import * as assessmentTemplateApi from '@client/src/api/assessment-template';
 import type {
@@ -69,8 +70,9 @@ const TemplateManagementPage: React.FC = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] =
     useState<AssessmentTemplateDetail | null>(null);
-
+  const [previewTemplate, setPreviewTemplate] =
     useState<AssessmentTemplateDetail | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const [deactivateId, setDeactivateId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -159,6 +161,7 @@ const TemplateManagementPage: React.FC = () => {
     await fetchList();
   };
 
+  const handlePreview = async (id: string) => {
     const cached = detailCache[id];
     if (cached) {
       setPreviewTemplate(cached);
@@ -256,7 +259,7 @@ const TemplateManagementPage: React.FC = () => {
             actionType="preview"
             icon={<Eye className="size-3" />}
             label="查看"
-            onClick={() => handleEdit(item.id)}
+            onClick={() => handlePreview(item.id)}
           />
           {item.isActive && (
             <CanRole roles={['admin', 'hrd']}>
@@ -430,6 +433,9 @@ const TemplateManagementPage: React.FC = () => {
         </AlertDialogContent>
       </AlertDialog>
 
+      <TemplatePreviewDialog
+        open={previewOpen}
+        template={previewTemplate}
         onOpenChange={setPreviewOpen}
       />
 

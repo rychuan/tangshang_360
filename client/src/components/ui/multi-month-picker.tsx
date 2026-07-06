@@ -76,7 +76,11 @@ const MultiMonthPicker: React.FC<MultiMonthPickerProps> = ({
   const toggleMonth = (m: number) =>
     setTempMonths((prev) => {
       const n = new Set(prev);
-      n.has(m) ? n.delete(m) : n.add(m);
+      if (n.has(m)) {
+        n.delete(m);
+      } else {
+        n.add(m);
+      }
       return n;
     });
   const toggleAll = () =>

@@ -227,7 +227,7 @@ const DepartmentManagementTab: React.FC = () => {
           </TableCell>
           <TableCell>
             <Button
-              variant="link"
+              variant="ghost"
               size="sm"
               className="text-primary p-0 h-auto"
               onClick={() => {
