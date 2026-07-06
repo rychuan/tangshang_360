@@ -489,7 +489,7 @@ const StatisticsPage: React.FC = () => {
       {/* Filters */}
       <Card className="rounded-xl">
         <CardContent className="p-4">
-          <div className="flex items-end gap-2 flex-wrap">
+          <div className="flex items-start gap-2 flex-wrap">
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs text-muted-foreground">绩效周期</Label>
               <MultiMonthPicker
@@ -534,37 +534,39 @@ const StatisticsPage: React.FC = () => {
                 className="w-24"
               />
             </div>
-            <Button size="sm" onClick={handleSearch} className="shrink-0">
-              <SearchIcon data-icon="inline-start" />
-              查询
-            </Button>
-            <CanRole roles={['admin', 'hrd', 'dept_head']}>
-              <CanDo resource="statistics" action="export">
+            <div className="flex items-end gap-2 ml-auto">
+              <Button size="sm" onClick={handleSearch} className="shrink-0">
+                <SearchIcon data-icon="inline-start" />
+                查询
+              </Button>
+              <CanRole roles={['admin', 'hrd', 'dept_head']}>
+                <CanDo resource="statistics" action="export">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExport}
+                    disabled={exporting}
+                    className="shrink-0"
+                  >
+                    <DownloadIcon data-icon="inline-start" />
+                    {exporting && <Spinner className="mr-2 size-4" />}导出
+                  </Button>
+                </CanDo>
+              </CanRole>
+              <CanRole roles={['admin', 'hrd']}>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleExport}
-                  disabled={exporting}
+                  onClick={handleSyncToBitable}
+                  disabled={syncingOut}
                   className="shrink-0"
                 >
-                  <DownloadIcon data-icon="inline-start" />
-                  {exporting && <Spinner className="mr-2 size-4" />}导出
+                  <Upload data-icon="inline-start" />
+                  {syncingOut && <Spinner className="mr-2 size-4" />}
+                  同步
                 </Button>
-              </CanDo>
-            </CanRole>
-            <CanRole roles={['admin', 'hrd']}>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSyncToBitable}
-                disabled={syncingOut}
-                className="shrink-0"
-              >
-                <Upload data-icon="inline-start" />
-                {syncingOut && <Spinner className="mr-2 size-4" />}
-                同步
-              </Button>
-            </CanRole>
+              </CanRole>
+            </div>
           </div>
         </CardContent>
       </Card>
