@@ -112,35 +112,35 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                   variant="outline"
                   className="bg-primary/10 text-primary border-primary/20 text-xs font-bold"
                 >
-                  权重 {group.dimensionWeight}%
+                  权重分 {group.dimensionWeight}%
                 </Badge>
               </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <Table>
+                <Table className="table-fixed w-full">
                   <TableHeader>
                     <TableRow className="bg-muted/30">
-                      <TableHead className="whitespace-nowrap w-[140px]">
+                      <TableHead className="w-[20%] text-xs">
                         指标
                       </TableHead>
-                      <TableHead className="whitespace-nowrap w-[160px] hidden md:table-cell">
+                      <TableHead className="w-[25%] text-xs hidden md:table-cell">
                         说明
                       </TableHead>
-                      <TableHead className="whitespace-nowrap max-w-[140px] hidden lg:table-cell">
-                        指标算法/描述
+                      <TableHead className="w-[15%] text-xs hidden lg:table-cell">
+                        算法/描述
                       </TableHead>
-                      <TableHead className="whitespace-nowrap max-w-[100px] hidden lg:table-cell">
+                      <TableHead className="w-[10%] text-xs hidden lg:table-cell">
                         数据来源
                       </TableHead>
-                      <TableHead className="text-center w-16">
-                        权重(分)
+                      <TableHead className="text-center w-[5%] text-xs">
+                        权重分
                       </TableHead>
-                      <TableHead className="text-center w-24">自评</TableHead>
-                      <TableHead className="text-center w-24">
+                      <TableHead className="text-center w-[5%] text-xs">自评</TableHead>
+                      <TableHead className="text-center w-[5%] text-xs">
                         上级评分
                       </TableHead>
-                      <TableHead className="w-40">备注</TableHead>
+                      <TableHead className="w-[15%] text-xs">备注</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
