@@ -23,7 +23,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty';
-import { Award } from 'lucide-react';
+import { Award, Settings2, Trash2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -238,6 +238,7 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
                       <CanDo resource="publish_management" action="edit">
                         <ActionBadge
                           actionType="edit"
+                          icon={<Settings2 className="size-3" />}
                           label="调整"
                           onClick={() => onAdjust(emp)}
                         />
@@ -245,6 +246,7 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
                       <CanDo resource="publish_management" action="edit">
                         <ActionBadge
                           actionType="delete"
+                          icon={<Trash2 className="size-3" />}
                           label="删除快照"
                           onClick={() => onDeleteSnapshot(emp)}
                         />
