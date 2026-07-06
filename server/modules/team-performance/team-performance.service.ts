@@ -4,7 +4,7 @@ import {
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
 import { CapabilityService } from '@lark-apaas/fullstack-nestjs-core';
-import { eq, and, sql, count, desc, isNull } from 'drizzle-orm';
+import { eq, and, inArray, sql, count, desc, isNull } from 'drizzle-orm';
 import {
   employee,
   assessmentInstance,
@@ -40,7 +40,7 @@ export class TeamPerformanceService {
 
   async getOverview(
     userId: string,
-    period?: string,
+    periods?: string[],
   ): Promise<TeamOverviewResponse> {
     // 获取用户负责的部门 ID 列表
     const deptRows = await this.db
@@ -84,8 +84,8 @@ export class TeamPerformanceService {
       subordinateIds,
     );
 
-    const periodCond = period
-      ? eq(assessmentInstance.period, period)
+    const periodCond = periods?.length
+      ? inArray(assessmentInstance.period, periods)
       : undefined;
     const statsWhere = periodCond ? and(empInCond, periodCond) : empInCond;
 
@@ -151,7 +151,7 @@ export class TeamPerformanceService {
     page: number,
     pageSize: number,
     status?: string,
-    period?: string,
+    periods?: string[],
   ): Promise<SubordinatesResponse> {
     const deptRows = await this.db
       .select({ id: department.id })
@@ -192,8 +192,8 @@ export class TeamPerformanceService {
     if (status) {
       whereConditions.push(eq(assessmentInstance.status, status));
     }
-    if (period) {
-      whereConditions.push(eq(assessmentInstance.period, period));
+    if (periods?.length) {
+      whereConditions.push(inArray(assessmentInstance.period, periods));
     }
 
     const countResult = await this.db

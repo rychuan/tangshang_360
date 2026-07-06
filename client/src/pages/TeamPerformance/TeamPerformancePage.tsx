@@ -79,13 +79,13 @@ const TeamPerformancePage: React.FC = () => {
   );
   const [remindingIds, setRemindingIds] = useState<Set<string>>(new Set());
 
-  const activePeriod = selectedPeriods.length > 0 ? selectedPeriods[0] : '';
+  const activePeriods = selectedPeriods;
 
   const loadOverview = useCallback(async () => {
     setLoading(true);
     try {
       const result = await teamPerformanceApi.getOverview(
-        activePeriod || undefined,
+        activePeriods.length > 0 ? activePeriods : undefined,
       );
       setOverview(result);
     } catch (err: unknown) {
@@ -94,7 +94,7 @@ const TeamPerformancePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [activePeriod]);
+  }, [activePeriods]);
 
   const loadSubordinates = useCallback(async () => {
     setLoadingList(true);
@@ -103,7 +103,7 @@ const TeamPerformancePage: React.FC = () => {
         page,
         pageSize: PAGE_SIZE,
         status: statusFilter || undefined,
-        period: activePeriod || undefined,
+        periods: activePeriods.length > 0 ? activePeriods : undefined,
       });
       setSubordinates(result?.items ?? []);
       setTotal(result.total);
@@ -115,7 +115,7 @@ const TeamPerformancePage: React.FC = () => {
     } finally {
       setLoadingList(false);
     }
-  }, [page, statusFilter, activePeriod]);
+  }, [page, statusFilter, activePeriods]);
 
   useEffect(() => {
     loadOverview();
@@ -230,7 +230,7 @@ const TeamPerformancePage: React.FC = () => {
           <MultiMonthPicker
             value={selectedPeriods}
             onChange={(value: string[]) => {
-              setSelectedPeriods(value.length > 0 ? [value[0]] : []);
+              setSelectedPeriods(value);
               setPage(1);
             }}
             className="w-40"

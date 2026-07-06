@@ -14,9 +14,15 @@ export class TeamPerformanceController {
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('team_performance', 'view')
   @Get('overview')
-  async getOverview(@Req() req: Request, @Query('period') period?: string) {
+  async getOverview(
+    @Req() req: Request,
+    @Query('periods') periods?: string,
+  ) {
     const { userId } = req.userContext;
-    return this.teamPerformanceService.getOverview(userId, period);
+    return this.teamPerformanceService.getOverview(
+      userId,
+      periods ? periods.split(',').filter(Boolean) : undefined,
+    );
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
@@ -27,7 +33,7 @@ export class TeamPerformanceController {
     @Query('page') page: string,
     @Query('pageSize') pageSize: string,
     @Query('status') status?: string,
-    @Query('period') period?: string,
+    @Query('periods') periods?: string,
   ) {
     const { userId } = req.userContext;
     return this.teamPerformanceService.getSubordinates(
@@ -35,7 +41,7 @@ export class TeamPerformanceController {
       parseInt(page, 10) || 1,
       parseInt(pageSize, 10) || 10,
       status,
-      period,
+      periods ? periods.split(',').filter(Boolean) : undefined,
     );
   }
 
