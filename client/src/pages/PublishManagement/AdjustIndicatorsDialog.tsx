@@ -317,27 +317,39 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
             <TableHeader>
               <TableRow className="bg-muted/30">
                 <TableHead className="text-xs">指标</TableHead>
-                <TableHead className="text-xs hidden md:table-cell">说明</TableHead>
-                <TableHead className="text-xs hidden lg:table-cell">算法/描述</TableHead>
-                <TableHead className="text-xs hidden lg:table-cell">数据来源</TableHead>
-                <TableHead className="text-center text-xs w-[80px]">权重分</TableHead>
+                <TableHead className="text-xs hidden md:table-cell">
+                  说明
+                </TableHead>
+                <TableHead className="text-xs hidden lg:table-cell">
+                  算法/描述
+                </TableHead>
+                <TableHead className="text-xs hidden lg:table-cell">
+                  数据来源
+                </TableHead>
+                <TableHead className="text-center text-xs w-[80px]">
+                  权重分
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {group.indicators.map(
                 (ind: AdjustIndicatorInput, idx: number) => (
                   <TableRow key={idx}>
-                    <TableCell className="text-xs">{ind.content || '-'}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground hidden md:table-cell break-words">
+                    <TableCell className="text-xs whitespace-pre-wrap break-words">
+                      {ind.content || '-'}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground hidden md:table-cell whitespace-pre-wrap break-words">
                       {ind.description || '-'}
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground hidden lg:table-cell break-words">
+                    <TableCell className="text-xs text-muted-foreground hidden lg:table-cell whitespace-pre-wrap break-words">
                       {ind.algorithm || '-'}
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground hidden lg:table-cell break-words">
+                    <TableCell className="text-xs text-muted-foreground hidden lg:table-cell whitespace-pre-wrap break-words">
                       {ind.dataSource || '-'}
                     </TableCell>
-                    <TableCell className="text-xs text-center">{ind.weight}</TableCell>
+                    <TableCell className="text-xs text-center">
+                      {ind.weight}
+                    </TableCell>
                   </TableRow>
                 ),
               )}
@@ -374,7 +386,9 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
               className="flex-1 text-sm font-semibold h-8"
               placeholder="维度名称"
             />
-            <span className="text-xs text-muted-foreground shrink-0">权重分</span>
+            <span className="text-xs text-muted-foreground shrink-0">
+              权重分
+            </span>
             <Input
               type="number"
               value={group.dimensionWeight}
@@ -403,7 +417,8 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
             <Alert variant="destructive" className="mb-3">
               <AlertTriangle className="size-4" />
               <AlertDescription>
-                权重分总和({indicatorSum})不等于维度权重分({group.dimensionWeight})
+                权重分总和({indicatorSum})不等于维度权重分(
+                {group.dimensionWeight})
               </AlertDescription>
             </Alert>
           )}
@@ -429,82 +444,106 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {group.indicators.map((ind: AdjustIndicatorInput, idx: number) => {
-                const flatIndex: number = group.flatIndices[idx];
-                return (
-                  <TableRow key={flatIndex}>
-                    <TableCell className="p-1">
-                      <Textarea
-                        className="text-xs min-h-[32px] resize-none"
-                        rows={2}
-                        placeholder="指标名称"
-                        value={ind.content}
-                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                          handleIndicatorChange(flatIndex, 'content', e.target.value)
-                        }
-                      />
-                    </TableCell>
-                    <TableCell className="p-1 hidden md:table-cell">
-                      <Textarea
-                        className="text-xs min-h-[32px] resize-none"
-                        rows={2}
-                        placeholder="说明"
-                        value={ind.description}
-                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                          handleIndicatorChange(flatIndex, 'description', e.target.value)
-                        }
-                      />
-                    </TableCell>
-                    <TableCell className="p-1 hidden lg:table-cell">
-                      <Textarea
-                        className="text-xs min-h-[32px] resize-none"
-                        rows={2}
-                        placeholder="算法"
-                        value={ind.algorithm}
-                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                          handleIndicatorChange(flatIndex, 'algorithm', e.target.value)
-                        }
-                      />
-                    </TableCell>
-                    <TableCell className="p-1 hidden lg:table-cell">
-                      <Input
-                        className="h-8 text-xs"
-                        placeholder="数据来源"
-                        value={ind.dataSource}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                          handleIndicatorChange(flatIndex, 'dataSource', e.target.value)
-                        }
-                      />
-                    </TableCell>
-                    <TableCell className="p-1 text-center">
-                      <Input
-                        type="number"
-                        min="0"
-                        className="h-8 w-20 text-xs text-center mx-auto"
-                        placeholder="0"
-                        value={ind.weight}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                          handleIndicatorChange(
-                            flatIndex,
-                            'weight',
-                            Number(e.target.value),
-                          )
-                        }
-                      />
-                    </TableCell>
-                    <TableCell className="p-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive size-7"
-                        onClick={() => handleRemoveIndicator(flatIndex)}
-                      >
-                        <Trash2 className="size-3" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {group.indicators.map(
+                (ind: AdjustIndicatorInput, idx: number) => {
+                  const flatIndex: number = group.flatIndices[idx];
+                  return (
+                    <TableRow key={flatIndex}>
+                      <TableCell className="p-1">
+                        <Textarea
+                          className="text-xs min-h-[32px] resize-none"
+                          rows={2}
+                          placeholder="指标名称"
+                          value={ind.content}
+                          onChange={(
+                            e: React.ChangeEvent<HTMLTextAreaElement>,
+                          ) =>
+                            handleIndicatorChange(
+                              flatIndex,
+                              'content',
+                              e.target.value,
+                            )
+                          }
+                        />
+                      </TableCell>
+                      <TableCell className="p-1 hidden md:table-cell">
+                        <Textarea
+                          className="text-xs min-h-[32px] resize-none"
+                          rows={2}
+                          placeholder="说明"
+                          value={ind.description}
+                          onChange={(
+                            e: React.ChangeEvent<HTMLTextAreaElement>,
+                          ) =>
+                            handleIndicatorChange(
+                              flatIndex,
+                              'description',
+                              e.target.value,
+                            )
+                          }
+                        />
+                      </TableCell>
+                      <TableCell className="p-1 hidden lg:table-cell">
+                        <Textarea
+                          className="text-xs min-h-[32px] resize-none"
+                          rows={2}
+                          placeholder="算法"
+                          value={ind.algorithm}
+                          onChange={(
+                            e: React.ChangeEvent<HTMLTextAreaElement>,
+                          ) =>
+                            handleIndicatorChange(
+                              flatIndex,
+                              'algorithm',
+                              e.target.value,
+                            )
+                          }
+                        />
+                      </TableCell>
+                      <TableCell className="p-1 hidden lg:table-cell">
+                        <Input
+                          className="h-8 text-xs"
+                          placeholder="数据来源"
+                          value={ind.dataSource}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            handleIndicatorChange(
+                              flatIndex,
+                              'dataSource',
+                              e.target.value,
+                            )
+                          }
+                        />
+                      </TableCell>
+                      <TableCell className="p-1 text-center">
+                        <Input
+                          type="number"
+                          min="0"
+                          className="h-8 w-20 text-xs text-center mx-auto"
+                          placeholder="0"
+                          value={ind.weight}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            handleIndicatorChange(
+                              flatIndex,
+                              'weight',
+                              Number(e.target.value),
+                            )
+                          }
+                        />
+                      </TableCell>
+                      <TableCell className="p-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive size-7"
+                          onClick={() => handleRemoveIndicator(flatIndex)}
+                        >
+                          <Trash2 className="size-3" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                },
+              )}
             </TableBody>
           </Table>
           <div className="flex items-center justify-between mt-2">

@@ -180,9 +180,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
 
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary">
-              {watchedPosition || '未选择岗位'}
-            </Badge>
+            <Badge variant="secondary">{watchedPosition || '未选择岗位'}</Badge>
             <Badge variant="outline">
               {watchedType === 'monthly' ? '月度绩效' : '试用期绩效'}
             </Badge>
@@ -212,7 +210,9 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   {positions.map((pos: string) => (
-                    <SelectItem key={pos} value={pos}>{pos}</SelectItem>
+                    <SelectItem key={pos} value={pos}>
+                      {pos}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -259,7 +259,13 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                     name: '',
                     weight: 0,
                     indicators: [
-                      { content: '', description: '', algorithm: '', dataSource: '', weight: 0 },
+                      {
+                        content: '',
+                        description: '',
+                        algorithm: '',
+                        dataSource: '',
+                        weight: 0,
+                      },
                     ],
                   })
                 }
