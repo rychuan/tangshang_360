@@ -489,7 +489,7 @@ const StatisticsPage: React.FC = () => {
       {/* Filters */}
       <Card className="rounded-xl">
         <CardContent className="p-4">
-          <div className="flex flex-wrap gap-3 items-end">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs text-muted-foreground">绩效周期</Label>
               <MultiMonthPicker
@@ -497,7 +497,7 @@ const StatisticsPage: React.FC = () => {
                 onChange={(value: string[]) =>
                   setFilters((f: FilterState) => ({ ...f, periods: value }))
                 }
-                className="w-48"
+                className="w-full"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -507,7 +507,7 @@ const StatisticsPage: React.FC = () => {
                 onChange={(value: string[]) =>
                   setFilters((f: FilterState) => ({ ...f, departments: value }))
                 }
-                className="w-48"
+                className="w-full"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -519,7 +519,7 @@ const StatisticsPage: React.FC = () => {
                   setFilters((f: FilterState) => ({ ...f, positions: value }))
                 }
                 placeholder="选择岗位"
-                className="w-44"
+                className="w-full"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -531,7 +531,7 @@ const StatisticsPage: React.FC = () => {
                   setFilters((f: FilterState) => ({ ...f, grades: value }))
                 }
                 placeholder="选择等级"
-                className="w-36"
+                className="w-full"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -543,9 +543,11 @@ const StatisticsPage: React.FC = () => {
                 onChange={(value: string[]) =>
                   setFilters((f: FilterState) => ({ ...f, employeeIds: value }))
                 }
-                className="w-40"
+                className="w-full"
               />
             </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t">
             <Button onClick={handleSearch} className="flex items-center gap-1">
               <SearchIcon data-icon="inline-start" />
               查询

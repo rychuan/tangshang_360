@@ -36,7 +36,7 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{template.name}</DialogTitle>
         </DialogHeader>
@@ -54,59 +54,57 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
           {template.dimensions.map(
             (dim: AssessmentDimensionDef, dimIdx: number) => (
               <Card key={dim.id || dimIdx}>
-                <CardHeader>
+                <CardHeader className="pb-2">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold">{dim.name}</h3>
-                    <Badge variant="secondary">权重 {dim.weight}%</Badge>
+                    <h3 className="text-base font-semibold">{dim.name}</h3>
+                    <Badge variant="secondary" className="text-xs">
+                      权重 {dim.weight}%
+                    </Badge>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-muted/30">
-                          <TableHead className="whitespace-nowrap w-1/4">
-                            指标
-                          </TableHead>
-                          <TableHead className="whitespace-nowrap">
-                            说明
-                          </TableHead>
-                          <TableHead className="whitespace-nowrap">
-                            指标算法/描述
-                          </TableHead>
-                          <TableHead className="whitespace-nowrap">
-                            数据来源
-                          </TableHead>
-                          <TableHead className="text-center w-20">
-                            权重(分)
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {dim.indicators.map(
-                          (ind: AssessmentIndicatorDef, indIdx: number) => (
-                            <TableRow key={ind.id || indIdx}>
-                              <TableCell className="font-medium">
-                                {ind.content}
-                              </TableCell>
-                              <TableCell className="text-muted-foreground">
-                                {ind.description || '-'}
-                              </TableCell>
-                              <TableCell className="text-muted-foreground">
-                                {ind.algorithm || '-'}
-                              </TableCell>
-                              <TableCell className="text-muted-foreground">
-                                {ind.dataSource || '-'}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                {ind.weight}
-                              </TableCell>
-                            </TableRow>
-                          ),
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/30">
+                        <TableHead className="w-[120px]">指标</TableHead>
+                        <TableHead className="w-[140px] hidden md:table-cell">
+                          说明
+                        </TableHead>
+                        <TableHead className="w-[140px] hidden lg:table-cell">
+                          指标算法/描述
+                        </TableHead>
+                        <TableHead className="w-[100px] hidden lg:table-cell">
+                          数据来源
+                        </TableHead>
+                        <TableHead className="text-center w-[70px]">
+                          权重(分)
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {dim.indicators.map(
+                        (ind: AssessmentIndicatorDef, indIdx: number) => (
+                          <TableRow key={ind.id || indIdx}>
+                            <TableCell className="font-medium text-xs whitespace-normal break-words">
+                              {ind.content}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-xs whitespace-normal break-words hidden md:table-cell">
+                              {ind.description || '-'}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-xs whitespace-normal break-words hidden lg:table-cell">
+                              {ind.algorithm || '-'}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-xs whitespace-normal break-words hidden lg:table-cell">
+                              {ind.dataSource || '-'}
+                            </TableCell>
+                            <TableCell className="text-center text-xs">
+                              {ind.weight}
+                            </TableCell>
+                          </TableRow>
+                        ),
+                      )}
+                    </TableBody>
+                  </Table>
                 </CardContent>
               </Card>
             ),
