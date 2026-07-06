@@ -3,7 +3,6 @@ import { toast } from 'sonner';
 import {
   Plus,
   Eye,
-  Pencil,
   Ban,
   Trash2,
   Search,
@@ -257,22 +256,14 @@ const TemplateManagementPage: React.FC = () => {
         'sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l',
       render: (item) => (
         <div className="flex items-center gap-1">
-          <ActionBadge
-            actionType="preview"
-            icon={<Eye className="size-3" />}
-            label="查看"
+          <Button
+            variant="default"
+            size="sm"
             onClick={() => handleEdit(item.id)}
-          />
-          <CanRole roles={['admin', 'hrd']}>
-            <CanDo resource="template_management" action="edit">
-              <ActionBadge
-                actionType="edit"
-                icon={<Pencil className="size-3" />}
-                label="编辑"
-                onClick={() => handleEdit(item.id)}
-              />
-            </CanDo>
-          </CanRole>
+          >
+            <Eye data-icon="inline-start" />
+            查看
+          </Button>
           {item.isActive && (
             <CanRole roles={['admin', 'hrd']}>
               <CanDo resource="template_management" action="delete">
