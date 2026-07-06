@@ -44,12 +44,11 @@ const DimensionCard: React.FC<DimensionCardProps> = ({
       (s: number, i: { weight: number }) => s + (i.weight || 0),
       0,
     ) || 0;
-  const indValid: boolean =
-    Math.abs(indSum - (dimData?.weight || 0)) < 0.01;
+  const indValid: boolean = Math.abs(indSum - (dimData?.weight || 0)) < 0.01;
 
   return (
     <Card>
-      <CardHeader className="pb-2 bg-muted/20">
+      <CardHeader className="pb-2 bg-muted">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground shrink-0">
             维度 {dimIdx + 1}：
@@ -68,7 +67,7 @@ const DimensionCard: React.FC<DimensionCardProps> = ({
             min="0"
             max="100"
             placeholder="0"
-            className="w-14 h-8 text-center text-sm"
+            className="w-20 h-8 text-center text-sm"
             value={dimData?.weight || ''}
             onChange={(e) =>
               form.setValue(
@@ -107,7 +106,7 @@ const DimensionCard: React.FC<DimensionCardProps> = ({
               <TableHead className="w-[100px] hidden lg:table-cell text-xs">
                 数据来源
               </TableHead>
-              <TableHead className="text-center w-[60px] text-xs">
+              <TableHead className="text-center w-[80px] text-xs">
                 权重分
               </TableHead>
               <TableHead className="w-[40px] text-xs" />
@@ -191,7 +190,7 @@ const DimensionCard: React.FC<DimensionCardProps> = ({
                   <Input
                     type="number"
                     min="0"
-                    className="h-8 w-14 text-xs text-center mx-auto"
+                    className="h-8 w-20 text-xs text-center mx-auto"
                     placeholder="0"
                     value={
                       form.watch(
