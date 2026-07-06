@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -10,14 +10,8 @@ import {
   DialogTitle,
 } from '@client/src/components/ui/dialog';
 import { Button } from '@client/src/components/ui/button';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@client/src/components/ui/form';
+import { Badge } from '@client/src/components/ui/badge';
+import { Card, CardContent, CardHeader } from '@client/src/components/ui/card';
 import { Input } from '@client/src/components/ui/input';
 import {
   Select,
@@ -26,7 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@client/src/components/ui/select';
-import { Separator } from '@client/src/components/ui/separator';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@client/src/components/ui/table';
 import { Spinner } from '@client/src/components/ui/spinner';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { handleApiError } from '@client/src/utils/api-error';
@@ -34,7 +35,6 @@ import {
   validateTotalWeight,
   validateIndicatorWeights,
 } from '@client/src/utils/weight-validation';
-import IndicatorsFieldArray from './TemplateIndicatorFields';
 import { formSchema, type FormData } from './TemplateFormDialog.types';
 import type {
   AssessmentTemplateDetail,
@@ -110,14 +110,9 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
     remove: removeDim,
   } = useFieldArray({ control: form.control, name: 'dimensions' });
 
-  const [collapsedDims, setCollapsedDims] = useState<Record<number, boolean>>(
-    {},
-  );
-
   useEffect(() => {
     if (open) {
       form.reset(buildDefault());
-      setCollapsedDims({});
     }
   }, [open, form, buildDefault]);
 
@@ -129,7 +124,6 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
       );
       return;
     }
-
     const indicatorResult = validateIndicatorWeights(data.dimensions);
     if (!indicatorResult.isValid) {
       const err = indicatorResult.errors[0];
@@ -138,7 +132,6 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
       );
       return;
     }
-
     setSubmitting(true);
     try {
       const payload: CreateTemplateRequest = {
@@ -168,11 +161,13 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
   };
 
   const watchedDims = form.watch('dimensions');
+  const watchedName = form.watch('name');
+  const watchedPosition = form.watch('position');
+  const watchedType = form.watch('type');
 
   const totalDimWeight: number =
     watchedDims?.reduce((sum: number, d) => sum + (d?.weight || 0), 0) || 0;
   const dimWeightValid: boolean = Math.abs(totalDimWeight - 100) < 0.01;
-
   const indicatorWeightsValid: boolean =
     watchedDims?.every((dim) => {
       const indSum: number =
@@ -182,249 +177,328 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
         ) || 0;
       return Math.abs(indSum - (dim?.weight || 0)) < 0.01;
     }) ?? false;
-
   const canSubmit: boolean = dimWeightValid && indicatorWeightsValid;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(handleSubmit)}
-            className="flex flex-col gap-6"
-          >
-            <DialogHeader>
-              <DialogTitle>
-                {template ? '编辑绩效模板' : '新建绩效模板'}
-              </DialogTitle>
-            </DialogHeader>
+      <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {watchedName || '新建绩效模板'}
+          </DialogTitle>
+        </DialogHeader>
 
-            <div className="flex flex-wrap gap-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem className="flex-1 min-w-[200px]">
-                    <FormLabel>
-                      模板名称 <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="如：销售经理月度绩效" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="position"
-                render={({ field }) => (
-                  <FormItem className="flex-1 min-w-[200px]">
-                    <FormLabel>
-                      适用岗位 <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="请选择岗位" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {positions.map((pos: string) => (
-                          <SelectItem key={pos} value={pos}>
-                            {pos}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem className="w-[160px]">
-                    <FormLabel>
-                      绩效类型 <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="请选择" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="monthly">月度绩效</SelectItem>
-                        <SelectItem value="probation">试用期绩效</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
+        <div className="flex flex-col gap-4">
+          {/* Badge row */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary">
+              {watchedPosition || '未选择岗位'}
+            </Badge>
+            <Badge variant="outline">
+              {watchedType === 'monthly' ? '月度绩效' : '试用期绩效'}
+            </Badge>
+          </div>
+
+          {/* Basic info fields */}
+          <div className="flex flex-wrap gap-3 items-end">
+            <div className="flex-1 min-w-[200px]">
+              <label className="text-xs text-muted-foreground block mb-1">
+                模板名称 <span className="text-destructive">*</span>
+              </label>
+              <Input
+                placeholder="如：销售经理月度绩效"
+                value={watchedName}
+                onChange={(e) => form.setValue('name', e.target.value)}
               />
             </div>
+            <div className="w-[180px]">
+              <label className="text-xs text-muted-foreground block mb-1">
+                适用岗位 <span className="text-destructive">*</span>
+              </label>
+              <Select
+                onValueChange={(v) => form.setValue('position', v)}
+                value={watchedPosition}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="请选择岗位" />
+                </SelectTrigger>
+                <SelectContent>
+                  {positions.map((pos: string) => (
+                    <SelectItem key={pos} value={pos}>{pos}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-[150px]">
+              <label className="text-xs text-muted-foreground block mb-1">
+                绩效类型 <span className="text-destructive">*</span>
+              </label>
+              <Select
+                onValueChange={(v: 'monthly' | 'probation') =>
+                  form.setValue('type', v)
+                }
+                value={watchedType}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="请选择" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">月度绩效</SelectItem>
+                  <SelectItem value="probation">试用期绩效</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-            <Separator />
+          {/* Dimension cards */}
+          {dimFields.map((dimField, dimIdx: number) => {
+            const dimData = watchedDims?.[dimIdx];
+            const { fields: indFields, append: appendInd, remove: removeInd } =
+              useFieldArray({
+                control: form.control,
+                name: `dimensions.${dimIdx}.indicators`,
+              });
+            const indSum: number =
+              dimData?.indicators?.reduce(
+                (s: number, i: { weight: number }) => s + (i.weight || 0),
+                0,
+              ) || 0;
+            const indValid: boolean =
+              Math.abs(indSum - (dimData?.weight || 0)) < 0.01;
 
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <h3 className="text-base font-medium">绩效维度</h3>
-                  <span
-                    className={`text-sm font-medium ${dimWeightValid ? 'text-success' : 'text-destructive'}`}
-                  >
-                    维度权重总和：{totalDimWeight} / 100
-                    {!dimWeightValid && ' （必须等于100）'}
-                  </span>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() =>
-                    appendDim({
-                      name: '',
-                      weight: 0,
-                      indicators: [
-                        {
+            return (
+              <Card key={dimField.id}>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      placeholder="维度名称"
+                      className="flex-1 text-base font-semibold h-8"
+                      value={dimData?.name || ''}
+                      onChange={(e) =>
+                        form.setValue(
+                          `dimensions.${dimIdx}.name`,
+                          e.target.value,
+                        )
+                      }
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      placeholder="权重"
+                      className="w-16 h-8 text-center"
+                      value={dimData?.weight || ''}
+                      onChange={(e) =>
+                        form.setValue(
+                          `dimensions.${dimIdx}.weight`,
+                          parseInt(e.target.value, 10) || 0,
+                        )
+                      }
+                    />
+                    <span className="text-xs text-muted-foreground">%</span>
+                    <Badge variant="secondary" className="text-xs">
+                      权重 {dimData?.weight || 0}%
+                    </Badge>
+                    {dimFields.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive"
+                        onClick={() => removeDim(dimIdx)}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/30">
+                        <TableHead className="w-[120px] text-xs">
+                          指标 <span className="text-destructive">*</span>
+                        </TableHead>
+                        <TableHead className="w-[140px] hidden md:table-cell text-xs">
+                          说明
+                        </TableHead>
+                        <TableHead className="w-[120px] hidden lg:table-cell text-xs">
+                          算法/描述
+                        </TableHead>
+                        <TableHead className="w-[100px] hidden lg:table-cell text-xs">
+                          数据来源
+                        </TableHead>
+                        <TableHead className="text-center w-[60px] text-xs">
+                          权重
+                        </TableHead>
+                        <TableHead className="w-[40px] text-xs" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {indFields.map((indField, indIdx: number) => (
+                        <TableRow key={indField.id}>
+                          <TableCell className="p-1">
+                            <Input
+                              className="h-8 text-xs"
+                              placeholder="指标名称"
+                              value={
+                                form.watch(
+                                  `dimensions.${dimIdx}.indicators.${indIdx}.content`,
+                                ) || ''
+                              }
+                              onChange={(e) =>
+                                form.setValue(
+                                  `dimensions.${dimIdx}.indicators.${indIdx}.content`,
+                                  e.target.value,
+                                )
+                              }
+                            />
+                          </TableCell>
+                          <TableCell className="p-1 hidden md:table-cell">
+                            <Input
+                              className="h-8 text-xs"
+                              placeholder="说明"
+                              value={
+                                form.watch(
+                                  `dimensions.${dimIdx}.indicators.${indIdx}.description`,
+                                ) || ''
+                              }
+                              onChange={(e) =>
+                                form.setValue(
+                                  `dimensions.${dimIdx}.indicators.${indIdx}.description`,
+                                  e.target.value,
+                                )
+                              }
+                            />
+                          </TableCell>
+                          <TableCell className="p-1 hidden lg:table-cell">
+                            <Input
+                              className="h-8 text-xs"
+                              placeholder="算法"
+                              value={
+                                form.watch(
+                                  `dimensions.${dimIdx}.indicators.${indIdx}.algorithm`,
+                                ) || ''
+                              }
+                              onChange={(e) =>
+                                form.setValue(
+                                  `dimensions.${dimIdx}.indicators.${indIdx}.algorithm`,
+                                  e.target.value,
+                                )
+                              }
+                            />
+                          </TableCell>
+                          <TableCell className="p-1 hidden lg:table-cell">
+                            <Input
+                              className="h-8 text-xs"
+                              placeholder="数据来源"
+                              value={
+                                form.watch(
+                                  `dimensions.${dimIdx}.indicators.${indIdx}.dataSource`,
+                                ) || ''
+                              }
+                              onChange={(e) =>
+                                form.setValue(
+                                  `dimensions.${dimIdx}.indicators.${indIdx}.dataSource`,
+                                  e.target.value,
+                                )
+                              }
+                            />
+                          </TableCell>
+                          <TableCell className="p-1 text-center">
+                            <Input
+                              type="number"
+                              min="0"
+                              className="h-8 w-14 text-xs text-center mx-auto"
+                              placeholder="0"
+                              value={
+                                form.watch(
+                                  `dimensions.${dimIdx}.indicators.${indIdx}.weight`,
+                                ) || ''
+                              }
+                              onChange={(e) =>
+                                form.setValue(
+                                  `dimensions.${dimIdx}.indicators.${indIdx}.weight`,
+                                  parseInt(e.target.value, 10) || 0,
+                                )
+                              }
+                            />
+                          </TableCell>
+                          <TableCell className="p-1">
+                            {indFields.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive size-7"
+                                onClick={() => removeInd(indIdx)}
+                              >
+                                <Trash2 className="size-3" />
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <div className="flex items-center justify-between mt-2">
+                    <span
+                      className={`text-xs font-medium ${indValid ? 'text-success' : 'text-destructive'}`}
+                    >
+                      指标权重总和：{indSum} / {dimData?.weight || 0}
+                      {!indValid && ' （必须等于维度权重）'}
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        appendInd({
                           content: '',
                           description: '',
                           algorithm: '',
                           dataSource: '',
                           weight: 0,
-                        },
-                      ],
-                    })
-                  }
-                >
-                  <Plus className="size-4 mr-1" />
-                  添加维度
-                </Button>
-              </div>
-
-              {dimFields.map((dimField, dimIdx: number) => {
-                const collapsed = collapsedDims[dimIdx];
-                const dimData = watchedDims?.[dimIdx];
-
-                return (
-                  <div
-                    key={dimField.id}
-                    className="rounded-md border bg-muted/30 p-4 flex flex-col gap-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="shrink-0"
-                        onClick={() =>
-                          setCollapsedDims((prev: Record<number, boolean>) => ({
-                            ...prev,
-                            [dimIdx]: !prev[dimIdx],
-                          }))
-                        }
-                      >
-                        {collapsed ? (
-                          <ChevronDown className="size-4" />
-                        ) : (
-                          <ChevronUp className="size-4" />
-                        )}
-                      </Button>
-                      <span className="text-sm font-medium text-muted-foreground">
-                        维度 {dimIdx + 1}
-                      </span>
-                      {dimFields.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="ml-auto text-destructive"
-                          onClick={() => removeDim(dimIdx)}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      )}
-                    </div>
-
-                    {!collapsed && (
-                      <>
-                        <div className="flex flex-wrap gap-4">
-                          <FormField
-                            control={form.control}
-                            name={`dimensions.${dimIdx}.name`}
-                            render={({ field }) => (
-                              <FormItem className="flex-1">
-                                <FormLabel>维度名称</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    placeholder="如：业绩指标"
-                                    {...field}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name={`dimensions.${dimIdx}.weight`}
-                            render={({ field }) => (
-                              <FormItem className="w-[120px]">
-                                <FormLabel>权重 (%)</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    step="1"
-                                    min="0"
-                                    max="100"
-                                    placeholder="60"
-                                    {...field}
-                                    onChange={(e) =>
-                                      field.onChange(
-                                        parseInt(e.target.value, 10) || 0,
-                                      )
-                                    }
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        <IndicatorsFieldArray
-                          control={form.control}
-                          dimIdx={dimIdx}
-                        />
-
-                        {dimData &&
-                          (() => {
-                            const indSum: number =
-                              dimData.indicators?.reduce(
-                                (sum: number, i: { weight: number }) =>
-                                  sum + (i.weight || 0),
-                                0,
-                              ) || 0;
-                            const indValid: boolean =
-                              Math.abs(indSum - (dimData.weight || 0)) < 0.01;
-                            return (
-                              <div
-                                className={`text-xs font-medium ${indValid ? 'text-success' : 'text-destructive'}`}
-                              >
-                                指标权重总和：{indSum} / {dimData.weight || 0}
-                                {!indValid && ' （必须等于维度权重）'}
-                              </div>
-                            );
-                          })()}
-                      </>
-                    )}
+                        })
+                      }
+                    >
+                      <Plus className="size-3 mr-1" />
+                      添加指标
+                    </Button>
                   </div>
-                );
-              })}
-            </div>
+                </CardContent>
+              </Card>
+            );
+          })}
 
-            <div className="flex justify-end gap-3 pt-4">
+          {/* Bottom bar */}
+          <div className="flex items-center justify-between pt-2 border-t">
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  appendDim({
+                    name: '',
+                    weight: 0,
+                    indicators: [
+                      { content: '', description: '', algorithm: '', dataSource: '', weight: 0 },
+                    ],
+                  })
+                }
+              >
+                <Plus className="size-3 mr-1" />
+                添加维度
+              </Button>
+              <span
+                className={`text-sm font-medium ${dimWeightValid ? 'text-success' : 'text-destructive'}`}
+              >
+                维度权重总和：{totalDimWeight} / 100
+                {!dimWeightValid && ' （必须等于100）'}
+              </span>
+            </div>
+            <div className="flex gap-3">
               <Button
                 type="button"
                 variant="outline"
@@ -432,13 +506,16 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
               >
                 取消
               </Button>
-              <Button type="submit" disabled={submitting || !canSubmit}>
+              <Button
+                onClick={form.handleSubmit(handleSubmit)}
+                disabled={submitting || !canSubmit}
+              >
                 {submitting && <Spinner className="mr-2 size-4" />}
                 保存
               </Button>
             </div>
-          </form>
-        </Form>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
