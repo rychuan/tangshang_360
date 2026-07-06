@@ -1,11 +1,21 @@
 import React, { useState, useMemo } from 'react';
 import { CalendarIcon, X } from 'lucide-react';
 import dayjs from 'dayjs';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 
 interface MultiMonthPickerProps {
@@ -15,7 +25,20 @@ interface MultiMonthPickerProps {
   className?: string;
 }
 
-const MONTH_LABELS = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+const MONTH_LABELS = [
+  '1月',
+  '2月',
+  '3月',
+  '4月',
+  '5月',
+  '6月',
+  '7月',
+  '8月',
+  '9月',
+  '10月',
+  '11月',
+  '12月',
+];
 
 const MultiMonthPicker: React.FC<MultiMonthPickerProps> = ({
   value,
@@ -45,7 +68,11 @@ const MultiMonthPicker: React.FC<MultiMonthPickerProps> = ({
   };
 
   const toggleAll = () => {
-    setTempMonths(allSelected ? new Set() : new Set(Array.from({ length: 12 }, (_, i) => i + 1)));
+    setTempMonths(
+      allSelected
+        ? new Set()
+        : new Set(Array.from({ length: 12 }, (_, i) => i + 1)),
+    );
   };
 
   const handleConfirm = () => {
@@ -62,6 +89,32 @@ const MultiMonthPicker: React.FC<MultiMonthPickerProps> = ({
     onChange(value.filter((v) => v !== period));
   };
 
+  const applyQuickSelect = (type: string) => {
+    const now = dayjs();
+    let periods: string[] = [];
+    switch (type) {
+      case 'this-month':
+        periods = [now.format('YYYY-MM')];
+        break;
+      case 'last-month':
+        periods = [now.subtract(1, 'month').format('YYYY-MM')];
+        break;
+      case 'this-quarter': {
+        const qStart = now.startOf('quarter');
+        for (let i = 0; i < 3; i++) {
+          periods.push(qStart.add(i, 'month').format('YYYY-MM'));
+        }
+        break;
+      }
+      case 'this-year':
+        for (let i = 0; i < 12; i++) {
+          periods.push(now.startOf('year').add(i, 'month').format('YYYY-MM'));
+        }
+        break;
+    }
+    onChange([...new Set([...value, ...periods])].sort().reverse());
+  };
+
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
     if (next) {
@@ -73,7 +126,10 @@ const MultiMonthPicker: React.FC<MultiMonthPickerProps> = ({
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className={`justify-start font-normal gap-1 ${className ?? ''}`}>
+        <Button
+          variant="outline"
+          className={`justify-start font-normal gap-1 ${className ?? ''}`}
+        >
           <CalendarIcon className="size-4 shrink-0" />
           <span className="truncate">
             {value.length > 0 ? `已选 ${value.length} 个周期` : placeholder}
@@ -86,32 +142,58 @@ const MultiMonthPicker: React.FC<MultiMonthPickerProps> = ({
             {value.map((period) => (
               <Badge key={period} variant="secondary" className="gap-1 pr-1">
                 {dayjs(period + '-01').format('YYYY年MM月')}
-                <button type="button" onClick={() => handleRemove(period)} className="ml-0.5 hover:text-destructive rounded-full">
+                <button
+                  type="button"
+                  onClick={() => handleRemove(period)}
+                  className="ml-0.5 hover:text-destructive rounded-full"
+                >
                   <X className="size-3" />
                 </button>
               </Badge>
             ))}
-            <button type="button" onClick={() => onChange([])} className="text-xs text-muted-foreground hover:text-destructive ml-1">
+            <button
+              type="button"
+              onClick={() => onChange([])}
+              className="text-xs text-muted-foreground hover:text-destructive ml-1"
+            >
               清空
             </button>
           </div>
         )}
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs text-muted-foreground">年份</Label>
+            <Label className="text-xs text-muted-foreground">快速选择</Label>
+            <Select onValueChange={(v) => { applyQuickSelect(v); }}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="选择预设周期..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="this-month">本月</SelectItem>
+                <SelectItem value="last-month">上月</SelectItem>
+                <SelectItem value="this-quarter">本季度</SelectItem>
+                <SelectItem value="this-year">本年</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs text-muted-foreground">自定义年份</Label>
             <Select value={selectedYear} onValueChange={setSelectedYear}>
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {yearOptions.map((y) => (
-                  <SelectItem key={y} value={String(y)}>{y}年</SelectItem>
+                  <SelectItem key={y} value={String(y)}>
+                    {y}年
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div>
-            <Label className="text-xs text-muted-foreground">月份 ({tempMonths.size}/12)</Label>
+            <Label className="text-xs text-muted-foreground">
+              月份 ({tempMonths.size}/12)
+            </Label>
             <div className="flex items-center gap-2 mt-1 mb-2">
               <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
               <span className="text-xs text-muted-foreground">全选</span>
@@ -124,17 +206,26 @@ const MultiMonthPicker: React.FC<MultiMonthPickerProps> = ({
                   <label
                     key={m}
                     className={`flex items-center gap-1.5 rounded px-1.5 py-1 cursor-pointer text-xs transition-colors ${
-                      checked ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50'
+                      checked
+                        ? 'bg-primary/10 text-primary'
+                        : 'hover:bg-muted/50'
                     }`}
                   >
-                    <Checkbox checked={checked} onCheckedChange={() => toggleMonth(m)} />
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={() => toggleMonth(m)}
+                    />
                     {label}
                   </label>
                 );
               })}
             </div>
           </div>
-          <Button size="sm" onClick={handleConfirm} disabled={tempMonths.size === 0}>
+          <Button
+            size="sm"
+            onClick={handleConfirm}
+            disabled={tempMonths.size === 0}
+          >
             添加选中月份
           </Button>
         </div>
