@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { Plus } from 'lucide-react';
+import { Plus, Eye, Pencil } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,7 @@ import {
 } from '@client/src/components/ui/dialog';
 import { Button } from '@client/src/components/ui/button';
 import { Badge } from '@client/src/components/ui/badge';
+import { Card, CardContent, CardHeader } from '@client/src/components/ui/card';
 import { Input } from '@client/src/components/ui/input';
 import {
   Select,
@@ -19,6 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@client/src/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@client/src/components/ui/table';
 import { Spinner } from '@client/src/components/ui/spinner';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { handleApiError } from '@client/src/utils/api-error';
@@ -49,6 +58,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
   positions = [],
 }) => {
   const [submitting, setSubmitting] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
 
   const buildDefault = useCallback((): FormData => {
     if (template) {
@@ -78,13 +88,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
           name: '',
           weight: 0,
           indicators: [
-            {
-              content: '',
-              description: '',
-              algorithm: '',
-              dataSource: '',
-              weight: 0,
-            },
+            { content: '', description: '', algorithm: '', dataSource: '', weight: 0 },
           ],
         },
       ],
@@ -96,24 +100,20 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
     defaultValues: buildDefault(),
   });
 
-  const {
-    fields: dimFields,
-    append: appendDim,
-    remove: removeDim,
-  } = useFieldArray({ control: form.control, name: 'dimensions' });
+  const { fields: dimFields, append: appendDim, remove: removeDim } =
+    useFieldArray({ control: form.control, name: 'dimensions' });
 
   useEffect(() => {
     if (open) {
       form.reset(buildDefault());
+      setPreviewMode(!!template);
     }
   }, [open, form, buildDefault]);
 
   const handleSubmit = async (data: FormData) => {
     const totalWeightResult = validateTotalWeight(data.dimensions);
     if (!totalWeightResult.isValid) {
-      toast.error(
-        `权重分总和必须等于 100，当前为 ${totalWeightResult.totalWeight}`,
-      );
+      toast.error(`权重分总和必须等于 100，当前为 ${totalWeightResult.totalWeight}`);
       return;
     }
     const indicatorResult = validateIndicatorWeights(data.dimensions);
@@ -163,10 +163,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
   const indicatorWeightsValid: boolean =
     watchedDims?.every((dim) => {
       const indSum: number =
-        dim?.indicators?.reduce(
-          (sum: number, ind) => sum + (ind?.weight || 0),
-          0,
-        ) || 0;
+        dim?.indicators?.reduce((sum: number, ind) => sum + (ind?.weight || 0), 0) || 0;
       return Math.abs(indSum - (dim?.weight || 0)) < 0.01;
     }) ?? false;
   const canSubmit: boolean = dimWeightValid && indicatorWeightsValid;
@@ -195,6 +192,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                 placeholder="如：销售经理月度绩效"
                 value={watchedName}
                 onChange={(e) => form.setValue('name', e.target.value)}
+                disabled={previewMode}
               />
             </div>
             <div className="w-[180px]">
@@ -204,15 +202,14 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
               <Select
                 onValueChange={(v) => form.setValue('position', v)}
                 value={watchedPosition}
+                disabled={previewMode}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="请选择岗位" />
                 </SelectTrigger>
                 <SelectContent>
-                  {positions.map((pos: string) => (
-                    <SelectItem key={pos} value={pos}>
-                      {pos}
-                    </SelectItem>
+                  {positions.map((pos) => (
+                    <SelectItem key={pos} value={pos}>{pos}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -222,10 +219,9 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                 绩效类型 <span className="text-destructive">*</span>
               </label>
               <Select
-                onValueChange={(v: 'monthly' | 'probation') =>
-                  form.setValue('type', v)
-                }
+                onValueChange={(v: 'monthly' | 'probation') => form.setValue('type', v)}
                 value={watchedType}
+                disabled={previewMode}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="请选择" />
@@ -238,47 +234,120 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
             </div>
           </div>
 
-          {dimFields.map((dimField, dimIdx: number) => (
-            <DimensionCard
-              key={dimField.id}
-              form={form}
-              dimIdx={dimIdx}
-              dimData={watchedDims?.[dimIdx]}
-              onRemove={() => removeDim(dimIdx)}
-              canRemove={dimFields.length > 1}
-            />
-          ))}
+          <div className="flex items-center gap-2">
+            <Button
+              variant={previewMode ? 'outline' : 'secondary'}
+              size="sm"
+              onClick={() => setPreviewMode(false)}
+            >
+              <Pencil className="size-3.5" />
+              编辑模式
+            </Button>
+            <Button
+              variant={!previewMode ? 'outline' : 'secondary'}
+              size="sm"
+              onClick={() => setPreviewMode(true)}
+            >
+              <Eye className="size-3.5" />
+              预览模式
+            </Button>
+          </div>
+
+          {dimFields.map((dimField, dimIdx: number) => {
+            const dimData = watchedDims?.[dimIdx];
+            if (previewMode) {
+              return (
+                <Card key={dimField.id}>
+                  <CardHeader className="pb-2 bg-muted">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-semibold">
+                        {dimData?.name || '未命名维度'}
+                      </h3>
+                      <Badge variant="secondary" className="text-xs">
+                        权重分 {dimData?.weight || 0}%
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <Table className="table-fixed w-full">
+                      <TableHeader>
+                        <TableRow className="bg-muted/30">
+                          <TableHead className="w-[20%] text-xs">指标</TableHead>
+                          <TableHead className="w-[30%] text-xs hidden md:table-cell">说明</TableHead>
+                          <TableHead className="w-[20%] text-xs hidden lg:table-cell">算法/描述</TableHead>
+                          <TableHead className="w-[18%] text-xs hidden lg:table-cell">数据来源</TableHead>
+                          <TableHead className="text-center w-[12%] text-xs">权重分</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {dimData?.indicators?.map(
+                          (ind: {
+                            content: string; description: string;
+                            algorithm: string; dataSource: string; weight: number;
+                          }, i: number) => (
+                            <TableRow key={i}>
+                              <TableCell className="text-xs whitespace-pre-wrap break-words">
+                                {ind.content || '-'}
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground whitespace-pre-wrap break-words hidden md:table-cell">
+                                {ind.description || '-'}
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground whitespace-pre-wrap break-words hidden lg:table-cell">
+                                {ind.algorithm || '-'}
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground whitespace-pre-wrap break-words hidden lg:table-cell">
+                                {ind.dataSource || '-'}
+                              </TableCell>
+                              <TableCell className="text-xs text-center">{ind.weight}</TableCell>
+                            </TableRow>
+                          ),
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              );
+            }
+            return (
+              <DimensionCard
+                key={dimField.id}
+                form={form}
+                dimIdx={dimIdx}
+                dimData={dimData}
+                onRemove={() => removeDim(dimIdx)}
+                canRemove={dimFields.length > 1}
+              />
+            );
+          })}
 
           <div className="flex items-center justify-between pt-2 border-t">
             <div className="flex items-center gap-3">
-              <Button
-                type="button"
-                size="sm"
-                onClick={() =>
-                  appendDim({
-                    name: '',
-                    weight: 0,
-                    indicators: [
-                      {
-                        content: '',
-                        description: '',
-                        algorithm: '',
-                        dataSource: '',
-                        weight: 0,
-                      },
-                    ],
-                  })
-                }
-              >
-                <Plus className="size-3 mr-1" />
-                添加维度
-              </Button>
-              <span
-                className={`text-sm font-medium ${dimWeightValid ? 'text-success' : 'text-destructive'}`}
-              >
-                权重分总和：{totalDimWeight} / 100
-                {!dimWeightValid && ' （必须等于100）'}
-              </span>
+              {!previewMode && (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() =>
+                    appendDim({
+                      name: '',
+                      weight: 0,
+                      indicators: [
+                        { content: '', description: '', algorithm: '', dataSource: '', weight: 0 },
+                      ],
+                    })
+                  }
+                >
+                  <Plus className="size-3 mr-1" />
+                  添加维度
+                </Button>
+              )}
+              {!previewMode && (
+                <span
+                  className={`text-sm font-medium ${dimWeightValid ? 'text-success' : 'text-destructive'}`}
+                >
+                  权重分总和：{totalDimWeight} / 100
+                  {!dimWeightValid && ' （必须等于100）'}
+                </span>
+              )}
             </div>
             <div className="flex gap-3">
               <Button
@@ -288,13 +357,15 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
               >
                 取消
               </Button>
-              <Button
-                onClick={form.handleSubmit(handleSubmit)}
-                disabled={submitting || !canSubmit}
-              >
-                {submitting && <Spinner className="mr-2 size-4" />}
-                保存
-              </Button>
+              {!previewMode && (
+                <Button
+                  onClick={form.handleSubmit(handleSubmit)}
+                  disabled={submitting || !canSubmit}
+                >
+                  {submitting && <Spinner className="mr-2 size-4" />}
+                  保存
+                </Button>
+              )}
             </div>
           </div>
         </div>

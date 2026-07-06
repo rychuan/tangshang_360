@@ -121,9 +121,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                 <Table className="table-fixed w-full">
                   <TableHeader>
                     <TableRow className="bg-muted/30">
-                      <TableHead className="w-[20%] text-xs">
-                        指标
-                      </TableHead>
+                      <TableHead className="w-[20%] text-xs">指标</TableHead>
                       <TableHead className="w-[25%] text-xs hidden md:table-cell">
                         说明
                       </TableHead>
@@ -136,7 +134,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                       <TableHead className="text-center w-[5%] text-xs">
                         权重分
                       </TableHead>
-                      <TableHead className="text-center w-[5%] text-xs">自评</TableHead>
+                      <TableHead className="text-center w-[5%] text-xs">
+                        自评
+                      </TableHead>
                       <TableHead className="text-center w-[5%] text-xs">
                         上级评分
                       </TableHead>

@@ -3,7 +3,6 @@ import { toast } from 'sonner';
 import {
   Plus,
   Eye,
-  Pencil,
   Ban,
   Trash2,
   Search,
@@ -49,7 +48,6 @@ import {
 } from '@/components/business-ui/page-table';
 import TemplateFormDialog from './TemplateFormDialog';
 import { POSITION_OPTIONS } from './TemplateFormDialog.types';
-import TemplatePreviewDialog from './TemplatePreviewDialog';
 import * as assessmentTemplateApi from '@client/src/api/assessment-template';
 import type {
   AssessmentTemplateItem,
@@ -72,8 +70,6 @@ const TemplateManagementPage: React.FC = () => {
   const [editingTemplate, setEditingTemplate] =
     useState<AssessmentTemplateDetail | null>(null);
 
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewTemplate, setPreviewTemplate] =
     useState<AssessmentTemplateDetail | null>(null);
 
   const [deactivateId, setDeactivateId] = useState<string | null>(null);
@@ -163,7 +159,6 @@ const TemplateManagementPage: React.FC = () => {
     await fetchList();
   };
 
-  const handlePreview = async (id: string) => {
     const cached = detailCache[id];
     if (cached) {
       setPreviewTemplate(cached);
@@ -260,19 +255,9 @@ const TemplateManagementPage: React.FC = () => {
           <ActionBadge
             actionType="preview"
             icon={<Eye className="size-3" />}
-            label="预览"
-            onClick={() => handlePreview(item.id)}
+            label="查看"
+            onClick={() => handleEdit(item.id)}
           />
-          <CanRole roles={['admin', 'hrd']}>
-            <CanDo resource="template_management" action="edit">
-              <ActionBadge
-                actionType="edit"
-                icon={<Pencil className="size-3" />}
-                label="编辑"
-                onClick={() => handleEdit(item.id)}
-              />
-            </CanDo>
-          </CanRole>
           {item.isActive && (
             <CanRole roles={['admin', 'hrd']}>
               <CanDo resource="template_management" action="delete">
@@ -445,10 +430,7 @@ const TemplateManagementPage: React.FC = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <TemplatePreviewDialog
-        open={previewOpen}
         onOpenChange={setPreviewOpen}
-        template={previewTemplate}
       />
 
       <AlertDialog
