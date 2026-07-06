@@ -226,14 +226,15 @@ const TeamPerformancePage: React.FC = () => {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <PageHeader title="团队绩效" visuallyHidden />
         <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground">考核周期</span>
+          <span className="text-xs text-muted-foreground shrink-0">
+            考核周期
+          </span>
           <MultiMonthPicker
             value={selectedPeriods}
             onChange={(value: string[]) => {
               setSelectedPeriods(value);
               setPage(1);
             }}
-            className="w-40"
           />
         </div>
       </div>
