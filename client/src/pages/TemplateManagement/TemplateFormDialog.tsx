@@ -88,7 +88,13 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
           name: '',
           weight: 0,
           indicators: [
-            { content: '', description: '', algorithm: '', dataSource: '', weight: 0 },
+            {
+              content: '',
+              description: '',
+              algorithm: '',
+              dataSource: '',
+              weight: 0,
+            },
           ],
         },
       ],
@@ -100,8 +106,11 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
     defaultValues: buildDefault(),
   });
 
-  const { fields: dimFields, append: appendDim, remove: removeDim } =
-    useFieldArray({ control: form.control, name: 'dimensions' });
+  const {
+    fields: dimFields,
+    append: appendDim,
+    remove: removeDim,
+  } = useFieldArray({ control: form.control, name: 'dimensions' });
 
   useEffect(() => {
     if (open) {
@@ -113,7 +122,9 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
   const handleSubmit = async (data: FormData) => {
     const totalWeightResult = validateTotalWeight(data.dimensions);
     if (!totalWeightResult.isValid) {
-      toast.error(`权重分总和必须等于 100，当前为 ${totalWeightResult.totalWeight}`);
+      toast.error(
+        `权重分总和必须等于 100，当前为 ${totalWeightResult.totalWeight}`,
+      );
       return;
     }
     const indicatorResult = validateIndicatorWeights(data.dimensions);
@@ -163,7 +174,10 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
   const indicatorWeightsValid: boolean =
     watchedDims?.every((dim) => {
       const indSum: number =
-        dim?.indicators?.reduce((sum: number, ind) => sum + (ind?.weight || 0), 0) || 0;
+        dim?.indicators?.reduce(
+          (sum: number, ind) => sum + (ind?.weight || 0),
+          0,
+        ) || 0;
       return Math.abs(indSum - (dim?.weight || 0)) < 0.01;
     }) ?? false;
   const canSubmit: boolean = dimWeightValid && indicatorWeightsValid;
@@ -209,7 +223,9 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   {positions.map((pos) => (
-                    <SelectItem key={pos} value={pos}>{pos}</SelectItem>
+                    <SelectItem key={pos} value={pos}>
+                      {pos}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -219,7 +235,9 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                 绩效类型 <span className="text-destructive">*</span>
               </label>
               <Select
-                onValueChange={(v: 'monthly' | 'probation') => form.setValue('type', v)}
+                onValueChange={(v: 'monthly' | 'probation') =>
+                  form.setValue('type', v)
+                }
                 value={watchedType}
                 disabled={previewMode}
               >
@@ -272,19 +290,35 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                     <Table className="table-fixed w-full">
                       <TableHeader>
                         <TableRow className="bg-muted/30">
-                          <TableHead className="w-[20%] text-xs">指标</TableHead>
-                          <TableHead className="w-[30%] text-xs hidden md:table-cell">说明</TableHead>
-                          <TableHead className="w-[20%] text-xs hidden lg:table-cell">算法/描述</TableHead>
-                          <TableHead className="w-[18%] text-xs hidden lg:table-cell">数据来源</TableHead>
-                          <TableHead className="text-center w-[12%] text-xs">权重分</TableHead>
+                          <TableHead className="w-[20%] text-xs">
+                            指标
+                          </TableHead>
+                          <TableHead className="w-[30%] text-xs hidden md:table-cell">
+                            说明
+                          </TableHead>
+                          <TableHead className="w-[20%] text-xs hidden lg:table-cell">
+                            算法/描述
+                          </TableHead>
+                          <TableHead className="w-[18%] text-xs hidden lg:table-cell">
+                            数据来源
+                          </TableHead>
+                          <TableHead className="text-center w-[12%] text-xs">
+                            权重分
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {dimData?.indicators?.map(
-                          (ind: {
-                            content: string; description: string;
-                            algorithm: string; dataSource: string; weight: number;
-                          }, i: number) => (
+                          (
+                            ind: {
+                              content: string;
+                              description: string;
+                              algorithm: string;
+                              dataSource: string;
+                              weight: number;
+                            },
+                            i: number,
+                          ) => (
                             <TableRow key={i}>
                               <TableCell className="text-xs whitespace-pre-wrap break-words">
                                 {ind.content || '-'}
@@ -298,7 +332,9 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                               <TableCell className="text-xs text-muted-foreground whitespace-pre-wrap break-words hidden lg:table-cell">
                                 {ind.dataSource || '-'}
                               </TableCell>
-                              <TableCell className="text-xs text-center">{ind.weight}</TableCell>
+                              <TableCell className="text-xs text-center">
+                                {ind.weight}
+                              </TableCell>
                             </TableRow>
                           ),
                         )}
@@ -331,7 +367,13 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                       name: '',
                       weight: 0,
                       indicators: [
-                        { content: '', description: '', algorithm: '', dataSource: '', weight: 0 },
+                        {
+                          content: '',
+                          description: '',
+                          algorithm: '',
+                          dataSource: '',
+                          weight: 0,
+                        },
                       ],
                     })
                   }

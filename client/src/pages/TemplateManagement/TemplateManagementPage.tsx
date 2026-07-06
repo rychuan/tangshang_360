@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import {
   Plus,
   Eye,
+  Pencil,
   Ban,
   Trash2,
   Search,
@@ -47,8 +48,8 @@ import {
   PageTableColumn,
 } from '@/components/business-ui/page-table';
 import TemplateFormDialog from './TemplateFormDialog';
-import TemplatePreviewDialog from './TemplatePreviewDialog';
 import { POSITION_OPTIONS } from './TemplateFormDialog.types';
+import TemplatePreviewDialog from './TemplatePreviewDialog';
 import * as assessmentTemplateApi from '@client/src/api/assessment-template';
 import type {
   AssessmentTemplateItem,
@@ -70,9 +71,10 @@ const TemplateManagementPage: React.FC = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] =
     useState<AssessmentTemplateDetail | null>(null);
+
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [previewTemplate, setPreviewTemplate] =
     useState<AssessmentTemplateDetail | null>(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
 
   const [deactivateId, setDeactivateId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -259,8 +261,18 @@ const TemplateManagementPage: React.FC = () => {
             actionType="preview"
             icon={<Eye className="size-3" />}
             label="查看"
-            onClick={() => handlePreview(item.id)}
+            onClick={() => handleEdit(item.id)}
           />
+          <CanRole roles={['admin', 'hrd']}>
+            <CanDo resource="template_management" action="edit">
+              <ActionBadge
+                actionType="edit"
+                icon={<Pencil className="size-3" />}
+                label="编辑"
+                onClick={() => handleEdit(item.id)}
+              />
+            </CanDo>
+          </CanRole>
           {item.isActive && (
             <CanRole roles={['admin', 'hrd']}>
               <CanDo resource="template_management" action="delete">
@@ -435,8 +447,8 @@ const TemplateManagementPage: React.FC = () => {
 
       <TemplatePreviewDialog
         open={previewOpen}
-        template={previewTemplate}
         onOpenChange={setPreviewOpen}
+        template={previewTemplate}
       />
 
       <AlertDialog
