@@ -310,7 +310,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                 return (
                   <div
                     key={dimField.id}
-                    className="rounded-md border-2 border-slate-400 bg-slate-200 p-4 flex flex-col gap-3 dark:border-slate-500 dark:bg-slate-700"
+                    className="rounded-md border border-gray-300 bg-gray-400/20 p-4 flex flex-col gap-3 dark:border-gray-600 dark:bg-gray-800"
                   >
                     <div className="flex items-center gap-3">
                       <Button
