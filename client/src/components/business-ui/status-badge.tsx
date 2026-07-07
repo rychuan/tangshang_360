@@ -21,7 +21,7 @@ export const ASSESSMENT_STATUS_BADGE_VARIANT: Record<
   self_review: 'default',
   supervisor_review: 'default',
   pending_sign: 'outline',
-  completed: 'secondary',
+  completed: 'outline',
 };
 
 // ---------------------------------------------------------------------------
@@ -51,8 +51,12 @@ interface StatusBadgeProps {
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className }) => {
   const label = ASSESSMENT_STATUS_LABELS[status] ?? status;
   const variant = ASSESSMENT_STATUS_BADGE_VARIANT[status] ?? 'secondary';
+  const completedClass =
+    status === 'completed'
+      ? 'bg-success/10 text-success border-success/20'
+      : '';
   return (
-    <Badge variant={variant} className={className}>
+    <Badge variant={variant} className={`${completedClass} ${className ?? ''}`}>
       {label}
     </Badge>
   );
