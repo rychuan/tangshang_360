@@ -5,6 +5,8 @@
 // ============================================================
 
 export interface AssessmentReminderFeishuSendOneInput {
+  /** 卡片标题 */
+  title: { title: string };
   /** 接收提醒的用户ID列表 */
   receiverUserList: string[];
   /** 消息正文内容，支持Markdown格式 */

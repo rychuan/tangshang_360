@@ -330,6 +330,7 @@ export class AssessmentPublishService {
               await this.capabilityService
                 .load('assessment_reminder_feishu_send_1')
                 .call('send_feishu_message', {
+                  title: { title: '考核发布通知' },
                   receiverUserList: [pi.employeeId],
                   cardContentMarkdown: message,
                 });
@@ -988,6 +989,7 @@ export class AssessmentPublishService {
         await this.capabilityService
           .load('assessment_reminder_feishu_send_1')
           .call('send_feishu_message', {
+            title: { title: '考核提醒通知' },
             receiverUserList: [empId],
             cardContentMarkdown: `**考核提醒通知**\n\n${period} 月度考核正在进行中，请尽快完成。`,
           });
