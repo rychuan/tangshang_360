@@ -73,6 +73,7 @@ export function useAssessmentDetail(
               : undefined;
         initial[ind.id] = {
           score: score ?? undefined,
+          completionStatus: ind.selfCompletionStatus ?? '',
           comment: comment ?? '',
         };
       }
@@ -164,7 +165,7 @@ export function useAssessmentDetail(
   const updateRating = useCallback(
     (
       indicatorId: string,
-      field: 'score' | 'comment',
+      field: 'score' | 'completionStatus' | 'comment',
       value: string,
       weight?: number,
     ) => {
@@ -259,6 +260,30 @@ export function useAssessmentDetail(
         `以下 ${overLimitIndicators.length} 项指标超过权重分：${names}${suffix}，请调整后提交`,
       );
       return;
+    }
+
+    if (detail.status === 'self_review') {
+      const emptyCompletionIndicators: string[] = [];
+      for (const group of groupedIndicators) {
+        for (const ind of group.indicators) {
+          const completionStatus = ratings[ind.id]?.completionStatus;
+          if (!completionStatus?.trim()) {
+            emptyCompletionIndicators.push(
+              ind.content.length > 12
+                ? ind.content.slice(0, 12) + '…'
+                : ind.content,
+            );
+          }
+        }
+      }
+      if (emptyCompletionIndicators.length > 0) {
+        const names = emptyCompletionIndicators.slice(0, 3).join('、');
+        const suffix = emptyCompletionIndicators.length > 3 ? '等' : '';
+        toast.warning(
+          `以下 ${emptyCompletionIndicators.length} 项指标未填写完成情况：${names}${suffix}，请填写后提交`,
+        );
+        return;
+      }
     }
 
     setSubmitting(true);

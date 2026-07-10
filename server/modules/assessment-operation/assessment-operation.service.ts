@@ -44,6 +44,7 @@ const SCORE_PRECISION = 100;
 export type RatingValidationInput = {
   indicatorSnapshotId: string;
   score: number;
+  completionStatus?: string;
 };
 
 export type SnapshotValidationInput = {
@@ -56,6 +57,7 @@ export function validateRatingsAgainstSnapshots(
   ratings: RatingValidationInput[] | undefined,
   snapshots: SnapshotValidationInput[],
   isDraft: boolean,
+  options: { requireCompletionStatus?: boolean } = {},
 ): void {
   const snapshotMap = new Map(snapshots.map((s) => [s.id, s]));
 
@@ -88,6 +90,18 @@ export function validateRatingsAgainstSnapshots(
       throw new BadRequestException(
         `以下指标未评分: ${missing.map((s) => s.content).join('、')}`,
       );
+    }
+
+    if (options.requireCompletionStatus) {
+      const missingCompletion = snapshots.filter((s) => {
+        const rating = ratings.find((r) => r.indicatorSnapshotId === s.id);
+        return !rating?.completionStatus?.trim();
+      });
+      if (missingCompletion.length > 0) {
+        throw new BadRequestException(
+          `以下指标未填写完成情况: ${missingCompletion.map((s) => s.content).join('、')}`,
+        );
+      }
     }
   }
 }
@@ -223,13 +237,18 @@ export class AssessmentOperationService {
 
     const ratingMap = new Map<
       string,
-      { score: number; comment?: string | null }
+      {
+        score: number;
+        comment?: string | null;
+        completionStatus?: string | null;
+      }
     >();
     for (const r of allRatings) {
       const key = `${r.indicatorSnapshotId}:${r.ratingType}`;
       ratingMap.set(key, {
         score: Number(r.score),
         comment: r.comment,
+        completionStatus: r.completionStatus,
       });
     }
 
@@ -247,6 +266,7 @@ export class AssessmentOperationService {
         dataSource: snap.dataSource || '',
         weight: Number(snap.weight),
         selfScore: selfRating?.score,
+        selfCompletionStatus: selfRating?.completionStatus || undefined,
         selfComment: selfRating?.comment || undefined,
         supervisorScore: supervisorRating?.score,
         supervisorComment: supervisorRating?.comment || undefined,
@@ -347,7 +367,9 @@ export class AssessmentOperationService {
       .from(assessmentIndicatorSnapshot)
       .where(eq(assessmentIndicatorSnapshot.instanceId, id));
 
-    validateRatingsAgainstSnapshots(body.ratings, allSnapshots, body.isDraft);
+    validateRatingsAgainstSnapshots(body.ratings, allSnapshots, body.isDraft, {
+      requireCompletionStatus: true,
+    });
 
     // ---- 事务：锁行 → 批量 upsert → 状态推进 → 审计日志 ----
     await this.db.transaction(async (tx) => {
@@ -393,6 +415,7 @@ export class AssessmentOperationService {
             .update(ratingRecord)
             .set({
               score: scoreStr,
+              completionStatus: rating.completionStatus ?? null,
               comment: rating.comment || null,
               isDraft: body.isDraft,
               submittedAt: body.isDraft ? null : new Date(),
@@ -404,6 +427,7 @@ export class AssessmentOperationService {
             indicatorSnapshotId: rating.indicatorSnapshotId,
             ratingType: 'self',
             score: scoreStr,
+            completionStatus: rating.completionStatus ?? null,
             comment: rating.comment || null,
             ratedBy: userId,
             isDraft: body.isDraft,

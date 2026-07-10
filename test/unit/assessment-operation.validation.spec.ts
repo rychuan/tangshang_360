@@ -40,4 +40,17 @@ describe('validateRatingsAgainstSnapshots', () => {
       validateRatingsAgainstSnapshots(ratings, snapshots, true),
     ).not.toThrow();
   });
+
+  it('requires completion status when employee submits final self-review', () => {
+    const ratings: RatingValidationInput[] = [
+      { indicatorSnapshotId: 'indicator-a', score: 20, completionStatus: '' },
+      { indicatorSnapshotId: 'indicator-b', score: 30, completionStatus: '完成' },
+    ];
+
+    expect(() =>
+      validateRatingsAgainstSnapshots(ratings, snapshots, false, {
+        requireCompletionStatus: true,
+      }),
+    ).toThrow('以下指标未填写完成情况');
+  });
 });

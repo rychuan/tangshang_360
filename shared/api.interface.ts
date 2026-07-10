@@ -140,6 +140,7 @@ export interface AssessmentIndicatorDetail {
   dataSource: string;
   weight: number;
   selfScore?: number;
+  selfCompletionStatus?: string;
   selfComment?: string;
   supervisorScore?: number;
   supervisorComment?: string;
@@ -170,6 +171,7 @@ export interface RatingSubmitRequest {
   ratings: Array<{
     indicatorSnapshotId: string;
     score: number;
+    completionStatus?: string;
     comment?: string;
   }>;
 }

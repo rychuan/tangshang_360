@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Table,
   TableBody,
@@ -27,7 +28,7 @@ interface IndicatorTableProps {
   canEditSupervisor: boolean;
   updateRating: (
     id: string,
-    field: 'score' | 'comment',
+    field: 'score' | 'completionStatus' | 'comment',
     value: string,
     weight?: number,
   ) => void;
@@ -127,15 +128,18 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                 <Table className="table-fixed w-full">
                   <TableHeader>
                     <TableRow className="bg-muted/30">
-                      <TableHead className="w-[20%] text-xs">指标</TableHead>
-                      <TableHead className="w-[25%] text-xs hidden md:table-cell">
+                      <TableHead className="w-[18%] text-xs">指标</TableHead>
+                      <TableHead className="w-[16%] text-xs hidden md:table-cell">
                         说明
                       </TableHead>
-                      <TableHead className="w-[10%] text-xs hidden lg:table-cell">
+                      <TableHead className="w-[8%] text-xs hidden lg:table-cell">
                         算法/描述
                       </TableHead>
-                      <TableHead className="w-[10%] text-xs hidden lg:table-cell">
+                      <TableHead className="w-[8%] text-xs hidden lg:table-cell">
                         数据来源
+                      </TableHead>
+                      <TableHead className="w-[15%] text-xs">
+                        完成情况
                       </TableHead>
                       <TableHead className="text-center w-[5%] text-xs">
                         权重分
@@ -163,6 +167,30 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                         </TableCell>
                         <TableCell className="text-muted-foreground text-xs whitespace-pre-wrap break-words max-w-[100px] hidden lg:table-cell">
                           {indicator.dataSource || '-'}
+                        </TableCell>
+                        <TableCell className="align-top">
+                          {canEditSelf ? (
+                            <Textarea
+                              className="min-h-20 w-full resize-y text-xs"
+                              placeholder="填写完成情况"
+                              value={
+                                ratings[indicator.id]?.completionStatus ?? ''
+                              }
+                              onChange={(
+                                e: React.ChangeEvent<HTMLTextAreaElement>,
+                              ) =>
+                                updateRating(
+                                  indicator.id,
+                                  'completionStatus',
+                                  e.target.value,
+                                )
+                              }
+                            />
+                          ) : (
+                            <span className="block whitespace-pre-wrap break-words text-xs text-muted-foreground">
+                              {indicator.selfCompletionStatus || '-'}
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell className="text-center text-sm">
                           {indicator.weight}
