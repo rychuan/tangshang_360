@@ -55,9 +55,6 @@ export function useAssessmentDetail(
       setLoading(true);
       setError(null);
       const data = await assessmentOperation.detail(id);
-      if (!data || !Array.isArray(data.indicators)) {
-        throw new Error('接口返回数据格式异常');
-      }
       setDetail(data);
 
       const initial: RatingsState = {};
