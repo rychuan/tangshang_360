@@ -30,6 +30,15 @@ export function normalizeAssessmentDetailResponse(
   ) {
     return (value as { data: AssessmentInstanceDetail }).data;
   }
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'error' in value &&
+    typeof (value as { error?: { message?: unknown } }).error?.message ===
+      'string'
+  ) {
+    throw new Error((value as { error: { message: string } }).error.message);
+  }
   throw new Error('接口返回数据格式异常');
 }
 

@@ -15,6 +15,8 @@ export function handleApiError(error: unknown): void {
     return; // handled by axiosForBackend interceptor
   }
   const message =
-    axiosError?.response?.data?.error?.message || '操作失败，请重试';
+    axiosError?.response?.data?.error?.message ||
+    (error instanceof Error ? error.message : undefined) ||
+    '操作失败，请重试';
   toast.error(message);
 }

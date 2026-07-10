@@ -25,9 +25,15 @@ describe('normalizeAssessmentDetailResponse', () => {
     expect(normalizeAssessmentDetailResponse({ data: detail })).toBe(detail);
   });
 
-  it('throws when the response is not an assessment detail payload', () => {
+  it('throws server error messages from error envelopes', () => {
     expect(() =>
       normalizeAssessmentDetailResponse({ error: { message: 'forbidden' } }),
-    ).toThrow('接口返回数据格式异常');
+    ).toThrow('forbidden');
+  });
+
+  it('throws when the response is not an assessment detail payload', () => {
+    expect(() => normalizeAssessmentDetailResponse({ ok: true })).toThrow(
+      '接口返回数据格式异常',
+    );
   });
 });

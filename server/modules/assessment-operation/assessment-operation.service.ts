@@ -21,6 +21,7 @@ import {
   performanceGrade,
 } from '@server/database/schema';
 import { PerformanceGradeService } from '../performance-grade/performance-grade.service';
+import { RoleManagerService } from '../role-manager/role-manager.service';
 import type {
   AssessmentInstanceDetail,
   AssessmentIndicatorDetail,
@@ -99,6 +100,7 @@ export class AssessmentOperationService {
     @Inject(DRIZZLE_DATABASE)
     private readonly db: PostgresJsDatabase,
     private readonly performanceGradeService: PerformanceGradeService,
+    private readonly roleManagerService: RoleManagerService,
   ) {}
 
   /** 统一的权限校验：检查当前用户是否为员工本人、上级、部门负责人或系统管理员 */
@@ -136,18 +138,8 @@ export class AssessmentOperationService {
 
     let isAdmin = false;
     if (!isEmployee && !isSupervisor && !isDeptHead) {
-      const adminRows = await this.db
-        .select({ id: employee.employeeId })
-        .from(employee)
-        .where(
-          and(
-            sql`(${employee.employeeId}).user_id = ${userId}`,
-            eq(employee.role, 'admin'),
-            isNull(employee.deletedAt),
-          ),
-        )
-        .limit(1);
-      isAdmin = adminRows.length > 0;
+      const roles = await this.roleManagerService.getUserRoles(userId);
+      isAdmin = roles.includes('admin') || roles.includes('hrd');
     }
 
     return { isEmployee, isSupervisor, isDeptHead, isAdmin };
