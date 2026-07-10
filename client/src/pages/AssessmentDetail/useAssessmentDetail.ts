@@ -12,6 +12,7 @@ import {
   type DimensionGroup,
   buildRatingPayload,
   calculatePreviewScore,
+  getScoreCoefficientWarnings,
   matchGradeLocally,
 } from './assessment-utils';
 import { handleApiError } from '@client/src/utils/api-error';
@@ -157,6 +158,11 @@ export function useAssessmentDetail(
     return calculatePreviewScore(ratings, groupedIndicators, gradeRules);
   }, [canEditSupervisor, ratings, groupedIndicators, gradeRules]);
 
+  const scoreWarningIndicators = useMemo(
+    () => getScoreCoefficientWarnings(ratings, groupedIndicators),
+    [ratings, groupedIndicators],
+  );
+
   const gradeStyleMap = useMemo(
     () => buildGradeStyleMap(gradeRules),
     [gradeRules],
@@ -207,7 +213,7 @@ export function useAssessmentDetail(
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (options?: { confirmedScoreWarning?: boolean }) => {
     if (!id || !detail) return;
 
     // 提交前校验：所有指标必须已填写分数
@@ -233,27 +239,6 @@ export function useAssessmentDetail(
       return;
     }
 
-    const warningIndicators: string[] = [];
-    for (const group of groupedIndicators) {
-      for (const ind of group.indicators) {
-        const s = ratings[ind.id]?.score;
-        if (s != null && s > ind.weight * 1.2) {
-          warningIndicators.push(
-            ind.content.length > 12
-              ? ind.content.slice(0, 12) + '…'
-              : ind.content,
-          );
-        }
-      }
-    }
-    if (warningIndicators.length > 0) {
-      const names = warningIndicators.slice(0, 3).join('、');
-      const suffix = warningIndicators.length > 3 ? '等' : '';
-      toast.warning(
-        `以下 ${warningIndicators.length} 项指标评分超过权重分的 1.2 倍：${names}${suffix}，请确认分数是否正确`,
-      );
-    }
-
     if (detail.status === 'self_review') {
       const emptyCompletionIndicators: string[] = [];
       for (const group of groupedIndicators) {
@@ -276,6 +261,13 @@ export function useAssessmentDetail(
         );
         return;
       }
+    }
+
+    if (
+      scoreWarningIndicators.length > 0 &&
+      !options?.confirmedScoreWarning
+    ) {
+      return { needsScoreWarningConfirm: true };
     }
 
     setSubmitting(true);
@@ -308,6 +300,7 @@ export function useAssessmentDetail(
     error,
     submitting,
     ratings,
+    scoreWarningIndicators,
     groupedIndicators,
     canEditSelf,
     canEditSupervisor,

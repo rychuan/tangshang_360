@@ -20,6 +20,16 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { StatusBadge } from '@/components/business-ui/status-badge';
 import { UserDisplay } from '@/components/business-ui/user-display';
 import * as assessmentOperation from '@client/src/api/assessment-operation';
@@ -50,6 +60,7 @@ const AssessmentDetailPage: React.FC = () => {
     error,
     submitting,
     ratings,
+    scoreWarningIndicators,
     groupedIndicators,
     canEditSelf,
     canEditSupervisor,
@@ -81,6 +92,8 @@ const AssessmentDetailPage: React.FC = () => {
   }, [detail, setLabel]);
 
   const [signDialogOpen, setSignDialogOpen] = useState<boolean>(false);
+  const [scoreWarningDialogOpen, setScoreWarningDialogOpen] =
+    useState<boolean>(false);
   const [signType, setSignType] = useState<'self' | 'supervisor'>('self');
   const [signImage, setSignImage] = useState<string | null>(null);
   const [signing, setSigning] = useState<boolean>(false);
@@ -89,6 +102,18 @@ const AssessmentDetailPage: React.FC = () => {
     setSignType(type);
     setSignImage(null);
     setSignDialogOpen(true);
+  };
+
+  const handleSubmitClick = async () => {
+    const result = await handleSubmit();
+    if (result?.needsScoreWarningConfirm) {
+      setScoreWarningDialogOpen(true);
+    }
+  };
+
+  const handleConfirmScoreWarningSubmit = async () => {
+    setScoreWarningDialogOpen(false);
+    await handleSubmit({ confirmedScoreWarning: true });
   };
 
   const handleSign = async () => {
@@ -375,7 +400,7 @@ const AssessmentDetailPage: React.FC = () => {
               <Save data-icon="inline-start" />
               保存草稿
             </Button>
-            <Button onClick={handleSubmit} disabled={submitting || signing}>
+            <Button onClick={handleSubmitClick} disabled={submitting || signing}>
               <Send data-icon="inline-start" />
               提交自评
             </Button>
@@ -391,7 +416,7 @@ const AssessmentDetailPage: React.FC = () => {
               <Save data-icon="inline-start" />
               保存草稿
             </Button>
-            <Button onClick={handleSubmit} disabled={submitting || signing}>
+            <Button onClick={handleSubmitClick} disabled={submitting || signing}>
               <Send data-icon="inline-start" />
               提交评分
             </Button>
@@ -429,6 +454,42 @@ const AssessmentDetailPage: React.FC = () => {
         loading={signing}
         onConfirm={handleSign}
       />
+
+      <AlertDialog
+        open={scoreWarningDialogOpen}
+        onOpenChange={setScoreWarningDialogOpen}
+      >
+        <AlertDialogContent className="w-[95vw] max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认提交评分</AlertDialogTitle>
+            <AlertDialogDescription>
+              以下 {scoreWarningIndicators.length}{' '}
+              项指标评分超过1.2系数，请确认是否继续提交。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="max-h-40 overflow-y-auto rounded-md bg-muted/50 p-3 text-sm">
+            {scoreWarningIndicators.slice(0, 8).map((name, index) => (
+              <div key={`${name}-${index}`} className="py-0.5">
+                {name}
+              </div>
+            ))}
+            {scoreWarningIndicators.length > 8 && (
+              <div className="py-0.5 text-muted-foreground">
+                另有 {scoreWarningIndicators.length - 8} 项
+              </div>
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={submitting}>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmScoreWarningSubmit}
+              disabled={submitting}
+            >
+              确认提交
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

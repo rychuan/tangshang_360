@@ -17,6 +17,34 @@ export interface DimensionGroup {
   indicators: AssessmentIndicatorDetail[];
 }
 
+export function exceedsScoreCoefficient(
+  score: number | null | undefined,
+  weight: number,
+  coefficient = 1.2,
+): boolean {
+  return score != null && score > weight * coefficient;
+}
+
+export function getScoreCoefficientWarnings(
+  ratings: RatingsState,
+  groups: DimensionGroup[],
+): string[] {
+  const warnings: string[] = [];
+  for (const group of groups) {
+    for (const ind of group.indicators) {
+      const score = ratings[ind.id]?.score;
+      if (exceedsScoreCoefficient(score, ind.weight)) {
+        warnings.push(
+          ind.content.length > 12
+            ? ind.content.slice(0, 12) + '…'
+            : ind.content,
+        );
+      }
+    }
+  }
+  return warnings;
+}
+
 export function buildRatingPayload(ratings: RatingsState) {
   return {
     ratings: Object.entries(ratings).map(([indicatorSnapshotId, r]) => ({

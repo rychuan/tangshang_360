@@ -19,7 +19,11 @@ import {
 } from '@/components/ui/empty';
 import { ChevronDown, BarChart3 } from 'lucide-react';
 import type { AssessmentIndicatorDetail } from '@shared/api.interface';
-import type { RatingsState, DimensionGroup } from './assessment-utils';
+import {
+  type RatingsState,
+  type DimensionGroup,
+  exceedsScoreCoefficient,
+} from './assessment-utils';
 
 interface IndicatorTableProps {
   groups: DimensionGroup[];
@@ -49,12 +53,15 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     const canEditThis = type === 'self' ? canEditSelf : canEditSupervisor;
     const existingScore =
       type === 'self' ? indicator.selfScore : indicator.supervisorScore;
+    const score = canEditThis ? ratings[indicator.id]?.score : existingScore;
+    const showScoreWarning = exceedsScoreCoefficient(score, indicator.weight);
+    const scoreWarning = showScoreWarning ? (
+      <span className="text-[0.625rem] leading-3 text-warning">
+        超过1.2系数
+      </span>
+    ) : null;
 
     if (canEditThis) {
-      const currentScore = ratings[indicator.id]?.score;
-      const warningThreshold = indicator.weight * 1.2;
-      const showScoreWarning =
-        currentScore != null && currentScore > warningThreshold;
       return (
         <div className="flex flex-col items-center gap-0.5">
           <Input
@@ -62,24 +69,25 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             min={0}
             placeholder="0"
             className="w-20 mx-auto text-center"
-            value={currentScore ?? ''}
+            value={score ?? ''}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               updateRating(indicator.id, 'score', e.target.value)
             }
           />
           <span className="text-xs text-muted-foreground">
-            {currentScore != null ? `${currentScore}` : '-'}
+            {score != null ? `${score}` : '-'}
           </span>
-          {showScoreWarning && (
-            <span className="text-[0.625rem] leading-3 text-warning">
-              超过1.2倍
-            </span>
-          )}
+          {scoreWarning}
         </div>
       );
     }
     if (existingScore != null) {
-      return <span className="font-medium">{existingScore}</span>;
+      return (
+        <span className="inline-flex flex-col items-center gap-0.5">
+          <span className="font-medium">{existingScore}</span>
+          {scoreWarning}
+        </span>
+      );
     }
     return <span className="text-muted-foreground">-</span>;
   };
