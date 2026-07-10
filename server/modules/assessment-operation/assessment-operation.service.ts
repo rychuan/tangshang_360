@@ -40,6 +40,57 @@ function validateUUID(id: string, label = 'id'): void {
 /** 总分保留小数位数 */
 const SCORE_PRECISION = 100;
 
+export type RatingValidationInput = {
+  indicatorSnapshotId: string;
+  score: number;
+};
+
+export type SnapshotValidationInput = {
+  id: string;
+  weight: string | number;
+  content: string;
+};
+
+export function validateRatingsAgainstSnapshots(
+  ratings: RatingValidationInput[] | undefined,
+  snapshots: SnapshotValidationInput[],
+  isDraft: boolean,
+): void {
+  const snapshotMap = new Map(snapshots.map((s) => [s.id, s]));
+
+  if (!ratings || !Array.isArray(ratings) || ratings.length === 0) {
+    throw new BadRequestException('评分数据不能为空');
+  }
+
+  for (const rating of ratings) {
+    const snapshot = snapshotMap.get(rating.indicatorSnapshotId);
+    if (!snapshot) {
+      throw new BadRequestException(
+        `指标快照不属于该考核实例: ${rating.indicatorSnapshotId}`,
+      );
+    }
+    if (rating.score < 0 || !Number.isFinite(rating.score)) {
+      throw new BadRequestException('评分不能为负数或非法数值');
+    }
+    const maxScore = Number(snapshot.weight);
+    if (Number.isFinite(maxScore) && rating.score > maxScore) {
+      throw new BadRequestException(
+        `评分不能超过指标权重分: ${snapshot.content} 最高 ${maxScore} 分`,
+      );
+    }
+  }
+
+  if (!isDraft) {
+    const submittedIds = new Set(ratings.map((r) => r.indicatorSnapshotId));
+    const missing = snapshots.filter((s) => !submittedIds.has(s.id));
+    if (missing.length > 0) {
+      throw new BadRequestException(
+        `以下指标未评分: ${missing.map((s) => s.content).join('、')}`,
+      );
+    }
+  }
+}
+
 @Injectable()
 export class AssessmentOperationService {
   private readonly logger = new Logger(AssessmentOperationService.name);
@@ -304,41 +355,7 @@ export class AssessmentOperationService {
       .from(assessmentIndicatorSnapshot)
       .where(eq(assessmentIndicatorSnapshot.instanceId, id));
 
-    const snapshotMap = new Map(allSnapshots.map((s) => [s.id, s]));
-
-    // 运行时校验 body.ratings 不为空
-    if (
-      !body.ratings ||
-      !Array.isArray(body.ratings) ||
-      body.ratings.length === 0
-    ) {
-      throw new BadRequestException('评分数据不能为空');
-    }
-
-    for (const rating of body.ratings) {
-      const snapshot = snapshotMap.get(rating.indicatorSnapshotId);
-      if (!snapshot) {
-        throw new BadRequestException(
-          `指标快照不属于该考核实例: ${rating.indicatorSnapshotId}`,
-        );
-      }
-      if (rating.score < 0 || !Number.isFinite(rating.score)) {
-        throw new BadRequestException('评分不能为负数或非法数值');
-      }
-    }
-
-    // 非草稿提交时校验所有指标均已评分，防止漏评静默计 0 分
-    if (!body.isDraft) {
-      const submittedIds = new Set(
-        body.ratings.map((r) => r.indicatorSnapshotId),
-      );
-      const missing = allSnapshots.filter((s) => !submittedIds.has(s.id));
-      if (missing.length > 0) {
-        throw new BadRequestException(
-          `以下指标未评分: ${missing.map((s) => s.content).join('、')}`,
-        );
-      }
-    }
+    validateRatingsAgainstSnapshots(body.ratings, allSnapshots, body.isDraft);
 
     // ---- 事务：锁行 → 批量 upsert → 状态推进 → 审计日志 ----
     await this.db.transaction(async (tx) => {
@@ -488,40 +505,7 @@ export class AssessmentOperationService {
       .from(assessmentIndicatorSnapshot)
       .where(eq(assessmentIndicatorSnapshot.instanceId, id));
 
-    const snapshotMap = new Map(allSnapshots.map((s) => [s.id, s]));
-
-    // 运行时校验 body.ratings 不为空
-    if (
-      !body.ratings ||
-      !Array.isArray(body.ratings) ||
-      body.ratings.length === 0
-    ) {
-      throw new BadRequestException('评分数据不能为空');
-    }
-
-    for (const rating of body.ratings) {
-      const snapshot = snapshotMap.get(rating.indicatorSnapshotId);
-      if (!snapshot) {
-        throw new BadRequestException(
-          `指标快照不属于该考核实例: ${rating.indicatorSnapshotId}`,
-        );
-      }
-      if (rating.score < 0 || !Number.isFinite(rating.score)) {
-        throw new BadRequestException('评分不能为负数或非法数值');
-      }
-    }
-
-    if (!body.isDraft) {
-      const submittedIds = new Set(
-        body.ratings.map((r) => r.indicatorSnapshotId),
-      );
-      const missing = allSnapshots.filter((s) => !submittedIds.has(s.id));
-      if (missing.length > 0) {
-        throw new BadRequestException(
-          `以下指标未评分: ${missing.map((s) => s.content).join('、')}`,
-        );
-      }
-    }
+    validateRatingsAgainstSnapshots(body.ratings, allSnapshots, body.isDraft);
 
     // ---- 事务：锁行 → 批量 upsert → 总分/等级/状态 → 审计日志 ----
     let resultTotalScore = 0;

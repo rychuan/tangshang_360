@@ -57,11 +57,17 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           <Input
             type="number"
             min={0}
+            max={indicator.weight}
             placeholder="0"
             className="w-20 mx-auto text-center"
             value={currentScore ?? ''}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              updateRating(indicator.id, 'score', e.target.value)
+              updateRating(
+                indicator.id,
+                'score',
+                e.target.value,
+                indicator.weight,
+              )
             }
           />
           <span className="text-xs text-muted-foreground">

@@ -171,16 +171,26 @@ export function useAssessmentDetail(
       value: string,
       weight?: number,
     ) => {
+      const nextValue =
+        field === 'score' && value !== ''
+          ? Math.max(
+              0,
+              Math.min(
+                Number(value) || 0,
+                weight ?? Number.POSITIVE_INFINITY,
+              ),
+            )
+          : value;
       setRatings((prev) => ({
         ...prev,
         [indicatorId]: {
           ...prev[indicatorId],
           [field]:
             field === 'score'
-              ? value === ''
+              ? nextValue === ''
                 ? undefined
-                : Number(value) || 0
-              : value,
+                : Number(nextValue) || 0
+              : nextValue,
         },
       }));
     },
@@ -228,6 +238,28 @@ export function useAssessmentDetail(
       const suffix = emptyIndicators.length > 3 ? '等' : '';
       toast.warning(
         `以下 ${emptyIndicators.length} 项指标未评分：${names}${suffix}，请填写后提交`,
+      );
+      return;
+    }
+
+    const overLimitIndicators: string[] = [];
+    for (const group of groupedIndicators) {
+      for (const ind of group.indicators) {
+        const s = ratings[ind.id]?.score;
+        if (s != null && s > ind.weight) {
+          overLimitIndicators.push(
+            ind.content.length > 12
+              ? ind.content.slice(0, 12) + '…'
+              : ind.content,
+          );
+        }
+      }
+    }
+    if (overLimitIndicators.length > 0) {
+      const names = overLimitIndicators.slice(0, 3).join('、');
+      const suffix = overLimitIndicators.length > 3 ? '等' : '';
+      toast.warning(
+        `以下 ${overLimitIndicators.length} 项指标超过权重分：${names}${suffix}，请调整后提交`,
       );
       return;
     }

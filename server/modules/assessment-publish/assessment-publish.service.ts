@@ -32,8 +32,10 @@ import {
   assessmentDimension,
   ratingRecord,
   auditLog,
+  department,
 } from '@server/database/schema';
 import { EmployeeSnapshotService } from '../employee-snapshot/employee-snapshot.service';
+import { RoleManagerService } from '../role-manager/role-manager.service';
 import type {
   PublishEmployeeItem,
   PublishRequest,
@@ -59,6 +61,74 @@ function validateUUID(id: string, label = 'id'): void {
   }
 }
 
+export type UnlockRule = {
+  newStatus: string;
+  resetRatingTypes?: string[];
+  clearSigns?: 'all';
+};
+
+const UNLOCK_RULES: Record<string, UnlockRule> = {
+  completed: { newStatus: 'pending_sign', clearSigns: 'all' },
+  pending_sign: {
+    newStatus: 'supervisor_review',
+    resetRatingTypes: ['supervisor'],
+    clearSigns: 'all',
+  },
+  supervisor_review: {
+    newStatus: 'self_review',
+    resetRatingTypes: ['self', 'supervisor'],
+  },
+  self_review: {
+    newStatus: 'self_review',
+    resetRatingTypes: ['self'],
+  },
+};
+
+export function getUnlockRule(status: string): UnlockRule {
+  const rule = UNLOCK_RULES[status];
+  if (!rule) {
+    throw new BadRequestException(`当前状态 ${status} 不允许解锁`);
+  }
+  return rule;
+}
+
+export function getUnlockUpdateData(rule: UnlockRule): {
+  status: string;
+  totalScore: null;
+  grade: null;
+  selfSignName?: null;
+  selfSignAt?: null;
+  selfSignImage?: null;
+  supervisorSignName?: null;
+  supervisorSignAt?: null;
+  supervisorSignImage?: null;
+} {
+  const updateData: {
+    status: string;
+    totalScore: null;
+    grade: null;
+    selfSignName?: null;
+    selfSignAt?: null;
+    selfSignImage?: null;
+    supervisorSignName?: null;
+    supervisorSignAt?: null;
+    supervisorSignImage?: null;
+  } = {
+    status: rule.newStatus,
+    totalScore: null,
+    grade: null,
+  };
+  if (rule.clearSigns === 'all') {
+    updateData.selfSignName = null;
+    updateData.selfSignAt = null;
+    updateData.selfSignImage = null;
+    updateData.supervisorSignName = null;
+    updateData.supervisorSignAt = null;
+    updateData.supervisorSignImage = null;
+  }
+  return updateData;
+}
+
 @Injectable()
 export class AssessmentPublishService {
   private readonly logger: Logger = new Logger(AssessmentPublishService.name);
@@ -68,12 +138,38 @@ export class AssessmentPublishService {
     @Inject(CapabilityService)
     private readonly capabilityService: CapabilityService,
     private readonly employeeSnapshotService: EmployeeSnapshotService,
+    private readonly roleManagerService: RoleManagerService,
   ) {}
+
+  private async buildPublishEmployeeScope(userId: string): Promise<SQL | null> {
+    const roles = await this.roleManagerService.getUserRoles(userId);
+    if (roles.includes('admin') || roles.includes('hrd')) {
+      return null;
+    }
+
+    const deptRows = await this.db
+      .select({ id: department.id })
+      .from(department)
+      .where(sql`(${department.headId}).user_id = ${userId}`);
+    const deptIds = deptRows.map((d: { id: string }) => d.id);
+
+    const supervisorCondition = sql`(${employee.supervisorId}).user_id = ${userId}`;
+    const departmentCondition =
+      deptIds.length > 0
+        ? sql`${employee.departmentId} IN (${sql.join(
+            deptIds.map((id: string) => sql`${id}`),
+            sql`, `,
+          )})`
+        : sql`FALSE`;
+
+    return sql`((${supervisorCondition}) OR (${departmentCondition}))`;
+  }
 
   async listEmployees(
     period: string,
     department: string,
     templateId: string,
+    userId: string,
   ): Promise<{ items: PublishEmployeeItem[] }> {
     this.logger.log(
       `listEmployees period=${period} department=${department} templateId=${templateId}`,
@@ -94,6 +190,10 @@ export class AssessmentPublishService {
     }
     if (templateId) {
       conditions.push(eq(employeeBinding.templateId, templateId));
+    }
+    const scopeCondition = await this.buildPublishEmployeeScope(userId);
+    if (scopeCondition) {
+      conditions.push(scopeCondition);
     }
     const rows = await this.db
       .select({
@@ -357,6 +457,7 @@ export class AssessmentPublishService {
     status: string,
     department: string,
     grade: string,
+    userId: string,
   ): Promise<AssessmentInstanceListResponse> {
     const p: number = parseInt(page, 10) || 1;
     const ps: number = parseInt(pageSize, 10) || 20;
@@ -377,6 +478,10 @@ export class AssessmentPublishService {
     }
     if (grade) {
       conditions.push(eq(assessmentInstance.grade, grade));
+    }
+    const scopeCondition = await this.buildPublishEmployeeScope(userId);
+    if (scopeCondition) {
+      conditions.push(scopeCondition);
     }
 
     const totalResult = await this.db
@@ -499,31 +604,7 @@ export class AssessmentPublishService {
     }
 
     const instance = instanceRows[0];
-    const statusMap: Record<
-      string,
-      { newStatus: string; resetRatingTypes?: string[]; clearSigns?: 'all' }
-    > = {
-      completed: { newStatus: 'pending_sign', clearSigns: 'all' },
-      pending_sign: {
-        newStatus: 'supervisor_review',
-        resetRatingTypes: ['supervisor'],
-        clearSigns: 'all',
-      },
-      supervisor_review: {
-        newStatus: 'self_review',
-        // 同时重置 self 和 supervisor 评分：解锁后自评需重填，上级也需基于新自评重新评分
-        resetRatingTypes: ['self', 'supervisor'],
-      },
-      self_review: {
-        newStatus: 'self_review',
-        resetRatingTypes: ['self'],
-      },
-    };
-
-    const mapped = statusMap[instance.status];
-    if (!mapped) {
-      throw new BadRequestException(`当前状态 ${instance.status} 不允许解锁`);
-    }
+    const mapped = getUnlockRule(instance.status);
 
     // 解锁时重置对应评分的草稿状态（支持同时重置多种评分类型）
     if (mapped.resetRatingTypes?.length) {
@@ -543,29 +624,7 @@ export class AssessmentPublishService {
       }
     }
 
-    const updateData: {
-      status: string;
-      totalScore?: null;
-      grade?: null;
-      selfSignName?: null;
-      selfSignAt?: null;
-      selfSignImage?: null;
-      supervisorSignName?: null;
-      supervisorSignAt?: null;
-      supervisorSignImage?: null;
-    } = {
-      status: mapped.newStatus,
-      totalScore: null,
-      grade: null,
-    };
-    if (mapped.clearSigns === 'all') {
-      updateData.selfSignName = null;
-      updateData.selfSignAt = null;
-      updateData.selfSignImage = null;
-      updateData.supervisorSignName = null;
-      updateData.supervisorSignAt = null;
-      updateData.supervisorSignImage = null;
-    }
+    const updateData = getUnlockUpdateData(mapped);
 
     await this.db
       .update(assessmentInstance)
@@ -631,7 +690,10 @@ export class AssessmentPublishService {
     );
   }
 
-  async getPeriodStatistics(period: string): Promise<PeriodStatisticsResponse> {
+  async getPeriodStatistics(
+    period: string,
+    userId: string,
+  ): Promise<PeriodStatisticsResponse> {
     this.logger.log(`getPeriodStatistics period=${period}`);
 
     if (!period) {
@@ -643,24 +705,40 @@ export class AssessmentPublishService {
       };
     }
 
+    const scopeCondition = await this.buildPublishEmployeeScope(userId);
+    const bindingConditions: SQL[] = [
+      eq(employeeBinding.status, true),
+      lte(employeeBinding.effectiveFrom, period),
+      isNull(employee.deletedAt),
+      eq(employee.status, true),
+    ];
+    if (scopeCondition) {
+      bindingConditions.push(scopeCondition);
+    }
+
     const bindingCountResult = await this.db
       .select({ count: count() })
       .from(employeeBinding)
-      .where(
-        and(
-          eq(employeeBinding.status, true),
-          lte(employeeBinding.effectiveFrom, period),
-        ),
-      );
+      .innerJoin(employee, eq(employeeBinding.employeeId, employee.employeeId))
+      .where(and(...bindingConditions));
     const bindingCount: number = parseInt(
       String(bindingCountResult[0]?.count ?? '0'),
       10,
     );
 
+    const instanceConditions: SQL[] = [
+      eq(assessmentInstance.period, period),
+      isNull(employee.deletedAt),
+    ];
+    if (scopeCondition) {
+      instanceConditions.push(scopeCondition);
+    }
+
     const publishedCountResult = await this.db
       .select({ count: count() })
       .from(assessmentInstance)
-      .where(eq(assessmentInstance.period, period));
+      .innerJoin(employee, eq(assessmentInstance.employeeId, employee.employeeId))
+      .where(and(...instanceConditions));
     const publishedCount: number = parseInt(
       String(publishedCountResult[0]?.count ?? '0'),
       10,
@@ -673,9 +751,13 @@ export class AssessmentPublishService {
       const selfReviewCompletedResult = await this.db
         .select({ count: count() })
         .from(assessmentInstance)
+        .innerJoin(
+          employee,
+          eq(assessmentInstance.employeeId, employee.employeeId),
+        )
         .where(
           and(
-            eq(assessmentInstance.period, period),
+            ...instanceConditions,
             sql`(${assessmentInstance.status} != 'self_review' OR EXISTS(SELECT 1 FROM ${ratingRecord} WHERE ${ratingRecord.instanceId} = ${assessmentInstance.id} AND ${ratingRecord.ratingType} = 'self' AND ${ratingRecord.isDraft} = false))`,
           ),
         );
@@ -691,9 +773,10 @@ export class AssessmentPublishService {
     const pendingCountResult = await this.db
       .select({ count: count() })
       .from(assessmentInstance)
+      .innerJoin(employee, eq(assessmentInstance.employeeId, employee.employeeId))
       .where(
         and(
-          eq(assessmentInstance.period, period),
+          ...instanceConditions,
           ne(assessmentInstance.status, 'completed'),
         ),
       );
@@ -773,28 +856,10 @@ export class AssessmentPublishService {
         }
 
         const instance = instanceRows[0];
-        const statusMap: Record<
-          string,
-          { newStatus: string; resetRatingType?: string; clearSigns?: 'all' }
-        > = {
-          completed: { newStatus: 'pending_sign', clearSigns: 'all' },
-          pending_sign: {
-            newStatus: 'supervisor_review',
-            resetRatingType: 'supervisor',
-            clearSigns: 'all',
-          },
-          supervisor_review: {
-            newStatus: 'self_review',
-            resetRatingType: 'self',
-          },
-          self_review: {
-            newStatus: 'self_review',
-            resetRatingType: 'self',
-          },
-        };
-
-        const mapped = statusMap[instance.status];
-        if (!mapped) {
+        let mapped: UnlockRule;
+        try {
+          mapped = getUnlockRule(instance.status);
+        } catch {
           this.logger.warn(
             `batchUnlock: instance ${instanceId} status ${instance.status} not unlockable`,
           );
@@ -802,44 +867,24 @@ export class AssessmentPublishService {
           continue;
         }
 
-        if (mapped.resetRatingType) {
-          await this.db
-            .update(ratingRecord)
-            .set({
-              isDraft: true,
-              submittedAt: null,
-            })
-            .where(
-              and(
-                eq(ratingRecord.instanceId, instanceId),
-                eq(ratingRecord.ratingType, mapped.resetRatingType),
-              ),
-            );
+        if (mapped.resetRatingTypes?.length) {
+          for (const ratingType of mapped.resetRatingTypes) {
+            await this.db
+              .update(ratingRecord)
+              .set({
+                isDraft: true,
+                submittedAt: null,
+              })
+              .where(
+                and(
+                  eq(ratingRecord.instanceId, instanceId),
+                  eq(ratingRecord.ratingType, ratingType),
+                ),
+              );
+          }
         }
 
-        const batchUpdateData: {
-          status: string;
-          totalScore?: null;
-          grade?: null;
-          selfSignName?: null;
-          selfSignAt?: null;
-          selfSignImage?: null;
-          supervisorSignName?: null;
-          supervisorSignAt?: null;
-          supervisorSignImage?: null;
-        } = {
-          status: mapped.newStatus,
-          totalScore: null,
-          grade: null,
-        };
-        if (mapped.clearSigns === 'all') {
-          batchUpdateData.selfSignName = null;
-          batchUpdateData.selfSignAt = null;
-          batchUpdateData.selfSignImage = null;
-          batchUpdateData.supervisorSignName = null;
-          batchUpdateData.supervisorSignAt = null;
-          batchUpdateData.supervisorSignImage = null;
-        }
+        const batchUpdateData = getUnlockUpdateData(mapped);
 
         await this.db
           .update(assessmentInstance)

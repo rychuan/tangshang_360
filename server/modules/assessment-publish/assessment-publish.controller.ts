@@ -31,17 +31,20 @@ export class AssessmentPublishController {
   @RequirePermission('publish_management', 'view')
   @Get('publish/employees')
   async listEmployees(
+    @Req() req: Request,
     @Query('period') period: string,
     @Query('department') department: string,
     @Query('templateId') templateId: string,
   ) {
-    return this.service.listEmployees(period, department, templateId);
+    const { userId } = req.userContext;
+    return this.service.listEmployees(period, department, templateId, userId);
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('publish_management', 'view')
   @Get('assessment-instances')
   async listInstances(
+    @Req() req: Request,
     @Query('period') period: string,
     @Query('page') page: string,
     @Query('pageSize') pageSize: string,
@@ -49,6 +52,7 @@ export class AssessmentPublishController {
     @Query('department') department: string,
     @Query('grade') grade: string,
   ) {
+    const { userId } = req.userContext;
     return this.service.listInstances(
       period,
       page,
@@ -56,14 +60,16 @@ export class AssessmentPublishController {
       status,
       department,
       grade,
+      userId,
     );
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('publish_management', 'view')
   @Get('publish/statistics')
-  async getStatistics(@Query('period') period: string) {
-    return this.service.getPeriodStatistics(period);
+  async getStatistics(@Req() req: Request, @Query('period') period: string) {
+    const { userId } = req.userContext;
+    return this.service.getPeriodStatistics(period, userId);
   }
 
   @CanRole(['admin', 'hrd'])
