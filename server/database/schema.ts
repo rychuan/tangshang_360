@@ -266,11 +266,11 @@ export const ratingRecord = pgTable("rating_record", {
   indicatorSnapshotId: uuid("indicator_snapshot_id").notNull(),
   ratingType: varchar("rating_type", { length: 255 }).notNull(),
   score: numeric("score").notNull().default('0'),
-  completionStatus: text("completion_status"),
   comment: text("comment"),
   ratedBy: userProfile("rated_by").notNull(),
   submittedAt: customTimestamptz("submitted_at", { precision: 6 }),
   isDraft: boolean("is_draft").notNull().default(true),
+  completionStatus: text("completion_status"),
   // System field: Creation time (auto-filled, do not modify)
   createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
   // System field: Creator (auto-filled, do not modify)
