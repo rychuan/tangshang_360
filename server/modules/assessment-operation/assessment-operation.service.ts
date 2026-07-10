@@ -75,12 +75,6 @@ export function validateRatingsAgainstSnapshots(
     if (rating.score < 0 || !Number.isFinite(rating.score)) {
       throw new BadRequestException('评分不能为负数或非法数值');
     }
-    const maxScore = Number(snapshot.weight);
-    if (Number.isFinite(maxScore) && rating.score > maxScore) {
-      throw new BadRequestException(
-        `评分不能超过指标权重分: ${snapshot.content} 最高 ${maxScore} 分`,
-      );
-    }
   }
 
   if (!isDraft) {
