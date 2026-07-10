@@ -55,6 +55,9 @@ export function useAssessmentDetail(
       setLoading(true);
       setError(null);
       const data = await assessmentOperation.detail(id);
+      if (!data || !Array.isArray(data.indicators)) {
+        throw new Error('接口返回数据格式异常');
+      }
       setDetail(data);
 
       const initial: RatingsState = {};
@@ -79,6 +82,7 @@ export function useAssessmentDetail(
       setRatings(initial);
     } catch (err: unknown) {
       logger.error('Failed to fetch detail:', err);
+      setDetail(null);
       handleApiError(err);
       setError('加载失败');
     } finally {
@@ -117,11 +121,13 @@ export function useAssessmentDetail(
     detail?.status === 'supervisor_review' &&
     (!isEmployeeCandidate || isSupervisorCandidate);
 
-  if (detail) {
-    logger.info(
-      `[Permission] status=${detail.status} isEmployee=${isEmployeeCandidate} canEditSupervisor=${canEditSupervisor} userId=${currentUserId} empId=${detail.employeeId} supId=${detail.supervisorId}`,
-    );
-  }
+  useEffect(() => {
+    if (detail) {
+      logger.info(
+        `[Permission] status=${detail.status} isEmployee=${isEmployeeCandidate} canEditSupervisor=${canEditSupervisor} userId=${currentUserId} empId=${detail.employeeId} supId=${detail.supervisorId}`,
+      );
+    }
+  }, [detail, isEmployeeCandidate, canEditSupervisor, currentUserId]);
   // 上级签名：非员工本人 OR 员工本人即发布上级时允许操作，
   // 最终权限由后端校验（支持发布上级/当前上级/部门负责人/admin 四种身份）
   const canSignSupervisor: boolean =
@@ -133,7 +139,7 @@ export function useAssessmentDetail(
   const isCompleted: boolean = detail?.status === 'completed';
 
   const groupedIndicators = useMemo<DimensionGroup[]>(() => {
-    if (!detail) return [];
+    if (!detail || !Array.isArray(detail.indicators)) return [];
     const groups: Record<string, DimensionGroup> = {};
     for (const ind of detail.indicators) {
       if (!groups[ind.dimensionName]) {

@@ -18,6 +18,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ roles, children }) => {
     );
   }
 
+  if (!ability) {
+    return <Navigate to="/403" replace />;
+  }
+
   const hasAccess = roles.some(r => ability.can(r, ROLE_SUBJECT));
 
   if (!hasAccess) {
