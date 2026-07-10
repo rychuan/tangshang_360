@@ -167,17 +167,10 @@ export function useAssessmentDetail(
       indicatorId: string,
       field: 'score' | 'completionStatus' | 'comment',
       value: string,
-      weight?: number,
     ) => {
       const nextValue =
         field === 'score' && value !== ''
-          ? Math.max(
-              0,
-              Math.min(
-                Number(value) || 0,
-                weight ?? Number.POSITIVE_INFINITY,
-              ),
-            )
+          ? Math.max(0, Number(value) || 0)
           : value;
       setRatings((prev) => ({
         ...prev,
@@ -240,12 +233,12 @@ export function useAssessmentDetail(
       return;
     }
 
-    const overLimitIndicators: string[] = [];
+    const warningIndicators: string[] = [];
     for (const group of groupedIndicators) {
       for (const ind of group.indicators) {
         const s = ratings[ind.id]?.score;
-        if (s != null && s > ind.weight) {
-          overLimitIndicators.push(
+        if (s != null && s > ind.weight * 1.2) {
+          warningIndicators.push(
             ind.content.length > 12
               ? ind.content.slice(0, 12) + '…'
               : ind.content,
@@ -253,13 +246,12 @@ export function useAssessmentDetail(
         }
       }
     }
-    if (overLimitIndicators.length > 0) {
-      const names = overLimitIndicators.slice(0, 3).join('、');
-      const suffix = overLimitIndicators.length > 3 ? '等' : '';
+    if (warningIndicators.length > 0) {
+      const names = warningIndicators.slice(0, 3).join('、');
+      const suffix = warningIndicators.length > 3 ? '等' : '';
       toast.warning(
-        `以下 ${overLimitIndicators.length} 项指标超过权重分：${names}${suffix}，请调整后提交`,
+        `以下 ${warningIndicators.length} 项指标评分超过权重分的 1.2 倍：${names}${suffix}，请确认分数是否正确`,
       );
-      return;
     }
 
     if (detail.status === 'self_review') {

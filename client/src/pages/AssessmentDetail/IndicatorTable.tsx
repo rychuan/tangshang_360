@@ -30,7 +30,6 @@ interface IndicatorTableProps {
     id: string,
     field: 'score' | 'completionStatus' | 'comment',
     value: string,
-    weight?: number,
   ) => void;
 }
 
@@ -53,27 +52,29 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
 
     if (canEditThis) {
       const currentScore = ratings[indicator.id]?.score;
+      const warningThreshold = indicator.weight * 1.2;
+      const showScoreWarning =
+        currentScore != null && currentScore > warningThreshold;
       return (
         <div className="flex flex-col items-center gap-0.5">
           <Input
             type="number"
             min={0}
-            max={indicator.weight}
             placeholder="0"
             className="w-20 mx-auto text-center"
             value={currentScore ?? ''}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              updateRating(
-                indicator.id,
-                'score',
-                e.target.value,
-                indicator.weight,
-              )
+              updateRating(indicator.id, 'score', e.target.value)
             }
           />
           <span className="text-xs text-muted-foreground">
             {currentScore != null ? `${currentScore}` : '-'}
           </span>
+          {showScoreWarning && (
+            <span className="text-[0.625rem] leading-3 text-warning">
+              超过1.2倍
+            </span>
+          )}
         </div>
       );
     }

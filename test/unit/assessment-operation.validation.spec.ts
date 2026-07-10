@@ -10,7 +10,7 @@ describe('validateRatingsAgainstSnapshots', () => {
     { id: 'indicator-b', weight: '30', content: '协作质量' },
   ];
 
-  it('rejects scores greater than the indicator weight', () => {
+  it('allows scores greater than the indicator weight', () => {
     const ratings: RatingValidationInput[] = [
       { indicatorSnapshotId: 'indicator-a', score: 21 },
       { indicatorSnapshotId: 'indicator-b', score: 30 },
@@ -18,7 +18,7 @@ describe('validateRatingsAgainstSnapshots', () => {
 
     expect(() =>
       validateRatingsAgainstSnapshots(ratings, snapshots, false),
-    ).toThrow('评分不能超过指标权重分');
+    ).not.toThrow();
   });
 
   it('rejects missing ratings on final submit', () => {
