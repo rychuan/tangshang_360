@@ -6,9 +6,6 @@ import {
   ArrowLeft,
   Save,
   Send,
-  User,
-  Users2,
-  CheckCircle2,
   ChevronRight,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -255,8 +252,7 @@ const AssessmentDetailPage: React.FC = () => {
             {[
               {
                 key: 'self',
-                label: '员工评分+签名',
-                icon: User,
+                label: '本人评分+签名',
                 done: !!detail.selfSignName && detail.status !== 'self_review',
                 active:
                   detail.status === 'self_review' ||
@@ -274,7 +270,6 @@ const AssessmentDetailPage: React.FC = () => {
               {
                 key: 'supervisor',
                 label: '上级评分+签名',
-                icon: Users2,
                 done:
                   detail.status === 'completed' && !!detail.supervisorSignName,
                 active:
@@ -293,57 +288,42 @@ const AssessmentDetailPage: React.FC = () => {
               },
             ].map((step, i) => (
               <div key={step.key} className="flex flex-1 items-center min-w-0">
-                <div className="flex h-full w-full min-w-0 flex-col gap-3 lg:flex-row lg:items-center">
-                  <div className="flex min-w-[190px] flex-col">
-                    <div className="flex h-9 items-center gap-1.5 overflow-hidden">
-                      <div
-                        className={`flex size-7 shrink-0 items-center justify-center rounded-full ${
+                <div
+                  className={`flex h-full w-full min-w-0 flex-col gap-2 rounded-md border p-2 lg:flex-row lg:items-center ${
+                    step.done
+                      ? 'border-success/30 bg-success/5'
+                      : 'border-destructive/30 bg-destructive/5'
+                  }`}
+                >
+                  <div className="flex min-w-[150px] flex-col">
+                    <div className="flex h-8 items-center justify-start overflow-hidden">
+                      <span className="truncate text-xs font-medium">
+                        {step.label}
+                      </span>
+                    </div>
+                    <div className="flex h-8 items-center justify-start gap-2">
+                      {step.operatorId ? (
+                        <UserDisplay
+                          userId={step.operatorId}
+                          size="small"
+                          showLabel
+                        />
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
+                      <Badge
+                        variant={step.done ? 'default' : 'destructive'}
+                        className={`text-[0.625rem] px-1.5 py-0 shrink-0 ${
                           step.done
-                            ? 'bg-success text-success-foreground'
-                            : step.active
-                              ? 'bg-primary text-primary-foreground ring-2 ring-primary/20'
-                              : 'bg-muted text-muted-foreground'
+                            ? 'bg-success/10 text-success border-success/20'
+                            : 'bg-destructive/10 text-destructive border-destructive/20'
                         }`}
                       >
-                        {step.done ? (
-                          <CheckCircle2 className="size-4" />
-                        ) : (
-                          <step.icon className="size-3.5" />
-                        )}
-                      </div>
-	                      <span className="text-xs font-medium truncate">
-	                        {step.label}
-	                      </span>
-	                    </div>
-	                    <div className="flex h-8 items-center gap-2 pl-8">
-	                      {step.operatorId ? (
-	                        <UserDisplay
-	                          userId={step.operatorId}
-	                          size="small"
-	                          showLabel
-                        />
-	                      ) : (
-	                        <span className="text-xs text-muted-foreground">-</span>
-	                      )}
-	                      <Badge
-	                        variant={
-	                          step.done
-	                            ? 'default'
-	                            : step.active
-	                              ? 'secondary'
-	                              : 'outline'
-	                        }
-	                        className={`text-[0.625rem] px-1.5 py-0 shrink-0 ${
-	                          step.done
-	                            ? 'bg-success/10 text-success border-transparent'
-	                            : ''
-	                        }`}
-	                      >
-	                        {step.statusText}
-	                      </Badge>
-	                    </div>
+                        {step.statusText}
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="grid h-20 w-full min-w-[220px] flex-1 grid-cols-[76px_1fr] items-center gap-2 rounded-md border bg-background p-2">
+                  <div className="grid h-20 w-full min-w-[200px] flex-1 grid-cols-[72px_1fr] items-center gap-2 rounded-md border bg-background p-2">
                     <div className="flex h-16 items-center justify-center rounded bg-muted/40 px-2">
                       {step.score != null ? (
                         <span className="text-base font-semibold tabular-nums">
