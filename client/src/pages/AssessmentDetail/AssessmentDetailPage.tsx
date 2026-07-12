@@ -191,20 +191,24 @@ const AssessmentDetailPage: React.FC = () => {
                 <p className="flex h-5 items-center text-xs text-muted-foreground">
                   总分
                 </p>
-                <p className="flex h-8 items-center text-2xl font-bold leading-none text-primary">
-                  {detail.totalScore}
-                </p>
+                <div className="flex h-9 items-center justify-center">
+                  <span className="text-2xl font-bold leading-none text-primary">
+                    {detail.totalScore}
+                  </span>
+                </div>
               </div>
               {detail.grade && (
                 <div className="flex min-w-12 flex-col items-center">
                   <p className="flex h-5 items-center text-xs text-muted-foreground">
                     等级
                   </p>
-                  <Badge
-                    className={`flex h-8 items-center text-lg font-bold leading-none ${getGradeStyle(detail.grade, gradeStyleMap)}`}
-                  >
-                    {detail.grade}
-                  </Badge>
+                  <div className="flex h-9 items-center justify-center">
+                    <Badge
+                      className={`flex h-7 min-w-7 items-center justify-center px-2 text-lg font-bold leading-none ${getGradeStyle(detail.grade, gradeStyleMap)}`}
+                    >
+                      {detail.grade}
+                    </Badge>
+                  </div>
                 </div>
               )}
               {detail.coefficient && (
@@ -212,9 +216,11 @@ const AssessmentDetailPage: React.FC = () => {
                   <p className="flex h-5 items-center text-xs text-muted-foreground">
                     系数
                   </p>
-                  <p className="flex h-8 items-center text-xl font-bold leading-none text-primary">
-                    {detail.coefficient}
-                  </p>
+                  <div className="flex h-9 items-center justify-center">
+                    <span className="text-xl font-bold leading-none text-primary">
+                      {detail.coefficient}
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
