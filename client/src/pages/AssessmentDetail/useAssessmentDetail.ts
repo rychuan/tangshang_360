@@ -16,6 +16,7 @@ import {
   matchGradeLocally,
 } from './assessment-utils';
 import { handleApiError } from '@client/src/utils/api-error';
+import { usePermission } from '@client/src/hooks/usePermissions';
 
 const GRADE_STYLE_TIERS = [
   'bg-destructive/10 text-destructive',
@@ -40,7 +41,6 @@ function buildGradeStyleMap(rules: ActiveGradeRule[]): Record<string, string> {
 
 export function useAssessmentDetail(
   id: string | undefined,
-  isSupervisorView: boolean,
   currentUserId: string | undefined,
 ) {
   const [detail, setDetail] = useState<AssessmentInstanceDetail | null>(null);
@@ -49,6 +49,7 @@ export function useAssessmentDetail(
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [ratings, setRatings] = useState<RatingsState>({});
   const [gradeRules, setGradeRules] = useState<ActiveGradeRule[]>([]);
+  const canEditAssessment = usePermission('my_assessments', 'edit');
 
   const fetchDetail = useCallback(async () => {
     if (!id) return;
@@ -104,26 +105,19 @@ export function useAssessmentDetail(
 
   const isEmployeeCandidate =
     !!currentUserId && !!detail && currentUserId === detail.employeeId;
-  const isSupervisorCandidate =
-    !!currentUserId && !!detail && currentUserId === detail.supervisorId;
-
-  // 员工身份仅基于 identity 匹配，不受 ?view 参数影响
   const isEmployee: boolean = isEmployeeCandidate;
-  // 上级身份：是发布时上级 AND (显式要求上级视角 OR 不是被评估人本人)
-  const isSupervisor: boolean =
-    isSupervisorCandidate && (isSupervisorView || !isEmployeeCandidate);
 
   const canEditSelf: boolean = detail?.status === 'self_review' && isEmployee;
-  // 上级评分/签名：非员工本人 OR 员工本人即发布上级时允许操作，
-  // 最终权限由后端校验（支持发布上级/当前上级/部门负责人三种身份）
+  // 上级评分/签名必须同时满足后端身份判定、资源编辑权限和流程状态。
   const canEditSupervisor: boolean =
     detail?.status === 'supervisor_review' &&
-    (!isEmployeeCandidate || isSupervisorCandidate);
+    detail.canSupervisorOperate &&
+    canEditAssessment;
 
   useEffect(() => {
     if (detail) {
       logger.info(
-        `[Permission] status=${detail.status} isEmployee=${isEmployeeCandidate} canEditSupervisor=${canEditSupervisor} userId=${currentUserId} empId=${detail.employeeId} supId=${detail.supervisorId}`,
+        `[Permission] status=${detail.status} isEmployee=${isEmployeeCandidate} canSupervisorOperate=${detail.canSupervisorOperate} canEditSupervisor=${canEditSupervisor} userId=${currentUserId} empId=${detail.employeeId} supId=${detail.supervisorId}`,
       );
     }
   }, [detail, isEmployeeCandidate, canEditSupervisor, currentUserId]);

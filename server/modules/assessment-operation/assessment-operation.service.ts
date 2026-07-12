@@ -318,6 +318,7 @@ export class AssessmentOperationService {
         ? instance.supervisorSignAt.toISOString()
         : undefined,
       supervisorSignImage: instance.supervisorSignImage || undefined,
+      canSupervisorOperate: access.isSupervisor || access.isAdmin,
       indicators,
     };
   }

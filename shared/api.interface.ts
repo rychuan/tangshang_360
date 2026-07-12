@@ -164,6 +164,7 @@ export interface AssessmentInstanceDetail {
   supervisorSignName?: string;
   supervisorSignAt?: string;
   supervisorSignImage?: string;
+  canSupervisorOperate: boolean;
   indicators: AssessmentIndicatorDetail[];
 }
 export interface RatingSubmitRequest {

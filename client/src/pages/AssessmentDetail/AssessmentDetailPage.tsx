@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useCurrentUserProfile } from '@lark-apaas/client-toolkit/hooks/useCurrentUserProfile';
 import { useBreadcrumb } from '@/components/business-ui/breadcrumb-context';
 import {
@@ -53,9 +53,7 @@ function sumScores(
 
 const AssessmentDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const isSupervisorView = searchParams.get('view') === 'supervisor';
   const currentUser = useCurrentUserProfile();
   const currentUserId: string | undefined = currentUser?.user_id;
 
@@ -77,7 +75,7 @@ const AssessmentDetailPage: React.FC = () => {
     handleSaveDraft,
     handleSubmit,
     handleSubmitWithSign,
-  } = useAssessmentDetail(id, isSupervisorView, currentUserId);
+  } = useAssessmentDetail(id, currentUserId);
 
   const { setLabel } = useBreadcrumb();
   useEffect(() => {
