@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -92,6 +98,7 @@ const TeamPerformancePage: React.FC = () => {
     null,
   );
   const [remindingIds, setRemindingIds] = useState<Set<string>>(new Set());
+  const subordinatesRequestIdRef = useRef(0);
 
   const activePeriods = selectedPeriods;
 
@@ -111,6 +118,7 @@ const TeamPerformancePage: React.FC = () => {
   }, [activePeriods]);
 
   const loadSubordinates = useCallback(async () => {
+    const requestId = ++subordinatesRequestIdRef.current;
     setLoadingList(true);
     try {
       const result = await teamPerformanceApi.getSubordinates({
@@ -119,15 +127,19 @@ const TeamPerformancePage: React.FC = () => {
         status: statusFilter || undefined,
         periods: activePeriods.length > 0 ? activePeriods : undefined,
       });
+      if (requestId !== subordinatesRequestIdRef.current) return;
       setSubordinates(result?.items ?? []);
       setTotal(result.total);
     } catch (err: unknown) {
+      if (requestId !== subordinatesRequestIdRef.current) return;
       logger.error(`Failed to load subordinates: ${JSON.stringify(err)}`);
       handleApiError(err);
       setSubordinates([]);
       setTotal(0);
     } finally {
-      setLoadingList(false);
+      if (requestId === subordinatesRequestIdRef.current) {
+        setLoadingList(false);
+      }
     }
   }, [page, statusFilter, activePeriods]);
 
