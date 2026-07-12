@@ -583,37 +583,32 @@ export class AssessmentPublishService {
     return this.employeeSnapshotService.deleteSnapshot(employeeId);
   }
 
-  async unlock(
+  private async unlockInstanceInTransaction(
     instanceId: string,
-    body: UnlockRequest,
+    reason: string | undefined,
     userId: string,
-  ): Promise<{ success: boolean }> {
-    validateUUID(instanceId);
-    this.logger.log(
-      `unlock instanceId=${instanceId} reason=${body.reason} userId=${userId}`,
-    );
+  ): Promise<void> {
+    await this.db.transaction(async (tx: any) => {
+      const instanceRows = await tx
+        .select()
+        .from(assessmentInstance)
+        .where(eq(assessmentInstance.id, instanceId))
+        .for('update')
+        .limit(1);
 
-    const instanceRows = await this.db
-      .select()
-      .from(assessmentInstance)
-      .where(eq(assessmentInstance.id, instanceId))
-      .limit(1);
+      if (instanceRows.length === 0) {
+        throw new NotFoundException('考核实例不存在');
+      }
 
-    if (instanceRows.length === 0) {
-      throw new NotFoundException('考核实例不存在');
-    }
+      const instance = instanceRows[0];
+      const mapped = getUnlockRule(instance.status);
+      const ratingTypesToDraft = [
+        ...(mapped.resetRatingTypes ?? []),
+        ...(mapped.draftRatingTypes ?? []),
+      ];
 
-    const instance = instanceRows[0];
-    const mapped = getUnlockRule(instance.status);
-
-    // 解锁时重置对应评分的草稿状态（支持同时重置多种评分类型）
-    const ratingTypesToDraft = [
-      ...(mapped.resetRatingTypes ?? []),
-      ...(mapped.draftRatingTypes ?? []),
-    ];
-    if (ratingTypesToDraft.length) {
       for (const ratingType of ratingTypesToDraft) {
-        await this.db
+        await tx
           .update(ratingRecord)
           .set({
             isDraft: true,
@@ -626,24 +621,34 @@ export class AssessmentPublishService {
             ),
           );
       }
-    }
 
-    const updateData = getUnlockUpdateData(mapped);
+      await tx
+        .update(assessmentInstance)
+        .set(getUnlockUpdateData(mapped))
+        .where(eq(assessmentInstance.id, instanceId));
 
-    await this.db
-      .update(assessmentInstance)
-      .set(updateData)
-      .where(eq(assessmentInstance.id, instanceId));
-
-    await this.db.insert(auditLog).values({
-      operatorId: userId,
-      action: 'unlock',
-      targetType: 'assessment_instance',
-      targetId: instanceId,
-      reason: body.reason,
-      changes: { from: instance.status, to: mapped.newStatus },
+      await tx.insert(auditLog).values({
+        operatorId: userId,
+        action: 'unlock',
+        targetType: 'assessment_instance',
+        targetId: instanceId,
+        reason,
+        changes: { from: instance.status, to: mapped.newStatus },
+      });
     });
+  }
 
+  async unlock(
+    instanceId: string,
+    body: UnlockRequest,
+    userId: string,
+  ): Promise<{ success: boolean }> {
+    validateUUID(instanceId);
+    this.logger.log(
+      `unlock instanceId=${instanceId} reason=${body.reason} userId=${userId}`,
+    );
+
+    await this.unlockInstanceInTransaction(instanceId, body.reason, userId);
     return { success: true };
   }
 
@@ -848,67 +853,7 @@ export class AssessmentPublishService {
     for (const instanceId of instanceIds) {
       try {
         validateUUID(instanceId, '实例ID');
-        const instanceRows = await this.db
-          .select()
-          .from(assessmentInstance)
-          .where(eq(assessmentInstance.id, instanceId))
-          .limit(1);
-
-        if (instanceRows.length === 0) {
-          this.logger.warn(`batchUnlock: instance ${instanceId} not found`);
-          failedCount++;
-          continue;
-        }
-
-        const instance = instanceRows[0];
-        let mapped: UnlockRule;
-        try {
-          mapped = getUnlockRule(instance.status);
-        } catch {
-          this.logger.warn(
-            `batchUnlock: instance ${instanceId} status ${instance.status} not unlockable`,
-          );
-          failedCount++;
-          continue;
-        }
-
-        const ratingTypesToDraft = [
-          ...(mapped.resetRatingTypes ?? []),
-          ...(mapped.draftRatingTypes ?? []),
-        ];
-        if (ratingTypesToDraft.length) {
-          for (const ratingType of ratingTypesToDraft) {
-            await this.db
-              .update(ratingRecord)
-              .set({
-                isDraft: true,
-                submittedAt: null,
-              })
-              .where(
-                and(
-                  eq(ratingRecord.instanceId, instanceId),
-                  eq(ratingRecord.ratingType, ratingType),
-                ),
-              );
-          }
-        }
-
-        const batchUpdateData = getUnlockUpdateData(mapped);
-
-        await this.db
-          .update(assessmentInstance)
-          .set(batchUpdateData)
-          .where(eq(assessmentInstance.id, instanceId));
-
-        await this.db.insert(auditLog).values({
-          operatorId: userId,
-          action: 'unlock',
-          targetType: 'assessment_instance',
-          targetId: instanceId,
-          reason,
-          changes: { from: instance.status, to: mapped.newStatus },
-        });
-
+        await this.unlockInstanceInTransaction(instanceId, reason, userId);
         successCount++;
       } catch (err) {
         this.logger.warn(

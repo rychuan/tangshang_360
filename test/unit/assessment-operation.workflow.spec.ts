@@ -3,7 +3,7 @@ import {
   getStatusAfterSupervisorRatingWithSignSubmit,
   getStatusAfterSign,
   isSignAllowedInStatus,
-} from '../../server/modules/assessment-operation/assessment-operation.service';
+} from '../../server/common/assessment/workflow';
 
 describe('assessment operation workflow status machine', () => {
   it('moves self review submit with signature to supervisor review', () => {
