@@ -311,37 +311,37 @@ const AssessmentDetailPage: React.FC = () => {
                           <step.icon className="size-3.5" />
                         )}
                       </div>
-                      <span className="text-xs font-medium truncate">
-                        {step.label}
-                      </span>
-                      <Badge
-                        variant={
-                          step.done
-                            ? 'default'
-                            : step.active
-                              ? 'secondary'
-                              : 'outline'
-                        }
-                        className={`text-[0.625rem] px-1.5 py-0 shrink-0 ${
-                          step.done
-                            ? 'bg-success/10 text-success border-transparent'
-                            : ''
-                        }`}
-                      >
-                        {step.statusText}
-                      </Badge>
-                    </div>
-                    <div className="flex h-8 items-center pl-8">
-                      {step.operatorId ? (
-                        <UserDisplay
-                          userId={step.operatorId}
-                          size="small"
-                          showLabel
+	                      <span className="text-xs font-medium truncate">
+	                        {step.label}
+	                      </span>
+	                    </div>
+	                    <div className="flex h-8 items-center gap-2 pl-8">
+	                      {step.operatorId ? (
+	                        <UserDisplay
+	                          userId={step.operatorId}
+	                          size="small"
+	                          showLabel
                         />
-                      ) : (
-                        <span className="text-xs text-muted-foreground">-</span>
-                      )}
-                    </div>
+	                      ) : (
+	                        <span className="text-xs text-muted-foreground">-</span>
+	                      )}
+	                      <Badge
+	                        variant={
+	                          step.done
+	                            ? 'default'
+	                            : step.active
+	                              ? 'secondary'
+	                              : 'outline'
+	                        }
+	                        className={`text-[0.625rem] px-1.5 py-0 shrink-0 ${
+	                          step.done
+	                            ? 'bg-success/10 text-success border-transparent'
+	                            : ''
+	                        }`}
+	                      >
+	                        {step.statusText}
+	                      </Badge>
+	                    </div>
                   </div>
                   <div className="grid h-20 w-full min-w-[220px] flex-1 grid-cols-[76px_1fr] items-center gap-2 rounded-md border bg-background p-2">
                     <div className="flex h-16 items-center justify-center rounded bg-muted/40 px-2">
