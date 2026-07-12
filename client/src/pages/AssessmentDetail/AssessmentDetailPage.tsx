@@ -46,6 +46,20 @@ function getGradeStyle(
   return 'bg-muted text-muted-foreground';
 }
 
+function sumScores(
+  indicators: Array<{ selfScore?: number; supervisorScore?: number }>,
+  type: 'self' | 'supervisor',
+): number | null {
+  const scores = indicators
+    .map((indicator) =>
+      type === 'self' ? indicator.selfScore : indicator.supervisorScore,
+    )
+    .filter((score): score is number => score != null);
+
+  if (scores.length === 0) return null;
+  return Math.round(scores.reduce((sum, score) => sum + score, 0) * 100) / 100;
+}
+
 const AssessmentDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
@@ -162,6 +176,9 @@ const AssessmentDetailPage: React.FC = () => {
 
   const hasFinalScore = detail.totalScore != null;
   const showPreview = !hasFinalScore && previewScore != null;
+  const selfScore = sumScores(detail.indicators, 'self');
+  const supervisorScore =
+    detail.totalScore ?? sumScores(detail.indicators, 'supervisor');
 
   return (
     <div className="flex flex-col gap-6">
@@ -244,8 +261,8 @@ const AssessmentDetailPage: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          {/* 4-step progress bar — fixed height per step */}
-          <div className="flex items-stretch justify-between gap-2">
+          {/* 4-step progress bar — fixed three-row layout per step */}
+          <div className="flex items-stretch justify-between gap-3">
             {[
               {
                 key: 'self',
@@ -255,8 +272,9 @@ const AssessmentDetailPage: React.FC = () => {
                 active: detail.status === 'self_review',
                 statusText:
                   detail.status !== 'self_review' ? '已完成' : '进行中',
-                person: detail.employeeId,
-                signImage: null as string | null,
+                operatorId: detail.employeeId,
+                resultType: 'score' as const,
+                score: selfScore,
               },
               {
                 key: 'supervisor',
@@ -271,8 +289,9 @@ const AssessmentDetailPage: React.FC = () => {
                   detail.status === 'completed'
                     ? '已完成'
                     : '进行中',
-                person: detail.supervisorId,
-                signImage: null as string | null,
+                operatorId: detail.supervisorId,
+                resultType: 'score' as const,
+                score: supervisorScore,
               },
               {
                 key: 'selfSign',
@@ -286,7 +305,8 @@ const AssessmentDetailPage: React.FC = () => {
                   : detail.status === 'pending_sign' && !detail.selfSignName
                     ? '待签名'
                     : '待进行',
-                person: null,
+                operatorId: detail.employeeId,
+                resultType: 'signature' as const,
                 signImage: detail.selfSignImage || null,
               },
               {
@@ -305,13 +325,14 @@ const AssessmentDetailPage: React.FC = () => {
                     : detail.status === 'pending_sign' && detail.selfSignName
                       ? '待签名'
                       : '待进行',
-                person: null,
+                operatorId: detail.supervisorId,
+                resultType: 'signature' as const,
                 signImage: detail.supervisorSignImage || null,
               },
             ].map((step, i) => (
               <div key={step.key} className="flex flex-1 items-center min-w-0">
-                <div className="flex flex-col w-full">
-                  <div className="flex items-center gap-1.5">
+                <div className="flex h-full w-full min-w-0 flex-col">
+                  <div className="flex h-10 items-center gap-1.5 overflow-hidden">
                     <div
                       className={`flex size-7 shrink-0 items-center justify-center rounded-full ${
                         step.done
@@ -347,24 +368,40 @@ const AssessmentDetailPage: React.FC = () => {
                       {step.statusText}
                     </Badge>
                   </div>
-                  {step.person && (
-                    <div className="pl-8 mt-1.5">
+                  <div className="flex h-8 items-center pl-8">
+                    {step.operatorId ? (
                       <UserDisplay
-                        userId={step.person}
+                        userId={step.operatorId}
                         size="small"
                         showLabel
                       />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">-</span>
+                    )}
+                  </div>
+                  <div className="mt-1.5 flex h-20 items-center pl-8">
+                    <div className="flex h-20 w-full max-w-[160px] items-center justify-center rounded-md border bg-background px-2">
+                      {step.resultType === 'signature' ? (
+                        step.signImage ? (
+                          <img
+                            src={step.signImage}
+                            alt={`${step.label}签名`}
+                            className="h-full w-full object-contain"
+                          />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            -
+                          </span>
+                        )
+                      ) : step.score != null ? (
+                        <span className="text-base font-semibold tabular-nums">
+                          {step.score}分
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
                     </div>
-                  )}
-                  {step.signImage && (
-                    <div className="pl-8 mt-1.5">
-                      <img
-                        src={step.signImage}
-                        alt={`${step.label}签名`}
-                        className="h-16 w-full max-w-[120px] border rounded-md object-contain bg-white"
-                      />
-                    </div>
-                  )}
+                  </div>
                 </div>
                 {i < 3 && (
                   <ChevronRight
