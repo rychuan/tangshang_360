@@ -186,32 +186,38 @@ const AssessmentDetailPage: React.FC = () => {
         </div>
         <div className="flex flex-wrap items-center gap-3 sm:gap-4">
           {hasFinalScore && (
-            <>
-              <div className="text-left sm:text-right">
-                <p className="text-xs text-muted-foreground">总分</p>
-                <p className="text-2xl font-bold text-primary leading-8">
+            <div className="grid grid-cols-3 items-start gap-4 sm:gap-5">
+              <div className="flex min-w-12 flex-col items-center">
+                <p className="flex h-5 items-center text-xs text-muted-foreground">
+                  总分
+                </p>
+                <p className="flex h-8 items-center text-2xl font-bold leading-none text-primary">
                   {detail.totalScore}
                 </p>
               </div>
               {detail.grade && (
-                <div className="text-left sm:text-right">
-                  <p className="text-xs text-muted-foreground">等级</p>
+                <div className="flex min-w-12 flex-col items-center">
+                  <p className="flex h-5 items-center text-xs text-muted-foreground">
+                    等级
+                  </p>
                   <Badge
-                    className={`text-lg font-bold ${getGradeStyle(detail.grade, gradeStyleMap)}`}
+                    className={`flex h-8 items-center text-lg font-bold leading-none ${getGradeStyle(detail.grade, gradeStyleMap)}`}
                   >
                     {detail.grade}
                   </Badge>
                 </div>
               )}
               {detail.coefficient && (
-                <div className="text-left sm:text-right">
-                  <p className="text-xs text-muted-foreground">系数</p>
-                  <p className="text-xl font-bold text-primary leading-8">
+                <div className="flex min-w-12 flex-col items-center">
+                  <p className="flex h-5 items-center text-xs text-muted-foreground">
+                    系数
+                  </p>
+                  <p className="flex h-8 items-center text-xl font-bold leading-none text-primary">
                     {detail.coefficient}
                   </p>
                 </div>
               )}
-            </>
+            </div>
           )}
           {showPreview && (
             <div className="flex items-center gap-3 rounded-md bg-muted px-3 py-1.5">
