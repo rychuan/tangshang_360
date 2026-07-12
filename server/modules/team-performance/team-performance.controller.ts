@@ -3,6 +3,7 @@ import type { Request } from 'express';
 import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { TeamPerformanceService } from './team-performance.service';
+import { parsePeriodsQuery } from './periods-query';
 import type { RemindRequest, RemindResponse } from '@shared/api.interface';
 
 @Controller('api/team-performance')
@@ -14,11 +15,14 @@ export class TeamPerformanceController {
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('team_performance', 'view')
   @Get('overview')
-  async getOverview(@Req() req: Request, @Query('periods') periods?: string) {
+  async getOverview(
+    @Req() req: Request,
+    @Query('periods') periods?: string | string[],
+  ) {
     const { userId } = req.userContext;
     return this.teamPerformanceService.getOverview(
       userId,
-      periods ? periods.split(',').filter(Boolean) : undefined,
+      parsePeriodsQuery(periods),
     );
   }
 
@@ -30,7 +34,7 @@ export class TeamPerformanceController {
     @Query('page') page: string,
     @Query('pageSize') pageSize: string,
     @Query('status') status?: string,
-    @Query('periods') periods?: string,
+    @Query('periods') periods?: string | string[],
   ) {
     const { userId } = req.userContext;
     return this.teamPerformanceService.getSubordinates(
@@ -38,7 +42,7 @@ export class TeamPerformanceController {
       parseInt(page, 10) || 1,
       parseInt(pageSize, 10) || 10,
       status,
-      periods ? periods.split(',').filter(Boolean) : undefined,
+      parsePeriodsQuery(periods),
     );
   }
 

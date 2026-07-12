@@ -24,10 +24,14 @@ export async function getSubordinates(params: {
   status?: string;
   periods?: string[];
 }): Promise<SubordinatesResponse> {
+  const { periods, ...rest } = params;
   const res = await axiosForBackend<SubordinatesResponse>({
     url: '/api/team-performance/subordinates',
     method: 'GET',
-    params,
+    params: {
+      ...rest,
+      ...(periods?.length ? { periods: periods.join(',') } : {}),
+    },
   });
   return unwrapApiData<SubordinatesResponse>(res.data);
 }
