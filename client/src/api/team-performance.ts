@@ -1,4 +1,5 @@
 import { axiosForBackend } from '@lark-apaas/client-toolkit/utils/getAxiosForBackend';
+import { unwrapApiData } from './response';
 import type {
   TeamOverviewResponse,
   SubordinatesResponse,
@@ -14,7 +15,7 @@ export async function getOverview(
     method: 'GET',
     params: periods?.length ? { periods: periods.join(',') } : undefined,
   });
-  return res.data;
+  return unwrapApiData<TeamOverviewResponse>(res.data);
 }
 
 export async function getSubordinates(params: {
@@ -28,7 +29,7 @@ export async function getSubordinates(params: {
     method: 'GET',
     params,
   });
-  return res.data;
+  return unwrapApiData<SubordinatesResponse>(res.data);
 }
 
 export async function sendRemind(
@@ -39,5 +40,5 @@ export async function sendRemind(
     method: 'POST',
     data: body,
   });
-  return res.data;
+  return unwrapApiData<SuccessResponse>(res.data);
 }

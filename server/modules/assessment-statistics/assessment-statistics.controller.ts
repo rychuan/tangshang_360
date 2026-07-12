@@ -8,6 +8,7 @@ import {
   type ExportQuery,
 } from './assessment-statistics.service';
 import type { ExportResult } from '@shared/api.interface';
+import type { Request } from 'express';
 
 @Controller('api/statistics')
 export class AssessmentStatisticsController {
@@ -17,6 +18,7 @@ export class AssessmentStatisticsController {
   @RequirePermission('statistics', 'view')
   @Get('records')
   async records(
+    @Req() req: Request,
     @Query('page') page: string,
     @Query('pageSize') pageSize: string,
     @Query('periods') periods: string,
@@ -38,13 +40,15 @@ export class AssessmentStatisticsController {
         ? employeeIds.split(',').filter(Boolean)
         : undefined,
     };
-    return this.service.records(query);
+    const { userId } = req.userContext;
+    return this.service.records(query, userId);
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('statistics', 'view')
   @Get('charts')
   async charts(
+    @Req() req: Request,
     @Query('periods') periods: string,
     @Query('departments') departments: string,
     @Query('positions') positions: string,
@@ -58,7 +62,8 @@ export class AssessmentStatisticsController {
       positions: positions ? positions.split(',').filter(Boolean) : undefined,
       grades: grades ? grades.split(',').filter(Boolean) : undefined,
     };
-    return this.service.charts(query);
+    const { userId } = req.userContext;
+    return this.service.charts(query, userId);
   }
 
   @CanRole(['admin', 'hrd', 'dept_head'])
@@ -66,6 +71,7 @@ export class AssessmentStatisticsController {
   @NeedLogin()
   @Get('export')
   async exportData(
+    @Req() req: Request,
     @Query('periods') periods: string,
     @Query('departments') departments: string,
     @Query('positions') positions: string,
@@ -83,6 +89,7 @@ export class AssessmentStatisticsController {
         ? employeeIds.split(',').filter(Boolean)
         : undefined,
     };
-    return this.service.exportData(query);
+    const { userId } = req.userContext;
+    return this.service.exportData(query, userId);
   }
 }

@@ -1,4 +1,5 @@
 import { axiosForBackend } from '@lark-apaas/client-toolkit/utils/getAxiosForBackend';
+import { unwrapApiData } from './response';
 import type {
   PublishEmployeeItem,
   PublishRequest,
@@ -33,7 +34,7 @@ export async function listEmployees(
     url,
     method: 'GET',
   });
-  return res.data;
+  return unwrapApiData<{ items: PublishEmployeeItem[] }>(res.data);
 }
 
 export async function publish(data: PublishRequest): Promise<PublishResponse> {
@@ -42,7 +43,7 @@ export async function publish(data: PublishRequest): Promise<PublishResponse> {
     method: 'POST',
     data,
   });
-  return res.data;
+  return unwrapApiData<PublishResponse>(res.data);
 }
 
 export async function listInstances(params: {
@@ -71,7 +72,7 @@ export async function listInstances(params: {
     url: `/api/assessment-instances?${query.toString()}`,
     method: 'GET',
   });
-  return res.data;
+  return unwrapApiData<AssessmentInstanceListResponse>(res.data);
 }
 
 export async function getEmployeeSnapshot(
@@ -81,7 +82,7 @@ export async function getEmployeeSnapshot(
     url: `/api/publish/employees/${employeeId}/indicators`,
     method: 'GET',
   });
-  return res.data;
+  return unwrapApiData<EmployeeSnapshotResponse>(res.data);
 }
 
 export async function adjustEmployeeSnapshot(
@@ -93,7 +94,7 @@ export async function adjustEmployeeSnapshot(
     method: 'PATCH',
     data,
   });
-  return res.data;
+  return unwrapApiData<{ success: boolean }>(res.data);
 }
 
 export async function deleteEmployeeSnapshot(
@@ -103,7 +104,7 @@ export async function deleteEmployeeSnapshot(
     url: `/api/publish/employees/${employeeId}/indicators`,
     method: 'DELETE',
   });
-  return res.data;
+  return unwrapApiData<{ success: boolean }>(res.data);
 }
 
 export async function unlock(
@@ -115,7 +116,7 @@ export async function unlock(
     method: 'PATCH',
     data,
   });
-  return res.data;
+  return unwrapApiData<{ success: boolean }>(res.data);
 }
 
 export async function getPeriodStatistics(
@@ -125,7 +126,7 @@ export async function getPeriodStatistics(
     url: `/api/publish/statistics?period=${encodeURIComponent(period)}`,
     method: 'GET',
   });
-  return res.data;
+  return unwrapApiData<PeriodStatisticsResponse>(res.data);
 }
 
 export async function getInstanceIndicators(
@@ -135,7 +136,7 @@ export async function getInstanceIndicators(
     url: `/api/assessment-instances/${id}/indicators`,
     method: 'GET',
   });
-  return res.data;
+  return unwrapApiData<InstanceIndicatorsResponse>(res.data);
 }
 
 export async function batchUnlock(
@@ -146,7 +147,7 @@ export async function batchUnlock(
     method: 'PATCH',
     data,
   });
-  return res.data;
+  return unwrapApiData<BatchOperationResponse>(res.data);
 }
 
 export async function batchResendNotification(
@@ -157,7 +158,7 @@ export async function batchResendNotification(
     method: 'POST',
     data,
   });
-  return res.data;
+  return unwrapApiData<BatchOperationResponse>(res.data);
 }
 
 export async function batchReturn(
@@ -168,7 +169,7 @@ export async function batchReturn(
     method: 'POST',
     data,
   });
-  return res.data;
+  return unwrapApiData<BatchOperationResponse>(res.data);
 }
 
 export async function getUnlockHistory(
@@ -178,5 +179,5 @@ export async function getUnlockHistory(
     url: `/api/assessment-instances/${id}/unlock-history`,
     method: 'GET',
   });
-  return res.data;
+  return unwrapApiData<UnlockHistoryItem[]>(res.data);
 }

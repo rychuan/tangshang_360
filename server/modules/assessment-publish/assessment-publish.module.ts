@@ -2,10 +2,10 @@ import { Module } from '@nestjs/common';
 import { AssessmentPublishController } from './assessment-publish.controller';
 import { AssessmentPublishService } from './assessment-publish.service';
 import { EmployeeSnapshotModule } from '../employee-snapshot/employee-snapshot.module';
-import { RoleManagerModule } from '../role-manager/role-manager.module';
+import { AccessScopeModule } from '@server/common/access/access-scope.module';
 
 @Module({
-  imports: [EmployeeSnapshotModule, RoleManagerModule],
+  imports: [EmployeeSnapshotModule, AccessScopeModule],
   controllers: [AssessmentPublishController],
   providers: [AssessmentPublishService],
   exports: [AssessmentPublishService],

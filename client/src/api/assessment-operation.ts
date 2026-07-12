@@ -1,4 +1,5 @@
 import { axiosForBackend } from '@lark-apaas/client-toolkit/utils/getAxiosForBackend';
+import { unwrapApiData } from './response';
 import type {
   AssessmentInstanceDetail,
   RatingSubmitRequest,
@@ -20,26 +21,8 @@ function isAssessmentDetailPayload(
 export function normalizeAssessmentDetailResponse(
   value: unknown,
 ): AssessmentInstanceDetail {
-  if (isAssessmentDetailPayload(value)) {
-    return value;
-  }
-  if (
-    typeof value === 'object' &&
-    value !== null &&
-    'data' in value &&
-    isAssessmentDetailPayload((value as { data?: unknown }).data)
-  ) {
-    return (value as { data: AssessmentInstanceDetail }).data;
-  }
-  if (
-    typeof value === 'object' &&
-    value !== null &&
-    'error' in value &&
-    typeof (value as { error?: { message?: unknown } }).error?.message ===
-      'string'
-  ) {
-    throw new Error((value as { error: { message: string } }).error.message);
-  }
+  const payload = unwrapApiData<unknown>(value);
+  if (isAssessmentDetailPayload(payload)) return payload;
   throw new Error('接口返回数据格式异常');
 }
 
@@ -60,7 +43,7 @@ export async function submitSelfRating(
     method: 'POST',
     data,
   });
-  return res.data;
+  return unwrapApiData<{ success: boolean }>(res.data);
 }
 
 export async function submitSelfRatingWithSign(
@@ -72,7 +55,7 @@ export async function submitSelfRatingWithSign(
     method: 'POST',
     data,
   });
-  return res.data;
+  return unwrapApiData<{ success: boolean; status: string }>(res.data);
 }
 
 export async function submitSupervisorRating(
@@ -84,7 +67,7 @@ export async function submitSupervisorRating(
     method: 'POST',
     data,
   });
-  return res.data;
+  return unwrapApiData<SupervisorRatingResponse>(res.data);
 }
 
 export async function submitSupervisorRatingWithSign(
@@ -96,7 +79,7 @@ export async function submitSupervisorRatingWithSign(
     method: 'POST',
     data,
   });
-  return res.data;
+  return unwrapApiData<SupervisorRatingResponse & { status: string }>(res.data);
 }
 
 export async function sign(
@@ -108,5 +91,5 @@ export async function sign(
     method: 'POST',
     data,
   });
-  return res.data;
+  return unwrapApiData<{ success: boolean; status: string }>(res.data);
 }

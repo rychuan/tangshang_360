@@ -32,10 +32,10 @@ import {
   assessmentDimension,
   ratingRecord,
   auditLog,
-  department,
 } from '@server/database/schema';
 import { EmployeeSnapshotService } from '../employee-snapshot/employee-snapshot.service';
-import { RoleManagerService } from '../role-manager/role-manager.service';
+import { AccessScopeService } from '@server/common/access/access-scope.service';
+import { assertBatchSize } from '@server/common/utils/batch';
 import type {
   PublishEmployeeItem,
   PublishRequest,
@@ -156,31 +156,13 @@ export class AssessmentPublishService {
     @Inject(CapabilityService)
     private readonly capabilityService: CapabilityService,
     private readonly employeeSnapshotService: EmployeeSnapshotService,
-    private readonly roleManagerService: RoleManagerService,
+    private readonly accessScopeService: AccessScopeService,
   ) {}
 
   private async buildPublishEmployeeScope(userId: string): Promise<SQL | null> {
-    const roles = await this.roleManagerService.getUserRoles(userId);
-    if (roles.includes('admin') || roles.includes('hrd')) {
-      return null;
-    }
-
-    const deptRows = await this.db
-      .select({ id: department.id })
-      .from(department)
-      .where(sql`(${department.headId}).user_id = ${userId}`);
-    const deptIds = deptRows.map((d: { id: string }) => d.id);
-
-    const supervisorCondition = sql`(${employee.supervisorId}).user_id = ${userId}`;
-    const departmentCondition =
-      deptIds.length > 0
-        ? sql`${employee.departmentId} IN (${sql.join(
-            deptIds.map((id: string) => sql`${id}`),
-            sql`, `,
-          )})`
-        : sql`FALSE`;
-
-    return sql`((${supervisorCondition}) OR (${departmentCondition}))`;
+    return this.accessScopeService.buildEmployeeScopeCondition(userId, {
+      includeSelf: false,
+    });
   }
 
   async listEmployees(
@@ -855,6 +837,7 @@ export class AssessmentPublishService {
     reason: string,
     userId: string,
   ): Promise<BatchOperationResponse> {
+    assertBatchSize(instanceIds, '实例');
     this.logger.log(
       `batchUnlock instanceIds=${JSON.stringify(instanceIds)} reason=${reason} userId=${userId}`,
     );
@@ -946,6 +929,7 @@ export class AssessmentPublishService {
     instanceIds: string[],
     userId: string,
   ): Promise<BatchOperationResponse> {
+    assertBatchSize(instanceIds, '实例');
     this.logger.log(
       `batchReturn instanceIds=${JSON.stringify(instanceIds)} userId=${userId}`,
     );
@@ -1027,6 +1011,7 @@ export class AssessmentPublishService {
     instanceIds: string[],
     userId: string,
   ): Promise<BatchOperationResponse> {
+    assertBatchSize(instanceIds, '实例');
     this.logger.log(
       `batchResendNotification instanceIds=${JSON.stringify(instanceIds)} userId=${userId}`,
     );

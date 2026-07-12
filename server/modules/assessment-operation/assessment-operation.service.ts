@@ -17,11 +17,10 @@ import {
   ratingRecord,
   auditLog,
   employee,
-  department,
   performanceGrade,
 } from '@server/database/schema';
 import { PerformanceGradeService } from '../performance-grade/performance-grade.service';
-import { RoleManagerService } from '../role-manager/role-manager.service';
+import { AccessScopeService } from '@server/common/access/access-scope.service';
 import type {
   AssessmentInstanceDetail,
   AssessmentIndicatorDetail,
@@ -156,15 +155,15 @@ export class AssessmentOperationService {
     @Inject(DRIZZLE_DATABASE)
     private readonly db: PostgresJsDatabase,
     private readonly performanceGradeService: PerformanceGradeService,
-    private readonly roleManagerService: RoleManagerService,
+    private readonly accessScopeService: AccessScopeService,
   ) {}
 
   /** 统一的权限校验：检查当前用户是否为员工本人、上级、部门负责人或系统管理员 */
   private async checkAssessmentAccess(
     instanceEmployeeId: string,
     instanceSupervisorId: string | null,
-    empSupervisorId: string,
-    empDepartment: string,
+    empSupervisorId: string | null,
+    _empDepartment: string,
     userId: string,
   ): Promise<{
     isEmployee: boolean;
@@ -176,27 +175,14 @@ export class AssessmentOperationService {
     const isSupervisor =
       (!!instanceSupervisorId && instanceSupervisorId === userId) ||
       empSupervisorId === userId;
-
-    let isDeptHead = false;
-    if (!isEmployee && !isSupervisor) {
-      const deptRows = await this.db
-        .select({ id: department.id })
-        .from(department)
-        .where(
-          and(
-            eq(department.name, empDepartment),
-            sql`(${department.headId}).user_id = ${userId}`,
-          ),
-        )
-        .limit(1);
-      isDeptHead = deptRows.length > 0;
-    }
-
-    let isAdmin = false;
-    if (!isEmployee && !isSupervisor && !isDeptHead) {
-      const roles = await this.roleManagerService.getUserRoles(userId);
-      isAdmin = roles.includes('admin') || roles.includes('hrd');
-    }
+    const scope = await this.accessScopeService.getScope(userId);
+    const isAdmin = scope.kind === 'global';
+    const hasScopedAccess = await this.accessScopeService.canAccessEmployee(
+      userId,
+      instanceEmployeeId,
+      { includeSelf: true },
+    );
+    const isDeptHead = !isEmployee && !isSupervisor && !isAdmin && hasScopedAccess;
 
     return { isEmployee, isSupervisor, isDeptHead, isAdmin };
   }

@@ -1,4 +1,5 @@
 import { axiosForBackend } from '@lark-apaas/client-toolkit/utils/getAxiosForBackend';
+import { unwrapApiData } from './response';
 import type {
   StatisticsRecordsResponse,
   ChartsResponse,
@@ -47,7 +48,7 @@ export async function getRecords(
       employeeIds: params.employeeIds?.join(',') || undefined,
     },
   });
-  return res.data;
+  return unwrapApiData<StatisticsRecordsResponse>(res.data);
 }
 
 export async function getCharts(
@@ -63,7 +64,7 @@ export async function getCharts(
       grades: params.grades?.join(',') || undefined,
     },
   });
-  return res.data;
+  return unwrapApiData<ChartsResponse>(res.data);
 }
 
 export async function exportData(
@@ -80,5 +81,5 @@ export async function exportData(
       employeeIds: params.employeeIds?.join(',') || undefined,
     },
   });
-  return res.data.items;
+  return unwrapApiData<ExportResult>(res.data).items;
 }

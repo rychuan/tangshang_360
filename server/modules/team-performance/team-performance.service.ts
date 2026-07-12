@@ -4,12 +4,10 @@ import {
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
 import { CapabilityService } from '@lark-apaas/fullstack-nestjs-core';
-import { eq, and, inArray, sql, count, desc, isNull } from 'drizzle-orm';
-import {
-  employee,
-  assessmentInstance,
-  department,
-} from '../../database/schema';
+import { eq, and, inArray, sql, count, desc } from 'drizzle-orm';
+import { employee, assessmentInstance } from '../../database/schema';
+import { AccessScopeService } from '@server/common/access/access-scope.service';
+import { assertBatchSize } from '@server/common/utils/batch';
 import type {
   TeamOverviewResponse,
   SubordinateRecord,
@@ -36,37 +34,16 @@ export class TeamPerformanceService {
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
     @Inject(CapabilityService)
     private readonly capabilityService: CapabilityService,
+    private readonly accessScopeService: AccessScopeService,
   ) {}
 
   async getOverview(
     userId: string,
     periods?: string[],
   ): Promise<TeamOverviewResponse> {
-    // 获取用户负责的部门 ID 列表
-    const deptRows = await this.db
-      .select({ id: department.id })
-      .from(department)
-      .where(sql`(${department.headId}).user_id = ${userId}`);
-    const deptIds = deptRows.map((d: { id: string }) => d.id);
-
-    const subRows = await this.db
-      .select({ userId: sql<string>`(${employee.employeeId}).user_id` })
-      .from(employee)
-      .where(
-        and(
-          deptIds.length > 0
-            ? sql`((${employee.supervisorId}).user_id = ${userId} OR ${employee.departmentId} IN (${sql.join(
-                deptIds.map((id: string) => sql`${id}`),
-                sql`, `,
-              )}))`
-            : sql`(${employee.supervisorId}).user_id = ${userId}`,
-          isNull(employee.deletedAt),
-          eq(employee.status, true),
-          sql`(${employee.employeeId}).user_id != ${userId}`,
-        ),
-      );
-    const subordinateIds: string[] = subRows.map(
-      (r: { userId: string }) => r.userId,
+    const subordinateIds = await this.accessScopeService.getManagedEmployeeIds(
+      userId,
+      { includeSelf: false },
     );
 
     if (subordinateIds.length === 0) {
@@ -153,30 +130,9 @@ export class TeamPerformanceService {
     status?: string,
     periods?: string[],
   ): Promise<SubordinatesResponse> {
-    const deptRows = await this.db
-      .select({ id: department.id })
-      .from(department)
-      .where(sql`(${department.headId}).user_id = ${userId}`);
-    const deptIds = deptRows.map((d: { id: string }) => d.id);
-
-    const subRows = await this.db
-      .select({ userId: sql<string>`(${employee.employeeId}).user_id` })
-      .from(employee)
-      .where(
-        and(
-          deptIds.length > 0
-            ? sql`((${employee.supervisorId}).user_id = ${userId} OR ${employee.departmentId} IN (${sql.join(
-                deptIds.map((id: string) => sql`${id}`),
-                sql`, `,
-              )}))`
-            : sql`(${employee.supervisorId}).user_id = ${userId}`,
-          isNull(employee.deletedAt),
-          eq(employee.status, true),
-          sql`(${employee.employeeId}).user_id != ${userId}`,
-        ),
-      );
-    const subordinateIds: string[] = subRows.map(
-      (r: { userId: string }) => r.userId,
+    const subordinateIds = await this.accessScopeService.getManagedEmployeeIds(
+      userId,
+      { includeSelf: false },
     );
 
     if (subordinateIds.length === 0) {
@@ -254,6 +210,7 @@ export class TeamPerformanceService {
   }
 
   async remind(userId: string, body: RemindRequest): Promise<RemindResponse> {
+    assertBatchSize(body.instanceIds, '实例');
     const results: RemindResult[] = [];
 
     for (const instanceId of body.instanceIds) {
@@ -292,47 +249,12 @@ export class TeamPerformanceService {
 
       const employeeUserId: string = row.employeeUserId;
 
-      // 权限校验：使用 employee.supervisorId（当前上级）而非 assessmentInstance.supervisorId（发布时快照）
-      const empRows = await this.db
-        .select({
-          supervisorId: employee.supervisorId,
-          empDepartment: employee.department,
-        })
-        .from(employee)
-        .where(
-          and(
-            sql`(${employee.employeeId}).user_id = ${employeeUserId}`,
-            isNull(employee.deletedAt),
-          ),
-        )
-        .limit(1);
-
-      if (empRows.length === 0) {
-        results.push({
-          instanceId,
-          status: 'failed',
-          reason: '员工信息不存在或无权操作',
-        });
-        continue;
-      }
-
-      const isSupervisor = empRows[0].supervisorId === userId;
-      let isDeptHead = false;
-      if (!isSupervisor) {
-        const deptRows = await this.db
-          .select({ id: department.id })
-          .from(department)
-          .where(
-            and(
-              eq(department.name, empRows[0].empDepartment),
-              sql`(${department.headId}).user_id = ${userId}`,
-            ),
-          )
-          .limit(1);
-        isDeptHead = deptRows.length > 0;
-      }
-
-      if (!isSupervisor && !isDeptHead) {
+      const canAccess = await this.accessScopeService.canAccessEmployee(
+        userId,
+        employeeUserId,
+        { includeSelf: false },
+      );
+      if (!canAccess) {
         this.logger.warn(
           `Instance ${instanceId} not authorized for user ${userId}`,
         );

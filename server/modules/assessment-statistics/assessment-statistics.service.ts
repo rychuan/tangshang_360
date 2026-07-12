@@ -5,6 +5,7 @@ import {
 } from '@lark-apaas/fullstack-nestjs-core';
 import { assessmentInstance, employee } from '@server/database/schema';
 import { and, or, desc, count, avg, sql, isNull, inArray } from 'drizzle-orm';
+import { AccessScopeService } from '@server/common/access/access-scope.service';
 import type {
   StatisticsRecordsResponse,
   StatisticsRecordItem,
@@ -43,10 +44,14 @@ export class AssessmentStatisticsService {
 
   constructor(
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
+    private readonly accessScopeService: AccessScopeService,
   ) {}
 
-  async records(query: RecordsQuery): Promise<StatisticsRecordsResponse> {
-    const conditions = this.buildConditions(query);
+  async records(
+    query: RecordsQuery,
+    userId: string,
+  ): Promise<StatisticsRecordsResponse> {
+    const conditions = await this.buildConditions(query, userId);
 
     const countResult = await this.db
       .select({ cnt: count() })
@@ -104,34 +109,16 @@ export class AssessmentStatisticsService {
     return { items, total };
   }
 
-  async charts(query: ChartsQuery): Promise<ChartsResponse> {
+  async charts(query: ChartsQuery, userId: string): Promise<ChartsResponse> {
     // 5.3: 对齐筛选参数 — charts 也支持 position 和 grade
-    const baseConditions: ReturnType<typeof and>[] = [];
-    if (query.periods && query.periods.length > 0) {
-      baseConditions.push(inArray(assessmentInstance.period, query.periods));
-    }
-    if (query.departments && query.departments.length > 0) {
-      baseConditions.push(inArray(employee.department, query.departments));
-    }
-    if (query.positions && query.positions.length > 0) {
-      baseConditions.push(
-        or(
-          inArray(employee.position, query.positions),
-          inArray(assessmentInstance.position, query.positions),
-        ),
-      );
-    }
-    if (query.grades && query.grades.length > 0) {
-      baseConditions.push(inArray(assessmentInstance.grade, query.grades));
-    }
+    const baseConditions: ReturnType<typeof and>[] =
+      await this.buildConditions(query, userId);
 
     const baseWhere =
       baseConditions.length > 0 ? and(...baseConditions) : undefined;
 
-    const empNotDeleted = sql`EXISTS(SELECT 1 FROM employee e WHERE (e.employee_id).user_id = (${assessmentInstance.employeeId}).user_id AND e.deleted_at IS NULL)`;
-
     // 5.4: 等级分布 — 过滤 grade IS NOT NULL
-    const gradeConditions = [...baseConditions, isNull(employee.deletedAt)];
+    const gradeConditions = [...baseConditions];
     gradeConditions.push(sql`${assessmentInstance.grade} IS NOT NULL`);
 
     const gradeRows = await this.db
@@ -179,7 +166,11 @@ export class AssessmentStatisticsService {
         avgVal: avg(assessmentInstance.totalScore),
       })
       .from(assessmentInstance)
-      .where(and(baseWhere || sql`TRUE`, empNotDeleted))
+      .innerJoin(
+        employee,
+        sql`(${assessmentInstance.employeeId}).user_id = (${employee.employeeId}).user_id`,
+      )
+      .where(baseWhere)
       .groupBy(assessmentInstance.period)
       .orderBy(assessmentInstance.period)
       .limit(12);
@@ -196,7 +187,11 @@ export class AssessmentStatisticsService {
         avgVal: avg(assessmentInstance.totalScore),
       })
       .from(assessmentInstance)
-      .where(and(baseWhere || sql`TRUE`, empNotDeleted))
+      .innerJoin(
+        employee,
+        sql`(${assessmentInstance.employeeId}).user_id = (${employee.employeeId}).user_id`,
+      )
+      .where(baseWhere)
       .groupBy(assessmentInstance.position);
 
     const positionAvg: ChartsResponse['positionAvg'] = positionRows.map(
@@ -209,8 +204,8 @@ export class AssessmentStatisticsService {
     return { gradeDistribution, departmentAvg, trend, positionAvg };
   }
 
-  async exportData(query: ExportQuery): Promise<ExportResult> {
-    const conditions = this.buildConditions(query);
+  async exportData(query: ExportQuery, userId: string): Promise<ExportResult> {
+    const conditions = await this.buildConditions(query, userId);
 
     // 先查询总数
     const countResult = await this.db
@@ -223,6 +218,7 @@ export class AssessmentStatisticsService {
       .where(and(...conditions));
     const total = Number(countResult[0].cnt);
 
+    const supAlias = sql`sup`;
     const rows = await this.db
       .select({
         id: assessmentInstance.id,
@@ -234,12 +230,16 @@ export class AssessmentStatisticsService {
         completedAt: assessmentInstance.completedAt,
         employeeName: employee.name,
         department: employee.department,
-        supervisorName: sql<string>`(SELECT name FROM employee sup WHERE (sup.employee_id).user_id = (${assessmentInstance.supervisorId}).user_id AND sup.deleted_at IS NULL LIMIT 1)`,
+        supervisorName: sql<string>`COALESCE(${supAlias}.name, '')`,
       })
       .from(assessmentInstance)
       .innerJoin(
         employee,
         sql`(${assessmentInstance.employeeId}).user_id = (${employee.employeeId}).user_id`,
+      )
+      .leftJoin(
+        sql`employee ${supAlias}`,
+        sql`(${supAlias}.employee_id).user_id = (${assessmentInstance.supervisorId}).user_id AND ${supAlias}.deleted_at IS NULL`,
       )
       .where(and(...conditions))
       .orderBy(desc(assessmentInstance.createdAt))
@@ -266,10 +266,18 @@ export class AssessmentStatisticsService {
     };
   }
 
-  private buildConditions(
-    query: RecordsQuery | ExportQuery,
-  ): ReturnType<typeof and>[] {
+  private async buildConditions(
+    query: RecordsQuery | ExportQuery | ChartsQuery,
+    userId: string,
+  ): Promise<ReturnType<typeof and>[]> {
     const conditions: ReturnType<typeof and>[] = [isNull(employee.deletedAt)];
+    const scopeCondition =
+      await this.accessScopeService.buildEmployeeScopeCondition(userId, {
+        includeSelf: true,
+      });
+    if (scopeCondition) {
+      conditions.push(scopeCondition);
+    }
     if (query.periods && query.periods.length > 0) {
       conditions.push(inArray(assessmentInstance.period, query.periods));
     }
@@ -287,7 +295,7 @@ export class AssessmentStatisticsService {
     if (query.grades && query.grades.length > 0) {
       conditions.push(inArray(assessmentInstance.grade, query.grades));
     }
-    if (query.employeeIds && query.employeeIds.length > 0) {
+    if ('employeeIds' in query && query.employeeIds && query.employeeIds.length > 0) {
       const idChunks = query.employeeIds.map((id: string) => sql`${id}`);
       conditions.push(
         sql`(${assessmentInstance.employeeId}).user_id IN (${sql.join(idChunks, sql`, `)})`,
