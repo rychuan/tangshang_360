@@ -56,10 +56,12 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     const score = canEditThis ? ratings[indicator.id]?.score : existingScore;
     const showScoreWarning = exceedsScoreCoefficient(score, indicator.weight);
     const scoreWarning = showScoreWarning ? (
-      <span className="text-[0.625rem] leading-3 text-warning">
+      <span className="flex h-3 items-center text-[0.625rem] leading-3 text-warning">
         超过1.2系数
       </span>
-    ) : null;
+    ) : (
+      <span className="h-3" aria-hidden="true" />
+    );
 
     if (canEditThis) {
       return (
@@ -80,13 +82,22 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     }
     if (existingScore != null) {
       return (
-        <span className="inline-flex flex-col items-center gap-0.5">
-          <span className="font-medium">{existingScore}</span>
+        <span className="inline-flex min-h-9 flex-col items-center justify-start gap-0.5">
+          <span className="flex h-5 items-center font-medium leading-none">
+            {existingScore}
+          </span>
           {scoreWarning}
         </span>
       );
     }
-    return <span className="text-muted-foreground">-</span>;
+    return (
+      <span className="inline-flex min-h-9 flex-col items-center justify-start gap-0.5">
+        <span className="flex h-5 items-center text-muted-foreground leading-none">
+          -
+        </span>
+        <span className="h-3" aria-hidden="true" />
+      </span>
+    );
   };
 
   if (groups.length === 0) {
@@ -303,7 +314,12 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                           )}
                         </TableCell>
                         <TableCell className="text-center text-sm">
-                          {indicator.weight}
+                          <span className="inline-flex min-h-9 flex-col items-center justify-start gap-0.5">
+                            <span className="flex h-5 items-center leading-none">
+                              {indicator.weight}
+                            </span>
+                            <span className="h-3" aria-hidden="true" />
+                          </span>
                         </TableCell>
                         <TableCell className="text-center">
                           {renderScoreCell(indicator, 'self')}
