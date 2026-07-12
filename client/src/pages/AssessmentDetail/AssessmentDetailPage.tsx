@@ -252,7 +252,7 @@ const AssessmentDetailPage: React.FC = () => {
             {[
               {
                 key: 'self',
-                label: '本人评分+签名',
+                label: '本人自评+签名',
                 done: !!detail.selfSignName && detail.status !== 'self_review',
                 active:
                   detail.status === 'self_review' ||
@@ -290,24 +290,30 @@ const AssessmentDetailPage: React.FC = () => {
 	              const stepTone = step.done
 	                ? {
 	                    panel: 'border-success/20 bg-success/[0.03]',
-	                    badge:
-	                      'bg-success/10 text-success border-success/20',
-	                    variant: 'default' as const,
-	                  }
+		                    badge:
+		                      'bg-success/10 text-success border-success/20',
+		                    result: 'border-success/20',
+		                    divider: 'bg-success/20',
+		                    variant: 'default' as const,
+		                  }
 	                : step.active
 	                  ? {
 	                      panel:
 	                        'border-primary bg-primary/5 shadow-sm ring-2 ring-primary/15',
-	                      badge:
-	                        'bg-primary/10 text-primary border-primary/20',
-	                      variant: 'secondary' as const,
-                    }
-                  : {
-                      panel: 'border-border bg-muted/20',
-                      badge:
-                        'bg-muted text-muted-foreground border-border',
-                      variant: 'outline' as const,
-                    };
+		                      badge:
+		                        'bg-primary/10 text-primary border-primary/20',
+		                      result: 'border-primary/20',
+		                      divider: 'bg-primary/20',
+		                      variant: 'secondary' as const,
+		                    }
+		                  : {
+		                      panel: 'border-border bg-muted/20',
+		                      badge:
+		                        'bg-muted text-muted-foreground border-border',
+		                      result: 'border-border',
+		                      divider: 'bg-border',
+		                      variant: 'outline' as const,
+		                    };
 
               return (
 	              <div key={step.key} className="flex flex-1 items-center min-w-0">
@@ -338,8 +344,8 @@ const AssessmentDetailPage: React.FC = () => {
                       </Badge>
                     </div>
                   </div>
-		                  <div className="flex h-16 w-full min-w-[260px] flex-1 items-center gap-4 overflow-hidden rounded-md border border-border/70 bg-background px-4">
-		                    <div className="flex w-20 shrink-0 items-center justify-center">
+			                  <div className={`flex h-16 w-full min-w-0 flex-1 items-center gap-3 overflow-hidden rounded-md border px-3 ${stepTone.result}`}>
+			                    <div className="flex w-20 shrink-0 items-center justify-center sm:w-24">
 	                      {step.score != null ? (
 	                        <span className="text-base font-semibold tabular-nums">
 	                          {step.score}分
@@ -350,13 +356,13 @@ const AssessmentDetailPage: React.FC = () => {
 	                        </span>
 	                      )}
 	                    </div>
-		                    <div className="h-8 w-px shrink-0 bg-border/70" />
-		                    <div className="flex min-w-0 flex-1 items-center justify-center overflow-hidden">
+			                    <div className={`h-8 w-px shrink-0 ${stepTone.divider}`} />
+			                    <div className="flex min-w-0 flex-1 items-center justify-center overflow-hidden">
 	                      {step.signImage ? (
 	                        <img
 	                          src={step.signImage}
 	                          alt={`${step.label}签名`}
-	                          className="max-h-14 w-full object-contain"
+		                          className="max-h-12 max-w-full object-scale-down"
 	                        />
 	                      ) : (
                         <span className="text-xs text-muted-foreground">
