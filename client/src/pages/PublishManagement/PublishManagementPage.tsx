@@ -285,6 +285,7 @@ const PublishManagementPage: React.FC = () => {
     'supervisor_sign',
     'pending_sign',
     'supervisor_review',
+    'self_review',
   ];
 
   const handleOpenBatchUnlock = (): void => {
@@ -303,7 +304,7 @@ const PublishManagementPage: React.FC = () => {
       selectedInstances.length - unlockable.length;
     if (unlockable.length === 0) {
       toast.error(
-        '选中的绩效均不可解锁（仅支持员工签名中/上级评分中/上级签名中/已完成状态）',
+        '选中的绩效均不可解锁（仅支持员工步骤中/上级步骤中/已完成状态）',
       );
       return;
     }

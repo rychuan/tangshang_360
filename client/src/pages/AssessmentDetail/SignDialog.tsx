@@ -17,6 +17,7 @@ interface SignDialogProps {
   setSignImage: (image: string | null) => void;
   loading: boolean;
   onConfirm: () => void;
+  onCancel?: () => void;
 }
 
 const SignDialog: React.FC<SignDialogProps> = ({
@@ -27,6 +28,7 @@ const SignDialog: React.FC<SignDialogProps> = ({
   setSignImage,
   loading,
   onConfirm,
+  onCancel,
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -42,7 +44,7 @@ const SignDialog: React.FC<SignDialogProps> = ({
           <div className="flex justify-end gap-3">
             <Button
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={onCancel ?? (() => onOpenChange(false))}
               disabled={loading}
             >
               取消

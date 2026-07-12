@@ -57,14 +57,13 @@ export class AssessmentDashboardService {
     const items: DashboardTodosResponse['items'] = [];
     for (const inst of instances) {
       let type: DashboardTodosResponse['items'][number]['type'];
-      if (inst.status === 'self_review') {
+      if (inst.status === 'self_review' || inst.status === 'pending_sign') {
         type = 'self_review';
-      } else if (inst.status === 'pending_sign') {
-        type = 'self_sign';
-      } else if (inst.status === 'supervisor_review') {
+      } else if (
+        inst.status === 'supervisor_review' ||
+        inst.status === 'supervisor_sign'
+      ) {
         type = 'supervisor_review';
-      } else if (inst.status === 'supervisor_sign') {
-        type = 'supervisor_sign';
       } else {
         continue;
       }
@@ -360,13 +359,9 @@ function getTodoTitle(
 ): string {
   switch (type) {
     case 'self_review':
-      return `${period} 自评待完成`;
-    case 'self_sign':
-      return `${period} 员工签名待完成`;
+      return `${period} 员工评分待完成`;
     case 'supervisor_review':
       return `${period} 上级评分待完成`;
-    case 'supervisor_sign':
-      return `${period} 上级签名待完成`;
   }
 }
 

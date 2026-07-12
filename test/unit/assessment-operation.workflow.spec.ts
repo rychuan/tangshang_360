@@ -1,16 +1,16 @@
 import {
-  getStatusAfterSelfRatingSubmit,
-  getStatusAfterSupervisorRatingSubmit,
+  getStatusAfterSelfRatingWithSignSubmit,
+  getStatusAfterSupervisorRatingWithSignSubmit,
   getStatusAfterSign,
   isSignAllowedInStatus,
 } from '../../server/modules/assessment-operation/assessment-operation.service';
 
 describe('assessment operation workflow status machine', () => {
-  it('moves self review submission to employee signing', () => {
-    expect(getStatusAfterSelfRatingSubmit()).toBe('pending_sign');
+  it('moves self review submit with signature to supervisor review', () => {
+    expect(getStatusAfterSelfRatingWithSignSubmit()).toBe('supervisor_review');
   });
 
-  it('allows only employee signature in pending_sign', () => {
+  it('keeps legacy pending_sign readable for employee signature compatibility', () => {
     expect(isSignAllowedInStatus('pending_sign', 'self')).toBe(true);
     expect(isSignAllowedInStatus('pending_sign', 'supervisor')).toBe(false);
     expect(getStatusAfterSign('pending_sign', 'self')).toBe(
@@ -18,11 +18,11 @@ describe('assessment operation workflow status machine', () => {
     );
   });
 
-  it('moves supervisor rating submission to supervisor signing', () => {
-    expect(getStatusAfterSupervisorRatingSubmit()).toBe('supervisor_sign');
+  it('moves supervisor review submit with signature to completed', () => {
+    expect(getStatusAfterSupervisorRatingWithSignSubmit()).toBe('completed');
   });
 
-  it('allows only supervisor signature in supervisor_sign and completes after signing', () => {
+  it('keeps legacy supervisor_sign readable for supervisor signature compatibility', () => {
     expect(isSignAllowedInStatus('supervisor_sign', 'self')).toBe(false);
     expect(isSignAllowedInStatus('supervisor_sign', 'supervisor')).toBe(true);
     expect(getStatusAfterSign('supervisor_sign', 'supervisor')).toBe(

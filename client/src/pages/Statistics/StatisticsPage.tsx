@@ -319,20 +319,15 @@ const StatisticsPage: React.FC = () => {
       const statusLabel: string =
         ASSESSMENT_STATUS_LABELS[detail.status] || detail.status;
 
-      // Status helpers for process stepper
-      const selfDone = detail.status !== 'self_review';
-      const selfSignDone = !!detail.selfSignName;
-      const supDone =
-        detail.status === 'supervisor_sign' || detail.status === 'completed';
-      const supSignDone = !!detail.supervisorSignName;
+      // Status helpers for two-step process summary
+      const selfDone = !!detail.selfSignName && detail.status !== 'self_review';
+      const supDone = detail.status === 'completed' && !!detail.supervisorSignName;
 
       const stepperHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding:10px 8px;border:1px solid #e5e7eb;border-radius:8px;font-size:11px;">
           ${[
-            { label: '员工自评', done: selfDone },
-            { label: '员工签名', done: selfSignDone },
-            { label: '上级评分', done: supDone },
-            { label: '上级签名', done: supSignDone },
+            { label: '员工评分+签名', done: selfDone },
+            { label: '上级评分+签名', done: supDone },
           ]
             .map(
               (s, i) => `
@@ -345,7 +340,7 @@ const StatisticsPage: React.FC = () => {
                 }">${s.done ? '✓' : i + 1}</div>
                 <span style="margin-top:4px;font-weight:${s.done ? '600' : '400'};color:${s.done ? '#111' : '#9ca3af'};">${s.label}</span>
               </div>
-              ${i < 3 ? '<div style="flex:1;height:1px;background:#e5e7eb;margin:0 4px;margin-bottom:16px;"></div>' : ''}
+              ${i < 1 ? '<div style="flex:1;height:1px;background:#e5e7eb;margin:0 4px;margin-bottom:16px;"></div>' : ''}
             </div>`,
             )
             .join('')}

@@ -64,15 +64,16 @@ function validateUUID(id: string, label = 'id'): void {
 export type UnlockRule = {
   newStatus: string;
   resetRatingTypes?: string[];
+  draftRatingTypes?: string[];
   clearSigns?: 'all' | 'self' | 'supervisor';
   clearScore?: boolean;
 };
 
 const UNLOCK_RULES: Record<string, UnlockRule> = {
   completed: {
-    newStatus: 'supervisor_sign',
+    newStatus: 'supervisor_review',
+    resetRatingTypes: ['supervisor'],
     clearSigns: 'supervisor',
-    clearScore: false,
   },
   supervisor_sign: {
     newStatus: 'supervisor_review',
@@ -80,8 +81,9 @@ const UNLOCK_RULES: Record<string, UnlockRule> = {
     clearSigns: 'supervisor',
   },
   supervisor_review: {
-    newStatus: 'pending_sign',
-    resetRatingTypes: ['supervisor'],
+    newStatus: 'self_review',
+    clearSigns: 'self',
+    draftRatingTypes: ['self'],
   },
   pending_sign: {
     newStatus: 'self_review',
@@ -623,8 +625,12 @@ export class AssessmentPublishService {
     const mapped = getUnlockRule(instance.status);
 
     // 解锁时重置对应评分的草稿状态（支持同时重置多种评分类型）
-    if (mapped.resetRatingTypes?.length) {
-      for (const ratingType of mapped.resetRatingTypes) {
+    const ratingTypesToDraft = [
+      ...(mapped.resetRatingTypes ?? []),
+      ...(mapped.draftRatingTypes ?? []),
+    ];
+    if (ratingTypesToDraft.length) {
+      for (const ratingType of ratingTypesToDraft) {
         await this.db
           .update(ratingRecord)
           .set({
@@ -883,8 +889,12 @@ export class AssessmentPublishService {
           continue;
         }
 
-        if (mapped.resetRatingTypes?.length) {
-          for (const ratingType of mapped.resetRatingTypes) {
+        const ratingTypesToDraft = [
+          ...(mapped.resetRatingTypes ?? []),
+          ...(mapped.draftRatingTypes ?? []),
+        ];
+        if (ratingTypesToDraft.length) {
+          for (const ratingType of ratingTypesToDraft) {
             await this.db
               .update(ratingRecord)
               .set({

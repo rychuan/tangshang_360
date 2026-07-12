@@ -3,7 +3,11 @@ import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import type { Request } from 'express';
 import { AssessmentOperationService } from './assessment-operation.service';
-import type { RatingSubmitRequest, SignRequest } from '@shared/api.interface';
+import type {
+  RatingSubmitRequest,
+  RatingSubmitWithSignRequest,
+  SignRequest,
+} from '@shared/api.interface';
 
 @Controller('api/assessment-instances')
 export class AssessmentOperationController {
@@ -32,6 +36,22 @@ export class AssessmentOperationController {
     return this.service.submitSelfRating(id, body, userId);
   }
 
+  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
+  @RequirePermission('my_assessments', 'edit')
+  @NeedLogin()
+  @Post(':id/self-rating-with-sign')
+  async submitSelfRatingWithSign(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Body() body: RatingSubmitWithSignRequest,
+  ) {
+    const { userId, userName } = req.userContext as {
+      userId: string;
+      userName: string;
+    };
+    return this.service.submitSelfRatingWithSign(id, body, userId, userName);
+  }
+
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('my_assessments', 'edit')
   @NeedLogin()
@@ -45,6 +65,27 @@ export class AssessmentOperationController {
       userId: string;
     };
     return this.service.submitSupervisorRating(id, body, userId);
+  }
+
+  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
+  @RequirePermission('my_assessments', 'edit')
+  @NeedLogin()
+  @Post(':id/supervisor-rating-with-sign')
+  async submitSupervisorRatingWithSign(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Body() body: RatingSubmitWithSignRequest,
+  ) {
+    const { userId, userName } = req.userContext as {
+      userId: string;
+      userName: string;
+    };
+    return this.service.submitSupervisorRatingWithSign(
+      id,
+      body,
+      userId,
+      userName,
+    );
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])

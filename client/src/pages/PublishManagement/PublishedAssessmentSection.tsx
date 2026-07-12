@@ -169,10 +169,10 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
               <SelectContent>
                 <SelectGroup>
                   <SelectItem value="__all__">全部</SelectItem>
-                  <SelectItem value="self_review">自评中</SelectItem>
-                  <SelectItem value="pending_sign">员工签名中</SelectItem>
+                  <SelectItem value="self_review">员工评分中</SelectItem>
+                  <SelectItem value="pending_sign">员工步骤中</SelectItem>
                   <SelectItem value="supervisor_review">上级评分中</SelectItem>
-                  <SelectItem value="supervisor_sign">待上级签名</SelectItem>
+                  <SelectItem value="supervisor_sign">上级步骤中</SelectItem>
                   <SelectItem value="completed">已完成</SelectItem>
                   <SelectItem value="draft">草稿</SelectItem>
                 </SelectGroup>

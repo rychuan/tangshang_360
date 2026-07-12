@@ -4,7 +4,7 @@ import {
 } from '../../server/modules/assessment-publish/assessment-publish.service';
 
 describe('assessment publish unlock rules', () => {
-  it('clears supervisor ratings when supervisor sign is unlocked', () => {
+  it('keeps legacy supervisor_sign unlock compatible', () => {
     expect(getUnlockRule('supervisor_sign')).toEqual({
       newStatus: 'supervisor_review',
       resetRatingTypes: ['supervisor'],
@@ -14,8 +14,9 @@ describe('assessment publish unlock rules', () => {
 
   it('clears supervisor ratings when supervisor review is unlocked', () => {
     expect(getUnlockRule('supervisor_review')).toEqual({
-      newStatus: 'pending_sign',
-      resetRatingTypes: ['supervisor'],
+      newStatus: 'self_review',
+      clearSigns: 'self',
+      draftRatingTypes: ['self'],
     });
   });
 
@@ -31,17 +32,25 @@ describe('assessment publish unlock rules', () => {
     });
   });
 
-  it('clears only supervisor signature and completed time when completed is unlocked', () => {
+  it('clears supervisor result and signature when completed is unlocked', () => {
     const updateData = getUnlockUpdateData(getUnlockRule('completed'));
 
     expect(updateData).toMatchObject({
-      status: 'supervisor_sign',
+      status: 'supervisor_review',
       completedAt: null,
+      totalScore: null,
+      grade: null,
       supervisorSignName: null,
       supervisorSignAt: null,
       supervisorSignImage: null,
     });
-    expect(updateData).not.toHaveProperty('totalScore');
-    expect(updateData).not.toHaveProperty('grade');
+  });
+
+  it('keeps legacy supervisor_sign unlock at supervisor review', () => {
+    expect(getUnlockRule('supervisor_sign')).toEqual({
+      newStatus: 'supervisor_review',
+      resetRatingTypes: ['supervisor'],
+      clearSigns: 'supervisor',
+    });
   });
 });

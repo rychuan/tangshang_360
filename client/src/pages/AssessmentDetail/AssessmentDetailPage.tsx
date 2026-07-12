@@ -2,17 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useCurrentUserProfile } from '@lark-apaas/client-toolkit/hooks/useCurrentUserProfile';
 import { useBreadcrumb } from '@/components/business-ui/breadcrumb-context';
-import { logger } from '@lark-apaas/client-toolkit/logger';
-import { handleApiError } from '@client/src/utils/api-error';
-import { toast } from 'sonner';
 import {
   ArrowLeft,
   Save,
   Send,
-  PenLine,
   User,
   Users2,
-  PenTool,
   CheckCircle2,
   ChevronRight,
 } from 'lucide-react';
@@ -32,7 +27,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { StatusBadge } from '@/components/business-ui/status-badge';
 import { UserDisplay } from '@/components/business-ui/user-display';
-import * as assessmentOperation from '@client/src/api/assessment-operation';
 import { useAssessmentDetail } from './useAssessmentDetail';
 import IndicatorTable from './IndicatorTable';
 import SignDialog from './SignDialog';
@@ -78,16 +72,14 @@ const AssessmentDetailPage: React.FC = () => {
     groupedIndicators,
     canEditSelf,
     canEditSupervisor,
-    canSignSelf,
-    canSignSupervisor,
     isCompleted,
     previewScore,
     previewGrade,
     gradeStyleMap,
-    fetchDetail,
     updateRating,
     handleSaveDraft,
     handleSubmit,
+    handleSubmitWithSign,
   } = useAssessmentDetail(id, isSupervisorView, currentUserId);
 
   const { setLabel } = useBreadcrumb();
@@ -110,7 +102,6 @@ const AssessmentDetailPage: React.FC = () => {
     useState<boolean>(false);
   const [signType, setSignType] = useState<'self' | 'supervisor'>('self');
   const [signImage, setSignImage] = useState<string | null>(null);
-  const [signing, setSigning] = useState<boolean>(false);
 
   const handleOpenSignDialog = (type: 'self' | 'supervisor') => {
     setSignType(type);
@@ -122,37 +113,36 @@ const AssessmentDetailPage: React.FC = () => {
     const result = await handleSubmit();
     if (result?.needsScoreWarningConfirm) {
       setScoreWarningDialogOpen(true);
+      return;
+    }
+    if (result?.readyToSign) {
+      handleOpenSignDialog(result.signType);
     }
   };
 
   const handleConfirmScoreWarningSubmit = async () => {
     setScoreWarningDialogOpen(false);
-    await handleSubmit({ confirmedScoreWarning: true });
+    const result = await handleSubmit({ confirmedScoreWarning: true });
+    if (result?.readyToSign) {
+      handleOpenSignDialog(result.signType);
+    }
   };
 
   const handleSign = async () => {
     if (!id || !signImage) return;
-    setSigning(true);
-    try {
-      const result = await assessmentOperation.sign(id, {
-        signType,
-        signName:
-          signType === 'self'
-            ? detail?.employeeName || ''
-            : detail?.supervisorName || '',
-        signImage: signImage ?? undefined,
-      });
-      toast.success(
-        result.status === 'completed' ? '双方已签名，绩效完成' : '签名成功',
-      );
+    const success = await handleSubmitWithSign(signType, signImage);
+    if (success) {
       setSignDialogOpen(false);
-      await fetchDetail();
-    } catch (err: unknown) {
-      logger.error('Sign failed:', err);
-      handleApiError(err);
-    } finally {
-      setSigning(false);
+      setSignImage(null);
     }
+  };
+
+  const handleCancelSign = async () => {
+    setSignDialogOpen(false);
+    setSignImage(null);
+    await handleSaveDraft({
+      successMessage: '已保存草稿，签名确认后才会提交',
+    });
   };
 
   if (loading) {
@@ -261,72 +251,44 @@ const AssessmentDetailPage: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          {/* 4-step progress bar — fixed three-row layout per step */}
           <div className="flex items-stretch justify-between gap-3">
             {[
               {
                 key: 'self',
-                label: '员工自评',
+                label: '员工评分+签名',
                 icon: User,
-                done: detail.status !== 'self_review',
-                active: detail.status === 'self_review',
-                statusText:
-                  detail.status !== 'self_review' ? '已完成' : '进行中',
-                operatorId: detail.employeeId,
-                resultType: 'score' as const,
-                score: selfScore,
-              },
-              {
-                key: 'selfSign',
-                label: '员工签名',
-                icon: PenTool,
-                done: !!detail.selfSignName,
+                done: !!detail.selfSignName && detail.status !== 'self_review',
                 active:
-                  detail.status === 'pending_sign' && !detail.selfSignName,
+                  detail.status === 'self_review' ||
+                  detail.status === 'pending_sign',
                 statusText: detail.selfSignName
                   ? '已完成'
-                  : detail.status === 'pending_sign' && !detail.selfSignName
-                    ? '待签名'
+                  : detail.status === 'self_review' ||
+                      detail.status === 'pending_sign'
+                    ? '进行中'
                     : '待进行',
                 operatorId: detail.employeeId,
-                resultType: 'signature' as const,
+                score: selfScore,
                 signImage: detail.selfSignImage || null,
               },
               {
                 key: 'supervisor',
-                label: '上级评分',
+                label: '上级评分+签名',
                 icon: Users2,
                 done:
-                  detail.status === 'supervisor_sign' ||
-                  detail.status === 'completed',
-                active: detail.status === 'supervisor_review',
+                  detail.status === 'completed' && !!detail.supervisorSignName,
+                active:
+                  detail.status === 'supervisor_review' ||
+                  detail.status === 'supervisor_sign',
                 statusText:
-                  detail.status === 'supervisor_sign' ||
-                  detail.status === 'completed'
+                  detail.status === 'completed' && detail.supervisorSignName
                     ? '已完成'
-                    : detail.status === 'supervisor_review'
+                    : detail.status === 'supervisor_review' ||
+                        detail.status === 'supervisor_sign'
                       ? '进行中'
                       : '待进行',
                 operatorId: detail.supervisorId,
-                resultType: 'score' as const,
                 score: supervisorScore,
-              },
-              {
-                key: 'supSign',
-                label: '上级签名',
-                icon: PenTool,
-                done: !!detail.supervisorSignName,
-                active:
-                  detail.status === 'supervisor_sign' &&
-                  !detail.supervisorSignName,
-                statusText:
-                  detail.supervisorSignName
-                    ? '已完成'
-                    : detail.status === 'supervisor_sign'
-                      ? '待签名'
-                      : '待进行',
-                operatorId: detail.supervisorId,
-                resultType: 'signature' as const,
                 signImage: detail.supervisorSignImage || null,
               },
             ].map((step, i) => (
@@ -379,10 +341,21 @@ const AssessmentDetailPage: React.FC = () => {
                       <span className="text-xs text-muted-foreground">-</span>
                     )}
                   </div>
-                  <div className="mt-1.5 flex h-20 items-center pl-8">
-                    <div className="flex h-20 w-full max-w-[160px] items-center justify-center rounded-md border bg-background px-2">
-                      {step.resultType === 'signature' ? (
-                        step.signImage ? (
+                  <div className="mt-1.5 flex min-h-24 items-center pl-8">
+                    <div className="grid min-h-24 w-full max-w-[240px] grid-cols-[80px_1fr] items-center gap-3 rounded-md border bg-background p-2">
+                      <div className="flex h-20 items-center justify-center rounded bg-muted/40 px-2">
+                        {step.score != null ? (
+                          <span className="text-base font-semibold tabular-nums">
+                            {step.score}分
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            {step.active ? '进行中' : '待进行'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex h-20 items-center justify-center rounded bg-muted/40 px-2">
+                        {step.signImage ? (
                           <img
                             src={step.signImage}
                             alt={`${step.label}签名`}
@@ -390,20 +363,14 @@ const AssessmentDetailPage: React.FC = () => {
                           />
                         ) : (
                           <span className="text-xs text-muted-foreground">
-                            -
+                            未签名
                           </span>
-                        )
-                      ) : step.score != null ? (
-                        <span className="text-base font-semibold tabular-nums">
-                          {step.score}分
-                        </span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">-</span>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-                {i < 3 && (
+                {i < 1 && (
                   <ChevronRight
                     className={`size-4 shrink-0 -ml-1 -mr-1 ${
                       step.done ? 'text-success' : 'text-muted-foreground/30'
@@ -431,13 +398,13 @@ const AssessmentDetailPage: React.FC = () => {
           <>
             <Button
               variant="outline"
-              onClick={handleSaveDraft}
-              disabled={submitting || signing}
+              onClick={() => void handleSaveDraft()}
+              disabled={submitting}
             >
               <Save data-icon="inline-start" />
               保存草稿
             </Button>
-            <Button onClick={handleSubmitClick} disabled={submitting || signing}>
+            <Button onClick={handleSubmitClick} disabled={submitting}>
               <Send data-icon="inline-start" />
               提交自评
             </Button>
@@ -447,35 +414,17 @@ const AssessmentDetailPage: React.FC = () => {
           <>
             <Button
               variant="outline"
-              onClick={handleSaveDraft}
-              disabled={submitting || signing}
+              onClick={() => void handleSaveDraft()}
+              disabled={submitting}
             >
               <Save data-icon="inline-start" />
               保存草稿
             </Button>
-            <Button onClick={handleSubmitClick} disabled={submitting || signing}>
+            <Button onClick={handleSubmitClick} disabled={submitting}>
               <Send data-icon="inline-start" />
               提交评分
             </Button>
           </>
-        )}
-        {canSignSelf && (
-          <Button
-            onClick={() => handleOpenSignDialog('self')}
-            disabled={submitting || signing}
-          >
-            <PenLine data-icon="inline-start" />
-            员工签名
-          </Button>
-        )}
-        {canSignSupervisor && (
-          <Button
-            onClick={() => handleOpenSignDialog('supervisor')}
-            disabled={submitting || signing}
-          >
-            <PenLine data-icon="inline-start" />
-            上级签名
-          </Button>
         )}
         {isCompleted && (
           <p className="text-muted-foreground text-sm">绩效已完成，档案只读</p>
@@ -484,12 +433,19 @@ const AssessmentDetailPage: React.FC = () => {
 
       <SignDialog
         open={signDialogOpen}
-        onOpenChange={setSignDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            void handleCancelSign();
+          } else {
+            setSignDialogOpen(open);
+          }
+        }}
         signType={signType}
         signImage={signImage}
         setSignImage={setSignImage}
-        loading={signing}
+        loading={submitting}
         onConfirm={handleSign}
+        onCancel={handleCancelSign}
       />
 
       <AlertDialog

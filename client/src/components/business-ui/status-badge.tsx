@@ -7,10 +7,10 @@ import { Badge } from '@/components/ui/badge';
 
 export const ASSESSMENT_STATUS_LABELS: Record<string, string> = {
   draft: '草稿',
-  self_review: '自评中',
+  self_review: '员工评分中',
   supervisor_review: '上级评分中',
-  pending_sign: '待员工签名',
-  supervisor_sign: '待上级签名',
+  pending_sign: '员工步骤中',
+  supervisor_sign: '上级步骤中',
   completed: '已完成',
 };
 

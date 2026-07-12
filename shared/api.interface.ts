@@ -185,11 +185,15 @@ export interface SignRequest {
   signName: string;
   signImage?: string;
 }
+export interface RatingSubmitWithSignRequest extends RatingSubmitRequest {
+  signName: string;
+  signImage?: string;
+}
 export interface DashboardTodosResponse {
   items: Array<{
     id: string;
     period: string;
-    type: 'self_review' | 'self_sign' | 'supervisor_review' | 'supervisor_sign';
+    type: 'self_review' | 'supervisor_review';
     title: string;
     deadline?: string;
   }>;

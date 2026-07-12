@@ -26,6 +26,7 @@ import type {
   AssessmentInstanceDetail,
   AssessmentIndicatorDetail,
   RatingSubmitRequest,
+  RatingSubmitWithSignRequest,
   SignRequest,
   SupervisorRatingResponse,
 } from '@shared/api.interface';
@@ -48,6 +49,14 @@ export function getStatusAfterSelfRatingSubmit(): string {
 
 export function getStatusAfterSupervisorRatingSubmit(): string {
   return 'supervisor_sign';
+}
+
+export function getStatusAfterSelfRatingWithSignSubmit(): string {
+  return 'supervisor_review';
+}
+
+export function getStatusAfterSupervisorRatingWithSignSubmit(): string {
+  return 'completed';
 }
 
 export function isSignAllowedInStatus(
@@ -492,6 +501,175 @@ export class AssessmentOperationService {
     return { success: true };
   }
 
+  async submitSelfRatingWithSign(
+    id: string,
+    body: RatingSubmitWithSignRequest,
+    userId: string,
+    userName: string,
+  ): Promise<{ success: boolean; status: string }> {
+    validateUUID(id);
+
+    const rows = await this.db
+      .select()
+      .from(assessmentInstance)
+      .where(eq(assessmentInstance.id, id))
+      .limit(1);
+
+    if (rows.length === 0) {
+      throw new NotFoundException('考核记录不存在');
+    }
+
+    const instance = rows[0];
+    if (instance.employeeId !== userId) {
+      throw new ForbiddenException('只能提交自己的自评');
+    }
+    if (instance.status !== 'self_review') {
+      throw new BadRequestException('当前状态不允许提交自评');
+    }
+    if (instance.selfSignName) {
+      throw new BadRequestException('本人已签名，不可重复提交');
+    }
+
+    const effectiveSignName = body.signName?.trim() || userName || '';
+    if (!effectiveSignName) {
+      throw new BadRequestException('签名姓名不能为空');
+    }
+    if (effectiveSignName.length > 255) {
+      throw new BadRequestException('签名姓名不能超过255个字符');
+    }
+
+    const empStatus = await this.db
+      .select({ status: employee.status })
+      .from(employee)
+      .where(
+        and(
+          sql`(${employee.employeeId}).user_id = ${instance.employeeId}`,
+          isNull(employee.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (empStatus.length === 0) {
+      throw new BadRequestException('未找到员工信息，无法提交评分');
+    }
+    if (!empStatus[0].status) {
+      throw new BadRequestException('员工已离职，无法提交评分');
+    }
+
+    const allSnapshots = await this.db
+      .select()
+      .from(assessmentIndicatorSnapshot)
+      .where(eq(assessmentIndicatorSnapshot.instanceId, id));
+
+    validateRatingsAgainstSnapshots(body.ratings, allSnapshots, false, {
+      requireCompletionStatus: true,
+    });
+
+    const now = new Date();
+    const newStatus = getStatusAfterSelfRatingWithSignSubmit();
+
+    await this.db.transaction(async (tx) => {
+      const locked = await tx
+        .select({
+          status: assessmentInstance.status,
+          employeeId: assessmentInstance.employeeId,
+          selfSignName: assessmentInstance.selfSignName,
+        })
+        .from(assessmentInstance)
+        .where(eq(assessmentInstance.id, id))
+        .for('update')
+        .limit(1);
+
+      if (locked.length === 0) {
+        throw new NotFoundException('考核记录不存在');
+      }
+      if (locked[0].status !== 'self_review') {
+        throw new BadRequestException('当前状态不允许提交自评');
+      }
+      if (locked[0].employeeId !== userId) {
+        throw new ForbiddenException('只能提交自己的自评');
+      }
+      if (locked[0].selfSignName) {
+        throw new BadRequestException('本人已签名，不可重复提交');
+      }
+
+      const snapshotIds = body.ratings.map((r) => r.indicatorSnapshotId);
+      const existingList = await tx
+        .select()
+        .from(ratingRecord)
+        .where(
+          and(
+            eq(ratingRecord.instanceId, id),
+            eq(ratingRecord.ratingType, 'self'),
+            inArray(ratingRecord.indicatorSnapshotId, snapshotIds),
+          ),
+        );
+      const existingMap = new Map(
+        existingList.map((r) => [r.indicatorSnapshotId, r]),
+      );
+
+      for (const rating of body.ratings) {
+        const existingRow = existingMap.get(rating.indicatorSnapshotId);
+        const scoreStr = rating.score == null ? null : String(rating.score);
+        if (existingRow) {
+          await tx
+            .update(ratingRecord)
+            .set({
+              score: scoreStr,
+              completionStatus: rating.completionStatus ?? null,
+              comment: rating.comment || null,
+              isDraft: false,
+              submittedAt: now,
+            })
+            .where(eq(ratingRecord.id, existingRow.id));
+        } else {
+          await tx.insert(ratingRecord).values({
+            instanceId: id,
+            indicatorSnapshotId: rating.indicatorSnapshotId,
+            ratingType: 'self',
+            score: scoreStr,
+            completionStatus: rating.completionStatus ?? null,
+            comment: rating.comment || null,
+            ratedBy: userId,
+            isDraft: false,
+            submittedAt: now,
+          });
+        }
+      }
+
+      const updateResult = await tx
+        .update(assessmentInstance)
+        .set({
+          selfSignName: effectiveSignName,
+          selfSignAt: now,
+          selfSignImage: body.signImage || null,
+          status: newStatus,
+        })
+        .where(
+          and(
+            eq(assessmentInstance.id, id),
+            sql`${assessmentInstance.selfSignName} IS NULL`,
+          ),
+        )
+        .returning();
+      if (updateResult.length === 0) {
+        throw new BadRequestException('本人签名已被他人抢先提交');
+      }
+
+      await tx.insert(auditLog).values({
+        operatorId: userId,
+        action: 'submit_self_rating_with_sign',
+        targetType: 'assessment_instance',
+        targetId: id,
+      });
+    });
+
+    this.logger.log(
+      `Self rating submitted with sign for instance ${id} by ${userId}`,
+    );
+
+    return { success: true, status: newStatus };
+  }
+
   async submitSupervisorRating(
     id: string,
     body: RatingSubmitRequest,
@@ -672,6 +850,221 @@ export class AssessmentOperationService {
     );
 
     return { success: true, totalScore: resultTotalScore, grade: resultGrade };
+  }
+
+  async submitSupervisorRatingWithSign(
+    id: string,
+    body: RatingSubmitWithSignRequest,
+    userId: string,
+    userName: string,
+  ): Promise<SupervisorRatingResponse & { status: string }> {
+    validateUUID(id);
+
+    const rows = await this.db
+      .select()
+      .from(assessmentInstance)
+      .where(eq(assessmentInstance.id, id))
+      .limit(1);
+
+    if (rows.length === 0) {
+      throw new NotFoundException('考核记录不存在');
+    }
+
+    const instance = rows[0];
+    if (instance.status !== 'supervisor_review') {
+      throw new BadRequestException('当前状态不允许提交上级评分');
+    }
+    if (!instance.selfSignName) {
+      throw new BadRequestException('请先完成员工评分签名');
+    }
+    if (instance.supervisorSignName) {
+      throw new BadRequestException('上级已签名，不可重复提交');
+    }
+
+    const effectiveSignName = body.signName?.trim() || userName || '';
+    if (!effectiveSignName) {
+      throw new BadRequestException('签名姓名不能为空');
+    }
+    if (effectiveSignName.length > 255) {
+      throw new BadRequestException('签名姓名不能超过255个字符');
+    }
+
+    const empRows = await this.db
+      .select({
+        supervisorId: employee.supervisorId,
+        empDepartment: employee.department,
+        status: employee.status,
+      })
+      .from(employee)
+      .where(
+        and(
+          sql`(${employee.employeeId}).user_id = ${instance.employeeId}`,
+          isNull(employee.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    if (empRows.length === 0) {
+      throw new NotFoundException('员工信息不存在');
+    }
+    if (!empRows[0].status) {
+      throw new BadRequestException('员工已离职或不可用，无法提交评分');
+    }
+
+    const access = await this.checkAssessmentAccess(
+      instance.employeeId,
+      instance.supervisorId,
+      empRows[0].supervisorId,
+      empRows[0].empDepartment,
+      userId,
+    );
+
+    if (!access.isSupervisor && !access.isDeptHead && !access.isAdmin) {
+      throw new ForbiddenException(
+        '您不是该员工的上级、部门负责人或系统管理员，无法评分',
+      );
+    }
+
+    const allSnapshots = await this.db
+      .select()
+      .from(assessmentIndicatorSnapshot)
+      .where(eq(assessmentIndicatorSnapshot.instanceId, id));
+
+    validateRatingsAgainstSnapshots(body.ratings, allSnapshots, false);
+
+    const now = new Date();
+    const newStatus = getStatusAfterSupervisorRatingWithSignSubmit();
+    let resultTotalScore = 0;
+    let resultGrade = 'D';
+
+    await this.db.transaction(async (tx) => {
+      const locked = await tx
+        .select({
+          status: assessmentInstance.status,
+          selfSignName: assessmentInstance.selfSignName,
+          supervisorSignName: assessmentInstance.supervisorSignName,
+        })
+        .from(assessmentInstance)
+        .where(eq(assessmentInstance.id, id))
+        .for('update')
+        .limit(1);
+
+      if (locked.length === 0) {
+        throw new NotFoundException('考核记录不存在');
+      }
+      if (locked[0].status !== 'supervisor_review') {
+        throw new BadRequestException('当前状态不允许提交上级评分');
+      }
+      if (!locked[0].selfSignName) {
+        throw new BadRequestException('请先完成员工评分签名');
+      }
+      if (locked[0].supervisorSignName) {
+        throw new BadRequestException('上级已签名，不可重复提交');
+      }
+
+      const snapshotIds = body.ratings.map((r) => r.indicatorSnapshotId);
+      const existingList = await tx
+        .select()
+        .from(ratingRecord)
+        .where(
+          and(
+            eq(ratingRecord.instanceId, id),
+            eq(ratingRecord.ratingType, 'supervisor'),
+            inArray(ratingRecord.indicatorSnapshotId, snapshotIds),
+          ),
+        );
+      const existingMap = new Map(
+        existingList.map((r) => [r.indicatorSnapshotId, r]),
+      );
+
+      for (const rating of body.ratings) {
+        const existingRow = existingMap.get(rating.indicatorSnapshotId);
+        const scoreStr = rating.score == null ? null : String(rating.score);
+        if (existingRow) {
+          await tx
+            .update(ratingRecord)
+            .set({
+              score: scoreStr,
+              comment: rating.comment || null,
+              isDraft: false,
+              submittedAt: now,
+            })
+            .where(eq(ratingRecord.id, existingRow.id));
+        } else {
+          await tx.insert(ratingRecord).values({
+            instanceId: id,
+            indicatorSnapshotId: rating.indicatorSnapshotId,
+            ratingType: 'supervisor',
+            score: scoreStr,
+            comment: rating.comment || null,
+            ratedBy: userId,
+            isDraft: false,
+            submittedAt: now,
+          });
+        }
+      }
+
+      const ratingBySnapId = new Map<string, number>();
+      for (const r of body.ratings) {
+        if (r.score != null) {
+          ratingBySnapId.set(r.indicatorSnapshotId, r.score);
+        }
+      }
+
+      let totalScore = 0;
+      for (const snap of allSnapshots) {
+        totalScore += ratingBySnapId.get(snap.id) ?? 0;
+      }
+      totalScore = Math.round(totalScore * SCORE_PRECISION) / SCORE_PRECISION;
+
+      const grade = await this.performanceGradeService.matchGrade(
+        totalScore,
+        tx,
+      );
+
+      const updateResult = await tx
+        .update(assessmentInstance)
+        .set({
+          totalScore: String(totalScore),
+          grade,
+          supervisorSignName: effectiveSignName,
+          supervisorSignAt: now,
+          supervisorSignImage: body.signImage || null,
+          status: newStatus,
+          completedAt: now,
+        })
+        .where(
+          and(
+            eq(assessmentInstance.id, id),
+            sql`${assessmentInstance.supervisorSignName} IS NULL`,
+          ),
+        )
+        .returning();
+      if (updateResult.length === 0) {
+        throw new BadRequestException('上级签名已被他人抢先提交');
+      }
+
+      resultTotalScore = totalScore;
+      resultGrade = grade;
+
+      await tx.insert(auditLog).values({
+        operatorId: userId,
+        action: 'submit_supervisor_rating_with_sign',
+        targetType: 'assessment_instance',
+        targetId: id,
+      });
+    });
+
+    this.logger.log(
+      `Supervisor rating submitted with sign for instance ${id} by ${userId}, total=${resultTotalScore}, grade=${resultGrade}`,
+    );
+
+    return {
+      success: true,
+      totalScore: resultTotalScore,
+      grade: resultGrade,
+      status: newStatus,
+    };
   }
 
   async sign(

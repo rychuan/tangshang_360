@@ -5,10 +5,10 @@ import { UserDisplay } from '@/components/business-ui/user-display';
 import type { AssessmentInstanceDetail } from '@shared/api.interface';
 
 const STATUS_LABELS: Record<string, string> = {
-  self_review: '待自评',
-  supervisor_review: '待上级评分',
-  pending_sign: '待员工签名',
-  supervisor_sign: '待上级签名',
+  self_review: '员工评分中',
+  supervisor_review: '上级评分中',
+  pending_sign: '员工步骤中',
+  supervisor_sign: '上级步骤中',
   completed: '已完成',
 };
 

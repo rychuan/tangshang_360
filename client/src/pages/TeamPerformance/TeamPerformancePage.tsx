@@ -407,9 +407,9 @@ const TeamPerformancePage: React.FC = () => {
               <SelectGroup>
                 <SelectItem value="__all">全部状态</SelectItem>
                 <SelectItem value="self_review">待自评</SelectItem>
-                <SelectItem value="pending_sign">待员工签名</SelectItem>
+                <SelectItem value="pending_sign">员工步骤中</SelectItem>
                 <SelectItem value="supervisor_review">待上级评分</SelectItem>
-                <SelectItem value="supervisor_sign">待上级签名</SelectItem>
+                <SelectItem value="supervisor_sign">上级步骤中</SelectItem>
                 <SelectItem value="completed">已完成</SelectItem>
               </SelectGroup>
             </SelectContent>

@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import {
   ClipboardCheckIcon,
   UsersIcon,
-  PenToolIcon,
   TrendingUpIcon,
   CheckCircleIcon,
   ClockIcon,
@@ -52,23 +51,17 @@ const TODO_ICONS: Record<
   React.ComponentType<{ className?: string }>
 > = {
   self_review: ClipboardCheckIcon,
-  self_sign: PenToolIcon,
   supervisor_review: UsersIcon,
-  supervisor_sign: PenToolIcon,
 };
 
 const TODO_LABELS: Record<string, string> = {
-  self_review: '自评',
-  self_sign: '员工签名',
+  self_review: '员工评分',
   supervisor_review: '上级评分',
-  supervisor_sign: '上级签名',
 };
 
 const TODO_COLORS: Record<string, string> = {
   self_review: 'text-info bg-info/10',
-  self_sign: 'text-success bg-success/10',
   supervisor_review: 'text-warning bg-warning/10',
-  supervisor_sign: 'text-primary bg-primary/10',
 };
 
 const HomePage: React.FC = () => {

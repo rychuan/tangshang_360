@@ -53,10 +53,10 @@ interface PendingPublishSectionProps {
 
 const LAST_PERIOD_STATUS_LABELS: Record<string, string> = {
   completed: '已完成',
-  supervisor_sign: '待上级签名',
-  pending_sign: '员工签名中',
+  supervisor_sign: '上级步骤中',
+  pending_sign: '员工步骤中',
   supervisor_review: '上级评分中',
-  self_review: '自评中',
+  self_review: '员工评分中',
   draft: '草稿',
 };
 

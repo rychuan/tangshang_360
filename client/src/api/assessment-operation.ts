@@ -2,6 +2,7 @@ import { axiosForBackend } from '@lark-apaas/client-toolkit/utils/getAxiosForBac
 import type {
   AssessmentInstanceDetail,
   RatingSubmitRequest,
+  RatingSubmitWithSignRequest,
   SupervisorRatingResponse,
   SignRequest,
 } from '@shared/api.interface';
@@ -62,12 +63,36 @@ export async function submitSelfRating(
   return res.data;
 }
 
+export async function submitSelfRatingWithSign(
+  id: string,
+  data: RatingSubmitWithSignRequest,
+): Promise<{ success: boolean; status: string }> {
+  const res = await axiosForBackend({
+    url: `/api/assessment-instances/${id}/self-rating-with-sign`,
+    method: 'POST',
+    data,
+  });
+  return res.data;
+}
+
 export async function submitSupervisorRating(
   id: string,
   data: RatingSubmitRequest,
 ): Promise<SupervisorRatingResponse> {
   const res = await axiosForBackend({
     url: `/api/assessment-instances/${id}/supervisor-rating`,
+    method: 'POST',
+    data,
+  });
+  return res.data;
+}
+
+export async function submitSupervisorRatingWithSign(
+  id: string,
+  data: RatingSubmitWithSignRequest,
+): Promise<SupervisorRatingResponse & { status: string }> {
+  const res = await axiosForBackend({
+    url: `/api/assessment-instances/${id}/supervisor-rating-with-sign`,
     method: 'POST',
     data,
   });

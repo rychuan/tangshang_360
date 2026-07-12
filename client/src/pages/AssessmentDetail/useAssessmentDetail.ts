@@ -127,14 +127,6 @@ export function useAssessmentDetail(
       );
     }
   }, [detail, isEmployeeCandidate, canEditSupervisor, currentUserId]);
-  // 上级签名：非员工本人 OR 员工本人即发布上级时允许操作，
-  // 最终权限由后端校验（支持发布上级/当前上级/部门负责人/admin 四种身份）
-  const canSignSupervisor: boolean =
-    detail?.status === 'supervisor_sign' &&
-    (!isEmployeeCandidate || isSupervisorCandidate) &&
-    !detail.supervisorSignName;
-  const canSignSelf: boolean =
-    detail?.status === 'pending_sign' && isEmployee && !detail.selfSignName;
   const isCompleted: boolean = detail?.status === 'completed';
 
   const groupedIndicators = useMemo<DimensionGroup[]>(() => {
@@ -194,7 +186,7 @@ export function useAssessmentDetail(
     [],
   );
 
-  const handleSaveDraft = async () => {
+  const handleSaveDraft = async (options?: { successMessage?: string }) => {
     if (!id || !detail) return;
     setSubmitting(true);
     try {
@@ -204,10 +196,12 @@ export function useAssessmentDetail(
       } else if (detail.status === 'supervisor_review') {
         await assessmentOperation.submitSupervisorRating(id, body);
       }
-      toast.success('草稿已保存');
+      toast.success(options?.successMessage ?? '草稿已保存');
+      return true;
     } catch (err: unknown) {
       logger.error('Save draft failed:', err);
       handleApiError(err);
+      return false;
     } finally {
       setSubmitting(false);
     }
@@ -270,25 +264,48 @@ export function useAssessmentDetail(
       return { needsScoreWarningConfirm: true };
     }
 
+    if (detail.status === 'self_review') {
+      return { readyToSign: true, signType: 'self' as const };
+    }
+    if (detail.status === 'supervisor_review') {
+      return { readyToSign: true, signType: 'supervisor' as const };
+    }
+  };
+
+  const handleSubmitWithSign = async (
+    signType: 'self' | 'supervisor',
+    signImage: string,
+  ) => {
+    if (!id || !detail) return;
     setSubmitting(true);
     try {
-      const body = { ...buildRatingPayload(ratings), isDraft: false };
-      if (detail.status === 'self_review') {
-        await assessmentOperation.submitSelfRating(id, body);
-        toast.success('自评已提交');
-      } else if (detail.status === 'supervisor_review') {
-        const result = await assessmentOperation.submitSupervisorRating(
+      const body = {
+        ...buildRatingPayload(ratings),
+        isDraft: false,
+        signName:
+          signType === 'self'
+            ? detail.employeeName || ''
+            : detail.supervisorName || '',
+        signImage,
+      };
+      if (signType === 'self') {
+        await assessmentOperation.submitSelfRatingWithSign(id, body);
+        toast.success('自评和签名已提交');
+      } else {
+        const result = await assessmentOperation.submitSupervisorRatingWithSign(
           id,
           body,
         );
         toast.success(
-          `评分已提交，总分 ${result.totalScore}，等级 ${result.grade}`,
+          `评分和签名已提交，总分 ${result.totalScore}，等级 ${result.grade}`,
         );
       }
       await fetchDetail();
+      return true;
     } catch (err: unknown) {
-      logger.error('Submit failed:', err);
+      logger.error('Submit with sign failed:', err);
       handleApiError(err);
+      return false;
     } finally {
       setSubmitting(false);
     }
@@ -304,8 +321,6 @@ export function useAssessmentDetail(
     groupedIndicators,
     canEditSelf,
     canEditSupervisor,
-    canSignSelf,
-    canSignSupervisor,
     isCompleted,
     previewScore: preview?.score ?? null,
     previewGrade: preview?.grade ?? null,
@@ -314,5 +329,6 @@ export function useAssessmentDetail(
     updateRating,
     handleSaveDraft,
     handleSubmit,
+    handleSubmitWithSign,
   };
 }
