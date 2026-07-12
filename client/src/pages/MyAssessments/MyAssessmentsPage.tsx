@@ -69,7 +69,7 @@ const MyAssessmentsPage: React.FC = () => {
       key: 'signStatus',
       header: '签名状态',
       render: (item) => (
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1">
           {signBadge('自评', item.selfSignAt)}
           {signBadge('上级', item.supervisorSignAt)}
         </div>
@@ -202,10 +202,10 @@ const MyAssessmentsPage: React.FC = () => {
             >
               <ChevronRight />
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="ml-1"
+	            <Button
+	              variant="outline"
+	              size="sm"
+	              className="ml-1 hidden sm:inline-flex"
               onClick={() => {
                 setYearFilter(String(new Date().getFullYear()));
                 setPage(1);
@@ -312,16 +312,109 @@ const MyAssessmentsPage: React.FC = () => {
               绩效记录加载失败：{recordsError}
             </div>
           ) : (
-            <PageTable
-              columns={myAssessmentColumns}
-              data={records}
-              loading={loading}
-              emptyMessage="暂无绩效记录"
-              page={page}
-              totalPages={totalPages}
-              total={total}
-              onPageChange={setPage}
-            />
+            <>
+              <div className="hidden md:block">
+                <PageTable
+                  columns={myAssessmentColumns}
+                  data={records}
+                  loading={loading}
+                  emptyMessage="暂无绩效记录"
+                  page={page}
+                  totalPages={totalPages}
+                  total={total}
+                  onPageChange={setPage}
+                />
+              </div>
+              <div className="md:hidden">
+                {records.length === 0 ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Empty>
+                      <EmptyHeader>
+                        <EmptyMedia variant="icon">
+                          <AreaChartIcon className="size-6" />
+                        </EmptyMedia>
+                        <EmptyTitle>暂无绩效记录</EmptyTitle>
+                      </EmptyHeader>
+                    </Empty>
+                  </div>
+                ) : (
+                  <div className="flex flex-col divide-y">
+                    {records.map((item) => (
+                      <div key={item.id} className="flex flex-col gap-3 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold">
+                              {item.period}
+                            </p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              {item.position || '-'}
+                            </p>
+                          </div>
+                          <StatusBadge status={item.status} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-xs text-muted-foreground">总分</p>
+                            <p className="font-semibold">
+                              {item.totalScore != null ? item.totalScore : '-'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">等级</p>
+                            {item.grade ? <GradeBadge grade={item.grade} /> : '-'}
+                          </div>
+                          <div className="col-span-2">
+                            <p className="mb-1 text-xs text-muted-foreground">
+                              签名状态
+                            </p>
+                            <div className="flex flex-wrap items-center gap-1">
+                              {signBadge('自评', item.selfSignAt)}
+                              {signBadge('上级', item.supervisorSignAt)}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-xs text-muted-foreground">
+                            {item.completedAt
+                              ? new Date(item.completedAt).toLocaleString('zh-CN')
+                              : '未完成'}
+                          </p>
+                          <ActionBadge
+                            actionType="view"
+                            icon={<Eye className="size-3" />}
+                            label="查看详情"
+                            onClick={() => navigate(`/assessment/${item.id}`)}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between border-t px-4 py-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={page <= 1}
+                      onClick={() => setPage(Math.max(1, page - 1))}
+                    >
+                      上一页
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      {page} / {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={page >= totalPages}
+                      onClick={() => setPage(Math.min(totalPages, page + 1))}
+                    >
+                      下一页
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

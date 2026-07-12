@@ -229,9 +229,9 @@ const TeamPerformancePage: React.FC = () => {
   return (
     <div className="@container/main flex flex-1 flex-col gap-4 md:gap-6">
       {/* Header + Period Filter */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
         <PageHeader title="团队绩效" visuallyHidden />
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <span className="text-xs text-muted-foreground shrink-0">
             考核周期
           </span>
@@ -400,7 +400,7 @@ const TeamPerformancePage: React.FC = () => {
               setStatusFilter(val === '__all' ? '' : val);
             }}
           >
-            <SelectTrigger className="w-36">
+          <SelectTrigger className="w-full sm:w-36">
               <SelectValue placeholder="全部状态" />
             </SelectTrigger>
             <SelectContent>
@@ -416,20 +416,129 @@ const TeamPerformancePage: React.FC = () => {
           </Select>
         </CardHeader>
         <CardContent className="p-0">
-          <PageTable
-            columns={teamColumns}
-            data={subordinates}
-            loading={loadingList}
-            emptyMessage={
-              statusFilter
-                ? '暂无符合筛选条件的绩效记录'
-                : '暂无非您负责的下属团队数据'
-            }
-            page={page}
-            totalPages={totalPages}
-            total={total}
-            onPageChange={setPage}
-          />
+          <div className="hidden md:block">
+            <PageTable
+              columns={teamColumns}
+              data={subordinates}
+              loading={loadingList}
+              emptyMessage={
+                statusFilter
+                  ? '暂无符合筛选条件的绩效记录'
+                  : '暂无非您负责的下属团队数据'
+              }
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              onPageChange={setPage}
+            />
+          </div>
+          <div className="md:hidden">
+            {loadingList ? (
+              <div className="flex items-center justify-center py-12">
+                <Spinner className="size-6" />
+              </div>
+            ) : subordinates.length === 0 ? (
+              <div className="flex items-center justify-center py-12">
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <Users className="size-6" />
+                    </EmptyMedia>
+                    <EmptyTitle>
+                      {statusFilter
+                        ? '暂无符合筛选条件的绩效记录'
+                        : '暂无非您负责的下属团队数据'}
+                    </EmptyTitle>
+                  </EmptyHeader>
+                </Empty>
+              </div>
+            ) : (
+              <div className="flex flex-col divide-y">
+                {subordinates.map((item) => (
+                  <div key={item.id} className="flex flex-col gap-3 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <UserDisplay
+                          value={{
+                            user_id: item.employeeId,
+                            name: item.employeeName,
+                          }}
+                          size="small"
+                          showLabel
+                        />
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {item.department || '-'} · {item.position || '-'}
+                        </p>
+                      </div>
+                      <StatusBadge status={item.status} />
+                    </div>
+                    <div className="grid grid-cols-3 gap-3 text-sm">
+                      <div>
+                        <p className="text-xs text-muted-foreground">周期</p>
+                        <p className="font-medium">{item.period}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">总分</p>
+                        <p className="font-semibold">
+                          {item.totalScore != null ? item.totalScore : '-'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">等级</p>
+                        {item.grade ? <GradeBadge grade={item.grade} /> : '-'}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      {item.status === 'self_review' && (
+                        <CanRole roles={['admin', 'dept_head', 'supervisor']}>
+                          <CanDo resource="team_performance" action="edit">
+                            <ActionBadge
+                              actionType="toggle"
+                              icon={<Bell className="size-3" />}
+                              label="催办"
+                              disabled={remindingIds.has(item.id)}
+                              onClick={() => handleRemind(item)}
+                            />
+                          </CanDo>
+                        </CanRole>
+                      )}
+                      <ActionBadge
+                        actionType="view"
+                        icon={<Eye className="size-3" />}
+                        label="查看/评分"
+                        onClick={() =>
+                          navigate(`../assessment/${item.id}?view=supervisor`)
+                        }
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between border-t px-4 py-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage(Math.max(1, page - 1))}
+                >
+                  上一页
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  {page} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage(Math.min(totalPages, page + 1))}
+                >
+                  下一页
+                </Button>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 

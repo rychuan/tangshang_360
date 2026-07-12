@@ -130,7 +130,111 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               </div>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              <div className="flex flex-col gap-3 md:hidden">
+                {group.indicators.map((indicator) => (
+                  <div
+                    key={indicator.id}
+                    className="rounded-md border bg-background p-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium leading-5">
+                          {indicator.content}
+                        </p>
+                        {indicator.description && (
+                          <p className="mt-1 text-xs leading-4 text-muted-foreground">
+                            {indicator.description}
+                          </p>
+                        )}
+                      </div>
+                      <Badge variant="outline" className="shrink-0 text-xs">
+                        {indicator.weight}分
+                      </Badge>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="mb-1 text-xs text-muted-foreground">
+                          自评
+                        </p>
+                        {renderScoreCell(indicator, 'self')}
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs text-muted-foreground">
+                          上级评分
+                        </p>
+                        {renderScoreCell(indicator, 'supervisor')}
+                      </div>
+                    </div>
+
+                    <div className="mt-3">
+                      <p className="mb-1 text-xs text-muted-foreground">
+                        完成情况
+                      </p>
+                      {canEditSelf ? (
+                        <Textarea
+                          className="min-h-20 w-full resize-y text-xs"
+                          placeholder="填写完成情况"
+                          value={ratings[indicator.id]?.completionStatus ?? ''}
+                          onChange={(
+                            e: React.ChangeEvent<HTMLTextAreaElement>,
+                          ) =>
+                            updateRating(
+                              indicator.id,
+                              'completionStatus',
+                              e.target.value,
+                            )
+                          }
+                        />
+                      ) : (
+                        <p className="whitespace-pre-wrap break-words text-xs text-muted-foreground">
+                          {indicator.selfCompletionStatus || '-'}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="mt-3">
+                      <p className="mb-1 text-xs text-muted-foreground">备注</p>
+                      {canEdit ? (
+                        <Input
+                          className="w-full text-xs"
+                          placeholder="备注"
+                          value={ratings[indicator.id]?.comment ?? ''}
+                          onChange={(
+                            e: React.ChangeEvent<HTMLInputElement>,
+                          ) =>
+                            updateRating(
+                              indicator.id,
+                              'comment',
+                              e.target.value,
+                            )
+                          }
+                        />
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          {(() => {
+                            const selfC = indicator.selfComment?.trim();
+                            const supC = indicator.supervisorComment?.trim();
+                            if (selfC && supC) {
+                              return (
+                                <span className="flex flex-col gap-0.5">
+                                  <span>自评：{selfC}</span>
+                                  <span>上级：{supC}</span>
+                                </span>
+                              );
+                            }
+                            if (selfC) return <>自评：{selfC}</>;
+                            if (supC) return <>上级：{supC}</>;
+                            return '-';
+                          })()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden overflow-x-auto md:block">
                 <Table className="table-fixed w-full">
                   <TableHeader>
                     <TableRow className="bg-muted/30">

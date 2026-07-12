@@ -168,10 +168,10 @@ const AssessmentDetailPage: React.FC = () => {
     detail.totalScore ?? sumScores(detail.indicators, 'supervisor');
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4 md:gap-6">
       {/* Top bar: back + period + status + score */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Button
             variant="outline"
             size="sm"
@@ -181,20 +181,20 @@ const AssessmentDetailPage: React.FC = () => {
             <ArrowLeft data-icon="inline-start" />
             返回
           </Button>
-          <h1 className="text-xl font-semibold">{detail.period}</h1>
+          <h1 className="text-lg font-semibold sm:text-xl">{detail.period}</h1>
           <StatusBadge status={detail.status} />
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
           {hasFinalScore && (
             <>
-              <div className="text-right">
+              <div className="text-left sm:text-right">
                 <p className="text-xs text-muted-foreground">总分</p>
                 <p className="text-2xl font-bold text-primary leading-8">
                   {detail.totalScore}
                 </p>
               </div>
               {detail.grade && (
-                <div className="text-right">
+                <div className="text-left sm:text-right">
                   <p className="text-xs text-muted-foreground">等级</p>
                   <Badge
                     className={`text-lg font-bold ${getGradeStyle(detail.grade, gradeStyleMap)}`}
@@ -204,7 +204,7 @@ const AssessmentDetailPage: React.FC = () => {
                 </div>
               )}
               {detail.coefficient && (
-                <div className="text-right">
+                <div className="text-left sm:text-right">
                   <p className="text-xs text-muted-foreground">系数</p>
                   <p className="text-xl font-bold text-primary leading-8">
                     {detail.coefficient}
@@ -236,7 +236,7 @@ const AssessmentDetailPage: React.FC = () => {
       {/* Process stepper card */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="flex flex-wrap items-center gap-2 text-base">
             <UserDisplay
               value={{ user_id: detail.employeeId, name: detail.employeeName }}
               size="small"
@@ -248,7 +248,7 @@ const AssessmentDetailPage: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <div className="flex items-stretch justify-between gap-3">
+          <div className="flex flex-col items-stretch justify-between gap-3 lg:flex-row">
             {[
               {
                 key: 'self',
@@ -316,7 +316,7 @@ const AssessmentDetailPage: React.FC = () => {
 		                    };
 
               return (
-	              <div key={step.key} className="flex flex-1 items-center min-w-0">
+		              <div key={step.key} className="flex flex-1 items-center min-w-0">
 	                <div
 			                  className={`flex h-full w-full min-w-0 flex-col gap-4 rounded-md border p-4 lg:flex-row lg:items-center lg:gap-6 ${stepTone.panel}`}
 	                >
@@ -372,12 +372,12 @@ const AssessmentDetailPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                {i < 1 && (
-                  <ChevronRight
-                    className={`size-4 shrink-0 -ml-1 -mr-1 ${
-                      step.done ? 'text-success' : 'text-muted-foreground/30'
-                    }`}
-                  />
+	                {i < 1 && (
+	                  <ChevronRight
+	                    className={`hidden size-4 shrink-0 -ml-1 -mr-1 lg:block ${
+	                      step.done ? 'text-success' : 'text-muted-foreground/30'
+	                    }`}
+	                  />
                 )}
               </div>
               );
