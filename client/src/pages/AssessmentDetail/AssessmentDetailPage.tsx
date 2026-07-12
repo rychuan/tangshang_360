@@ -293,80 +293,80 @@ const AssessmentDetailPage: React.FC = () => {
               },
             ].map((step, i) => (
               <div key={step.key} className="flex flex-1 items-center min-w-0">
-                <div className="flex h-full w-full min-w-0 flex-col">
-                  <div className="flex h-10 items-center gap-1.5 overflow-hidden">
-                    <div
-                      className={`flex size-7 shrink-0 items-center justify-center rounded-full ${
-                        step.done
-                          ? 'bg-success text-success-foreground'
-                          : step.active
-                            ? 'bg-primary text-primary-foreground ring-2 ring-primary/20'
-                            : 'bg-muted text-muted-foreground'
-                      }`}
-                    >
-                      {step.done ? (
-                        <CheckCircle2 className="size-4" />
+                <div className="flex h-full w-full min-w-0 flex-col gap-3 lg:flex-row lg:items-center">
+                  <div className="flex min-w-[190px] flex-col">
+                    <div className="flex h-9 items-center gap-1.5 overflow-hidden">
+                      <div
+                        className={`flex size-7 shrink-0 items-center justify-center rounded-full ${
+                          step.done
+                            ? 'bg-success text-success-foreground'
+                            : step.active
+                              ? 'bg-primary text-primary-foreground ring-2 ring-primary/20'
+                              : 'bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        {step.done ? (
+                          <CheckCircle2 className="size-4" />
+                        ) : (
+                          <step.icon className="size-3.5" />
+                        )}
+                      </div>
+                      <span className="text-xs font-medium truncate">
+                        {step.label}
+                      </span>
+                      <Badge
+                        variant={
+                          step.done
+                            ? 'default'
+                            : step.active
+                              ? 'secondary'
+                              : 'outline'
+                        }
+                        className={`text-[0.625rem] px-1.5 py-0 shrink-0 ${
+                          step.done
+                            ? 'bg-success/10 text-success border-transparent'
+                            : ''
+                        }`}
+                      >
+                        {step.statusText}
+                      </Badge>
+                    </div>
+                    <div className="flex h-8 items-center pl-8">
+                      {step.operatorId ? (
+                        <UserDisplay
+                          userId={step.operatorId}
+                          size="small"
+                          showLabel
+                        />
                       ) : (
-                        <step.icon className="size-3.5" />
+                        <span className="text-xs text-muted-foreground">-</span>
                       )}
                     </div>
-                    <span className="text-xs font-medium truncate">
-                      {step.label}
-                    </span>
-                    <Badge
-                      variant={
-                        step.done
-                          ? 'default'
-                          : step.active
-                            ? 'secondary'
-                            : 'outline'
-                      }
-                      className={`text-[0.625rem] px-1.5 py-0 shrink-0 ${
-                        step.done
-                          ? 'bg-success/10 text-success border-transparent'
-                          : ''
-                      }`}
-                    >
-                      {step.statusText}
-                    </Badge>
                   </div>
-                  <div className="flex h-8 items-center pl-8">
-                    {step.operatorId ? (
-                      <UserDisplay
-                        userId={step.operatorId}
-                        size="small"
-                        showLabel
-                      />
-                    ) : (
-                      <span className="text-xs text-muted-foreground">-</span>
-                    )}
-                  </div>
-                  <div className="mt-1.5 flex min-h-24 items-center pl-8">
-                    <div className="grid min-h-24 w-full max-w-[240px] grid-cols-[80px_1fr] items-center gap-3 rounded-md border bg-background p-2">
-                      <div className="flex h-20 items-center justify-center rounded bg-muted/40 px-2">
-                        {step.score != null ? (
-                          <span className="text-base font-semibold tabular-nums">
-                            {step.score}分
-                          </span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">
-                            {step.active ? '进行中' : '待进行'}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex h-20 items-center justify-center rounded bg-muted/40 px-2">
-                        {step.signImage ? (
-                          <img
-                            src={step.signImage}
-                            alt={`${step.label}签名`}
-                            className="h-full w-full object-contain"
-                          />
-                        ) : (
-                          <span className="text-xs text-muted-foreground">
-                            未签名
-                          </span>
-                        )}
-                      </div>
+                  <div className="grid h-20 w-full min-w-[220px] flex-1 grid-cols-[76px_1fr] items-center gap-2 rounded-md border bg-background p-2">
+                    <div className="flex h-16 items-center justify-center rounded bg-muted/40 px-2">
+                      {step.score != null ? (
+                        <span className="text-base font-semibold tabular-nums">
+                          {step.score}分
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          {step.active ? '进行中' : '待进行'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex h-16 items-center justify-center rounded bg-muted/40 px-2">
+                      {step.signImage ? (
+                        <img
+                          src={step.signImage}
+                          alt={`${step.label}签名`}
+                          className="h-full w-full object-contain"
+                        />
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          未签名
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
