@@ -54,6 +54,14 @@ const PAGE_SIZE = 10;
 
 const GRADE_COLORS = ['S', 'A', 'B', 'C', 'D'];
 
+const RANKING_BAR_COLORS = [
+  '#2563eb',
+  '#16a34a',
+  '#f59e0b',
+  '#7c3aed',
+  '#0891b2',
+];
+
 const chartConfig = {
   S: { label: 'S', color: 'hsl(var(--chart-5))' },
   A: { label: 'A', color: 'hsl(var(--chart-1))' },
@@ -153,9 +161,9 @@ const TeamPerformancePage: React.FC = () => {
       .map((s, i) => ({
         employeeId: s.employeeId,
         name: s.employeeName,
-        score: s.totalScore ?? 0,
-        fill: `hsl(var(--chart-${(i % 5) + 1}))`,
-      }));
+	        score: s.totalScore ?? 0,
+	        fill: RANKING_BAR_COLORS[i % RANKING_BAR_COLORS.length],
+	      }));
   }, [subordinates]);
 
   const teamColumns: PageTableColumn<SubordinateRecord>[] = useMemo(
@@ -313,27 +321,31 @@ const TeamPerformancePage: React.FC = () => {
                 </Empty>
               </div>
             ) : (
-              <div className="flex flex-col gap-1.5">
-                {scoreRankingData.map((entry) => {
-                  const maxScore = scoreRankingData[0]?.score || 100;
-                  const pct = Math.max((entry.score / maxScore) * 100, 4);
-                  return (
-                    <div
-                      key={entry.employeeId}
-                      className="flex items-center gap-1.5 text-xs"
-                    >
-                      <div
-                        className="relative h-6 rounded-r-sm flex items-center justify-end pr-1.5 min-w-[28px]"
-                        style={{
-                          width: `${pct}%`,
-                          backgroundColor: entry.fill,
-                        }}
-                      >
-                        <span className="text-xs font-mono font-bold text-white drop-shadow-sm">
-                          {entry.score}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
+	              <div className="flex flex-col gap-2">
+	                {scoreRankingData.map((entry) => {
+	                  const maxScore = scoreRankingData[0]?.score || 100;
+	                  const pct = Math.max((entry.score / maxScore) * 100, 4);
+	                  return (
+	                    <div
+	                      key={entry.employeeId}
+	                      className="grid grid-cols-[1fr_auto] items-center gap-2 text-xs"
+	                    >
+	                      <div className="flex min-w-0 items-center gap-2">
+	                        <div className="h-6 min-w-0 flex-1 rounded-sm bg-muted">
+	                          <div
+	                            className="flex h-full min-w-[32px] items-center justify-end rounded-sm pr-1.5"
+	                            style={{
+	                              width: `${pct}%`,
+	                              backgroundColor: entry.fill,
+	                            }}
+	                          >
+	                            <span className="text-xs font-mono font-bold text-white">
+	                              {entry.score}
+	                            </span>
+	                          </div>
+	                        </div>
+	                      </div>
+	                      <div className="flex shrink-0 items-center gap-1">
                         <UserDisplay
                           value={{
                             user_id: entry.employeeId,
