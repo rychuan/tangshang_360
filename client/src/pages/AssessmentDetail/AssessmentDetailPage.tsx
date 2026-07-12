@@ -310,11 +310,11 @@ const AssessmentDetailPage: React.FC = () => {
                     };
 
               return (
-              <div key={step.key} className="flex flex-1 items-center min-w-0">
-                <div
-		                  className={`flex h-full w-full min-w-0 flex-col gap-3 rounded-md border p-3 lg:flex-row lg:items-center lg:gap-4 ${stepTone.panel}`}
-                >
-	                  <div className="flex min-w-[170px] flex-col">
+	              <div key={step.key} className="flex flex-1 items-center min-w-0">
+	                <div
+			                  className={`flex h-full w-full min-w-0 flex-col gap-4 rounded-md border p-4 lg:flex-row lg:items-center lg:gap-6 ${stepTone.panel}`}
+	                >
+		                  <div className="flex min-w-[190px] flex-col">
                     <div className="flex h-8 items-center justify-start overflow-hidden">
                       <span className="truncate text-xs font-medium">
                         {step.label}
@@ -338,26 +338,27 @@ const AssessmentDetailPage: React.FC = () => {
                       </Badge>
                     </div>
                   </div>
-	                  <div className="grid h-20 w-full min-w-[230px] flex-1 grid-cols-[84px_1fr] items-center rounded-md border bg-background">
-	                    <div className="flex h-full items-center justify-center border-r px-3">
-                      {step.score != null ? (
-                        <span className="text-base font-semibold tabular-nums">
-                          {step.score}分
+		                  <div className="flex h-16 w-full min-w-[260px] flex-1 items-center gap-4 overflow-hidden rounded-md border border-border/70 bg-background px-4">
+		                    <div className="flex w-20 shrink-0 items-center justify-center">
+	                      {step.score != null ? (
+	                        <span className="text-base font-semibold tabular-nums">
+	                          {step.score}分
                         </span>
                       ) : (
                         <span className="text-xs text-muted-foreground">
                           {step.active ? '进行中' : '待进行'}
-                        </span>
-                      )}
-                    </div>
-	                    <div className="flex h-full items-center justify-center px-3">
-                      {step.signImage ? (
-                        <img
-                          src={step.signImage}
-                          alt={`${step.label}签名`}
-                          className="h-full w-full object-contain"
-                        />
-                      ) : (
+	                        </span>
+	                      )}
+	                    </div>
+		                    <div className="h-8 w-px shrink-0 bg-border/70" />
+		                    <div className="flex min-w-0 flex-1 items-center justify-center overflow-hidden">
+	                      {step.signImage ? (
+	                        <img
+	                          src={step.signImage}
+	                          alt={`${step.label}签名`}
+	                          className="max-h-14 w-full object-contain"
+	                        />
+	                      ) : (
                         <span className="text-xs text-muted-foreground">
                           未签名
                         </span>
