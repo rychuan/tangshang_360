@@ -44,26 +44,39 @@ export class AccessScopeService {
 
   async getScope(userId: string): Promise<AccessScope> {
     const roles = await this.roleManagerService.getUserRoles(userId);
+    const isDeptHead = roles.includes('dept_head');
+    const isSupervisor = roles.includes('supervisor');
+
+    // 部门范围：仅当用户有 dept_head 角色时才查询其负责的部门
+    const departmentPromise = isDeptHead
+      ? this.db
+          .select({ id: department.id })
+          .from(department)
+          .where(
+            and(
+              sql`(${department.headId}).user_id = ${userId}`,
+              eq(department.isActive, true),
+            ),
+          )
+      : Promise.resolve([] as { id: string }[]);
+
+    // 下属范围：仅当用户有 supervisor 角色时才查询其直接下属
+    const subordinatePromise = isSupervisor
+      ? this.db
+          .select({ userId: sql<string>`(${employee.employeeId}).user_id` })
+          .from(employee)
+          .where(
+            and(
+              sql`(${employee.supervisorId}).user_id = ${userId}`,
+              isNull(employee.deletedAt),
+              eq(employee.status, true),
+            ),
+          )
+      : Promise.resolve([] as { userId: string }[]);
+
     const [departmentRows, subordinateRows] = await Promise.all([
-      this.db
-        .select({ id: department.id })
-        .from(department)
-        .where(
-          and(
-            sql`(${department.headId}).user_id = ${userId}`,
-            eq(department.isActive, true),
-          ),
-        ),
-      this.db
-        .select({ userId: sql<string>`(${employee.employeeId}).user_id` })
-        .from(employee)
-        .where(
-          and(
-            sql`(${employee.supervisorId}).user_id = ${userId}`,
-            isNull(employee.deletedAt),
-            eq(employee.status, true),
-          ),
-        ),
+      departmentPromise,
+      subordinatePromise,
     ]);
 
     const departmentIds = departmentRows.map((row) => row.id);
@@ -72,8 +85,8 @@ export class AccessScopeService {
     return {
       kind: classifyAccessScope(
         roles,
-        departmentIds.length > 0,
-        subordinateIds.length > 0,
+        isDeptHead && departmentIds.length > 0,
+        isSupervisor && subordinateIds.length > 0,
       ),
       roles,
       departmentIds,

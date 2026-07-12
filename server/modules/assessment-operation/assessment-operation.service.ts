@@ -126,7 +126,13 @@ export class AssessmentOperationService {
     private readonly accessScopeService: AccessScopeService,
   ) {}
 
-  /** 统一的权限校验：检查当前用户是否为员工本人、上级、部门负责人或系统管理员 */
+  /**
+   * 统一的权限校验：区分查看权限和操作（评分/签名）权限。
+   * - 查看：本人、直接上级、部门负责人（管理同一部门）、系统管理员
+   * - 评分/签名（上级操作）：仅直接上级或系统管理员
+   *
+   * 注意：部门负责人可以查看部门内员工考核，但不能代为评分或签名。
+   */
   private async checkAssessmentAccess(
     instanceEmployeeId: string,
     instanceSupervisorId: string | null,
@@ -136,7 +142,7 @@ export class AssessmentOperationService {
   ): Promise<{
     isEmployee: boolean;
     isSupervisor: boolean;
-    isDeptHead: boolean;
+    canView: boolean;
     isAdmin: boolean;
   }> {
     const isEmployee = instanceEmployeeId === userId;
@@ -145,14 +151,20 @@ export class AssessmentOperationService {
       empSupervisorId === userId;
     const scope = await this.accessScopeService.getScope(userId);
     const isAdmin = scope.kind === 'global';
-    const hasScopedAccess = await this.accessScopeService.canAccessEmployee(
-      userId,
-      instanceEmployeeId,
-      { includeSelf: true },
-    );
-    const isDeptHead = !isEmployee && !isSupervisor && !isAdmin && hasScopedAccess;
 
-    return { isEmployee, isSupervisor, isDeptHead, isAdmin };
+    // 查看权限：本人、直接上级、admin/HRD、部门负责人可查看部门内员工
+    const canView =
+      isEmployee ||
+      isSupervisor ||
+      isAdmin ||
+      (scope.departmentIds.length > 0 &&
+        (await this.accessScopeService.canAccessEmployee(
+          userId,
+          instanceEmployeeId,
+          { includeSelf: false },
+        )));
+
+    return { isEmployee, isSupervisor, canView, isAdmin };
   }
 
   async detail(id: string, userId: string): Promise<AssessmentInstanceDetail> {
@@ -169,7 +181,7 @@ export class AssessmentOperationService {
 
     const instance = rows[0];
 
-    // 权限校验：仅允许本人、当前上级或部门负责人查看考核详情
+    // 权限校验：仅允许本人、当前上级、部门负责人或系统管理员查看考核详情
     const empRows = await this.db
       .select({
         name: employee.name,
@@ -194,12 +206,7 @@ export class AssessmentOperationService {
       userId,
     );
 
-    if (
-      !access.isEmployee &&
-      !access.isSupervisor &&
-      !access.isDeptHead &&
-      !access.isAdmin
-    ) {
+    if (!access.canView) {
       throw new ForbiddenException('无权查看该考核记录');
     }
 
@@ -667,7 +674,7 @@ export class AssessmentOperationService {
       throw new BadRequestException('员工已离职或不可用，无法提交评分');
     }
 
-    // 身份校验：上级评分允许发布时上级（快照）、当前上级、部门负责人或系统管理员
+    // 身份校验：上级评分仅允许发布时上级（快照）、当前上级或系统管理员
     const access = await this.checkAssessmentAccess(
       instance.employeeId,
       instance.supervisorId,
@@ -676,9 +683,9 @@ export class AssessmentOperationService {
       userId,
     );
 
-    if (!access.isSupervisor && !access.isDeptHead && !access.isAdmin) {
+    if (!access.isSupervisor && !access.isAdmin) {
       throw new ForbiddenException(
-        '您不是该员工的上级、部门负责人或系统管理员，无法评分',
+        '您不是该员工的直接上级或系统管理员，无法评分',
       );
     }
 
@@ -873,9 +880,9 @@ export class AssessmentOperationService {
       userId,
     );
 
-    if (!access.isSupervisor && !access.isDeptHead && !access.isAdmin) {
+    if (!access.isSupervisor && !access.isAdmin) {
       throw new ForbiddenException(
-        '您不是该员工的上级、部门负责人或系统管理员，无法评分',
+        '您不是该员工的直接上级或系统管理员，无法评分',
       );
     }
 
@@ -1098,7 +1105,7 @@ export class AssessmentOperationService {
         throw new ForbiddenException('员工信息不存在，无法签署上级签名');
       }
 
-      // P0: 上级签名身份校验 — 允许发布时上级（快照）、当前上级、部门负责人或系统管理员
+      // P0: 上级签名身份校验 — 仅允许发布时上级（快照）、当前上级或系统管理员
       access = await this.checkAssessmentAccess(
         instance.employeeId,
         instance.supervisorId,
@@ -1107,9 +1114,9 @@ export class AssessmentOperationService {
         userId,
       );
 
-      if (!access.isSupervisor && !access.isDeptHead && !access.isAdmin) {
+      if (!access.isSupervisor && !access.isAdmin) {
         throw new ForbiddenException(
-          '您不是该员工的上级、部门负责人或系统管理员，无法签署上级签名',
+          '您不是该员工的直接上级或系统管理员，无法签署上级签名',
         );
       }
     }
@@ -1189,11 +1196,10 @@ export class AssessmentOperationService {
         if (
           access &&
           !access.isSupervisor &&
-          !access.isDeptHead &&
           !access.isAdmin
         ) {
           throw new ForbiddenException(
-            '您不是该员工的上级、部门负责人或系统管理员，无法签署上级签名',
+            '您不是该员工的直接上级或系统管理员，无法签署上级签名',
           );
         }
 
