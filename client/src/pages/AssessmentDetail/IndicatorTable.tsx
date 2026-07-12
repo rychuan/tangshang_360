@@ -74,9 +74,6 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               updateRating(indicator.id, 'score', e.target.value)
             }
           />
-          <span className="text-xs text-muted-foreground">
-            {score != null ? `${score}` : '-'}
-          </span>
           {scoreWarning}
         </div>
       );
