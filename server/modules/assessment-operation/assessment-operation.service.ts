@@ -40,10 +40,42 @@ function validateUUID(id: string, label = 'id'): void {
 
 /** 总分保留小数位数 */
 const SCORE_PRECISION = 100;
+type SignType = 'self' | 'supervisor';
+
+export function getStatusAfterSelfRatingSubmit(): string {
+  return 'pending_sign';
+}
+
+export function getStatusAfterSupervisorRatingSubmit(): string {
+  return 'supervisor_sign';
+}
+
+export function isSignAllowedInStatus(
+  status: string,
+  signType: SignType,
+): boolean {
+  return (
+    (status === 'pending_sign' && signType === 'self') ||
+    (status === 'supervisor_sign' && signType === 'supervisor')
+  );
+}
+
+export function getStatusAfterSign(
+  status: string,
+  signType: SignType,
+): string {
+  if (status === 'pending_sign' && signType === 'self') {
+    return 'supervisor_review';
+  }
+  if (status === 'supervisor_sign' && signType === 'supervisor') {
+    return 'completed';
+  }
+  return status;
+}
 
 export type RatingValidationInput = {
   indicatorSnapshotId: string;
-  score: number;
+  score?: number | null;
   completionStatus?: string;
 };
 
@@ -72,13 +104,20 @@ export function validateRatingsAgainstSnapshots(
         `指标快照不属于该考核实例: ${rating.indicatorSnapshotId}`,
       );
     }
+    if (rating.score == null) {
+      continue;
+    }
     if (rating.score < 0 || !Number.isFinite(rating.score)) {
       throw new BadRequestException('评分不能为负数或非法数值');
     }
   }
 
   if (!isDraft) {
-    const submittedIds = new Set(ratings.map((r) => r.indicatorSnapshotId));
+    const submittedIds = new Set(
+      ratings
+        .filter((r) => r.score != null)
+        .map((r) => r.indicatorSnapshotId),
+    );
     const missing = snapshots.filter((s) => !submittedIds.has(s.id));
     if (missing.length > 0) {
       throw new BadRequestException(
@@ -232,7 +271,7 @@ export class AssessmentOperationService {
     const ratingMap = new Map<
       string,
       {
-        score: number;
+        score?: number;
         comment?: string | null;
         completionStatus?: string | null;
       }
@@ -240,7 +279,7 @@ export class AssessmentOperationService {
     for (const r of allRatings) {
       const key = `${r.indicatorSnapshotId}:${r.ratingType}`;
       ratingMap.set(key, {
-        score: Number(r.score),
+        score: r.score == null ? undefined : Number(r.score),
         comment: r.comment,
         completionStatus: r.completionStatus,
       });
@@ -402,7 +441,8 @@ export class AssessmentOperationService {
 
       for (const rating of body.ratings) {
         const existingRow = existingMap.get(rating.indicatorSnapshotId);
-        const scoreStr: string = String(rating.score);
+        const scoreStr: string | null =
+          rating.score == null ? null : String(rating.score);
 
         if (existingRow) {
           await tx
@@ -433,7 +473,7 @@ export class AssessmentOperationService {
       if (!body.isDraft) {
         await tx
           .update(assessmentInstance)
-          .set({ status: 'supervisor_review' })
+          .set({ status: getStatusAfterSelfRatingSubmit() })
           .where(eq(assessmentInstance.id, id));
       }
 
@@ -556,7 +596,8 @@ export class AssessmentOperationService {
 
       for (const rating of body.ratings) {
         const existingRow = existingMap.get(rating.indicatorSnapshotId);
-        const scoreStr: string = String(rating.score);
+        const scoreStr: string | null =
+          rating.score == null ? null : String(rating.score);
 
         if (existingRow) {
           await tx
@@ -586,7 +627,9 @@ export class AssessmentOperationService {
         // 在事务内计算总分和等级
         const ratingBySnapId = new Map<string, number>();
         for (const r of body.ratings) {
-          ratingBySnapId.set(r.indicatorSnapshotId, r.score);
+          if (r.score != null) {
+            ratingBySnapId.set(r.indicatorSnapshotId, r.score);
+          }
         }
 
         let totalScore = 0;
@@ -606,7 +649,7 @@ export class AssessmentOperationService {
           .set({
             totalScore: String(totalScore),
             grade,
-            status: 'pending_sign',
+            status: getStatusAfterSupervisorRatingSubmit(),
           })
           .where(eq(assessmentInstance.id, id));
 
@@ -650,14 +693,17 @@ export class AssessmentOperationService {
 
     const instance = rows[0];
 
-    // P0: 校验考核状态 — 只有 pending_sign 状态允许签名
-    if (instance.status !== 'pending_sign') {
-      throw new BadRequestException('当前状态不允许签名，请先完成评分');
-    }
-
     // P1: 校验 signType 值
     if (body.signType !== 'self' && body.signType !== 'supervisor') {
       throw new BadRequestException('签名类型无效，必须为 self 或 supervisor');
+    }
+
+    if (!isSignAllowedInStatus(instance.status, body.signType)) {
+      throw new BadRequestException(
+        body.signType === 'self'
+          ? '当前状态不允许员工签名，请先完成自评'
+          : '当前状态不允许上级签名，请先完成上级评分',
+      );
     }
 
     const effectiveSignName =
@@ -722,7 +768,7 @@ export class AssessmentOperationService {
     }
 
     const now: Date = new Date();
-    let newStatus = 'pending_sign';
+    let newStatus = getStatusAfterSign(instance.status, body.signType);
 
     // 事务保护：签名 CAS 更新 + 状态推进 + 审计日志原子化
     await this.db.transaction(async (tx) => {
@@ -746,10 +792,15 @@ export class AssessmentOperationService {
 
       const current = locked[0];
 
-      // 事务内二次校验状态
-      if (current.status !== 'pending_sign') {
-        throw new BadRequestException('当前状态不允许签名，请先完成评分');
+      if (!isSignAllowedInStatus(current.status, body.signType)) {
+        throw new BadRequestException(
+          body.signType === 'self'
+            ? '当前状态不允许员工签名，请先完成自评'
+            : '当前状态不允许上级签名，请先完成上级评分',
+        );
       }
+
+      newStatus = getStatusAfterSign(current.status, body.signType);
 
       // CAS 写入签名
       if (body.signType === 'self') {
@@ -767,6 +818,7 @@ export class AssessmentOperationService {
             selfSignName: effectiveSignName,
             selfSignAt: now,
             selfSignImage: body.signImage || null,
+            status: newStatus,
           })
           .where(
             and(
@@ -782,6 +834,9 @@ export class AssessmentOperationService {
         // supervisor sign
         if (current.supervisorSignName) {
           throw new BadRequestException('上级已签名，不可重复签名');
+        }
+        if (!current.selfSignName) {
+          throw new BadRequestException('请先完成员工签名');
         }
 
         if (
@@ -801,6 +856,8 @@ export class AssessmentOperationService {
             supervisorSignName: effectiveSignName,
             supervisorSignAt: now,
             supervisorSignImage: body.signImage || null,
+            status: newStatus,
+            completedAt: now,
           })
           .where(
             and(
@@ -812,26 +869,6 @@ export class AssessmentOperationService {
         if (supResult.length === 0) {
           throw new BadRequestException('上级签名已被他人抢先提交');
         }
-      }
-
-      // 双方都已签名时将状态推进到 completed
-      const completedResult = await tx
-        .update(assessmentInstance)
-        .set({
-          status: 'completed',
-          completedAt: now,
-        })
-        .where(
-          and(
-            eq(assessmentInstance.id, id),
-            sql`${assessmentInstance.selfSignName} IS NOT NULL`,
-            sql`${assessmentInstance.supervisorSignName} IS NOT NULL`,
-          ),
-        )
-        .returning({ status: assessmentInstance.status });
-
-      if (completedResult.length > 0) {
-        newStatus = 'completed';
       }
 
       await tx.insert(auditLog).values({

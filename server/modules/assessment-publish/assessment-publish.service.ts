@@ -64,19 +64,28 @@ function validateUUID(id: string, label = 'id'): void {
 export type UnlockRule = {
   newStatus: string;
   resetRatingTypes?: string[];
-  clearSigns?: 'all';
+  clearSigns?: 'all' | 'self' | 'supervisor';
+  clearScore?: boolean;
 };
 
 const UNLOCK_RULES: Record<string, UnlockRule> = {
-  completed: { newStatus: 'pending_sign', clearSigns: 'all' },
-  pending_sign: {
+  completed: {
+    newStatus: 'supervisor_sign',
+    clearSigns: 'supervisor',
+    clearScore: false,
+  },
+  supervisor_sign: {
     newStatus: 'supervisor_review',
     resetRatingTypes: ['supervisor'],
-    clearSigns: 'all',
+    clearSigns: 'supervisor',
   },
   supervisor_review: {
+    newStatus: 'pending_sign',
+    resetRatingTypes: ['supervisor'],
+  },
+  pending_sign: {
     newStatus: 'self_review',
-    resetRatingTypes: ['self', 'supervisor'],
+    clearSigns: 'self',
   },
   self_review: {
     newStatus: 'self_review',
@@ -94,8 +103,9 @@ export function getUnlockRule(status: string): UnlockRule {
 
 export function getUnlockUpdateData(rule: UnlockRule): {
   status: string;
-  totalScore: null;
-  grade: null;
+  totalScore?: null;
+  grade?: null;
+  completedAt: null;
   selfSignName?: null;
   selfSignAt?: null;
   selfSignImage?: null;
@@ -105,8 +115,9 @@ export function getUnlockUpdateData(rule: UnlockRule): {
 } {
   const updateData: {
     status: string;
-    totalScore: null;
-    grade: null;
+    totalScore?: null;
+    grade?: null;
+    completedAt: null;
     selfSignName?: null;
     selfSignAt?: null;
     selfSignImage?: null;
@@ -115,13 +126,18 @@ export function getUnlockUpdateData(rule: UnlockRule): {
     supervisorSignImage?: null;
   } = {
     status: rule.newStatus,
-    totalScore: null,
-    grade: null,
+    completedAt: null,
   };
-  if (rule.clearSigns === 'all') {
+  if (rule.clearScore !== false) {
+    updateData.totalScore = null;
+    updateData.grade = null;
+  }
+  if (rule.clearSigns === 'all' || rule.clearSigns === 'self') {
     updateData.selfSignName = null;
     updateData.selfSignAt = null;
     updateData.selfSignImage = null;
+  }
+  if (rule.clearSigns === 'all' || rule.clearSigns === 'supervisor') {
     updateData.supervisorSignName = null;
     updateData.supervisorSignAt = null;
     updateData.supervisorSignImage = null;

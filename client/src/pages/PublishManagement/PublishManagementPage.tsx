@@ -282,6 +282,7 @@ const PublishManagementPage: React.FC = () => {
 
   const UNLOCKABLE_STATUSES: string[] = [
     'completed',
+    'supervisor_sign',
     'pending_sign',
     'supervisor_review',
   ];
@@ -301,7 +302,9 @@ const PublishManagementPage: React.FC = () => {
     const notUnlockableCount: number =
       selectedInstances.length - unlockable.length;
     if (unlockable.length === 0) {
-      toast.error('选中的绩效均不可解锁（仅支持上级评分中/待签名/已完成状态）');
+      toast.error(
+        '选中的绩效均不可解锁（仅支持员工签名中/上级评分中/上级签名中/已完成状态）',
+      );
       return;
     }
     if (notUnlockableCount > 0) {

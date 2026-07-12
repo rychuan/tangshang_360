@@ -170,7 +170,7 @@ export interface RatingSubmitRequest {
   isDraft: boolean;
   ratings: Array<{
     indicatorSnapshotId: string;
-    score: number;
+    score?: number;
     completionStatus?: string;
     comment?: string;
   }>;
@@ -189,7 +189,7 @@ export interface DashboardTodosResponse {
   items: Array<{
     id: string;
     period: string;
-    type: 'self_review' | 'supervisor_review' | 'sign';
+    type: 'self_review' | 'self_sign' | 'supervisor_review' | 'supervisor_sign';
     title: string;
     deadline?: string;
   }>;

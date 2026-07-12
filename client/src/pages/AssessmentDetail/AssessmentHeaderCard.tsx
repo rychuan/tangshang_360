@@ -7,7 +7,8 @@ import type { AssessmentInstanceDetail } from '@shared/api.interface';
 const STATUS_LABELS: Record<string, string> = {
   self_review: '待自评',
   supervisor_review: '待上级评分',
-  pending_sign: '待签名',
+  pending_sign: '待员工签名',
+  supervisor_sign: '待上级签名',
   completed: '已完成',
 };
 
@@ -18,6 +19,7 @@ const STATUS_VARIANTS: Record<
   self_review: 'default',
   supervisor_review: 'secondary',
   pending_sign: 'outline',
+  supervisor_sign: 'outline',
   completed: 'outline',
 };
 

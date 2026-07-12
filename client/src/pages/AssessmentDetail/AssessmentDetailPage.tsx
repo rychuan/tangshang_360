@@ -277,23 +277,6 @@ const AssessmentDetailPage: React.FC = () => {
                 score: selfScore,
               },
               {
-                key: 'supervisor',
-                label: '上级评分',
-                icon: Users2,
-                done:
-                  detail.status === 'pending_sign' ||
-                  detail.status === 'completed',
-                active: detail.status === 'supervisor_review',
-                statusText:
-                  detail.status === 'pending_sign' ||
-                  detail.status === 'completed'
-                    ? '已完成'
-                    : '进行中',
-                operatorId: detail.supervisorId,
-                resultType: 'score' as const,
-                score: supervisorScore,
-              },
-              {
                 key: 'selfSign',
                 label: '员工签名',
                 icon: PenTool,
@@ -310,19 +293,36 @@ const AssessmentDetailPage: React.FC = () => {
                 signImage: detail.selfSignImage || null,
               },
               {
+                key: 'supervisor',
+                label: '上级评分',
+                icon: Users2,
+                done:
+                  detail.status === 'supervisor_sign' ||
+                  detail.status === 'completed',
+                active: detail.status === 'supervisor_review',
+                statusText:
+                  detail.status === 'supervisor_sign' ||
+                  detail.status === 'completed'
+                    ? '已完成'
+                    : detail.status === 'supervisor_review'
+                      ? '进行中'
+                      : '待进行',
+                operatorId: detail.supervisorId,
+                resultType: 'score' as const,
+                score: supervisorScore,
+              },
+              {
                 key: 'supSign',
                 label: '上级签名',
                 icon: PenTool,
-                done:
-                  !!detail.supervisorSignName || detail.status === 'completed',
+                done: !!detail.supervisorSignName,
                 active:
-                  detail.status === 'pending_sign' &&
-                  !!detail.selfSignName &&
+                  detail.status === 'supervisor_sign' &&
                   !detail.supervisorSignName,
                 statusText:
-                  detail.supervisorSignName || detail.status === 'completed'
+                  detail.supervisorSignName
                     ? '已完成'
-                    : detail.status === 'pending_sign' && detail.selfSignName
+                    : detail.status === 'supervisor_sign'
                       ? '待签名'
                       : '待进行',
                 operatorId: detail.supervisorId,

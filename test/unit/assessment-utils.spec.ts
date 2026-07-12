@@ -1,4 +1,5 @@
 import {
+  buildRatingPayload,
   exceedsScoreCoefficient,
   getScoreCoefficientWarnings,
   type DimensionGroup,
@@ -55,5 +56,24 @@ describe('assessment score coefficient warnings', () => {
     };
 
     expect(getScoreCoefficientWarnings(ratings, groups)).toEqual(['业绩达成']);
+  });
+
+  it('preserves empty draft scores instead of converting them to zero', () => {
+    const payload = buildRatingPayload({
+      'indicator-a': {
+        score: undefined,
+        completionStatus: '已完成',
+        comment: '',
+      },
+    });
+
+    expect(payload.ratings).toEqual([
+      {
+        indicatorSnapshotId: 'indicator-a',
+        score: undefined,
+        completionStatus: '已完成',
+        comment: undefined,
+      },
+    ]);
   });
 });

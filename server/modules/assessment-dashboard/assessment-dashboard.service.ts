@@ -46,22 +46,25 @@ export class AssessmentDashboardService {
             eq(assessmentInstance.status, 'supervisor_review'),
           ),
           and(
-            or(employeeCond, supervisorCond),
+            employeeCond,
             eq(assessmentInstance.status, 'pending_sign'),
           ),
+          and(supervisorCond, eq(assessmentInstance.status, 'supervisor_sign')),
         ),
       )
       .orderBy(desc(assessmentInstance.createdAt));
 
     const items: DashboardTodosResponse['items'] = [];
     for (const inst of instances) {
-      let type: 'self_review' | 'supervisor_review' | 'sign';
+      let type: DashboardTodosResponse['items'][number]['type'];
       if (inst.status === 'self_review') {
         type = 'self_review';
+      } else if (inst.status === 'pending_sign') {
+        type = 'self_sign';
       } else if (inst.status === 'supervisor_review') {
         type = 'supervisor_review';
-      } else if (inst.status === 'pending_sign') {
-        type = 'sign';
+      } else if (inst.status === 'supervisor_sign') {
+        type = 'supervisor_sign';
       } else {
         continue;
       }
@@ -91,6 +94,7 @@ export class AssessmentDashboardService {
         eq(assessmentInstance.status, 'self_review'),
         eq(assessmentInstance.status, 'supervisor_review'),
         eq(assessmentInstance.status, 'pending_sign'),
+        eq(assessmentInstance.status, 'supervisor_sign'),
       );
       completedWhere = eq(assessmentInstance.status, 'completed');
     } else if (role === 'supervisor' || hasSubordinates) {
@@ -112,6 +116,7 @@ export class AssessmentDashboardService {
           eq(assessmentInstance.status, 'self_review'),
           eq(assessmentInstance.status, 'supervisor_review'),
           eq(assessmentInstance.status, 'pending_sign'),
+          eq(assessmentInstance.status, 'supervisor_sign'),
         ),
       );
       completedWhere = and(
@@ -204,10 +209,8 @@ export class AssessmentDashboardService {
     return or(
       and(employeeCond, eq(assessmentInstance.status, 'self_review')),
       and(supervisorCond, eq(assessmentInstance.status, 'supervisor_review')),
-      and(
-        or(employeeCond, supervisorCond),
-        eq(assessmentInstance.status, 'pending_sign'),
-      ),
+      and(employeeCond, eq(assessmentInstance.status, 'pending_sign')),
+      and(supervisorCond, eq(assessmentInstance.status, 'supervisor_sign')),
     );
   }
 
@@ -352,16 +355,18 @@ export class AssessmentDashboardService {
 }
 
 function getTodoTitle(
-  type: 'self_review' | 'supervisor_review' | 'sign',
+  type: DashboardTodosResponse['items'][number]['type'],
   period: string,
 ): string {
   switch (type) {
     case 'self_review':
       return `${period} 自评待完成`;
+    case 'self_sign':
+      return `${period} 员工签名待完成`;
     case 'supervisor_review':
       return `${period} 上级评分待完成`;
-    case 'sign':
-      return `${period} 签名确认待完成`;
+    case 'supervisor_sign':
+      return `${period} 上级签名待完成`;
   }
 }
 

@@ -321,18 +321,17 @@ const StatisticsPage: React.FC = () => {
 
       // Status helpers for process stepper
       const selfDone = detail.status !== 'self_review';
-      const supDone =
-        detail.status === 'pending_sign' || detail.status === 'completed';
       const selfSignDone = !!detail.selfSignName;
-      const supSignDone =
-        !!detail.supervisorSignName || detail.status === 'completed';
+      const supDone =
+        detail.status === 'supervisor_sign' || detail.status === 'completed';
+      const supSignDone = !!detail.supervisorSignName;
 
       const stepperHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding:10px 8px;border:1px solid #e5e7eb;border-radius:8px;font-size:11px;">
           ${[
             { label: '员工自评', done: selfDone },
-            { label: '上级评分', done: supDone },
             { label: '员工签名', done: selfSignDone },
+            { label: '上级评分', done: supDone },
             { label: '上级签名', done: supSignDone },
           ]
             .map(

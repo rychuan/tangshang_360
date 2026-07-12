@@ -41,6 +41,27 @@ describe('validateRatingsAgainstSnapshots', () => {
     ).not.toThrow();
   });
 
+  it('allows draft ratings without scores', () => {
+    const ratings: RatingValidationInput[] = [
+      { indicatorSnapshotId: 'indicator-a', completionStatus: '已完成' },
+    ];
+
+    expect(() =>
+      validateRatingsAgainstSnapshots(ratings, snapshots, true),
+    ).not.toThrow();
+  });
+
+  it('rejects final submitted ratings without scores', () => {
+    const ratings: RatingValidationInput[] = [
+      { indicatorSnapshotId: 'indicator-a', score: 20 },
+      { indicatorSnapshotId: 'indicator-b' },
+    ];
+
+    expect(() =>
+      validateRatingsAgainstSnapshots(ratings, snapshots, false),
+    ).toThrow('以下指标未评分');
+  });
+
   it('requires completion status when employee submits final self-review', () => {
     const ratings: RatingValidationInput[] = [
       { indicatorSnapshotId: 'indicator-a', score: 20, completionStatus: '' },

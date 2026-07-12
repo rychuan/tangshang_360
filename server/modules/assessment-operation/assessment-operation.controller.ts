@@ -32,7 +32,7 @@ export class AssessmentOperationController {
     return this.service.submitSelfRating(id, body, userId);
   }
 
-  @CanRole(['admin', 'dept_head', 'supervisor'])
+  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('my_assessments', 'edit')
   @NeedLogin()
   @Post(':id/supervisor-rating')
@@ -47,7 +47,7 @@ export class AssessmentOperationController {
     return this.service.submitSupervisorRating(id, body, userId);
   }
 
-  @CanRole(['admin', 'dept_head', 'supervisor', 'employee'])
+  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
   @RequirePermission('my_assessments', 'edit')
   @NeedLogin()
   @Post(':id/sign')
