@@ -8,6 +8,7 @@ import { eq, and, inArray, sql, count, desc } from 'drizzle-orm';
 import { employee, assessmentInstance } from '../../database/schema';
 import { AccessScopeService } from '@server/common/access/access-scope.service';
 import { assertBatchSize } from '@server/common/utils/batch';
+import { buildEmployeeIdInCondition } from './employee-scope-condition';
 import type {
   TeamOverviewResponse,
   SubordinateRecord,
@@ -16,15 +17,6 @@ import type {
   RemindResponse,
   RemindResult,
 } from '@shared/api.interface';
-
-function buildEmployeeIdInCondition(
-  col: typeof assessmentInstance.employeeId,
-  ids: string[],
-) {
-  if (ids.length === 0) return sql`FALSE`;
-  const chunks = ids.map((id) => sql`(${col}).user_id = ${id}`);
-  return sql.join(chunks, sql` OR `);
-}
 
 @Injectable()
 export class TeamPerformanceService {
