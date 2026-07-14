@@ -37,10 +37,7 @@ export class TeamStructureService {
     const pageSizeNum = parseInt(query.pageSize || '10', 10);
     const offset = (pageNum - 1) * pageSizeNum;
 
-    const conditions = [
-      eq(employee.status, true),
-      isNull(employee.deletedAt),
-    ];
+    const conditions = [eq(employee.status, true), isNull(employee.deletedAt)];
 
     if (query.employeeName) {
       conditions.push(like(employee.name, `%${query.employeeName}%`));
@@ -140,7 +137,7 @@ export class TeamStructureService {
       return { success: true, deactivatedCount: 0 };
     }
 
-    return this.db.transaction(async (tx: any) => {
+    return this.db.transaction(async (tx) => {
       const idParams = sql.join(
         employeeIds.map((id) => sql`${id}`),
         sql`, `,
@@ -219,7 +216,10 @@ export class TeamStructureService {
         eq(employeeBinding.templateId, assessmentTemplate.id),
       )
       .where(
-        and(sql`(${employee.employeeId}).user_id = ${id}`, isNull(employee.deletedAt)),
+        and(
+          sql`(${employee.employeeId}).user_id = ${id}`,
+          isNull(employee.deletedAt),
+        ),
       )
       .limit(1);
 
@@ -276,7 +276,10 @@ export class TeamStructureService {
       .update(employee)
       .set(updateData as Record<string, unknown>)
       .where(
-        and(sql`(${employee.employeeId}).user_id = ${id}`, isNull(employee.deletedAt)),
+        and(
+          sql`(${employee.employeeId}).user_id = ${id}`,
+          isNull(employee.deletedAt),
+        ),
       );
 
     await this.db.insert(auditLog).values({

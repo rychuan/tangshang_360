@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   DownloadIcon,
@@ -19,6 +19,8 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { detail as getAssessmentDetail } from '@/api/assessment-operation';
+import { useStatisticsData } from './useStatisticsData';
+import type { FilterState } from './useStatisticsData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -67,33 +69,12 @@ import {
   Area,
   AreaChart,
 } from 'recharts';
-import {
-  getRecords,
-  getCharts,
-  exportData,
-  type StatisticsRecordsParams,
-  type StatisticsChartsParams,
-} from '@/api/assessment-statistics';
+import { exportData } from '@/api/assessment-statistics';
 import { exportPerformanceToBitable } from '@/api/bitable-sync';
-import { getPositions } from '@/api/employee-management';
-import { listActive } from '@/api/performance-grade';
 import type {
   StatisticsRecordItem,
   ChartsResponse,
 } from '@shared/api.interface';
-
-function currentMonth(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-
-const DEFAULT_GRADE_OPTIONS: MultiSelectOption[] = [
-  { label: 'S', value: 'S' },
-  { label: 'A', value: 'A' },
-  { label: 'B', value: 'B' },
-  { label: 'C', value: 'C' },
-  { label: 'D', value: 'D' },
-];
 
 const CHART_COLORS = [
   'hsl(var(--chart-1))',
@@ -103,14 +84,6 @@ const CHART_COLORS = [
   'hsl(var(--chart-5))',
 ];
 
-interface FilterState {
-  periods: string[];
-  departments: string[];
-  positions: string[];
-  grades: string[];
-  employeeIds: string[];
-}
-
 const chartConfig = {
   count: { label: '人数', color: 'hsl(var(--chart-1))' },
   score: { label: '平均分', color: 'hsl(var(--chart-2))' },
@@ -118,110 +91,26 @@ const chartConfig = {
 };
 
 const StatisticsPage: React.FC = () => {
-  const [filters, setFilters] = useState<FilterState>({
-    periods: [currentMonth()],
-    departments: [],
-    positions: [],
-    grades: [],
-    employeeIds: [],
-  });
-  const [positionOptions, setPositionOptions] = useState<MultiSelectOption[]>(
-    [],
-  );
-  const [records, setRecords] = useState<StatisticsRecordItem[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pageSize] = useState(20);
-  const [loading, setLoading] = useState(false);
-  const [charts, setCharts] = useState<ChartsResponse | null>(null);
+  const {
+    filters,
+    setFilters,
+    records,
+    total,
+    page,
+    setPage,
+    pageSize,
+    loading,
+    charts,
+    positionOptions,
+    gradeSelectOptions,
+    loadRecords,
+  } = useStatisticsData();
+
   const [exporting, setExporting] = useState(false);
   const [exportingPdfId, setExportingPdfId] = useState<string | null>(null);
   const [syncingOut, setSyncingOut] = useState(false);
-  const [gradeSelectOptions, setGradeSelectOptions] = useState<
-    MultiSelectOption[]
-  >(DEFAULT_GRADE_OPTIONS);
   const navigate = useNavigate();
   const pdfRef = useRef<HTMLDivElement>(null);
-
-  const buildParams = useCallback(
-    (p: number): StatisticsRecordsParams => ({
-      page: p,
-      pageSize,
-      periods: filters.periods.length > 0 ? filters.periods : undefined,
-      departments:
-        filters.departments.length > 0 ? filters.departments : undefined,
-      positions: filters.positions.length > 0 ? filters.positions : undefined,
-      grades: filters.grades.length > 0 ? filters.grades : undefined,
-      employeeIds:
-        filters.employeeIds.length > 0 ? filters.employeeIds : undefined,
-    }),
-    [filters, pageSize],
-  );
-
-  const loadRecords = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await getRecords(buildParams(page));
-      setRecords(res?.items ?? []);
-      setTotal(res.total);
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : '加载失败';
-      logger.error(`Statistics records load error: ${msg}`);
-      handleApiError(e);
-    } finally {
-      setLoading(false);
-    }
-  }, [buildParams, page]);
-
-  const loadCharts = useCallback(async () => {
-    try {
-      const chartParams: StatisticsChartsParams = {
-        periods: filters.periods.length > 0 ? filters.periods : undefined,
-        departments:
-          filters.departments.length > 0 ? filters.departments : undefined,
-        positions: filters.positions.length > 0 ? filters.positions : undefined,
-        grades: filters.grades.length > 0 ? filters.grades : undefined,
-      };
-      const res = await getCharts(chartParams);
-      setCharts(res);
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : '加载图表失败';
-      logger.error(`Statistics charts load error: ${msg}`);
-    }
-  }, [filters.periods, filters.departments, filters.positions, filters.grades]);
-
-  useEffect(() => {
-    loadRecords();
-  }, [loadRecords]);
-  useEffect(() => {
-    loadCharts();
-  }, [loadCharts]);
-
-  useEffect(() => {
-    getPositions()
-      .then((res: { positions: string[] }) => {
-        setPositionOptions(
-          res.positions.map((p: string) => ({ label: p, value: p })),
-        );
-      })
-      .catch((err: unknown) =>
-        logger.error('Failed to load positions', err as Error),
-      );
-  }, []);
-
-  // 从等级配置同步等级筛选选项
-  useEffect(() => {
-    listActive()
-      .then((res) => {
-        if (res?.rules?.length) {
-          const names = [...new Set(res.rules.map((r) => r.name))];
-          setGradeSelectOptions(names.map((n) => ({ label: n, value: n })));
-        }
-      })
-      .catch(() => {
-        // 非关键数据，加载失败使用默认选项
-      });
-  }, []);
 
   const handleSyncToBitable = async () => {
     try {
@@ -321,7 +210,8 @@ const StatisticsPage: React.FC = () => {
 
       // Status helpers for two-step process summary
       const selfDone = !!detail.selfSignName && detail.status !== 'self_review';
-      const supDone = detail.status === 'completed' && !!detail.supervisorSignName;
+      const supDone =
+        detail.status === 'completed' && !!detail.supervisorSignName;
 
       const stepperHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding:10px 8px;border:1px solid #e5e7eb;border-radius:8px;font-size:11px;">
@@ -874,7 +764,7 @@ const StatisticsPage: React.FC = () => {
                       variant="outline"
                       size="sm"
                       disabled={page <= 1}
-                      onClick={() => setPage((p: number) => Math.max(1, p - 1))}
+                      onClick={() => setPage(Math.max(1, page - 1))}
                     >
                       上一页
                     </Button>
@@ -882,9 +772,7 @@ const StatisticsPage: React.FC = () => {
                       variant="outline"
                       size="sm"
                       disabled={page >= totalPages}
-                      onClick={() =>
-                        setPage((p: number) => Math.min(totalPages, p + 1))
-                      }
+                      onClick={() => setPage(Math.min(totalPages, page + 1))}
                     >
                       下一页
                     </Button>

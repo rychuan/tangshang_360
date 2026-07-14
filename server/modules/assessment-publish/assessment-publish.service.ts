@@ -35,8 +35,10 @@ import {
   auditLog,
 } from '@server/database/schema';
 import { EmployeeSnapshotService } from '../employee-snapshot/employee-snapshot.service';
+import { UnlockService } from './unlock.service';
 import { AccessScopeService } from '@server/common/access/access-scope.service';
 import { assertBatchSize } from '@server/common/utils/batch';
+import { validateUUID } from '@server/common/utils/validation';
 import type {
   PublishEmployeeItem,
   PublishRequest,
@@ -64,14 +66,6 @@ import {
   type AssessmentNotificationMessage,
 } from '@server/common/assessment/notification';
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-function validateUUID(id: string, label = 'id'): void {
-  if (!UUID_PATTERN.test(id)) {
-    throw new BadRequestException(`${label} 格式无效`);
-  }
-}
-
 const PUBLISHED_ASSESSMENT_STATUS_GROUPS: Record<string, string[]> = {
   employee_processing: ['self_review', 'pending_sign'],
   supervisor_processing: ['supervisor_review', 'supervisor_sign'],
@@ -94,92 +88,6 @@ async function runWithConcurrency<T, R>(
   return results;
 }
 
-export type UnlockRule = {
-  newStatus: string;
-  resetRatingTypes?: string[];
-  draftRatingTypes?: string[];
-  clearSigns?: 'all' | 'self' | 'supervisor';
-  clearScore?: boolean;
-};
-
-const UNLOCK_RULES: Record<string, UnlockRule> = {
-  completed: {
-    newStatus: 'supervisor_review',
-    resetRatingTypes: ['supervisor'],
-    clearSigns: 'supervisor',
-  },
-  supervisor_sign: {
-    newStatus: 'supervisor_review',
-    resetRatingTypes: ['supervisor'],
-    clearSigns: 'supervisor',
-  },
-  supervisor_review: {
-    newStatus: 'self_review',
-    clearSigns: 'self',
-    draftRatingTypes: ['self'],
-  },
-  pending_sign: {
-    newStatus: 'self_review',
-    clearSigns: 'self',
-  },
-  self_review: {
-    newStatus: 'self_review',
-    resetRatingTypes: ['self'],
-  },
-};
-
-export function getUnlockRule(status: string): UnlockRule {
-  const rule = UNLOCK_RULES[status];
-  if (!rule) {
-    throw new BadRequestException(`当前状态 ${status} 不允许解锁`);
-  }
-  return rule;
-}
-
-export function getUnlockUpdateData(rule: UnlockRule): {
-  status: string;
-  totalScore?: null;
-  grade?: null;
-  completedAt: null;
-  selfSignName?: null;
-  selfSignAt?: null;
-  selfSignImage?: null;
-  supervisorSignName?: null;
-  supervisorSignAt?: null;
-  supervisorSignImage?: null;
-} {
-  const updateData: {
-    status: string;
-    totalScore?: null;
-    grade?: null;
-    completedAt: null;
-    selfSignName?: null;
-    selfSignAt?: null;
-    selfSignImage?: null;
-    supervisorSignName?: null;
-    supervisorSignAt?: null;
-    supervisorSignImage?: null;
-  } = {
-    status: rule.newStatus,
-    completedAt: null,
-  };
-  if (rule.clearScore !== false) {
-    updateData.totalScore = null;
-    updateData.grade = null;
-  }
-  if (rule.clearSigns === 'all' || rule.clearSigns === 'self') {
-    updateData.selfSignName = null;
-    updateData.selfSignAt = null;
-    updateData.selfSignImage = null;
-  }
-  if (rule.clearSigns === 'all' || rule.clearSigns === 'supervisor') {
-    updateData.supervisorSignName = null;
-    updateData.supervisorSignAt = null;
-    updateData.supervisorSignImage = null;
-  }
-  return updateData;
-}
-
 @Injectable()
 export class AssessmentPublishService {
   private readonly logger: Logger = new Logger(AssessmentPublishService.name);
@@ -190,6 +98,7 @@ export class AssessmentPublishService {
     private readonly capabilityService: CapabilityService,
     private readonly employeeSnapshotService: EmployeeSnapshotService,
     private readonly accessScopeService: AccessScopeService,
+    private readonly unlockService: UnlockService,
   ) {}
 
   private async buildPublishEmployeeScope(userId: string): Promise<SQL | null> {
@@ -279,7 +188,13 @@ export class AssessmentPublishService {
     }
 
     const publishedAt: Date = new Date();
-    let publishedCount: number = 0;
+
+    const validation = await this.validatePublishTargets(
+      targetEmployeeIds,
+      period,
+    );
+
+    let publishedCount = 0;
     const publishedInstances: Array<{
       employeeId: string;
       instanceId: string;
@@ -289,125 +204,18 @@ export class AssessmentPublishService {
       status: string;
     }> = [];
 
-    for (const empId of targetEmployeeIds) {
-      // === P0: 防止重复发布（同员工同月份） ===
-      const existingInstances = await this.db
-        .select({ id: assessmentInstance.id })
-        .from(assessmentInstance)
-        .where(
-          and(
-            eq(assessmentInstance.employeeId, empId),
-            eq(assessmentInstance.period, period),
-          ),
-        )
-        .limit(1);
+    for (const empId of validation.validIds) {
+      const info = validation.employeeMap.get(empId)!;
 
-      if (existingInstances.length > 0) {
-        this.logger.log(
-          `skip employee ${empId}: already has instance for period ${period}`,
-        );
-        continue;
-      }
-
-      const bindingRows = await this.db
-        .select()
-        .from(employeeBinding)
-        .where(
-          and(
-            eq(employeeBinding.employeeId, empId),
-            eq(employeeBinding.status, true),
-            lte(employeeBinding.effectiveFrom, period),
-          ),
-        )
-        .limit(1);
-
-      if (bindingRows.length === 0) {
-        this.logger.log(
-          `skip employee ${empId}: no active binding for period ${period}`,
-        );
-        continue;
-      }
-
-      const binding = bindingRows[0];
-      const templateId: string = binding.templateId;
-
-      const templateRows = await this.db
-        .select({
-          id: assessmentTemplate.id,
-          isActive: assessmentTemplate.isActive,
-        })
-        .from(assessmentTemplate)
-        .where(eq(assessmentTemplate.id, templateId))
-        .limit(1);
-
-      if (templateRows.length === 0) {
-        this.logger.log(
-          `skip employee ${empId}: template ${templateId} not found`,
-        );
-        continue;
-      }
-
-      if (!templateRows[0].isActive) {
-        this.logger.warn(
-          `skip employee ${empId}: template ${templateId} is inactive`,
-        );
-        continue;
-      }
-
-      const empRows = await this.db
-        .select()
-        .from(employee)
-        .where(and(eq(employee.employeeId, empId), isNull(employee.deletedAt)))
-        .limit(1);
-
-      if (empRows.length === 0) {
-        this.logger.log(`skip employee ${empId}: employee not found`);
-        continue;
-      }
-
-      const empRecord = empRows[0];
-
-      if (!empRecord.status) {
-        this.logger.warn(
-          `skip employee ${empId}: employee status is '${empRecord.status ? 'active' : 'inactive'}'`,
-        );
-        continue;
-      }
-
-      if (!empRecord.supervisorId) {
-        this.logger.warn(
-          `employee ${empId} has no supervisor — supervisor review will be blocked`,
-        );
-      }
-
-      // 检查模板是否有指标
-      const indicatorCountResult = await this.db
-        .select({ cnt: sql<number>`count(*)::int` })
-        .from(assessmentIndicator)
-        .innerJoin(
-          assessmentDimension,
-          eq(assessmentIndicator.dimensionId, assessmentDimension.id),
-        )
-        .where(eq(assessmentDimension.templateId, templateId));
-
-      if (Number(indicatorCountResult[0]?.cnt ?? 0) === 0) {
-        throw new BadRequestException(
-          `模板 ${templateId} 没有配置考核指标，无法发布员工 ${empId}`,
-        );
-      }
-      const empPosition: string = empRecord.position;
-      const empSupervisorId: string | null = empRecord.supervisorId;
-
-      // 事务包裹每个员工的发布写入（实例创建 + 快照复制 + 审计日志）
-      await this.db.transaction(async (tx: any) => {
+      await this.db.transaction(async (tx) => {
         const [instance] = await tx
           .insert(assessmentInstance)
           .values({
             period,
             employeeId: empId,
-            supervisorId: empSupervisorId,
-            position: empPosition,
-            templateId,
+            supervisorId: info.supervisorId,
+            position: info.position,
+            templateId: info.templateId,
             status: 'self_review',
             publishedBy: userId,
             publishedAt,
@@ -416,8 +224,10 @@ export class AssessmentPublishService {
 
         const instanceId: string = instance.id;
 
-        const hasSnap: boolean =
-          await this.employeeSnapshotService.hasSnapshot(empId, tx);
+        const hasSnap = await this.employeeSnapshotService.hasSnapshot(
+          empId,
+          tx,
+        );
         if (hasSnap) {
           await this.employeeSnapshotService.copyToInstance(
             empId,
@@ -427,7 +237,7 @@ export class AssessmentPublishService {
         } else {
           await this.employeeSnapshotService.generateFromTemplate(
             empId,
-            templateId,
+            info.templateId,
             userId,
             tx,
           );
@@ -443,22 +253,21 @@ export class AssessmentPublishService {
           action: 'publish',
           targetType: 'assessment_instance',
           targetId: instanceId,
-          changes: { period, employeeId: empId, templateId },
+          changes: { period, employeeId: empId, templateId: info.templateId },
         });
 
         publishedCount++;
         publishedInstances.push({
           employeeId: empId,
           instanceId,
-          employeeName: empRecord.name,
-          supervisorId: empSupervisorId ?? undefined,
+          employeeName: info.employeeName,
+          supervisorId: info.supervisorId ?? undefined,
           period,
           status: 'self_review',
         });
       });
     }
 
-    // 发布通知异步执行，消息失败不回滚已经创建的考核实例。
     if (publishedInstances.length > 0) {
       const messages = publishedInstances.flatMap((instance) =>
         buildPublishedNotificationMessages({
@@ -474,6 +283,155 @@ export class AssessmentPublishService {
     }
 
     return { success: true, publishedCount };
+  }
+
+  /** 批量预校验发布目标 — 一次数据库往返替代 5N 次串行查询 */
+  private async validatePublishTargets(
+    employeeIds: string[],
+    period: string,
+  ): Promise<{
+    validIds: string[];
+    employeeMap: Map<
+      string,
+      {
+        employeeName: string;
+        position: string;
+        supervisorId: string | null;
+        templateId: string;
+      }
+    >;
+  }> {
+    const existingInstances = await this.db
+      .select({ employeeId: assessmentInstance.employeeId })
+      .from(assessmentInstance)
+      .where(
+        and(
+          inArray(assessmentInstance.employeeId, employeeIds),
+          eq(assessmentInstance.period, period),
+        ),
+      );
+    const duplicateIds = new Set(existingInstances.map((r) => r.employeeId));
+
+    const bindings = await this.db
+      .select({
+        employeeId: employeeBinding.employeeId,
+        templateId: employeeBinding.templateId,
+      })
+      .from(employeeBinding)
+      .where(
+        and(
+          inArray(employeeBinding.employeeId, employeeIds),
+          eq(employeeBinding.status, true),
+          lte(employeeBinding.effectiveFrom, period),
+        ),
+      );
+    const bindingMap = new Map(
+      bindings.map((b) => [b.employeeId, b.templateId]),
+    );
+
+    const templateIds = [...new Set(bindings.map((b) => b.templateId))];
+    const templates = await this.db
+      .select({
+        id: assessmentTemplate.id,
+        isActive: assessmentTemplate.isActive,
+      })
+      .from(assessmentTemplate)
+      .where(inArray(assessmentTemplate.id, templateIds));
+    const templateMap = new Map(templates.map((t) => [t.id, t.isActive]));
+
+    const indicatorCounts = await this.db
+      .select({
+        templateId: assessmentDimension.templateId,
+        cnt: sql<number>`count(${assessmentIndicator.id})::int`,
+      })
+      .from(assessmentDimension)
+      .innerJoin(
+        assessmentIndicator,
+        eq(assessmentIndicator.dimensionId, assessmentDimension.id),
+      )
+      .where(inArray(assessmentDimension.templateId, templateIds))
+      .groupBy(assessmentDimension.templateId);
+    const indicatorCountMap = new Map(
+      indicatorCounts.map((r) => [r.templateId, r.cnt]),
+    );
+
+    const employees = await this.db
+      .select()
+      .from(employee)
+      .where(
+        and(
+          inArray(employee.employeeId, employeeIds),
+          isNull(employee.deletedAt),
+        ),
+      );
+    const employeeMap = new Map(employees.map((e) => [e.employeeId, e]));
+
+    const validIds: string[] = [];
+    const resultMap = new Map<
+      string,
+      {
+        employeeName: string;
+        position: string;
+        supervisorId: string | null;
+        templateId: string;
+      }
+    >();
+
+    for (const empId of employeeIds) {
+      if (duplicateIds.has(empId)) {
+        this.logger.log(
+          `skip ${empId}: already has instance for period ${period}`,
+        );
+        continue;
+      }
+
+      const templateId = bindingMap.get(empId);
+      if (!templateId) {
+        this.logger.log(`skip ${empId}: no active binding`);
+        continue;
+      }
+
+      if (!templateMap.get(templateId)) {
+        this.logger.log(
+          `skip ${empId}: template ${templateId} not found or inactive`,
+        );
+        continue;
+      }
+
+      if (
+        !indicatorCountMap.has(templateId) ||
+        Number(indicatorCountMap.get(templateId)) === 0
+      ) {
+        throw new BadRequestException(
+          `模板 ${templateId} 没有配置考核指标，无法发布员工 ${empId}`,
+        );
+      }
+
+      const emp = employeeMap.get(empId);
+      if (!emp) {
+        this.logger.log(`skip ${empId}: employee not found`);
+        continue;
+      }
+
+      if (!emp.status) {
+        this.logger.warn(`skip ${empId}: employee inactive`);
+        continue;
+      }
+
+      if (!emp.supervisorId) {
+        this.logger.warn(`employee ${empId} has no supervisor`);
+      }
+
+      validIds.push(empId);
+      resultMap.set(empId, {
+        employeeName: emp.name,
+        position: emp.position,
+        supervisorId: emp.supervisorId,
+        templateId,
+      });
+    }
+
+    return { validIds, employeeMap: resultMap };
   }
 
   async listInstances(
@@ -518,7 +476,10 @@ export class AssessmentPublishService {
     const totalResult = await this.db
       .select({ count: count() })
       .from(assessmentInstance)
-      .innerJoin(employee, eq(assessmentInstance.employeeId, employee.employeeId))
+      .innerJoin(
+        employee,
+        eq(assessmentInstance.employeeId, employee.employeeId),
+      )
       .where(and(...conditions));
 
     const total: number = parseInt(String(totalResult[0]?.count ?? '0'), 10);
@@ -543,7 +504,10 @@ export class AssessmentPublishService {
         supervisorName: sql<string>`COALESCE((SELECT sup.name FROM employee sup WHERE (sup.employee_id).user_id = (${assessmentInstance.supervisorId}).user_id AND sup.deleted_at IS NULL LIMIT 1), '')`,
       })
       .from(assessmentInstance)
-      .innerJoin(employee, eq(assessmentInstance.employeeId, employee.employeeId))
+      .innerJoin(
+        employee,
+        eq(assessmentInstance.employeeId, employee.employeeId),
+      )
       .where(and(...conditions))
       .orderBy(desc(assessmentInstance.createdAt))
       .limit(ps)
@@ -614,120 +578,16 @@ export class AssessmentPublishService {
     return this.employeeSnapshotService.deleteSnapshot(employeeId);
   }
 
-  private async unlockInstanceInTransaction(
-    instanceId: string,
-    reason: string | undefined,
-    userId: string,
-  ): Promise<void> {
-    await this.db.transaction(async (tx: any) => {
-      const instanceRows = await tx
-        .select()
-        .from(assessmentInstance)
-        .where(eq(assessmentInstance.id, instanceId))
-        .for('update')
-        .limit(1);
-
-      if (instanceRows.length === 0) {
-        throw new NotFoundException('考核实例不存在');
-      }
-
-      const instance = instanceRows[0];
-      const mapped = getUnlockRule(instance.status);
-      const ratingTypesToDraft = [
-        ...(mapped.resetRatingTypes ?? []),
-        ...(mapped.draftRatingTypes ?? []),
-      ];
-
-      for (const ratingType of ratingTypesToDraft) {
-        await tx
-          .update(ratingRecord)
-          .set({
-            isDraft: true,
-            submittedAt: null,
-          })
-          .where(
-            and(
-              eq(ratingRecord.instanceId, instanceId),
-              eq(ratingRecord.ratingType, ratingType),
-            ),
-          );
-      }
-
-      await tx
-        .update(assessmentInstance)
-        .set(getUnlockUpdateData(mapped))
-        .where(eq(assessmentInstance.id, instanceId));
-
-      await tx.insert(auditLog).values({
-        operatorId: userId,
-        action: 'unlock',
-        targetType: 'assessment_instance',
-        targetId: instanceId,
-        reason,
-        changes: { from: instance.status, to: mapped.newStatus },
-      });
-    });
-  }
-
   async unlock(
     instanceId: string,
     body: UnlockRequest,
     userId: string,
   ): Promise<{ success: boolean }> {
-    validateUUID(instanceId);
-    this.logger.log(
-      `unlock instanceId=${instanceId} reason=${body.reason} userId=${userId}`,
-    );
-
-    await this.unlockInstanceInTransaction(instanceId, body.reason, userId);
-    return { success: true };
+    return this.unlockService.unlock(instanceId, body, userId);
   }
 
   async getUnlockHistory(instanceId: string): Promise<UnlockHistoryItem[]> {
-    validateUUID(instanceId);
-    this.logger.log(`getUnlockHistory instanceId=${instanceId}`);
-
-    const rows = await this.db
-      .select({
-        id: auditLog.id,
-        operatorId: auditLog.operatorId,
-        action: auditLog.action,
-        changes: auditLog.changes,
-        reason: auditLog.reason,
-        createdAt: auditLog.createdAt,
-        operatorName: employee.name,
-      })
-      .from(auditLog)
-      .leftJoin(
-        employee,
-        sql`(${auditLog.operatorId}).user_id = (${employee.employeeId}).user_id`,
-      )
-      .where(
-        and(eq(auditLog.targetId, instanceId), eq(auditLog.action, 'unlock')),
-      )
-      .orderBy(desc(auditLog.createdAt));
-
-    return rows.map(
-      (row: {
-        id: string;
-        operatorId: string;
-        action: string;
-        changes: unknown;
-        reason: string | null;
-        createdAt: Date;
-        operatorName: string | null;
-      }): UnlockHistoryItem => {
-        const changes = (row.changes as { from?: string; to?: string }) ?? {};
-        return {
-          id: row.id,
-          operatorName: row.operatorName ?? '未知',
-          fromStatus: changes.from ?? '',
-          toStatus: changes.to ?? '',
-          reason: row.reason ?? '',
-          createdAt: row.createdAt.toISOString(),
-        };
-      },
-    );
+    return this.unlockService.getUnlockHistory(instanceId);
   }
 
   async getPeriodStatistics(
@@ -777,7 +637,10 @@ export class AssessmentPublishService {
     const publishedCountResult = await this.db
       .select({ count: count() })
       .from(assessmentInstance)
-      .innerJoin(employee, eq(assessmentInstance.employeeId, employee.employeeId))
+      .innerJoin(
+        employee,
+        eq(assessmentInstance.employeeId, employee.employeeId),
+      )
       .where(and(...instanceConditions));
     const publishedCount: number = parseInt(
       String(publishedCountResult[0]?.count ?? '0'),
@@ -813,12 +676,12 @@ export class AssessmentPublishService {
     const pendingCountResult = await this.db
       .select({ count: count() })
       .from(assessmentInstance)
-      .innerJoin(employee, eq(assessmentInstance.employeeId, employee.employeeId))
+      .innerJoin(
+        employee,
+        eq(assessmentInstance.employeeId, employee.employeeId),
+      )
       .where(
-        and(
-          ...instanceConditions,
-          ne(assessmentInstance.status, 'completed'),
-        ),
+        and(...instanceConditions, ne(assessmentInstance.status, 'completed')),
       );
     const pendingCount: number = parseInt(
       String(pendingCountResult[0]?.count ?? '0'),
@@ -873,32 +736,7 @@ export class AssessmentPublishService {
     reason: string,
     userId: string,
   ): Promise<BatchOperationResponse> {
-    assertBatchSize(instanceIds, '实例');
-    this.logger.log(
-      `batchUnlock instanceIds=${JSON.stringify(instanceIds)} reason=${reason} userId=${userId}`,
-    );
-
-    let successCount: number = 0;
-    let failedCount: number = 0;
-
-    for (const instanceId of instanceIds) {
-      try {
-        validateUUID(instanceId, '实例ID');
-        await this.unlockInstanceInTransaction(instanceId, reason, userId);
-        successCount++;
-      } catch (err) {
-        this.logger.warn(
-          `batchUnlock: failed for instance ${instanceId}: ${err}`,
-        );
-        failedCount++;
-      }
-    }
-
-    return {
-      success: failedCount === 0,
-      successCount,
-      failedCount,
-    };
+    return this.unlockService.batchUnlock(instanceIds, reason, userId);
   }
 
   async batchReturn(
@@ -917,7 +755,7 @@ export class AssessmentPublishService {
       try {
         validateUUID(instanceId, '实例ID');
 
-        await this.db.transaction(async (tx: any) => {
+        await this.db.transaction(async (tx) => {
           const instanceRows = await tx
             .select()
             .from(assessmentInstance)
