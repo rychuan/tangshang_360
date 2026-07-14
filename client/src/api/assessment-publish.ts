@@ -12,9 +12,11 @@ import type {
   InstanceIndicatorsResponse,
   EmployeeSnapshotResponse,
   BatchUnlockRequest,
-  BatchNotifyRequest,
   BatchReturnRequest,
   BatchOperationResponse,
+  ReminderPreviewResponse,
+  UnfinishedReminderRequest,
+  UnfinishedReminderResponse,
   UnlockHistoryItem,
 } from '@shared/api.interface';
 
@@ -150,15 +152,38 @@ export async function batchUnlock(
   return unwrapApiData<BatchOperationResponse>(res.data);
 }
 
-export async function batchResendNotification(
-  data: BatchNotifyRequest,
-): Promise<BatchOperationResponse> {
+export async function previewUnfinishedReminders(params: {
+  period: string;
+  department?: string;
+  status?: string;
+  grade?: string;
+}): Promise<ReminderPreviewResponse> {
+  const query = new URLSearchParams({ period: params.period });
+  if (params.department) {
+    query.set('department', params.department);
+  }
+  if (params.status) {
+    query.set('status', params.status);
+  }
+  if (params.grade) {
+    query.set('grade', params.grade);
+  }
   const res = await axiosForBackend({
-    url: '/api/assessment-instances/batch-notify',
+    url: `/api/assessment-instances/reminder-preview?${query.toString()}`,
+    method: 'GET',
+  });
+  return unwrapApiData<ReminderPreviewResponse>(res.data);
+}
+
+export async function remindUnfinishedAssessments(
+  data: UnfinishedReminderRequest,
+): Promise<UnfinishedReminderResponse> {
+  const res = await axiosForBackend({
+    url: '/api/assessment-instances/remind-unfinished',
     method: 'POST',
     data,
   });
-  return unwrapApiData<BatchOperationResponse>(res.data);
+  return unwrapApiData<UnfinishedReminderResponse>(res.data);
 }
 
 export async function batchReturn(

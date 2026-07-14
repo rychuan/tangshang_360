@@ -14,7 +14,7 @@ import {
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo } from '@/hooks/usePermissions';
 import { UserDisplay } from '@/components/business-ui/user-display';
-import { Unlock, Send, Download, Award, Undo2 } from 'lucide-react';
+import { Unlock, BellRing, Download, Award, Undo2 } from 'lucide-react';
 import dayjs from 'dayjs';
 import type { AssessmentInstanceItem } from '@shared/api.interface';
 import { StatusBadge } from '@/components/business-ui/status-badge';
@@ -63,11 +63,11 @@ interface PublishedAssessmentSectionProps {
   onReturn: (instance: AssessmentInstanceItem) => void;
   onBatchUnlock: () => void;
   onBatchReturn: () => void;
-  onBatchNotify: () => void;
+  onRemindUnfinished: () => void;
   onExport: () => void;
   batchUnlockLoading: boolean;
   batchReturnLoading: boolean;
-  batchNotifyLoading: boolean;
+  reminderLoading: boolean;
   departments: string[];
 }
 
@@ -91,11 +91,11 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
   onReturn,
   onBatchUnlock,
   onBatchReturn,
-  onBatchNotify,
+  onRemindUnfinished,
   onExport,
   batchUnlockLoading,
   batchReturnLoading,
-  batchNotifyLoading,
+  reminderLoading,
   departments,
 }) => {
   const totalPages = Math.ceil(total / pageSize);
@@ -133,7 +133,22 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
       className="rounded-lg border bg-card p-6"
     >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">已发布绩效</h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-lg font-semibold">已发布绩效</h2>
+          <CanRole roles={['admin', 'hrd']}>
+            <CanDo resource="publish_management" action="edit">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRemindUnfinished}
+                disabled={reminderLoading}
+              >
+                <BellRing data-icon="inline-start" />
+                {reminderLoading ? '加载中...' : '通知未完成任务'}
+              </Button>
+            </CanDo>
+          </CanRole>
+        </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <Label className="shrink-0 text-sm text-muted-foreground">
@@ -169,12 +184,13 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
               <SelectContent>
                 <SelectGroup>
                   <SelectItem value="__all__">全部</SelectItem>
-                  <SelectItem value="self_review">员工评分中</SelectItem>
-                  <SelectItem value="pending_sign">员工步骤中</SelectItem>
-                  <SelectItem value="supervisor_review">上级评分中</SelectItem>
-                  <SelectItem value="supervisor_sign">上级步骤中</SelectItem>
+                  <SelectItem value="employee_processing">
+                    员工处理中
+                  </SelectItem>
+                  <SelectItem value="supervisor_processing">
+                    上级处理中
+                  </SelectItem>
                   <SelectItem value="completed">已完成</SelectItem>
-                  <SelectItem value="draft">草稿</SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>
@@ -227,15 +243,6 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
             >
               <Unlock data-icon="inline-start" />
               {batchUnlockLoading ? '解锁中...' : '批量解锁'}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onBatchNotify}
-              disabled={batchNotifyLoading}
-            >
-              <Send data-icon="inline-start" />
-              {batchNotifyLoading ? '发送中...' : '批量通知'}
             </Button>
             <Button variant="outline" size="sm" onClick={onExport}>
               <Download data-icon="inline-start" />

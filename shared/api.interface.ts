@@ -100,6 +100,7 @@ export interface PublishEmployeeItem {
 export interface PublishRequest {
   period: string;
   employeeIds?: string[];
+  appBaseUrl: string;
 }
 export interface AssessmentInstanceItem {
   id: string;
@@ -260,15 +261,31 @@ export interface BatchUnlockRequest {
   instanceIds: string[];
   reason: string;
 }
-export interface BatchNotifyRequest {
-  instanceIds: string[];
-}
 export interface BatchReturnRequest {
   instanceIds: string[];
 }
 export interface BatchOperationResponse {
   success: boolean;
   successCount: number;
+  failedCount: number;
+}
+export interface ReminderPreviewResponse {
+  taskCount: number;
+  employeeCount: number;
+  supervisorCount: number;
+  expectedMessageCount: number;
+  missingSupervisorCount: number;
+}
+export interface UnfinishedReminderRequest {
+  period: string;
+  department?: string;
+  status?: string;
+  grade?: string;
+  appBaseUrl: string;
+}
+export interface UnfinishedReminderResponse extends ReminderPreviewResponse {
+  success: boolean;
+  sentCount: number;
   failedCount: number;
 }
 export interface UnlockHistoryItem {
