@@ -4,7 +4,9 @@ import { useCurrentUserProfile } from '@lark-apaas/client-toolkit/hooks/useCurre
 import { useAppInfo } from '@lark-apaas/client-toolkit/hooks/useAppInfo';
 import { useAuth, ROLE_SUBJECT } from '@lark-apaas/client-toolkit/auth';
 import { usePermissions } from '@/hooks/usePermissions';
-import type { PermissionResource } from '@shared/api.interface';
+import { navGroups } from './navigation';
+import type { NavItem } from './navigation';
+import { ALL_ROLES, MANAGER_ROLES } from './role-constants';
 import {
   Sidebar,
   SidebarContent,
@@ -21,20 +23,7 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
-import {
-  LayoutDashboard,
-  ClipboardList,
-  FileText,
-  Send,
-  BarChart3,
-  Users,
-  UserCog,
-  Shield,
-  Award,
-  SunIcon,
-  MoonIcon,
-  BookOpen,
-} from 'lucide-react';
+import { LayoutDashboard, SunIcon, MoonIcon } from 'lucide-react';
 import { UserDisplay } from '@/components/business-ui/user-display';
 import {
   useBreadcrumb,
@@ -48,109 +37,6 @@ import {
   BreadcrumbSeparator,
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
-
-type NavItem = {
-  label: string;
-  path: string;
-  icon: typeof LayoutDashboard;
-  roles: string[];
-  permissionResource?: PermissionResource;
-};
-
-type NavGroup = {
-  label: string;
-  icon: typeof LayoutDashboard;
-  items: NavItem[];
-};
-
-const ALL_ROLES = ['admin', 'hrd', 'dept_head', 'supervisor', 'employee'];
-const MANAGER_ROLES = ['admin', 'hrd', 'dept_head', 'supervisor'];
-const TEMPLATE_ROLES = ['admin', 'hrd', 'dept_head'];
-const ADMIN_HRD_ROLES = ['admin', 'hrd'];
-
-const navGroups: NavGroup[] = [
-  {
-    label: '工作台',
-    icon: LayoutDashboard,
-    items: [
-      {
-        label: '我的绩效',
-        path: '/my-assessments',
-        icon: ClipboardList,
-        roles: ALL_ROLES,
-        permissionResource: 'my_assessments',
-      },
-      {
-        label: '团队绩效',
-        path: '/team-performance',
-        icon: Users,
-        roles: MANAGER_ROLES,
-        permissionResource: 'team_performance',
-      },
-    ],
-  },
-  {
-    label: '绩效管理',
-    icon: FileText,
-    items: [
-      {
-        label: '模板管理',
-        path: '/template-management',
-        icon: FileText,
-        roles: TEMPLATE_ROLES,
-        permissionResource: 'template_management',
-      },
-      {
-        label: '发布管理',
-        path: '/publish-management',
-        icon: Send,
-        roles: MANAGER_ROLES,
-        permissionResource: 'publish_management',
-      },
-      {
-        label: '统计查询',
-        path: '/statistics',
-        icon: BarChart3,
-        roles: MANAGER_ROLES,
-        permissionResource: 'statistics',
-      },
-      {
-        label: '等级配置',
-        path: '/grade-config',
-        icon: Award,
-        roles: ADMIN_HRD_ROLES,
-        permissionResource: 'grade_config',
-      },
-    ],
-  },
-  {
-    label: '系统设置',
-    icon: Shield,
-    items: [
-      {
-        label: '员工管理',
-        path: '/employees',
-        icon: UserCog,
-        roles: MANAGER_ROLES,
-        permissionResource: 'employees',
-      },
-      {
-        label: '权限管理',
-        path: '/permissions',
-        icon: Shield,
-        roles: ADMIN_HRD_ROLES,
-        permissionResource: 'permission_management',
-      },
-      {
-        label: '字段管理',
-        path: '/dictionary',
-        icon: BookOpen,
-        roles: ADMIN_HRD_ROLES,
-        permissionResource: 'dictionary_config',
-      },
-    ],
-  },
-];
 
 const pathTitleMap: Record<string, string> = {
   '/employees': '员工管理',

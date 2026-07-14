@@ -4,6 +4,12 @@ import { AuthProvider } from '@lark-apaas/client-toolkit/auth';
 
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import {
+  ALL_ROLES,
+  MANAGER_ROLES,
+  TEMPLATE_ROLES,
+  ADMIN_HRD_ROLES,
+} from './components/role-constants';
 import { PermissionsProvider } from './hooks/usePermissions';
 import NotFound from './pages/NotFound/NotFound';
 import TemplateManagementPage from './pages/TemplateManagement/TemplateManagementPage';
@@ -18,11 +24,6 @@ import PermissionPage from './pages/EmployeeManagement/PermissionPage';
 import GradeConfigPage from './pages/GradeConfig/GradeConfigPage';
 import DictionaryConfigPage from './pages/DictionaryConfig/DictionaryConfigPage';
 import HomePage from './pages/HomePage/HomePage';
-
-const ALL_ROLES = ['admin', 'hrd', 'dept_head', 'supervisor', 'employee'];
-const MANAGER_ROLES = ['admin', 'hrd', 'dept_head', 'supervisor'];
-const TEMPLATE_ROLES = ['admin', 'hrd', 'dept_head'];
-const ADMIN_HRD_ROLES = ['admin', 'hrd'];
 
 const ForbiddenPage: React.FC = () => (
   <div className="flex h-screen items-center justify-center">
