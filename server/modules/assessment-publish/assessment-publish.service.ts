@@ -20,6 +20,7 @@ import {
   asc,
   sql,
   isNull,
+  inArray,
   type SQL,
 } from 'drizzle-orm';
 import {
@@ -50,8 +51,18 @@ import type {
   InstanceIndicatorItem,
   EmployeeSnapshotResponse,
   BatchOperationResponse,
+  ReminderPreviewResponse,
+  UnfinishedReminderRequest,
+  UnfinishedReminderResponse,
   UnlockHistoryItem,
 } from '@shared/api.interface';
+import {
+  buildPublishedNotificationMessages,
+  buildReminderNotificationMessages,
+  normalizeAppBaseUrl,
+  summarizeReminderTargets,
+  type AssessmentNotificationMessage,
+} from '@server/common/assessment/notification';
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -59,6 +70,28 @@ function validateUUID(id: string, label = 'id'): void {
   if (!UUID_PATTERN.test(id)) {
     throw new BadRequestException(`${label} 格式无效`);
   }
+}
+
+const PUBLISHED_ASSESSMENT_STATUS_GROUPS: Record<string, string[]> = {
+  employee_processing: ['self_review', 'pending_sign'],
+  supervisor_processing: ['supervisor_review', 'supervisor_sign'],
+};
+
+export function getPublishedAssessmentStatuses(status: string): string[] {
+  return PUBLISHED_ASSESSMENT_STATUS_GROUPS[status] ?? [status];
+}
+
+async function runWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = [];
+  for (let index = 0; index < items.length; index += concurrency) {
+    const batch = items.slice(index, index + concurrency);
+    results.push(...(await Promise.all(batch.map(worker))));
+  }
+  return results;
 }
 
 export type UnlockRule = {
@@ -231,6 +264,7 @@ export class AssessmentPublishService {
     userId: string,
   ): Promise<PublishResponse> {
     const { period, employeeIds } = body;
+    const appBaseUrl = normalizeAppBaseUrl(body.appBaseUrl);
     this.logger.log(
       `publish period=${period} employeeIds=${JSON.stringify(employeeIds)}`,
     );
@@ -250,7 +284,9 @@ export class AssessmentPublishService {
       employeeId: string;
       instanceId: string;
       employeeName: string;
+      supervisorId?: string;
       period: string;
+      status: string;
     }> = [];
 
     for (const empId of targetEmployeeIds) {
@@ -415,36 +451,26 @@ export class AssessmentPublishService {
           employeeId: empId,
           instanceId,
           employeeName: empRecord.name,
+          supervisorId: empSupervisorId ?? undefined,
           period,
+          status: 'self_review',
         });
       });
     }
 
-    // === P1: 发布后异步发送飞书通知（不阻塞响应） ===
+    // 发布通知异步执行，消息失败不回滚已经创建的考核实例。
     if (publishedInstances.length > 0) {
-      Promise.allSettled(
-        publishedInstances.map(
-          async (pi: { employeeId: string; employeeName: string; period: string }) => {
-            try {
-              const message = `**考核发布通知**\n\n${pi.period} 月度考核已发布，请尽快登录系统完成自评。`;
-              await this.capabilityService
-                .load('assessment_reminder_feishu_send_1')
-                .call('send_feishu_message', {
-                  title: { title: '考核发布通知' },
-                  receiverUserList: [pi.employeeId],
-                  cardContentMarkdown: message,
-                });
-              this.logger.log(
-                `Published notification sent to ${pi.employeeName} (${pi.employeeId})`,
-              );
-            } catch (err) {
-              this.logger.warn(
-                `Failed to send notification to ${pi.employeeName}: ${err}`,
-              );
-            }
-          },
-        ),
-      ).catch(() => {});
+      const messages = publishedInstances.flatMap((instance) =>
+        buildPublishedNotificationMessages({
+          ...instance,
+          appBaseUrl,
+        }),
+      );
+      void this.sendNotificationMessages(messages).then((result) => {
+        this.logger.log(
+          `Published notifications completed: sent=${result.sentCount}, failed=${result.failedCount}`,
+        );
+      });
     }
 
     return { success: true, publishedCount };
@@ -471,7 +497,12 @@ export class AssessmentPublishService {
       isNull(employee.deletedAt),
     ];
     if (status) {
-      conditions.push(eq(assessmentInstance.status, status));
+      const statuses = getPublishedAssessmentStatuses(status);
+      conditions.push(
+        statuses.length === 1
+          ? eq(assessmentInstance.status, statuses[0])
+          : inArray(assessmentInstance.status, statuses),
+      );
     }
     if (department) {
       conditions.push(eq(employee.department, department));
@@ -952,64 +983,186 @@ export class AssessmentPublishService {
     };
   }
 
-  async batchResendNotification(
-    instanceIds: string[],
+  private async getUnfinishedReminderTargets(
+    period: string,
+    department: string | undefined,
+    status: string | undefined,
+    grade: string | undefined,
     userId: string,
-  ): Promise<BatchOperationResponse> {
-    assertBatchSize(instanceIds, '实例');
-    this.logger.log(
-      `batchResendNotification instanceIds=${JSON.stringify(instanceIds)} userId=${userId}`,
-    );
+  ): Promise<
+    Array<{
+      instanceId: string;
+      period: string;
+      employeeId: string;
+      employeeName: string;
+      supervisorId?: string;
+      status: string;
+    }>
+  > {
+    if (!period) {
+      throw new BadRequestException('绩效周期不能为空');
+    }
 
-    let successCount: number = 0;
-    let failedCount: number = 0;
+    const conditions: SQL[] = [
+      eq(assessmentInstance.period, period),
+      inArray(assessmentInstance.status, [
+        'self_review',
+        'pending_sign',
+        'supervisor_review',
+        'supervisor_sign',
+      ]),
+      isNull(employee.deletedAt),
+    ];
+    if (department) {
+      conditions.push(eq(employee.department, department));
+    }
+    if (status) {
+      conditions.push(
+        inArray(
+          assessmentInstance.status,
+          getPublishedAssessmentStatuses(status),
+        ),
+      );
+    }
+    if (grade) {
+      conditions.push(eq(assessmentInstance.grade, grade));
+    }
+    const scopeCondition = await this.buildPublishEmployeeScope(userId);
+    if (scopeCondition) {
+      conditions.push(scopeCondition);
+    }
 
-    for (const instanceId of instanceIds) {
+    const rows = await this.db
+      .select({
+        instanceId: assessmentInstance.id,
+        period: assessmentInstance.period,
+        employeeId: assessmentInstance.employeeId,
+        employeeName: employee.name,
+        supervisorId: assessmentInstance.supervisorId,
+        status: assessmentInstance.status,
+      })
+      .from(assessmentInstance)
+      .innerJoin(
+        employee,
+        eq(assessmentInstance.employeeId, employee.employeeId),
+      )
+      .where(and(...conditions))
+      .orderBy(desc(assessmentInstance.createdAt));
+
+    return rows.map((row) => ({
+      instanceId: row.instanceId,
+      period: row.period,
+      employeeId: row.employeeId,
+      employeeName: row.employeeName ?? '未命名员工',
+      supervisorId: row.supervisorId ?? undefined,
+      status: row.status,
+    }));
+  }
+
+  private async sendNotificationMessages(
+    messages: AssessmentNotificationMessage[],
+  ): Promise<{ sentCount: number; failedCount: number }> {
+    const results = await runWithConcurrency(messages, 5, async (message) => {
       try {
-        const instanceRows = await this.db
-          .select({
-            employeeId: assessmentInstance.employeeId,
-            period: assessmentInstance.period,
-          })
-          .from(assessmentInstance)
-          .where(eq(assessmentInstance.id, instanceId))
-          .limit(1);
-
-        if (instanceRows.length === 0) {
-          this.logger.warn(
-            `batchResendNotification: instance ${instanceId} not found`,
-          );
-          failedCount++;
-          continue;
-        }
-
-        const instance = instanceRows[0];
-        const empId: string = instance.employeeId;
-        const period: string = instance.period;
-
         await this.capabilityService
           .load('assessment_reminder_feishu_send_1')
           .call('send_feishu_message', {
-            title: { title: '考核提醒通知' },
-            receiverUserList: [empId],
-            cardContentMarkdown: `**考核提醒通知**\n\n${period} 月度考核正在进行中，请尽快完成。`,
+            title: { title: message.title },
+            receiverUserList: [message.receiverId],
+            cardContentMarkdown: message.markdown,
           });
-
-        this.logger.log(
-          `batchResendNotification: sent for instance ${instanceId} to employee ${empId}`,
-        );
-        successCount++;
+        return true;
       } catch (err) {
         this.logger.warn(
-          `batchResendNotification: failed for instance ${instanceId}: ${err}`,
+          `Failed to send ${message.title} to ${message.receiverId}: ${err}`,
         );
-        failedCount++;
+        return false;
       }
-    }
+    });
+
+    const sentCount = results.filter(Boolean).length;
+    return {
+      sentCount,
+      failedCount: results.length - sentCount,
+    };
+  }
+
+  async previewUnfinishedReminders(
+    period: string,
+    department: string,
+    status: string,
+    grade: string,
+    userId: string,
+  ): Promise<ReminderPreviewResponse> {
+    const targets = await this.getUnfinishedReminderTargets(
+      period,
+      department || undefined,
+      status || undefined,
+      grade || undefined,
+      userId,
+    );
+    return summarizeReminderTargets(targets);
+  }
+
+  async remindUnfinishedAssessments(
+    body: UnfinishedReminderRequest,
+    userId: string,
+  ): Promise<UnfinishedReminderResponse> {
+    const appBaseUrl = normalizeAppBaseUrl(body.appBaseUrl);
+    const targets = await this.getUnfinishedReminderTargets(
+      body.period,
+      body.department,
+      body.status,
+      body.grade,
+      userId,
+    );
+    const preview = summarizeReminderTargets(targets);
+
+    const outcomes = await runWithConcurrency(targets, 5, async (target) => {
+      const messages = buildReminderNotificationMessages({
+        ...target,
+        appBaseUrl,
+      });
+      const delivery = await this.sendNotificationMessages(messages);
+
+      try {
+        await this.db.insert(auditLog).values({
+          operatorId: userId,
+          action: 'remind',
+          targetType: 'assessment_instance',
+          targetId: target.instanceId,
+          changes: {
+            status: target.status,
+            recipients: messages.map((message) => ({
+              userId: message.receiverId,
+              role: message.recipientRole,
+            })),
+            sentCount: delivery.sentCount,
+            failedCount: delivery.failedCount,
+          },
+        });
+      } catch (err) {
+        this.logger.warn(
+          `Failed to write reminder audit for ${target.instanceId}: ${err}`,
+        );
+      }
+
+      return delivery;
+    });
+
+    const sentCount = outcomes.reduce(
+      (total, outcome) => total + outcome.sentCount,
+      0,
+    );
+    const failedCount = outcomes.reduce(
+      (total, outcome) => total + outcome.failedCount,
+      0,
+    );
 
     return {
+      ...preview,
       success: failedCount === 0,
-      successCount,
+      sentCount,
       failedCount,
     };
   }

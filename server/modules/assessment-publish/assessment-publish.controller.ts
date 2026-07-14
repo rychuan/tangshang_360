@@ -18,8 +18,8 @@ import type {
   AdjustRequest,
   UnlockRequest,
   BatchUnlockRequest,
-  BatchNotifyRequest,
   BatchReturnRequest,
+  UnfinishedReminderRequest,
   EmployeeSnapshotResponse,
 } from '@shared/api.interface';
 
@@ -84,10 +84,34 @@ export class AssessmentPublishController {
   @CanRole(['admin', 'hrd'])
   @RequirePermission('publish_management', 'edit')
   @NeedLogin()
-  @Post('assessment-instances/batch-notify')
-  async batchNotify(@Req() req: Request, @Body() body: BatchNotifyRequest) {
+  @Get('assessment-instances/reminder-preview')
+  async reminderPreview(
+    @Req() req: Request,
+    @Query('period') period: string,
+    @Query('department') department: string,
+    @Query('status') status: string,
+    @Query('grade') grade: string,
+  ) {
     const { userId } = req.userContext;
-    return this.service.batchResendNotification(body.instanceIds, userId);
+    return this.service.previewUnfinishedReminders(
+      period,
+      department,
+      status,
+      grade,
+      userId,
+    );
+  }
+
+  @CanRole(['admin', 'hrd'])
+  @RequirePermission('publish_management', 'edit')
+  @NeedLogin()
+  @Post('assessment-instances/remind-unfinished')
+  async remindUnfinished(
+    @Req() req: Request,
+    @Body() body: UnfinishedReminderRequest,
+  ) {
+    const { userId } = req.userContext;
+    return this.service.remindUnfinishedAssessments(body, userId);
   }
 
   @CanRole(['admin', 'hrd'])

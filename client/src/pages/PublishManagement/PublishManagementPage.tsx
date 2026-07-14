@@ -12,9 +12,10 @@ import {
   adjustEmployeeSnapshot,
   deleteEmployeeSnapshot,
   batchUnlock,
-  batchResendNotification,
   batchReturn,
   getPeriodStatistics,
+  previewUnfinishedReminders,
+  remindUnfinishedAssessments,
 } from '@/api/assessment-publish';
 import type {
   PublishEmployeeItem,
@@ -22,6 +23,7 @@ import type {
   AdjustIndicatorInput,
   PeriodStatisticsResponse,
   BatchOperationResponse,
+  ReminderPreviewResponse,
 } from '@shared/api.interface';
 import { PageHeader } from '@/components/business-ui/page-header';
 import { PUBLISHED_STATUS_LABELS } from './published-assessment-columns';
@@ -31,6 +33,8 @@ import PublishedAssessmentSection from './PublishedAssessmentSection';
 import AdjustIndicatorsDialog from './AdjustIndicatorsDialog';
 import BatchUnlockDialog from './BatchUnlockDialog';
 import UnlockHistoryDialog from './UnlockHistoryDialog';
+import UnfinishedReminderDialog from './UnfinishedReminderDialog';
+import { getAppBaseUrl } from '@/utils/app-url';
 
 const PAGE_SIZE: number = 20;
 
@@ -61,8 +65,13 @@ const PublishManagementPage: React.FC = () => {
   const [selectedInstanceIds, setSelectedInstanceIds] = useState<Set<string>>(
     new Set(),
   );
-  const [batchNotifyLoading, setBatchNotifyLoading] = useState<boolean>(false);
   const [batchReturnLoading, setBatchReturnLoading] = useState<boolean>(false);
+  const [reminderPreviewLoading, setReminderPreviewLoading] =
+    useState<boolean>(false);
+  const [reminderSending, setReminderSending] = useState<boolean>(false);
+  const [reminderOpen, setReminderOpen] = useState<boolean>(false);
+  const [reminderPreview, setReminderPreview] =
+    useState<ReminderPreviewResponse | null>(null);
 
   const [adjustOpen, setAdjustOpen] = useState<boolean>(false);
   const [adjustingEmployee, setAdjustingEmployee] =
@@ -214,6 +223,7 @@ const PublishManagementPage: React.FC = () => {
       const result = await publish({
         period,
         employeeIds: Array.from(selectedEmployeeIds),
+        appBaseUrl: getAppBaseUrl(),
       });
       toast.success(`发布成功，共 ${result.publishedCount} 人`);
       setSelectedEmployeeIds(new Set());
@@ -350,28 +360,63 @@ const PublishManagementPage: React.FC = () => {
     }
   };
 
-  const handleBatchNotify = async (): Promise<void> => {
-    if (selectedInstanceIds.size === 0) {
-      toast.error('请选择要通知的绩效');
-      return;
-    }
-    setBatchNotifyLoading(true);
+  const handleOpenUnfinishedReminder = async (): Promise<void> => {
+    setReminderPreviewLoading(true);
     try {
-      const result = await batchResendNotification({
-        instanceIds: Array.from(selectedInstanceIds),
+      const preview = await previewUnfinishedReminders({
+        period,
+        department: deptFilter || undefined,
+        status: statusFilter === '__all__' ? undefined : statusFilter,
+        grade: gradeFilter || undefined,
       });
-      if (result.failedCount > 0) {
-        toast.success(
-          `发送完成：成功 ${result.successCount} 项，失败 ${result.failedCount} 项`,
-        );
-      } else {
-        toast.success(`通知发送成功，共 ${result.successCount} 项`);
+      if (preview.taskCount === 0) {
+        toast.info('当前范围内没有未完成的绩效任务');
+        return;
       }
+      setReminderPreview(preview);
+      setReminderOpen(true);
     } catch (err: unknown) {
-      logger.error('batchNotify failed', err);
+      logger.error('previewUnfinishedReminders failed', err);
       handleApiError(err);
     } finally {
-      setBatchNotifyLoading(false);
+      setReminderPreviewLoading(false);
+    }
+  };
+
+  const handleConfirmUnfinishedReminder = async (): Promise<void> => {
+    setReminderSending(true);
+    try {
+      const result = await remindUnfinishedAssessments({
+        period,
+        department: deptFilter || undefined,
+        status: statusFilter === '__all__' ? undefined : statusFilter,
+        grade: gradeFilter || undefined,
+        appBaseUrl: getAppBaseUrl(),
+      });
+      if (result.failedCount === 0 && result.missingSupervisorCount === 0) {
+        toast.success(`通知发送成功，共 ${result.sentCount} 条消息`);
+      } else if (
+        result.failedCount === 0 &&
+        result.missingSupervisorCount > 0
+      ) {
+        toast.warning(
+          `通知已发送 ${result.sentCount} 条，另有 ${result.missingSupervisorCount} 项未配置上级`,
+        );
+      } else if (result.sentCount > 0) {
+        toast.warning(
+          `通知发送完成：成功 ${result.sentCount} 条，失败 ${result.failedCount} 条`,
+        );
+      } else {
+        toast.error(`通知发送失败，共 ${result.failedCount} 条`);
+      }
+      setReminderOpen(false);
+      setReminderPreview(null);
+      setSelectedInstanceIds(new Set());
+    } catch (err: unknown) {
+      logger.error('remindUnfinishedAssessments failed', err);
+      handleApiError(err);
+    } finally {
+      setReminderSending(false);
     }
   };
 
@@ -516,21 +561,27 @@ const PublishManagementPage: React.FC = () => {
           total={instancesTotal}
           page={instancesPage}
           pageSize={PAGE_SIZE}
-          onPageChange={setInstancesPage}
+          onPageChange={(nextPage: number) => {
+            setInstancesPage(nextPage);
+            setSelectedInstanceIds(new Set());
+          }}
           statusFilter={statusFilter}
           onStatusFilterChange={(v: string) => {
             setStatusFilter(v);
             setInstancesPage(1);
+            setSelectedInstanceIds(new Set());
           }}
           departmentFilter={deptFilter}
           onDepartmentFilterChange={(v: string) => {
             setDeptFilter(v);
             setInstancesPage(1);
+            setSelectedInstanceIds(new Set());
           }}
           gradeFilter={gradeFilter}
           onGradeFilterChange={(v: string) => {
             setGradeFilter(v);
             setInstancesPage(1);
+            setSelectedInstanceIds(new Set());
           }}
           selectedInstanceIds={selectedInstanceIds}
           onSelectedInstancesChange={setSelectedInstanceIds}
@@ -539,11 +590,11 @@ const PublishManagementPage: React.FC = () => {
           onReturn={handleReturn}
           onBatchUnlock={handleOpenBatchUnlock}
           onBatchReturn={handleBatchReturn}
-          onBatchNotify={handleBatchNotify}
+          onRemindUnfinished={handleOpenUnfinishedReminder}
           onExport={handleExport}
           batchUnlockLoading={unlockLoading}
           batchReturnLoading={batchReturnLoading}
-          batchNotifyLoading={batchNotifyLoading}
+          reminderLoading={reminderPreviewLoading || reminderSending}
           departments={departments}
         />
 
@@ -583,6 +634,28 @@ const PublishManagementPage: React.FC = () => {
           open={historyOpen}
           onOpenChange={setHistoryOpen}
           instanceId={historyInstanceId}
+        />
+
+        <UnfinishedReminderDialog
+          open={reminderOpen}
+          onOpenChange={(open: boolean) => {
+            if (!reminderSending) setReminderOpen(open);
+          }}
+          preview={reminderPreview}
+          period={period}
+          department={deptFilter || undefined}
+          statusLabel={
+            statusFilter === 'employee_processing'
+              ? '员工处理中'
+              : statusFilter === 'supervisor_processing'
+                ? '上级处理中'
+                : statusFilter === 'completed'
+                  ? '已完成'
+                  : '全部未完成状态'
+          }
+          grade={gradeFilter || undefined}
+          sending={reminderSending}
+          onConfirm={handleConfirmUnfinishedReminder}
         />
       </>
     </div>
