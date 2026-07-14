@@ -10,7 +10,7 @@ import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { eq, and, sql, isNull, inArray } from 'drizzle-orm';
+import { eq, and, sql, isNull } from 'drizzle-orm';
 import {
   assessmentInstance,
   assessmentIndicatorSnapshot,
@@ -21,6 +21,12 @@ import {
 } from '@server/database/schema';
 import { PerformanceGradeService } from '../performance-grade/performance-grade.service';
 import { AccessScopeService } from '@server/common/access/access-scope.service';
+import { validateUUID } from '@server/common/utils/validation';
+import { mapToSnapshotFields } from '@server/common/interfaces/indicator-snapshot.interface';
+import {
+  upsertRatingsInTx,
+  calculateTotalScore,
+} from '@server/common/assessment/rating-transaction';
 import {
   getStatusAfterSelfRatingSubmit,
   getStatusAfterSelfRatingWithSignSubmit,
@@ -37,17 +43,6 @@ import type {
   SignRequest,
   SupervisorRatingResponse,
 } from '@shared/api.interface';
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-function validateUUID(id: string, label = 'id'): void {
-  if (!UUID_PATTERN.test(id)) {
-    throw new BadRequestException(`${label} 格式无效`);
-  }
-}
-
-/** 总分保留小数位数 */
-const SCORE_PRECISION = 100;
 
 export type RatingValidationInput = {
   indicatorSnapshotId: string;
@@ -90,9 +85,7 @@ export function validateRatingsAgainstSnapshots(
 
   if (!isDraft) {
     const submittedIds = new Set(
-      ratings
-        .filter((r) => r.score != null)
-        .map((r) => r.indicatorSnapshotId),
+      ratings.filter((r) => r.score != null).map((r) => r.indicatorSnapshotId),
     );
     const missing = snapshots.filter((s) => !submittedIds.has(s.id));
     if (missing.length > 0) {
@@ -190,7 +183,10 @@ export class AssessmentOperationService {
       })
       .from(employee)
       .where(
-        and(eq(employee.employeeId, instance.employeeId), isNull(employee.deletedAt)),
+        and(
+          eq(employee.employeeId, instance.employeeId),
+          isNull(employee.deletedAt),
+        ),
       )
       .limit(1);
 
@@ -258,16 +254,11 @@ export class AssessmentOperationService {
     const indicators: AssessmentIndicatorDetail[] = snapshots.map((snap) => {
       const selfRating = ratingMap.get(`${snap.id}:self`);
       const supervisorRating = ratingMap.get(`${snap.id}:supervisor`);
+      const fields = mapToSnapshotFields(snap);
 
       return {
         id: snap.id,
-        dimensionName: snap.dimensionName,
-        dimensionWeight: Number(snap.dimensionWeight),
-        content: snap.content,
-        description: snap.description || '',
-        algorithm: snap.algorithm || '',
-        dataSource: snap.dataSource || '',
-        weight: Number(snap.weight),
+        ...fields,
         selfScore: selfRating?.score,
         selfCompletionStatus: selfRating?.completionStatus || undefined,
         selfComment: selfRating?.comment || undefined,
@@ -393,53 +384,16 @@ export class AssessmentOperationService {
         throw new BadRequestException('当前状态不允许提交自评');
       }
 
-      // 批量查询已有评分记录（消除 N+1）
-      const snapshotIds = body.ratings.map((r) => r.indicatorSnapshotId);
-      const existingList = await tx
-        .select()
-        .from(ratingRecord)
-        .where(
-          and(
-            eq(ratingRecord.instanceId, id),
-            eq(ratingRecord.ratingType, 'self'),
-            inArray(ratingRecord.indicatorSnapshotId, snapshotIds),
-          ),
-        );
-
-      const existingMap = new Map(
-        existingList.map((r) => [r.indicatorSnapshotId, r]),
-      );
-
-      for (const rating of body.ratings) {
-        const existingRow = existingMap.get(rating.indicatorSnapshotId);
-        const scoreStr: string | null =
-          rating.score == null ? null : String(rating.score);
-
-        if (existingRow) {
-          await tx
-            .update(ratingRecord)
-            .set({
-              score: scoreStr,
-              completionStatus: rating.completionStatus ?? null,
-              comment: rating.comment || null,
-              isDraft: body.isDraft,
-              submittedAt: body.isDraft ? null : new Date(),
-            })
-            .where(eq(ratingRecord.id, existingRow.id));
-        } else {
-          await tx.insert(ratingRecord).values({
-            instanceId: id,
-            indicatorSnapshotId: rating.indicatorSnapshotId,
-            ratingType: 'self',
-            score: scoreStr,
-            completionStatus: rating.completionStatus ?? null,
-            comment: rating.comment || null,
-            ratedBy: userId,
-            isDraft: body.isDraft,
-            submittedAt: body.isDraft ? null : new Date(),
-          });
-        }
-      }
+      await upsertRatingsInTx(tx, this.db, {
+        instanceId: id,
+        ratingType: 'self',
+        ratings: body.ratings,
+        isDraft: body.isDraft,
+        ratedBy: userId,
+        extraFields: (rating) => ({
+          completionStatus: rating.completionStatus ?? null,
+        }),
+      });
 
       if (!body.isDraft) {
         await tx
@@ -554,49 +508,17 @@ export class AssessmentOperationService {
         throw new BadRequestException('本人已签名，不可重复提交');
       }
 
-      const snapshotIds = body.ratings.map((r) => r.indicatorSnapshotId);
-      const existingList = await tx
-        .select()
-        .from(ratingRecord)
-        .where(
-          and(
-            eq(ratingRecord.instanceId, id),
-            eq(ratingRecord.ratingType, 'self'),
-            inArray(ratingRecord.indicatorSnapshotId, snapshotIds),
-          ),
-        );
-      const existingMap = new Map(
-        existingList.map((r) => [r.indicatorSnapshotId, r]),
-      );
-
-      for (const rating of body.ratings) {
-        const existingRow = existingMap.get(rating.indicatorSnapshotId);
-        const scoreStr = rating.score == null ? null : String(rating.score);
-        if (existingRow) {
-          await tx
-            .update(ratingRecord)
-            .set({
-              score: scoreStr,
-              completionStatus: rating.completionStatus ?? null,
-              comment: rating.comment || null,
-              isDraft: false,
-              submittedAt: now,
-            })
-            .where(eq(ratingRecord.id, existingRow.id));
-        } else {
-          await tx.insert(ratingRecord).values({
-            instanceId: id,
-            indicatorSnapshotId: rating.indicatorSnapshotId,
-            ratingType: 'self',
-            score: scoreStr,
-            completionStatus: rating.completionStatus ?? null,
-            comment: rating.comment || null,
-            ratedBy: userId,
-            isDraft: false,
-            submittedAt: now,
-          });
-        }
-      }
+      await upsertRatingsInTx(tx, this.db, {
+        instanceId: id,
+        ratingType: 'self',
+        ratings: body.ratings,
+        isDraft: false,
+        ratedBy: userId,
+        submittedAt: now,
+        extraFields: (rating) => ({
+          completionStatus: rating.completionStatus ?? null,
+        }),
+      });
 
       const updateResult = await tx
         .update(assessmentInstance)
@@ -717,67 +639,17 @@ export class AssessmentOperationService {
         throw new BadRequestException('当前状态不允许提交上级评分');
       }
 
-      // 批量查询已有评分记录
-      const snapshotIds = body.ratings.map((r) => r.indicatorSnapshotId);
-      const existingList = await tx
-        .select()
-        .from(ratingRecord)
-        .where(
-          and(
-            eq(ratingRecord.instanceId, id),
-            eq(ratingRecord.ratingType, 'supervisor'),
-            inArray(ratingRecord.indicatorSnapshotId, snapshotIds),
-          ),
-        );
-
-      const existingMap = new Map(
-        existingList.map((r) => [r.indicatorSnapshotId, r]),
-      );
-
-      for (const rating of body.ratings) {
-        const existingRow = existingMap.get(rating.indicatorSnapshotId);
-        const scoreStr: string | null =
-          rating.score == null ? null : String(rating.score);
-
-        if (existingRow) {
-          await tx
-            .update(ratingRecord)
-            .set({
-              score: scoreStr,
-              comment: rating.comment || null,
-              isDraft: body.isDraft,
-              submittedAt: body.isDraft ? null : new Date(),
-            })
-            .where(eq(ratingRecord.id, existingRow.id));
-        } else {
-          await tx.insert(ratingRecord).values({
-            instanceId: id,
-            indicatorSnapshotId: rating.indicatorSnapshotId,
-            ratingType: 'supervisor',
-            score: scoreStr,
-            comment: rating.comment || null,
-            ratedBy: userId,
-            isDraft: body.isDraft,
-            submittedAt: body.isDraft ? null : new Date(),
-          });
-        }
-      }
+      const ratingBySnapId = await upsertRatingsInTx(tx, this.db, {
+        instanceId: id,
+        ratingType: 'supervisor',
+        ratings: body.ratings,
+        isDraft: body.isDraft,
+        ratedBy: userId,
+      });
 
       if (!body.isDraft) {
         // 在事务内计算总分和等级
-        const ratingBySnapId = new Map<string, number>();
-        for (const r of body.ratings) {
-          if (r.score != null) {
-            ratingBySnapId.set(r.indicatorSnapshotId, r.score);
-          }
-        }
-
-        let totalScore = 0;
-        for (const snap of allSnapshots) {
-          totalScore += ratingBySnapId.get(snap.id) ?? 0;
-        }
-
-        totalScore = Math.round(totalScore * SCORE_PRECISION) / SCORE_PRECISION;
+        const totalScore = calculateTotalScore(ratingBySnapId, allSnapshots);
 
         const grade = await this.performanceGradeService.matchGrade(
           totalScore,
@@ -924,60 +796,16 @@ export class AssessmentOperationService {
         throw new BadRequestException('上级已签名，不可重复提交');
       }
 
-      const snapshotIds = body.ratings.map((r) => r.indicatorSnapshotId);
-      const existingList = await tx
-        .select()
-        .from(ratingRecord)
-        .where(
-          and(
-            eq(ratingRecord.instanceId, id),
-            eq(ratingRecord.ratingType, 'supervisor'),
-            inArray(ratingRecord.indicatorSnapshotId, snapshotIds),
-          ),
-        );
-      const existingMap = new Map(
-        existingList.map((r) => [r.indicatorSnapshotId, r]),
-      );
+      const ratingBySnapId = await upsertRatingsInTx(tx, this.db, {
+        instanceId: id,
+        ratingType: 'supervisor',
+        ratings: body.ratings,
+        isDraft: false,
+        ratedBy: userId,
+        submittedAt: now,
+      });
 
-      for (const rating of body.ratings) {
-        const existingRow = existingMap.get(rating.indicatorSnapshotId);
-        const scoreStr = rating.score == null ? null : String(rating.score);
-        if (existingRow) {
-          await tx
-            .update(ratingRecord)
-            .set({
-              score: scoreStr,
-              comment: rating.comment || null,
-              isDraft: false,
-              submittedAt: now,
-            })
-            .where(eq(ratingRecord.id, existingRow.id));
-        } else {
-          await tx.insert(ratingRecord).values({
-            instanceId: id,
-            indicatorSnapshotId: rating.indicatorSnapshotId,
-            ratingType: 'supervisor',
-            score: scoreStr,
-            comment: rating.comment || null,
-            ratedBy: userId,
-            isDraft: false,
-            submittedAt: now,
-          });
-        }
-      }
-
-      const ratingBySnapId = new Map<string, number>();
-      for (const r of body.ratings) {
-        if (r.score != null) {
-          ratingBySnapId.set(r.indicatorSnapshotId, r.score);
-        }
-      }
-
-      let totalScore = 0;
-      for (const snap of allSnapshots) {
-        totalScore += ratingBySnapId.get(snap.id) ?? 0;
-      }
-      totalScore = Math.round(totalScore * SCORE_PRECISION) / SCORE_PRECISION;
+      const totalScore = calculateTotalScore(ratingBySnapId, allSnapshots);
 
       const grade = await this.performanceGradeService.matchGrade(
         totalScore,
@@ -1194,11 +1022,7 @@ export class AssessmentOperationService {
           throw new BadRequestException('请先完成员工签名');
         }
 
-        if (
-          access &&
-          !access.isSupervisor &&
-          !access.isAdmin
-        ) {
+        if (access && !access.isSupervisor && !access.isAdmin) {
           throw new ForbiddenException(
             '您不是该员工的直接上级或系统管理员，无法签署上级签名',
           );

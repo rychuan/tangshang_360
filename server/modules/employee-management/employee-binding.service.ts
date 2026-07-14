@@ -98,7 +98,7 @@ export class EmployeeBindingService {
       existing.length > 0 ? existing[0].templateId : null;
 
     return this.db
-      .transaction(async (tx: any) => {
+      .transaction(async (tx) => {
         if (existing.length > 0) {
           await tx
             .update(employeeBinding)
@@ -236,18 +236,16 @@ export class EmployeeBindingService {
         )
         .returning();
       if (inserted.length > 0) {
-        await tx
-          .insert(auditLog)
-          .values(
-            inserted.map((b) => ({
-              operatorId: userId,
-              action: 'bind',
-              targetType: 'employee_binding',
-              targetId: String(b.id),
-              changes: { after: { templateId, effectiveFrom } },
-              reason: '员工模板批量绑定',
-            })),
-          );
+        await tx.insert(auditLog).values(
+          inserted.map((b) => ({
+            operatorId: userId,
+            action: 'bind',
+            targetType: 'employee_binding',
+            targetId: String(b.id),
+            changes: { after: { templateId, effectiveFrom } },
+            reason: '员工模板批量绑定',
+          })),
+        );
       }
       return inserted.map((b) => String(b.id));
     });

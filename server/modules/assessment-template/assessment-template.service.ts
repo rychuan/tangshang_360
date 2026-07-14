@@ -185,7 +185,7 @@ export class AssessmentTemplateService {
 
     this.validateWeights(body.dimensions);
 
-    return this.db.transaction(async (tx: any) => {
+    return this.db.transaction(async (tx) => {
       const [inserted] = await tx
         .insert(assessmentTemplate)
         .values({
@@ -252,7 +252,7 @@ export class AssessmentTemplateService {
       .from(assessmentDimension)
       .where(eq(assessmentDimension.templateId, id));
 
-    return this.db.transaction(async (tx: any) => {
+    return this.db.transaction(async (tx) => {
       for (const dim of existingDims) {
         await tx
           .delete(assessmentIndicator)
