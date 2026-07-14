@@ -265,7 +265,7 @@ export const ratingRecord = pgTable("rating_record", {
   instanceId: uuid("instance_id").notNull(),
   indicatorSnapshotId: uuid("indicator_snapshot_id").notNull(),
   ratingType: varchar("rating_type", { length: 255 }).notNull(),
-  score: numeric("score"),
+  score: numeric("score").notNull().default('0'),
   comment: text("comment"),
   ratedBy: userProfile("rated_by").notNull(),
   submittedAt: customTimestamptz("submitted_at", { precision: 6 }),
@@ -282,11 +282,6 @@ export const ratingRecord = pgTable("rating_record", {
 }, (table) => [
   index("idx_rating_instance").on(table.instanceId),
   index("idx_rating_snapshot").on(table.indicatorSnapshotId),
-  uniqueIndex("idx_rating_unique_instance_snapshot_type").on(
-    table.instanceId,
-    table.indicatorSnapshotId,
-    table.ratingType,
-  ),
 ]);
 
 export const rolePermissionConfig = pgTable("role_permission_config", {

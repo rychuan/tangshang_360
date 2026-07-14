@@ -267,7 +267,6 @@ export class TeamPerformanceService {
         await this.capabilityService
           .load('assessment_reminder_feishu_send_1')
           .call('send_feishu_message', {
-            title: { title: '考核催办提醒' },
             receiverUserList: [employeeUserId],
             cardContentMarkdown: message,
           });

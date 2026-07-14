@@ -21,22 +21,22 @@
         "description": "接收提醒的用户ID列表"
       },
       "cardContentMarkdown": {
-        "type": "string",
-        "description": "消息正文内容，支持Markdown格式"
+        "description": "消息正文内容，支持Markdown格式",
+        "type": "string"
       }
     }
   },
   "formValue": {
+    "receiverUserList": "{{input.receiverUserList}}",
     "sender": "bot",
     "buttons": [],
     "title": {
-      "text": "考核催办提醒",
-      "color": "blue"
+      "title": "考核催办提醒",
+      "titleColor": "wathet"
     },
-    "content": "{{input.cardContentMarkdown}}",
-    "receiverUserList": "{{input.receiverUserList}}"
+    "content": "{{input.cardContentMarkdown}}"
   },
   "createdAt": 1782050105000,
-  "updatedAt": 1782050105000,
+  "updatedAt": 1784004929764,
   "createdBy": 7652289183771692275
 }
