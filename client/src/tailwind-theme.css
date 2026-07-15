@@ -135,6 +135,21 @@
 }
 
 @theme inline {
+  --text-xs: 0.975rem;
+  --text-xs--line-height: 1.375rem;
+  --text-sm: 1.15rem;
+  --text-sm--line-height: 1.625rem;
+  --text-base: 1.3rem;
+  --text-base--line-height: 2rem;
+  --text-lg: 1.45rem;
+  --text-lg--line-height: 2rem;
+  --text-xl: 1.65rem;
+  --text-xl--line-height: 2rem;
+  --text-2xl: 1.95rem;
+  --text-2xl--line-height: 2.5rem;
+  --text-3xl: 2.35rem;
+  --text-3xl--line-height: 2.75rem;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
