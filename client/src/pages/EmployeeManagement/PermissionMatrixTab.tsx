@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { roleManager } from '@/api';
 import type {
   PermissionItem,
@@ -78,25 +79,15 @@ const clonePermissions = (items: PermissionItem[]): PermissionItem[] =>
   items.map((p) => ({ resource: p.resource, actions: [...p.actions] }));
 
 const PermissionMatrixTab: React.FC<PermissionMatrixTabProps> = ({ role }) => {
-  const [permissions, setPermissions] = useState<PermissionItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+
+  const { data: permissions = [], isLoading: loading } = useQuery({
+    queryKey: ['roles', 'permissions', role.bizID],
+    queryFn: () => roleManager.getRolePermissions(role.bizID).then((config) => clonePermissions(config.permissions || [])),
+    enabled: !!role.bizID,
+  });
+
   const [saving, setSaving] = useState(false);
-
-  const fetchPermissions = useCallback(async (bizID: string) => {
-    setLoading(true);
-    try {
-      const config = await roleManager.getRolePermissions(bizID);
-      setPermissions(clonePermissions(config.permissions || []));
-    } catch (err) {
-      handleApiError(err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (role.bizID) fetchPermissions(role.bizID);
-  }, [role.bizID, fetchPermissions]);
 
   const hasAction = (resource: PermissionResource, action: PermissionAction) =>
     permissions
@@ -107,7 +98,7 @@ const PermissionMatrixTab: React.FC<PermissionMatrixTabProps> = ({ role }) => {
     resource: PermissionResource,
     action: PermissionAction,
   ) => {
-    setPermissions((prev) => {
+    queryClient.setQueryData(['roles', 'permissions', role.bizID], (prev: PermissionItem[]) => {
       const copy = clonePermissions(prev);
       const existing = copy.find((p) => p.resource === resource);
       if (!existing) {
@@ -152,7 +143,7 @@ const PermissionMatrixTab: React.FC<PermissionMatrixTabProps> = ({ role }) => {
       role.bizID ?? ''
     ];
     if (preset) {
-      setPermissions(clonePermissions(preset));
+      queryClient.setQueryData(['roles', 'permissions', role.bizID], clonePermissions(preset));
       toast.info('已重置为预设权限，点击保存生效');
     } else {
       toast('当前角色无预设权限');
