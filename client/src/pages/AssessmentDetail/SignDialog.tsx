@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -44,51 +44,71 @@ const SignDialog: React.FC<SignDialogProps> = ({
 }) => {
   const [mobileSent, setMobileSent] = useState(false);
   const [mobileSending, setMobileSending] = useState(false);
-  const [mobileToken, setMobileToken] = useState<string | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const pollStartRef = useRef<number>(0);
+  const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollGenerationRef = useRef(0);
+
+  const clearPolling = useCallback(() => {
+    pollGenerationRef.current += 1;
+    if (pollRef.current) {
+      clearTimeout(pollRef.current);
+      pollRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     if (open) {
       setMobileSent(false);
       setMobileSending(false);
-      setMobileToken(null);
+    } else {
+      clearPolling();
     }
-  }, [open]);
+  }, [open, clearPolling]);
 
   useEffect(() => {
-    return () => {
-      if (pollRef.current) {
-        clearInterval(pollRef.current);
-        pollRef.current = null;
-      }
-    };
-  }, []);
+    return clearPolling;
+  }, [clearPolling]);
 
   const startPolling = (token: string) => {
-    pollStartRef.current = Date.now();
-    pollRef.current = setInterval(async () => {
+    clearPolling();
+    const generation = pollGenerationRef.current;
+    const startedAt = Date.now();
+    const poll = async () => {
       try {
         const res = await signTokenApi.checkSignStatus(token);
-        if (res.signed) {
-          clearInterval(pollRef.current!);
+        if (pollGenerationRef.current !== generation) return;
+        if (res.status === 'succeeded') {
           pollRef.current = null;
           toast.success('手机签名已完成');
           setSignImage(null);
           onMobileSignComplete?.();
           return;
         }
-        if (Date.now() - pollStartRef.current > 2 * 60 * 1000) {
-          clearInterval(pollRef.current!);
+        if (res.status !== 'pending') {
+          pollRef.current = null;
+          setMobileSent(false);
+          const message =
+            res.status === 'expired'
+              ? '签名链接已过期，请重新发起'
+              : res.status === 'forbidden'
+                ? '当前账号无权使用该签名链接'
+                : '签名会话已失效，请重新发起';
+          toast.warning(message);
+          return;
+        }
+        if (Date.now() - startedAt > 2 * 60 * 1000) {
           pollRef.current = null;
           toast.warning('签名等待超时，请重新发起');
           setMobileSent(false);
-          setMobileToken(null);
+          return;
         }
       } catch {
         // 轮询失败静默重试
       }
-    }, 2000);
+      if (pollGenerationRef.current === generation) {
+        pollRef.current = setTimeout(poll, 2000);
+      }
+    };
+    pollRef.current = setTimeout(poll, 2000);
   };
 
   const handleSendToPhone = async () => {
@@ -103,7 +123,6 @@ const SignDialog: React.FC<SignDialogProps> = ({
         signType,
         getAppBaseUrl(),
       );
-      setMobileToken(res.token);
       setMobileSent(true);
       toast.success('已发送到飞书，请在手机上打开并签名');
       startPolling(res.token);

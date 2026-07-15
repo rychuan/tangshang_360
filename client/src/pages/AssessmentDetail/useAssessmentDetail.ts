@@ -110,8 +110,10 @@ export function useAssessmentDetail(
     !!currentUserId && !!detail && currentUserId === detail.employeeId;
   const isEmployee: boolean = isEmployeeCandidate;
 
-  const canEditSelf: boolean = detail?.status === 'self_review' && isEmployee;
-  const canSignSelf: boolean = detail?.status === 'pending_sign' && isEmployee;
+  const canEditSelf: boolean =
+    detail?.status === 'self_review' && isEmployee && canEditAssessment;
+  const canSignSelf: boolean =
+    detail?.status === 'pending_sign' && isEmployee && canEditAssessment;
   // 上级评分/签名必须同时满足后端身份判定、资源编辑权限和流程状态。
   const canEditSupervisor: boolean =
     detail?.status === 'supervisor_review' &&
@@ -291,10 +293,6 @@ export function useAssessmentDetail(
       const body = {
         ...buildRatingPayload(ratings),
         isDraft: false,
-        signName:
-          signType === 'self'
-            ? detail.employeeName || ''
-            : detail.supervisorName || '',
         signImage,
       };
       if (signType === 'self' && detail.status === 'self_review') {
@@ -314,7 +312,6 @@ export function useAssessmentDetail(
       } else {
         await assessmentOperation.sign(id, {
           signType,
-          signName: signType === 'self' ? detail.employeeName || '' : detail.supervisorName || '',
           signImage,
         });
         toast.success('签名已完成');
@@ -336,10 +333,15 @@ export function useAssessmentDetail(
     const body = { ...buildRatingPayload(ratings), isDraft: false };
     if (detail.status === 'self_review') {
       await assessmentOperation.submitSelfRating(id, body);
+      setDetail((current) =>
+        current ? { ...current, status: 'pending_sign' } : current,
+      );
     } else {
       await assessmentOperation.submitSupervisorRating(id, body);
+      setDetail((current) =>
+        current ? { ...current, status: 'supervisor_sign' } : current,
+      );
     }
-    await fetchDetail();
   };
 
   return {

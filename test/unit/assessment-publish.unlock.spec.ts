@@ -1,7 +1,7 @@
 import {
   getUnlockRule,
   getUnlockUpdateData,
-} from '../../server/modules/assessment-publish/assessment-publish.service';
+} from '../../server/modules/assessment-publish/unlock.service';
 
 describe('assessment publish unlock rules', () => {
   it('keeps legacy supervisor_sign unlock compatible', () => {

@@ -1,50 +1,64 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { CapabilityService } from '@lark-apaas/fullstack-nestjs-core';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  CapabilityService,
+  DRIZZLE_DATABASE,
+  type PostgresJsDatabase,
+} from '@lark-apaas/fullstack-nestjs-core';
 import { randomBytes } from 'crypto';
+import { and, eq } from 'drizzle-orm';
+import { assessmentSignSession } from '@server/database/schema';
+import { hashSignToken } from './sign-session.utils';
 
 interface TokenPayload {
   instanceId: string;
   signType: 'self' | 'supervisor';
   userId: string;
   userName: string;
-  expiresAt: number;
 }
 
 @Injectable()
 export class SignTokenService {
   private readonly logger = new Logger(SignTokenService.name);
-  private readonly tokens = new Map<string, TokenPayload>();
   private readonly TOKEN_TTL_MS = 5 * 60 * 1000;
 
-  constructor(private readonly capabilityService: CapabilityService) {}
+  constructor(
+    @Inject(DRIZZLE_DATABASE)
+    private readonly db: PostgresJsDatabase,
+    private readonly capabilityService: CapabilityService,
+  ) {}
 
-  generateToken(payload: Omit<TokenPayload, 'expiresAt'>): string {
-    this.cleanExpired();
+  async generateToken(payload: TokenPayload): Promise<string> {
     const token = randomBytes(32).toString('hex');
-    this.tokens.set(token, {
-      ...payload,
-      expiresAt: Date.now() + this.TOKEN_TTL_MS,
+    await this.db.insert(assessmentSignSession).values({
+      tokenHash: hashSignToken(token),
+      instanceId: payload.instanceId,
+      signType: payload.signType,
+      userId: payload.userId,
+      userName: payload.userName,
+      status: 'pending',
+      expiresAt: new Date(Date.now() + this.TOKEN_TTL_MS),
     });
     return token;
   }
 
-  validateToken(token: string): TokenPayload | null {
-    this.cleanExpired();
-    const payload = this.tokens.get(token);
-    if (!payload) return null;
-    if (Date.now() > payload.expiresAt) {
-      this.tokens.delete(token);
-      return null;
-    }
-    return payload;
+  async getSession(token: string) {
+    const rows = await this.db
+      .select()
+      .from(assessmentSignSession)
+      .where(eq(assessmentSignSession.tokenHash, hashSignToken(token)))
+      .limit(1);
+    return rows[0] ?? null;
   }
 
-  consumeToken(token: string): TokenPayload | null {
-    const payload = this.validateToken(token);
-    if (payload) {
-      this.tokens.delete(token);
-    }
-    return payload;
+  async deleteSession(token: string): Promise<void> {
+    await this.db
+      .delete(assessmentSignSession)
+      .where(
+        and(
+          eq(assessmentSignSession.tokenHash, hashSignToken(token)),
+          eq(assessmentSignSession.status, 'pending'),
+        ),
+      );
   }
 
   async sendSignMessage(
@@ -75,15 +89,7 @@ export class SignTokenService {
       this.logger.log(`Sign message sent to ${userId}`);
     } catch (err) {
       this.logger.warn(`Failed to send sign message to ${userId}: ${err}`);
-    }
-  }
-
-  private cleanExpired(): void {
-    const now = Date.now();
-    for (const [token, payload] of this.tokens) {
-      if (now > payload.expiresAt) {
-        this.tokens.delete(token);
-      }
+      throw err;
     }
   }
 }

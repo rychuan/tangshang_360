@@ -4,6 +4,7 @@ import type {
   SignTokenResponse,
   SignSessionResponse,
   SignStatusResponse,
+  SignSubmissionResponse,
 } from '@shared/api.interface';
 
 export async function generateSignToken(
@@ -32,15 +33,14 @@ export async function getSignSession(
 
 export async function submitSignByToken(data: {
   token: string;
-  signName: string;
-  signImage?: string;
-}): Promise<{ success: boolean; status: string }> {
+  signImage: string;
+}): Promise<SignSubmissionResponse> {
   const res = await axiosForBackend({
     url: '/api/assessment-instances/sign-session',
     method: 'POST',
     data,
   });
-  return unwrapApiData<{ success: boolean; status: string }>(res.data);
+  return unwrapApiData<SignSubmissionResponse>(res.data);
 }
 
 export async function checkSignStatus(

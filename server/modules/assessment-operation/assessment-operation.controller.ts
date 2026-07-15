@@ -13,7 +13,9 @@ import type {
   SignSessionResponse,
   SignByTokenRequest,
   SignStatusResponse,
+  SignSubmissionResponse,
 } from '@shared/api.interface';
+import { normalizeAppBaseUrl } from '@server/common/assessment/notification';
 
 @Controller('api/assessment-instances')
 export class AssessmentOperationController {
@@ -29,46 +31,37 @@ export class AssessmentOperationController {
     @Query('token') token: string,
   ): Promise<SignSessionResponse> {
     const { userId } = req.userContext as { userId: string };
-    const payload = this.signTokenService.validateToken(token);
-    if (!payload) {
-      return { instanceId: '', signType: 'self', employeeName: '', period: '' };
-    }
-    if (payload.userId !== userId) {
-      return { instanceId: '', signType: 'self', employeeName: '', period: '' };
-    }
-    const session = await this.service.getSignSession(
-      payload.instanceId,
-      payload.signType,
-    );
-    return session;
+    return this.service.getSignSession(token, userId);
   }
 
   @NeedLogin()
+  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
+  @RequirePermission('my_assessments', 'edit')
   @Post('sign-session')
   async signByToken(
     @Req() req: Request,
     @Body() body: SignByTokenRequest,
-  ): Promise<{ success: boolean; status: string }> {
-    const { userId } = req.userContext as { userId: string };
-    const payload = this.signTokenService.validateToken(body.token);
-    if (!payload) {
-      return { success: false, status: 'expired' };
-    }
-    if (payload.userId !== userId) {
-      return { success: false, status: 'forbidden' };
-    }
-    const consumed = this.signTokenService.consumeToken(body.token);
-    if (!consumed) {
-      return { success: false, status: 'expired' };
-    }
-    return this.service.signByToken(consumed, body.signName, body.signImage);
+  ): Promise<SignSubmissionResponse> {
+    const { userId, userName } = req.userContext as {
+      userId: string;
+      userName: string;
+    };
+    return this.service.signByToken(
+      body.token,
+      userId,
+      userName,
+      body.signImage,
+    );
   }
 
   @NeedLogin()
   @Get('sign-session/status')
-  async signStatus(@Query('token') token: string): Promise<SignStatusResponse> {
-    const payload = this.signTokenService.validateToken(token);
-    return { signed: !payload };
+  async signStatus(
+    @Req() req: Request,
+    @Query('token') token: string,
+  ): Promise<SignStatusResponse> {
+    const { userId } = req.userContext as { userId: string };
+    return this.service.getSignStatus(token, userId);
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
@@ -175,22 +168,32 @@ export class AssessmentOperationController {
       userId: string;
       userName: string;
     };
-    const session = await this.service.generateSignSession(id, body.signType, userId, userName);
-    const token = this.signTokenService.generateToken({
+    const appBaseUrl = normalizeAppBaseUrl(body.appBaseUrl);
+    const session = await this.service.generateSignSession(
+      id,
+      body.signType,
+      userId,
+    );
+    const token = await this.signTokenService.generateToken({
       instanceId: session.instanceId,
       signType: session.signType,
       userId,
       userName,
     });
-    const signUrl = `${body.appBaseUrl}/mobile-sign?token=${encodeURIComponent(token)}`;
+    const signUrl = `${appBaseUrl}/mobile-sign?token=${encodeURIComponent(token)}`;
 
-    void this.signTokenService.sendSignMessage(
-      userId,
-      signUrl,
-      session.period,
-      session.signType,
-      session.employeeName,
-    );
+    try {
+      await this.signTokenService.sendSignMessage(
+        userId,
+        signUrl,
+        session.period,
+        session.signType,
+        session.employeeName,
+      );
+    } catch (error) {
+      await this.signTokenService.deleteSession(token);
+      throw error;
+    }
 
     return {
       token,

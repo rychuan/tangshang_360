@@ -205,13 +205,13 @@ export interface SupervisorRatingResponse {
 
 export interface SignRequest {
   signType: 'self' | 'supervisor';
-  signName: string;
-  signImage?: string;
+  signName?: string;
+  signImage: string;
 }
 
 export interface RatingSubmitWithSignRequest extends RatingSubmitRequest {
-  signName: string;
-  signImage?: string;
+  signName?: string;
+  signImage: string;
 }
 
 export interface DashboardTodosResponse {
@@ -479,6 +479,14 @@ export interface SignTokenRequest {
   appBaseUrl: string;
 }
 
+export type SignSessionStatus =
+  | 'pending'
+  | 'succeeded'
+  | 'failed'
+  | 'expired'
+  | 'invalid'
+  | 'forbidden';
+
 export interface SignTokenResponse {
   token: string;
   signUrl: string;
@@ -489,6 +497,7 @@ export interface SignTokenResponse {
 }
 
 export interface SignSessionResponse {
+  status: SignSessionStatus;
   instanceId: string;
   signType: 'self' | 'supervisor';
   employeeName: string;
@@ -497,10 +506,16 @@ export interface SignSessionResponse {
 
 export interface SignByTokenRequest {
   token: string;
-  signName: string;
-  signImage?: string;
+  signName?: string;
+  signImage: string;
 }
 
 export interface SignStatusResponse {
   signed: boolean;
+  status: SignSessionStatus;
+}
+
+export interface SignSubmissionResponse {
+  success: boolean;
+  status: SignSessionStatus;
 }

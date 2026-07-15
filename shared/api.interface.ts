@@ -63,6 +63,8 @@ export {
   type SignSessionResponse,
   type SignByTokenRequest,
   type SignStatusResponse,
+  type SignSessionStatus,
+  type SignSubmissionResponse,
 } from './types/assessment.types';
 
 export {

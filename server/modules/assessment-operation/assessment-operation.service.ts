@@ -18,6 +18,7 @@ import {
   auditLog,
   employee,
   performanceGrade,
+  assessmentSignSession,
 } from '@server/database/schema';
 import { PerformanceGradeService } from '../performance-grade/performance-grade.service';
 import { AccessScopeService } from '@server/common/access/access-scope.service';
@@ -44,7 +45,14 @@ import type {
   SupervisorRatingResponse,
   SignTokenResponse,
   SignSessionResponse,
+  SignStatusResponse,
+  SignSubmissionResponse,
 } from '@shared/api.interface';
+import {
+  hashSignToken,
+  resolveSignSessionStatus,
+  validateSignImage,
+} from './sign-session.utils';
 
 export type RatingValidationInput = {
   indicatorSnapshotId: string;
@@ -448,13 +456,14 @@ export class AssessmentOperationService {
       throw new BadRequestException('本人已签名，不可重复提交');
     }
 
-    const effectiveSignName = body.signName?.trim() || userName || '';
+    const effectiveSignName = userName?.trim() || '';
     if (!effectiveSignName) {
       throw new BadRequestException('签名姓名不能为空');
     }
     if (effectiveSignName.length > 255) {
       throw new BadRequestException('签名姓名不能超过255个字符');
     }
+    const signImage = validateSignImage(body.signImage);
 
     const empStatus = await this.db
       .select({ status: employee.status })
@@ -527,7 +536,7 @@ export class AssessmentOperationService {
         .set({
           selfSignName: effectiveSignName,
           selfSignAt: now,
-          selfSignImage: body.signImage || null,
+          selfSignImage: signImage,
           status: newStatus,
         })
         .where(
@@ -717,13 +726,14 @@ export class AssessmentOperationService {
       throw new BadRequestException('上级已签名，不可重复提交');
     }
 
-    const effectiveSignName = body.signName?.trim() || userName || '';
+    const effectiveSignName = userName?.trim() || '';
     if (!effectiveSignName) {
       throw new BadRequestException('签名姓名不能为空');
     }
     if (effectiveSignName.length > 255) {
       throw new BadRequestException('签名姓名不能超过255个字符');
     }
+    const signImage = validateSignImage(body.signImage);
 
     const empRows = await this.db
       .select({
@@ -821,7 +831,7 @@ export class AssessmentOperationService {
           grade,
           supervisorSignName: effectiveSignName,
           supervisorSignAt: now,
-          supervisorSignImage: body.signImage || null,
+          supervisorSignImage: signImage,
           status: newStatus,
           completedAt: now,
         })
@@ -891,16 +901,14 @@ export class AssessmentOperationService {
       );
     }
 
-    const effectiveSignName =
-      body.signType === 'self'
-        ? body.signName?.trim() || userName || ''
-        : body.signName?.trim() || userName || '';
+    const effectiveSignName = userName?.trim() || '';
     if (!effectiveSignName) {
       throw new BadRequestException('签名姓名不能为空');
     }
     if (effectiveSignName.length > 255) {
       throw new BadRequestException('签名姓名不能超过255个字符');
     }
+    const signImage = validateSignImage(body.signImage);
 
     // P0: 签名不可变性校验 — 已签不可覆盖
     if (body.signType === 'self' && instance.selfSignName) {
@@ -1002,7 +1010,7 @@ export class AssessmentOperationService {
           .set({
             selfSignName: effectiveSignName,
             selfSignAt: now,
-            selfSignImage: body.signImage || null,
+            selfSignImage: signImage,
             status: newStatus,
           })
           .where(
@@ -1035,7 +1043,7 @@ export class AssessmentOperationService {
           .set({
             supervisorSignName: effectiveSignName,
             supervisorSignAt: now,
-            supervisorSignImage: body.signImage || null,
+            supervisorSignImage: signImage,
             status: newStatus,
             completedAt: now,
           })
@@ -1070,9 +1078,11 @@ export class AssessmentOperationService {
     id: string,
     signType: 'self' | 'supervisor',
     userId: string,
-    userName: string,
   ): Promise<Omit<SignTokenResponse, 'token' | 'signUrl'>> {
     validateUUID(id);
+    if (signType !== 'self' && signType !== 'supervisor') {
+      throw new BadRequestException('签名类型无效，必须为 self 或 supervisor');
+    }
     const rows = await this.db
       .select({
         id: assessmentInstance.id,
@@ -1166,25 +1176,77 @@ export class AssessmentOperationService {
   }
 
   async getSignSession(
-    instanceId: string,
-    signType: 'self' | 'supervisor',
+    token: string,
+    userId: string,
   ): Promise<SignSessionResponse> {
-    const rows = await this.db
+    const sessionRows = await this.db
+      .select()
+      .from(assessmentSignSession)
+      .where(eq(assessmentSignSession.tokenHash, hashSignToken(token)))
+      .limit(1);
+
+    if (sessionRows.length === 0) {
+      return {
+        status: 'invalid',
+        instanceId: '',
+        signType: 'self',
+        employeeName: '',
+        period: '',
+      };
+    }
+
+    const session = sessionRows[0];
+    const instanceRows = await this.db
       .select({
+        id: assessmentInstance.id,
         period: assessmentInstance.period,
         employeeId: assessmentInstance.employeeId,
         status: assessmentInstance.status,
+        selfSignName: assessmentInstance.selfSignName,
+        supervisorSignName: assessmentInstance.supervisorSignName,
       })
       .from(assessmentInstance)
-      .where(eq(assessmentInstance.id, instanceId))
+      .where(eq(assessmentInstance.id, session.instanceId))
       .limit(1);
 
-    if (rows.length === 0) {
-      return { instanceId, signType, employeeName: '', period: '' };
+    const instance = instanceRows[0] ?? null;
+    const status = resolveSignSessionStatus(
+      {
+        ...session,
+        signType: session.signType as 'self' | 'supervisor',
+      },
+      instance,
+      userId,
+    );
+
+    if (
+      session.status === 'pending' &&
+      (status === 'expired' || status === 'failed' || status === 'succeeded')
+    ) {
+      await this.db
+        .update(assessmentSignSession)
+        .set({
+          status,
+          consumedAt: status === 'succeeded' ? new Date() : null,
+          failureReason:
+            status === 'failed' ? '考核流程状态已变化' : null,
+        })
+        .where(
+          and(
+            eq(assessmentSignSession.id, session.id),
+            eq(assessmentSignSession.status, 'pending'),
+          ),
+        );
     }
 
-    if (!isSignAllowedInStatus(rows[0].status, signType)) {
-      return { instanceId, signType, employeeName: '', period: '' };
+    if (status !== 'pending' || !instance) {
+      return {
+        status,
+        instanceId: status === 'succeeded' ? session.instanceId : '',
+        signType: session.signType as 'self' | 'supervisor',
+        employeeName: '',
+        period: '',
+      };
     }
 
     const empRows = await this.db
@@ -1192,162 +1254,199 @@ export class AssessmentOperationService {
       .from(employee)
       .where(
         and(
-          eq(employee.employeeId, rows[0].employeeId),
+          eq(employee.employeeId, instance.employeeId),
           isNull(employee.deletedAt),
         ),
       )
       .limit(1);
 
     return {
-      instanceId,
-      signType,
+      status,
+      instanceId: session.instanceId,
+      signType: session.signType as 'self' | 'supervisor',
       employeeName: empRows[0]?.name || '',
-      period: rows[0].period,
+      period: instance.period,
+    };
+  }
+
+  async getSignStatus(
+    token: string,
+    userId: string,
+  ): Promise<SignStatusResponse> {
+    const session = await this.getSignSession(token, userId);
+    return {
+      signed: session.status === 'succeeded',
+      status: session.status,
     };
   }
 
   async signByToken(
-    payload: { instanceId: string; signType: 'self' | 'supervisor'; userId: string; userName: string },
-    signName: string,
+    token: string,
+    userId: string,
+    userName: string,
     signImage?: string,
-  ): Promise<{ success: boolean; status: string }> {
-    const id = payload.instanceId;
-    const signType = payload.signType;
-
-    const effectiveSignName = signName?.trim() || payload.userName || '';
+  ): Promise<SignSubmissionResponse> {
+    const effectiveSignName = userName?.trim() || '';
     if (!effectiveSignName) {
       throw new BadRequestException('签名姓名不能为空');
     }
     if (effectiveSignName.length > 255) {
       throw new BadRequestException('签名姓名不能超过255个字符');
     }
+    const validatedSignImage = validateSignImage(signImage);
 
     const now: Date = new Date();
-    const rows = await this.db
-      .select({
-        status: assessmentInstance.status,
-        employeeId: assessmentInstance.employeeId,
-        selfSignName: assessmentInstance.selfSignName,
-        supervisorSignName: assessmentInstance.supervisorSignName,
-      })
-      .from(assessmentInstance)
-      .where(eq(assessmentInstance.id, id))
-      .limit(1);
+    const result = await this.db.transaction(async (tx) => {
+      const sessionRows = await tx
+        .select()
+        .from(assessmentSignSession)
+        .where(
+          eq(assessmentSignSession.tokenHash, hashSignToken(token)),
+        )
+        .for('update')
+        .limit(1);
 
-    if (rows.length === 0) {
-      throw new NotFoundException('考核记录不存在');
-    }
+      if (sessionRows.length === 0) {
+        return { success: false, status: 'invalid' } as SignSubmissionResponse;
+      }
 
-    const instance = rows[0];
-
-    if (!isSignAllowedInStatus(instance.status, signType)) {
-      throw new BadRequestException(
-        signType === 'self'
-          ? '当前状态不允许员工签名，请先完成自评'
-          : '当前状态不允许上级签名，请先完成上级评分',
-      );
-    }
-
-    if (signType === 'self' && instance.selfSignName) {
-      throw new BadRequestException('本人已签名，不可重复签名');
-    }
-    if (signType === 'supervisor' && instance.supervisorSignName) {
-      throw new BadRequestException('上级已签名，不可重复签名');
-    }
-
-    let newStatus: string;
-
-    await this.db.transaction(async (tx) => {
-      const locked = await tx
+      const session = sessionRows[0];
+      const instanceRows = await tx
         .select({
           status: assessmentInstance.status,
           selfSignName: assessmentInstance.selfSignName,
           supervisorSignName: assessmentInstance.supervisorSignName,
           employeeId: assessmentInstance.employeeId,
+          supervisorId: assessmentInstance.supervisorId,
         })
         .from(assessmentInstance)
-        .where(eq(assessmentInstance.id, id))
+        .where(eq(assessmentInstance.id, session.instanceId))
         .for('update')
         .limit(1);
 
-      if (locked.length === 0) {
-        throw new NotFoundException('考核记录不存在');
+      if (instanceRows.length === 0) {
+        return { success: false, status: 'invalid' } as SignSubmissionResponse;
       }
 
-      const current = locked[0];
+      const current = instanceRows[0];
+      const sessionStatus = resolveSignSessionStatus(
+        {
+          ...session,
+          signType: session.signType as 'self' | 'supervisor',
+        },
+        current,
+        userId,
+        now,
+      );
 
-      if (!isSignAllowedInStatus(current.status, signType)) {
-        throw new BadRequestException(
-          signType === 'self'
-            ? '当前状态不允许员工签名'
-            : '当前状态不允许上级签名',
-        );
+      if (sessionStatus !== 'pending') {
+        if (
+          session.status === 'pending' &&
+          sessionStatus !== 'forbidden' &&
+          sessionStatus !== 'invalid'
+        ) {
+          await tx
+            .update(assessmentSignSession)
+            .set({
+              status: sessionStatus,
+              consumedAt: sessionStatus === 'succeeded' ? now : null,
+              failureReason:
+                sessionStatus === 'failed' ? '考核流程状态已变化' : null,
+            })
+            .where(eq(assessmentSignSession.id, session.id));
+        }
+        return {
+          success: sessionStatus === 'succeeded',
+          status: sessionStatus,
+        } as SignSubmissionResponse;
       }
 
-      newStatus = getStatusAfterSign(current.status, signType);
+      const signType = session.signType as 'self' | 'supervisor';
+      const newStatus = getStatusAfterSign(current.status, signType);
 
       if (signType === 'self') {
-        if (current.selfSignName) {
-          throw new BadRequestException('本人已签名');
+        if (current.employeeId !== userId) {
+          return {
+            success: false,
+            status: 'forbidden',
+          } as SignSubmissionResponse;
         }
-        const result = await tx
+        await tx
           .update(assessmentInstance)
           .set({
             selfSignName: effectiveSignName,
             selfSignAt: now,
-            selfSignImage: signImage || null,
+            selfSignImage: validatedSignImage,
             status: newStatus,
           })
+          .where(eq(assessmentInstance.id, session.instanceId));
+      } else {
+        if (!current.selfSignName) {
+          return { success: false, status: 'failed' } as SignSubmissionResponse;
+        }
+
+        const empRows = await tx
+          .select({
+            supervisorId: employee.supervisorId,
+          })
+          .from(employee)
           .where(
             and(
-              eq(assessmentInstance.id, id),
-              sql`${assessmentInstance.selfSignName} IS NULL`,
+              eq(employee.employeeId, current.employeeId),
+              isNull(employee.deletedAt),
             ),
           )
-          .returning();
-        if (result.length === 0) {
-          throw new BadRequestException('本人签名已被他人抢先提交');
+          .limit(1);
+        const scope = await this.accessScopeService.getScope(userId);
+        const canOperate =
+          scope.kind === 'global' ||
+          current.supervisorId === userId ||
+          empRows[0]?.supervisorId === userId;
+        if (!canOperate) {
+          return {
+            success: false,
+            status: 'forbidden',
+          } as SignSubmissionResponse;
         }
-      } else {
-        if (current.supervisorSignName) {
-          throw new BadRequestException('上级已签名');
-        }
-        if (!current.selfSignName) {
-          throw new BadRequestException('请先完成员工签名');
-        }
-        const result = await tx
+
+        await tx
           .update(assessmentInstance)
           .set({
             supervisorSignName: effectiveSignName,
             supervisorSignAt: now,
-            supervisorSignImage: signImage || null,
+            supervisorSignImage: validatedSignImage,
             status: newStatus,
             completedAt: now,
           })
-          .where(
-            and(
-              eq(assessmentInstance.id, id),
-              sql`${assessmentInstance.supervisorSignName} IS NULL`,
-            ),
-          )
-          .returning();
-        if (result.length === 0) {
-          throw new BadRequestException('上级签名已被他人抢先提交');
-        }
+          .where(eq(assessmentInstance.id, session.instanceId));
       }
 
       await tx.insert(auditLog).values({
-        operatorId: payload.userId,
+        operatorId: userId,
         action: `sign_${signType}_by_token`,
         targetType: 'assessment_instance',
-        targetId: id,
+        targetId: session.instanceId,
       });
+
+      await tx
+        .update(assessmentSignSession)
+        .set({
+          status: 'succeeded',
+          consumedAt: now,
+          failureReason: null,
+        })
+        .where(eq(assessmentSignSession.id, session.id));
+
+      return {
+        success: true,
+        status: 'succeeded',
+      } as SignSubmissionResponse;
     });
 
     this.logger.log(
-      `Sign ${signType} by token for instance ${id}, status=${newStatus}`,
+      `Sign by token for user ${userId}, status=${result.status}`,
     );
 
-    return { success: true, status: newStatus! };
+    return result;
   }
 }

@@ -26,6 +26,11 @@ const MobileSignPad: React.FC<MobileSignPadProps> = ({ onChange }) => {
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    if (hasDrawnRef.current) {
+      hasDrawnRef.current = false;
+      setIsEmpty(true);
+      onChange(null);
+    }
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width * dpr;
@@ -37,7 +42,7 @@ const MobileSignPad: React.FC<MobileSignPadProps> = ({ onChange }) => {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.strokeStyle = '#1a1a1a';
-  }, [getCtx]);
+  }, [getCtx, onChange]);
 
   useEffect(() => {
     resizeCanvas();
@@ -102,8 +107,8 @@ const MobileSignPad: React.FC<MobileSignPadProps> = ({ onChange }) => {
   };
 
   return (
-    <div className="relative flex flex-1 flex-col">
-      <div className="relative flex-1 rounded-lg border-2 border-dashed border-input bg-white">
+    <div className="relative min-h-0 flex-1 p-2 landscape:p-1">
+      <div className="relative h-full min-h-0 rounded-lg border-2 border-dashed border-input bg-white">
         <canvas
           ref={canvasRef}
           className="absolute inset-0 size-full touch-none"
@@ -121,14 +126,13 @@ const MobileSignPad: React.FC<MobileSignPadProps> = ({ onChange }) => {
             </span>
           </div>
         )}
-      </div>
-      <div className="flex justify-end px-4 pb-2">
         <Button
           type="button"
-          variant="ghost"
+          variant="outline"
           size="sm"
           onClick={handleClear}
           disabled={isEmpty}
+          className="absolute right-2 top-2 z-10 bg-white/95 shadow-sm landscape:h-8 landscape:px-2"
         >
           <Eraser className="size-4 mr-1" />
           清空
@@ -153,29 +157,52 @@ const MobileSignPage: React.FC = () => {
   } | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setSubmitting(false);
+    setError(null);
+    setDone(false);
+    setSession(null);
+    setSignImage(null);
+
     if (!token) {
       setError('链接不合法，缺少签名凭证');
       setLoading(false);
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
     signTokenApi
       .getSignSession(token)
       .then((data) => {
-        if (!data.instanceId) {
-          setError('签名链接已过期或不合法，请重新发起');
-        } else {
+        if (cancelled) return;
+        if (data.status === 'succeeded') {
+          setDone(true);
+        } else if (data.status === 'pending' && data.instanceId) {
           setSession({
             employeeName: data.employeeName,
             period: data.period,
             signType: data.signType,
           });
+        } else if (data.status === 'forbidden') {
+          setError('此签名链接不属于您的账号，请使用接收签名请求的飞书账号打开');
+        } else if (data.status === 'expired') {
+          setError('签名链接已过期，请重新发起');
+        } else {
+          setError('签名链接已失效或不合法，请重新发起');
         }
       })
       .catch((err) => {
+        if (cancelled) return;
         logger.error('Failed to get sign session:', err);
         setError('签名链接验证失败，请重新发起');
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [token]);
 
   const handleSubmit = async () => {
@@ -184,13 +211,16 @@ const MobileSignPage: React.FC = () => {
     try {
       const result = await signTokenApi.submitSignByToken({
         token,
-        signName: '',
         signImage,
       });
-      if (result.success) {
+      if (result.success || result.status === 'succeeded') {
         setDone(true);
       } else if (result.status === 'forbidden') {
         setError('此签名链接不属于您的账号，请使用发送签名请求的飞书账号打开');
+      } else if (result.status === 'expired') {
+        setError('签名链接已过期，请重新发起');
+      } else if (result.status === 'failed' || result.status === 'invalid') {
+        setError('签名会话已失效，请重新发起');
       } else {
         setError('签名提交失败，请重试');
       }
@@ -205,7 +235,7 @@ const MobileSignPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex h-svh items-center justify-center bg-white">
+      <div className="flex h-dvh items-center justify-center bg-white">
         <p className="text-muted-foreground">加载中...</p>
       </div>
     );
@@ -213,7 +243,7 @@ const MobileSignPage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="flex h-svh flex-col items-center justify-center gap-4 bg-white p-8">
+      <div className="flex h-dvh flex-col items-center justify-center gap-4 bg-white p-8">
         <p className="text-center text-base text-destructive">{error}</p>
         <Button variant="outline" onClick={() => window.close()}>
           关闭
@@ -224,7 +254,7 @@ const MobileSignPage: React.FC = () => {
 
   if (done) {
     return (
-      <div className="flex h-svh flex-col items-center justify-center gap-4 bg-white p-8">
+      <div className="flex h-dvh flex-col items-center justify-center gap-4 bg-white p-8">
         <CheckCircle className="size-16 text-success" />
         <p className="text-center text-lg font-medium text-success">签名成功</p>
         <p className="text-center text-sm text-muted-foreground">
@@ -241,30 +271,30 @@ const MobileSignPage: React.FC = () => {
     session?.signType === 'self' ? '本人签名' : '上级签名';
 
   return (
-    <div className="flex h-svh flex-col bg-white">
-      <header className="flex h-12 items-center justify-between border-b px-4 shrink-0">
-        <div className="flex items-center gap-2">
+    <div className="relative flex h-dvh min-h-0 flex-col overflow-hidden bg-white">
+      <header className="flex h-12 shrink-0 items-center justify-between border-b bg-white px-4 landscape:absolute landscape:left-2 landscape:top-2 landscape:z-20 landscape:h-8 landscape:max-w-[65vw] landscape:gap-3 landscape:rounded-md landscape:border landscape:bg-white/95 landscape:px-2 landscape:shadow-sm">
+        <div className="flex min-w-0 items-center gap-2">
           <button
             type="button"
-            className="text-muted-foreground"
+            className="shrink-0 text-muted-foreground"
             onClick={() => window.close()}
           >
             <X className="size-5" />
           </button>
-          <span className="text-sm font-medium">
+          <span className="truncate text-sm font-medium landscape:text-xs">
             {signTypeLabel}
           </span>
         </div>
-        <span className="text-xs text-muted-foreground">
+        <span className="truncate text-xs text-muted-foreground landscape:max-w-[38vw] landscape:text-[11px]">
           {session?.employeeName} · {session?.period}
         </span>
       </header>
 
       <MobileSignPad onChange={setSignImage} />
 
-      <footer className="shrink-0 border-t px-4 py-3">
+      <footer className="shrink-0 border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] landscape:absolute landscape:bottom-2 landscape:right-2 landscape:z-20 landscape:border-0 landscape:p-0">
         <Button
-          className="h-12 w-full text-base"
+          className="h-12 w-full text-base shadow-sm landscape:h-10 landscape:w-32 landscape:text-sm landscape:shadow-lg"
           disabled={!signImage || submitting}
           onClick={handleSubmit}
         >
