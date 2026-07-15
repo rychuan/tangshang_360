@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -47,10 +48,16 @@ import type {
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { handleApiError } from '@client/src/utils/api-error';
 
+
 const BitableConnectionTab: React.FC = () => {
-  const [connections, setConnections] = useState<BitableConnectionItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  const { data: connections = [], isLoading: loading, error: queryError } = useQuery({
+    queryKey: ['bitable-connections'],
+    queryFn: () => api.list({ page: 1, pageSize: 100 }).then((res) => res.items),
+  });
+  const error = queryError ? '获取连接列表失败' : null;
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<BitableConnectionItem | null>(null);
   const [deleteTarget, setDeleteTarget] =
@@ -70,38 +77,20 @@ const BitableConnectionTab: React.FC = () => {
   } | null>(null);
   const [showGuide, setShowGuide] = useState(false);
 
-  const fetchConnections = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await api.list({ page: 1, pageSize: 100 });
-      setConnections(res.items);
-    } catch (err) {
-      handleApiError(err);
-      setError('获取连接列表失败');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchConnections();
-  }, [fetchConnections]);
-
   const handleSave = async (data: CreateBitableConnectionRequest) => {
     if (editing) {
       await api.update(editing.id, data);
     } else {
       await api.create(data);
     }
-    await fetchConnections();
+    await queryClient.invalidateQueries({ queryKey: ['bitable-connections'] });
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     await api.remove(deleteTarget.id);
     setDeleteTarget(null);
-    await fetchConnections();
+    await queryClient.invalidateQueries({ queryKey: ['bitable-connections'] });
   };
 
   const handleImport = async (conn: BitableConnectionItem) => {
@@ -358,7 +347,7 @@ const BitableConnectionTab: React.FC = () => {
           <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
             <XCircle className="size-8 opacity-30 text-destructive" />
             <p className="text-sm text-destructive">{error}</p>
-            <Button variant="outline" size="sm" onClick={fetchConnections}>
+            <Button variant="outline" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ['bitable-connections'] })}>
               重试
             </Button>
           </CardContent>
