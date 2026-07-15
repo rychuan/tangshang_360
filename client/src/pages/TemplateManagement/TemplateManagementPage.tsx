@@ -109,8 +109,7 @@ const TemplateManagementPage: React.FC = () => {
   const positions: string[] =
     positionsQuery.data?.items
       ?.filter((p: { isActive: boolean; name: string }) => p.isActive)
-      .map((p: { name: string }) => p.name) ??
-    POSITION_OPTIONS;
+      .map((p: { name: string }) => p.name) ?? POSITION_OPTIONS;
   const positionsLoading = positionsQuery.isLoading;
 
   const handleSearch = () => {
