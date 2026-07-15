@@ -184,7 +184,7 @@ const MobileSignPage: React.FC = () => {
     try {
       const result = await signTokenApi.submitSignByToken({
         token,
-        signName: session?.employeeName || '',
+        signName: '',
         signImage,
       });
       if (result.success) {
