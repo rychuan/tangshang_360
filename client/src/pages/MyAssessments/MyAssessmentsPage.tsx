@@ -220,37 +220,18 @@ const MyAssessmentsPage: React.FC = () => {
           ) : (
             <ChartContainer config={chartConfig} className="h-[300px] w-full">
               <AreaChart
+                accessibilityLayer
                 data={trendItems.map((t) => ({ ...t, score: t.avgScore }))}
+                margin={{ left: 12, right: 12 }}
               >
-                <defs>
-                  <linearGradient
-                    id="fillMyAssessment"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop
-                      offset="5%"
-                      stopColor="hsl(var(--chart-2))"
-                      stopOpacity={0.3}
-                    />
-                    <stop
-                      offset="95%"
-                      stopColor="hsl(var(--chart-2))"
-                      stopOpacity={0.05}
-                    />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <CartesianGrid vertical={false} className="stroke-muted" />
                 <XAxis
                   dataKey="period"
                   tickLine={false}
                   axisLine={false}
+                  tickMargin={8}
+                  tickFormatter={(value) => value.slice(0, 3)}
                   className="text-xs text-muted-foreground"
-                  angle={-45}
-                  textAnchor="end"
-                  height={60}
                 />
                 <YAxis
                   tickLine={false}
@@ -258,13 +239,16 @@ const MyAssessmentsPage: React.FC = () => {
                   className="text-xs text-muted-foreground"
                   domain={[0, 100]}
                 />
-                <ChartTooltip content={<ChartTooltipContent />} />
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent indicator="line" />}
+                />
                 <Area
-                  type="monotone"
                   dataKey="score"
-                  fill="url(#fillMyAssessment)"
-                  stroke="hsl(var(--chart-2))"
-                  strokeWidth={2}
+                  type="natural"
+                  fill="var(--color-score)"
+                  fillOpacity={0.4}
+                  stroke="var(--color-score)"
                   connectNulls
                 />
               </AreaChart>
