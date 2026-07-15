@@ -2,12 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCurrentUserProfile } from '@lark-apaas/client-toolkit/hooks/useCurrentUserProfile';
 import { useBreadcrumb } from '@/components/business-ui/breadcrumb-context';
-import {
-  ArrowLeft,
-  Save,
-  Send,
-  ChevronRight,
-} from 'lucide-react';
+import { ArrowLeft, Save, Send, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -297,99 +292,105 @@ const AssessmentDetailPage: React.FC = () => {
                 signImage: detail.supervisorSignImage || null,
               },
             ].map((step, i) => {
-	              const stepTone = step.done
-	                ? {
-	                    panel: 'border-success/20 bg-success/[0.03]',
-		                    badge:
-		                      'bg-success/10 text-success border-success/20',
-		                    result: 'border-success/20',
-		                    divider: 'bg-success/20',
-		                    variant: 'default' as const,
-		                  }
-	                : step.active
-	                  ? {
-	                      panel:
-	                        'border-primary bg-primary/5 shadow-sm ring-2 ring-primary/15',
-		                      badge:
-		                        'bg-primary/10 text-primary border-primary/20',
-		                      result: 'border-primary/20',
-		                      divider: 'bg-primary/20',
-		                      variant: 'secondary' as const,
-		                    }
-		                  : {
-		                      panel: 'border-border bg-muted/20',
-		                      badge:
-		                        'bg-muted text-muted-foreground border-border',
-		                      result: 'border-border',
-		                      divider: 'bg-border',
-		                      variant: 'outline' as const,
-		                    };
+              const stepTone = step.done
+                ? {
+                    panel: 'border-success/20 bg-success/[0.03]',
+                    badge: 'bg-success/10 text-success border-success/20',
+                    result: 'border-success/20',
+                    divider: 'bg-success/20',
+                    variant: 'default' as const,
+                  }
+                : step.active
+                  ? {
+                      panel:
+                        'border-primary bg-primary/5 shadow-sm ring-2 ring-primary/15',
+                      badge: 'bg-primary/10 text-primary border-primary/20',
+                      result: 'border-primary/20',
+                      divider: 'bg-primary/20',
+                      variant: 'secondary' as const,
+                    }
+                  : {
+                      panel: 'border-border bg-muted/20',
+                      badge: 'bg-muted text-muted-foreground border-border',
+                      result: 'border-border',
+                      divider: 'bg-border',
+                      variant: 'outline' as const,
+                    };
 
               return (
-		              <div key={step.key} className="flex flex-1 items-center min-w-0">
-	                <div
-			                  className={`flex h-full w-full min-w-0 flex-col gap-4 rounded-md border p-4 lg:flex-row lg:items-center lg:gap-6 ${stepTone.panel}`}
-	                >
-		                  <div className="flex min-w-[190px] flex-col">
-                    <div className="flex h-8 items-center justify-start overflow-hidden">
-                      <span className="truncate text-xs font-medium">
-                        {step.label}
-                      </span>
+                <div
+                  key={step.key}
+                  className="flex flex-1 items-center min-w-0"
+                >
+                  <div
+                    className={`flex h-full w-full min-w-0 flex-col gap-4 rounded-md border p-4 lg:flex-row lg:items-center lg:gap-6 ${stepTone.panel}`}
+                  >
+                    <div className="flex min-w-[190px] flex-col">
+                      <div className="flex h-8 items-center justify-start overflow-hidden">
+                        <span className="truncate text-xs font-medium">
+                          {step.label}
+                        </span>
+                      </div>
+                      <div className="flex h-8 items-center justify-start gap-2">
+                        {step.operatorId ? (
+                          <UserDisplay
+                            userId={step.operatorId}
+                            size="small"
+                            showLabel
+                          />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            -
+                          </span>
+                        )}
+                        <Badge
+                          variant={stepTone.variant}
+                          className={`text-xs px-1.5 py-0 shrink-0 ${stepTone.badge}`}
+                        >
+                          {step.statusText}
+                        </Badge>
+                      </div>
                     </div>
-                    <div className="flex h-8 items-center justify-start gap-2">
-                      {step.operatorId ? (
-                        <UserDisplay
-                          userId={step.operatorId}
-                          size="small"
-                          showLabel
-                        />
-                      ) : (
-                        <span className="text-xs text-muted-foreground">-</span>
-	                      )}
-	                      <Badge
-	                        variant={stepTone.variant}
-	                        className={`text-xs px-1.5 py-0 shrink-0 ${stepTone.badge}`}
-	                      >
-                        {step.statusText}
-                      </Badge>
+                    <div
+                      className={`flex h-16 w-full min-w-0 flex-1 items-center gap-3 overflow-hidden rounded-md border px-3 ${stepTone.result}`}
+                    >
+                      <div className="flex w-20 shrink-0 items-center justify-center sm:w-24">
+                        {step.score != null ? (
+                          <span className="text-base font-semibold tabular-nums">
+                            {step.score}分
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            {step.active ? '进行中' : '待进行'}
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        className={`h-8 w-px shrink-0 ${stepTone.divider}`}
+                      />
+                      <div className="flex min-w-0 flex-1 items-center justify-center overflow-hidden">
+                        {step.signImage ? (
+                          <img
+                            src={step.signImage}
+                            alt={`${step.label}签名`}
+                            className="max-h-12 max-w-full object-scale-down"
+                          />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            未签名
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-			                  <div className={`flex h-16 w-full min-w-0 flex-1 items-center gap-3 overflow-hidden rounded-md border px-3 ${stepTone.result}`}>
-			                    <div className="flex w-20 shrink-0 items-center justify-center sm:w-24">
-	                      {step.score != null ? (
-	                        <span className="text-base font-semibold tabular-nums">
-	                          {step.score}分
-                        </span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">
-                          {step.active ? '进行中' : '待进行'}
-	                        </span>
-	                      )}
-	                    </div>
-			                    <div className={`h-8 w-px shrink-0 ${stepTone.divider}`} />
-			                    <div className="flex min-w-0 flex-1 items-center justify-center overflow-hidden">
-	                      {step.signImage ? (
-	                        <img
-	                          src={step.signImage}
-	                          alt={`${step.label}签名`}
-		                          className="max-h-12 max-w-full object-scale-down"
-	                        />
-	                      ) : (
-                        <span className="text-xs text-muted-foreground">
-                          未签名
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                  {i < 1 && (
+                    <ChevronRight
+                      className={`hidden size-4 shrink-0 -ml-1 -mr-1 lg:block ${
+                        step.done ? 'text-success' : 'text-muted-foreground/30'
+                      }`}
+                    />
+                  )}
                 </div>
-	                {i < 1 && (
-	                  <ChevronRight
-	                    className={`hidden size-4 shrink-0 -ml-1 -mr-1 lg:block ${
-	                      step.done ? 'text-success' : 'text-muted-foreground/30'
-	                    }`}
-	                  />
-                )}
-              </div>
               );
             })}
           </div>
@@ -405,50 +406,50 @@ const AssessmentDetailPage: React.FC = () => {
         updateRating={updateRating}
       />
 
-	      {/* Actions */}
-	      {(canEditSelf || canEditSupervisor || isCompleted) && (
-	        <div className="sticky bottom-0 z-20 -mx-2 border-t bg-background/95 px-3 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-	          <div className="flex flex-wrap items-center justify-center gap-3">
-	            {canEditSelf && (
-	              <>
-	                <Button
-	                  variant="outline"
-	                  onClick={() => void handleSaveDraft()}
-	                  disabled={submitting}
-	                >
-	                  <Save data-icon="inline-start" />
-	                  保存草稿
-	                </Button>
-	                <Button onClick={handleSubmitClick} disabled={submitting}>
-	                  <Send data-icon="inline-start" />
-	                  提交自评
-	                </Button>
-	              </>
-	            )}
-	            {canEditSupervisor && (
-	              <>
-	                <Button
-	                  variant="outline"
-	                  onClick={() => void handleSaveDraft()}
-	                  disabled={submitting}
-	                >
-	                  <Save data-icon="inline-start" />
-	                  保存草稿
-	                </Button>
-	                <Button onClick={handleSubmitClick} disabled={submitting}>
-	                  <Send data-icon="inline-start" />
-	                  提交评分
-	                </Button>
-	              </>
-	            )}
-	            {isCompleted && (
-	              <p className="text-muted-foreground text-sm">
-	                绩效已完成，档案只读
-	              </p>
-	            )}
-	          </div>
-	        </div>
-	      )}
+      {/* Actions */}
+      {(canEditSelf || canEditSupervisor || isCompleted) && (
+        <div className="sticky bottom-0 z-20 -mx-2 border-t bg-background/95 px-3 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {canEditSelf && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => void handleSaveDraft()}
+                  disabled={submitting}
+                >
+                  <Save data-icon="inline-start" />
+                  保存草稿
+                </Button>
+                <Button onClick={handleSubmitClick} disabled={submitting}>
+                  <Send data-icon="inline-start" />
+                  提交自评
+                </Button>
+              </>
+            )}
+            {canEditSupervisor && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => void handleSaveDraft()}
+                  disabled={submitting}
+                >
+                  <Save data-icon="inline-start" />
+                  保存草稿
+                </Button>
+                <Button onClick={handleSubmitClick} disabled={submitting}>
+                  <Send data-icon="inline-start" />
+                  提交评分
+                </Button>
+              </>
+            )}
+            {isCompleted && (
+              <p className="text-muted-foreground text-sm">
+                绩效已完成，档案只读
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       <SignDialog
         open={signDialogOpen}

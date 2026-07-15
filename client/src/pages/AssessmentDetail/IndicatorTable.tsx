@@ -211,9 +211,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                           className="w-full text-xs"
                           placeholder="备注"
                           value={ratings[indicator.id]?.comment ?? ''}
-                          onChange={(
-                            e: React.ChangeEvent<HTMLInputElement>,
-                          ) =>
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                             updateRating(
                               indicator.id,
                               'comment',
