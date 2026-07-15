@@ -55,10 +55,15 @@ const DictPanel: React.FC<{ dictType: string }> = ({ dictType }) => {
   const api = useMemo(() => dictApi(dictType), [dictType]);
   const queryClient = useQueryClient();
 
-  const { data: items = [], isLoading: loading } = useQuery({
+  const { data, isLoading: loading } = useQuery({
     queryKey: ['dictionary', dictType],
-    queryFn: () => api.list().then((res: { items: DictEntry[] }) => res.items),
+    queryFn: async () => {
+      const res = await api.list();
+      const items = res?.items;
+      return Array.isArray(items) ? items : [];
+    },
   });
+  const items = Array.isArray(data) ? data : [];
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<DictEntry | null>(null);
