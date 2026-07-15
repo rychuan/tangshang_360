@@ -22,6 +22,40 @@ export class AssessmentOperationController {
     private readonly signTokenService: SignTokenService,
   ) {}
 
+  @Get('sign-session')
+  async signSession(@Query('token') token: string): Promise<SignSessionResponse> {
+    if (!token) {
+      return { instanceId: '', signType: 'self', employeeName: '', period: '' };
+    }
+    const payload = this.signTokenService.validateToken(token);
+    if (!payload) {
+      return { instanceId: '', signType: 'self', employeeName: '', period: '' };
+    }
+    const session = await this.service.getSignSession(
+      payload.instanceId,
+      payload.signType,
+    );
+    return session;
+  }
+
+  @Post('sign-session')
+  async signByToken(
+    @Req() req: Request,
+    @Body() body: SignByTokenRequest,
+  ): Promise<{ success: boolean; status: string }> {
+    const payload = this.signTokenService.consumeToken(body.token);
+    if (!payload) {
+      return { success: false, status: 'expired' };
+    }
+    return this.service.signByToken(payload, body.signName, body.signImage);
+  }
+
+  @Get('sign-session/status')
+  async signStatus(@Query('token') token: string): Promise<SignStatusResponse> {
+    const payload = this.signTokenService.validateToken(token);
+    return { signed: !payload };
+  }
+
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
   @RequirePermission('my_assessments', 'view')
   @Get(':id')
@@ -156,37 +190,4 @@ export class AssessmentOperationController {
     };
   }
 
-  @Get('sign-session')
-  async signSession(@Query('token') token: string): Promise<SignSessionResponse> {
-    if (!token) {
-      return { instanceId: '', signType: 'self', employeeName: '', period: '' };
-    }
-    const payload = this.signTokenService.validateToken(token);
-    if (!payload) {
-      return { instanceId: '', signType: 'self', employeeName: '', period: '' };
-    }
-    const session = await this.service.getSignSession(
-      payload.instanceId,
-      payload.signType,
-    );
-    return session;
-  }
-
-  @Post('sign-session')
-  async signByToken(
-    @Req() req: Request,
-    @Body() body: SignByTokenRequest,
-  ): Promise<{ success: boolean; status: string }> {
-    const payload = this.signTokenService.consumeToken(body.token);
-    if (!payload) {
-      return { success: false, status: 'expired' };
-    }
-    return this.service.signByToken(payload, body.signName, body.signImage);
-  }
-
-  @Get('sign-session/status')
-  async signStatus(@Query('token') token: string): Promise<SignStatusResponse> {
-    const payload = this.signTokenService.validateToken(token);
-    return { signed: !payload };
-  }
 }
