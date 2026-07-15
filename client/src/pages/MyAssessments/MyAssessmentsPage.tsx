@@ -18,7 +18,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, CartesianGrid, Line, XAxis, YAxis } from 'recharts';
 import { Eye, ChevronLeft, ChevronRight, AreaChartIcon } from 'lucide-react';
 import { PageHeader } from '@/components/business-ui/page-header';
 import { StatusBadge, GradeBadge } from '@/components/business-ui/status-badge';
@@ -259,11 +259,18 @@ const MyAssessmentsPage: React.FC = () => {
                 />
                 <Area
                   dataKey="score"
-                  type="basis"
+                  type="natural"
                   fill="url(#fillScore)"
                   fillOpacity={0.4}
+                  stroke="none"
+                />
+                <Line
+                  dataKey="score"
+                  type="basis"
                   stroke="var(--color-score)"
                   strokeWidth={2}
+                  dot={false}
+                  connectNulls
                 />
               </AreaChart>
             </ChartContainer>
