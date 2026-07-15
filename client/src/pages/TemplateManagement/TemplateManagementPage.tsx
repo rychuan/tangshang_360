@@ -98,8 +98,8 @@ const TemplateManagementPage: React.FC = () => {
   });
 
   const positionsQuery = useQuery({
-    queryKey: ['dictionary', 'position'],
-    queryFn: () => dictionaryApi('position').list(),
+    queryKey: ['dictionary', 'position', 'active'],
+    queryFn: () => dictionaryApi('position').list(undefined, true),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -107,7 +107,9 @@ const TemplateManagementPage: React.FC = () => {
   const items: AssessmentTemplateItem[] = listQuery.data?.items ?? [];
   const total = listQuery.data?.total ?? 0;
   const positions: string[] =
-    positionsQuery.data?.items?.map((p: { name: string }) => p.name) ??
+    positionsQuery.data?.items
+      ?.filter((p: { isActive: boolean; name: string }) => p.isActive)
+      .map((p: { name: string }) => p.name) ??
     POSITION_OPTIONS;
   const positionsLoading = positionsQuery.isLoading;
 

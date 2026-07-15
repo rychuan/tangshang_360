@@ -6,11 +6,11 @@ import type {
 } from '@shared/api.interface';
 
 const dictApi = (type: string) => ({
-  async list(keyword?: string): Promise<DictListResponse> {
+  async list(keyword?: string, onlyActive?: boolean): Promise<DictListResponse> {
     const { data } = await axiosForBackend<DictListResponse>({
       url: `/api/dictionary/${type}`,
       method: 'GET',
-      params: keyword ? { keyword } : undefined,
+      params: { ...(keyword ? { keyword } : {}), ...(onlyActive ? { onlyActive: 'true' } : {}) },
     });
     return data;
   },

@@ -29,8 +29,9 @@ export class SystemDictController {
   async list(
     @Param('type') type: string,
     @Query('keyword') keyword?: string,
+    @Query('onlyActive') onlyActive?: string,
   ): Promise<DictListResponse> {
-    return this.service.list(type, keyword);
+    return this.service.list(type, keyword, onlyActive === 'true');
   }
 
   @CanRole(['admin', 'hrd'])

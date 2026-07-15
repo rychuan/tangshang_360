@@ -42,10 +42,13 @@ export class SystemDictService {
     },
   };
 
-  async list(dictType: string, keyword?: string): Promise<DictListResponse> {
-    const conditions = [eq(systemDict.dictType, dictType)];
+  async list(dictType: string, keyword?: string, onlyActive?: boolean): Promise<DictListResponse> {
+    const conditions: ReturnType<typeof eq>[] = [eq(systemDict.dictType, dictType)];
     if (keyword) {
       conditions.push(sql`${systemDict.name} ILIKE ${'%' + keyword + '%'}`);
+    }
+    if (onlyActive) {
+      conditions.push(eq(systemDict.isActive, true));
     }
 
     const items = await this.db
