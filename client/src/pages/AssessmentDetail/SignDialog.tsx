@@ -25,6 +25,7 @@ interface SignDialogProps {
   onCancel?: () => void;
   instanceId?: string;
   onMobileSignComplete?: () => void;
+  onSubmitRatings?: () => Promise<void>;
 }
 
 const SignDialog: React.FC<SignDialogProps> = ({
@@ -38,6 +39,7 @@ const SignDialog: React.FC<SignDialogProps> = ({
   onCancel,
   instanceId,
   onMobileSignComplete,
+  onSubmitRatings,
 }) => {
   const [mobileSent, setMobileSent] = useState(false);
   const [mobileSending, setMobileSending] = useState(false);
@@ -92,6 +94,9 @@ const SignDialog: React.FC<SignDialogProps> = ({
     if (!instanceId || mobileSending) return;
     setMobileSending(true);
     try {
+      if (onSubmitRatings) {
+        await onSubmitRatings();
+      }
       const res = await signTokenApi.generateSignToken(
         instanceId,
         signType,

@@ -61,18 +61,21 @@ export function useAssessmentDetail(
 
       const initial: RatingsState = {};
       for (const ind of data.indicators) {
-        const score =
-          data.status === 'self_review'
-            ? ind.selfScore
-            : data.status === 'supervisor_review'
-              ? ind.supervisorScore
-              : undefined;
-        const comment =
-          data.status === 'self_review'
-            ? ind.selfComment
-            : data.status === 'supervisor_review'
-              ? ind.supervisorComment
-              : undefined;
+        const isSelfPhase =
+          data.status === 'self_review' || data.status === 'pending_sign';
+        const isSupervisorPhase =
+          data.status === 'supervisor_review' ||
+          data.status === 'supervisor_sign';
+        const score = isSelfPhase
+          ? ind.selfScore
+          : isSupervisorPhase
+            ? ind.supervisorScore
+            : undefined;
+        const comment = isSelfPhase
+          ? ind.selfComment
+          : isSupervisorPhase
+            ? ind.supervisorComment
+            : undefined;
         initial[ind.id] = {
           score: score ?? undefined,
           completionStatus: ind.selfCompletionStatus ?? '',
@@ -108,9 +111,14 @@ export function useAssessmentDetail(
   const isEmployee: boolean = isEmployeeCandidate;
 
   const canEditSelf: boolean = detail?.status === 'self_review' && isEmployee;
+  const canSignSelf: boolean = detail?.status === 'pending_sign' && isEmployee;
   // 上级评分/签名必须同时满足后端身份判定、资源编辑权限和流程状态。
   const canEditSupervisor: boolean =
     detail?.status === 'supervisor_review' &&
+    detail.canSupervisorOperate &&
+    canEditAssessment;
+  const canSignSupervisor: boolean =
+    detail?.status === 'supervisor_sign' &&
     detail.canSupervisorOperate &&
     canEditAssessment;
 
@@ -204,6 +212,13 @@ export function useAssessmentDetail(
   const handleSubmit = async (options?: { confirmedScoreWarning?: boolean }) => {
     if (!id || !detail) return;
 
+    if (detail.status === 'pending_sign') {
+      return { readyToSign: true, signType: 'self' as const };
+    }
+    if (detail.status === 'supervisor_sign') {
+      return { readyToSign: true, signType: 'supervisor' as const };
+    }
+
     // 提交前校验：所有指标必须已填写分数
     const emptyIndicators: string[] = [];
     for (const group of groupedIndicators) {
@@ -282,10 +297,13 @@ export function useAssessmentDetail(
             : detail.supervisorName || '',
         signImage,
       };
-      if (signType === 'self') {
+      if (signType === 'self' && detail.status === 'self_review') {
         await assessmentOperation.submitSelfRatingWithSign(id, body);
         toast.success('自评和签名已提交');
-      } else {
+      } else if (
+        signType === 'supervisor' &&
+        detail.status === 'supervisor_review'
+      ) {
         const result = await assessmentOperation.submitSupervisorRatingWithSign(
           id,
           body,
@@ -293,6 +311,13 @@ export function useAssessmentDetail(
         toast.success(
           `评分和签名已提交，总分 ${result.totalScore}，等级 ${result.grade}`,
         );
+      } else {
+        await assessmentOperation.sign(id, {
+          signType,
+          signName: signType === 'self' ? detail.employeeName || '' : detail.supervisorName || '',
+          signImage,
+        });
+        toast.success('签名已完成');
       }
       await fetchDetail();
       return true;
@@ -305,6 +330,18 @@ export function useAssessmentDetail(
     }
   };
 
+  const submitRatingsForMobileSign = async (): Promise<void> => {
+    if (!id || !detail) return;
+    if (detail.status !== 'self_review' && detail.status !== 'supervisor_review') return;
+    const body = { ...buildRatingPayload(ratings), isDraft: false };
+    if (detail.status === 'self_review') {
+      await assessmentOperation.submitSelfRating(id, body);
+    } else {
+      await assessmentOperation.submitSupervisorRating(id, body);
+    }
+    await fetchDetail();
+  };
+
   return {
     detail,
     loading,
@@ -314,7 +351,9 @@ export function useAssessmentDetail(
     scoreWarningIndicators,
     groupedIndicators,
     canEditSelf,
+    canSignSelf,
     canEditSupervisor,
+    canSignSupervisor,
     isCompleted,
     previewScore: preview?.score ?? null,
     previewGrade: preview?.grade ?? null,
@@ -324,5 +363,6 @@ export function useAssessmentDetail(
     handleSaveDraft,
     handleSubmit,
     handleSubmitWithSign,
+    submitRatingsForMobileSign,
   };
 }

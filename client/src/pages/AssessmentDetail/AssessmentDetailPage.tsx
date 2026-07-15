@@ -61,7 +61,9 @@ const AssessmentDetailPage: React.FC = () => {
     scoreWarningIndicators,
     groupedIndicators,
     canEditSelf,
+    canSignSelf,
     canEditSupervisor,
+    canSignSupervisor,
     isCompleted,
     previewScore,
     previewGrade,
@@ -70,6 +72,7 @@ const AssessmentDetailPage: React.FC = () => {
     handleSaveDraft,
     handleSubmit,
     handleSubmitWithSign,
+    submitRatingsForMobileSign,
     fetchDetail,
   } = useAssessmentDetail(id, currentUserId);
 
@@ -131,9 +134,11 @@ const AssessmentDetailPage: React.FC = () => {
   const handleCancelSign = async () => {
     setSignDialogOpen(false);
     setSignImage(null);
-    await handleSaveDraft({
-      successMessage: '已保存草稿，签名确认后才会提交',
-    });
+    if (detail?.status === 'self_review' || detail?.status === 'supervisor_review') {
+      await handleSaveDraft({
+        successMessage: '已保存草稿，签名确认后才会提交',
+      });
+    }
   };
 
   if (loading) {
@@ -408,7 +413,7 @@ const AssessmentDetailPage: React.FC = () => {
       />
 
       {/* Actions */}
-      {(canEditSelf || canEditSupervisor || isCompleted) && (
+      {(canEditSelf || canSignSelf || canEditSupervisor || canSignSupervisor || isCompleted) && (
         <div className="sticky bottom-0 z-20 -mx-2 border-t bg-background/95 px-3 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <div className="flex flex-wrap items-center justify-center gap-3">
             {canEditSelf && (
@@ -427,6 +432,12 @@ const AssessmentDetailPage: React.FC = () => {
                 </Button>
               </>
             )}
+            {canSignSelf && (
+              <Button onClick={handleSubmitClick} disabled={submitting}>
+                <Send data-icon="inline-start" />
+                签名确认
+              </Button>
+            )}
             {canEditSupervisor && (
               <>
                 <Button
@@ -442,6 +453,12 @@ const AssessmentDetailPage: React.FC = () => {
                   提交评分
                 </Button>
               </>
+            )}
+            {canSignSupervisor && (
+              <Button onClick={handleSubmitClick} disabled={submitting}>
+                <Send data-icon="inline-start" />
+                签名确认
+              </Button>
             )}
             {isCompleted && (
               <p className="text-muted-foreground text-sm">
@@ -468,6 +485,7 @@ const AssessmentDetailPage: React.FC = () => {
         onConfirm={handleSign}
         onCancel={handleCancelSign}
         instanceId={id}
+        onSubmitRatings={submitRatingsForMobileSign}
         onMobileSignComplete={() => {
           setSignDialogOpen(false);
           setSignImage(null);
