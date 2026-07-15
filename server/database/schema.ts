@@ -117,6 +117,27 @@ export const fileAttachmentArray = customType<{
   },
 });
 
+export const assessmentSignSession = pgTable("assessment_sign_session", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+  instanceId: uuid("instance_id").notNull(),
+  signType: varchar("sign_type", { length: 20 }).notNull(),
+  userId: userProfile("user_id").notNull(),
+  userName: varchar("user_name", { length: 255 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default('pending'),
+  expiresAt: customTimestamptz("expires_at", { precision: 6 }).notNull(),
+  consumedAt: customTimestamptz("consumed_at", { precision: 6 }),
+  failureReason: varchar("failure_reason", { length: 500 }),
+  // System field: Creation time (auto-filled, do not modify)
+  createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Update time (auto-filled, do not modify)
+  updatedAt: customTimestamptz("_updated_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  uniqueIndex("assessment_sign_session_token_hash_key").on(table.tokenHash),
+  index("idx_sign_session_instance").on(table.instanceId),
+  index("idx_sign_session_expires").on(table.expiresAt),
+]);
+
 export const bitableSyncLog = pgTable("bitable_sync_log", {
   id: uuid("id").primaryKey().defaultRandom(),
   connectionId: uuid("connection_id").notNull(),
@@ -265,7 +286,7 @@ export const ratingRecord = pgTable("rating_record", {
   instanceId: uuid("instance_id").notNull(),
   indicatorSnapshotId: uuid("indicator_snapshot_id").notNull(),
   ratingType: varchar("rating_type", { length: 255 }).notNull(),
-  score: numeric("score"),
+  score: numeric("score").notNull().default('0'),
   comment: text("comment"),
   ratedBy: userProfile("rated_by").notNull(),
   submittedAt: customTimestamptz("submitted_at", { precision: 6 }),
@@ -354,25 +375,6 @@ export const assessmentInstance = pgTable("assessment_instance", {
 }, (table) => [
   // Complex index: CREATE INDEX idx_instance_employee ON assessment_instance USING btree (((employee_id).user_id)),
   index("idx_instance_period").on(table.period),
-]);
-
-export const assessmentSignSession = pgTable("assessment_sign_session", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  tokenHash: varchar("token_hash", { length: 64 }).notNull(),
-  instanceId: uuid("instance_id").notNull(),
-  signType: varchar("sign_type", { length: 20 }).notNull(),
-  userId: userProfile("user_id").notNull(),
-  userName: varchar("user_name", { length: 255 }).notNull(),
-  status: varchar("status", { length: 20 }).notNull().default('pending'),
-  expiresAt: customTimestamptz("expires_at", { precision: 6 }).notNull(),
-  consumedAt: customTimestamptz("consumed_at", { precision: 6 }),
-  failureReason: varchar("failure_reason", { length: 500 }),
-  createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: customTimestamptz("_updated_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
-}, (table) => [
-  uniqueIndex("assessment_sign_session_token_hash_key").on(table.tokenHash),
-  index("idx_sign_session_instance").on(table.instanceId),
-  index("idx_sign_session_expires").on(table.expiresAt),
 ]);
 
 // Synced table: data is auto-synced from external source. Do not rename or delete this table.
@@ -528,6 +530,7 @@ export const assessmentDimensionTable = assessmentDimension;
 export const assessmentIndicatorTable = assessmentIndicator;
 export const assessmentIndicatorSnapshotTable = assessmentIndicatorSnapshot;
 export const assessmentInstanceTable = assessmentInstance;
+export const assessmentSignSessionTable = assessmentSignSession;
 export const assessmentTemplateTable = assessmentTemplate;
 export const auditLogTable = auditLog;
 export const bitableConnectionTable = bitableConnection;
