@@ -263,7 +263,7 @@ const MyAssessmentsPage: React.FC = () => {
                   fill="url(#fillScore)"
                   fillOpacity={0.4}
                   stroke="var(--color-score)"
-                  connectNulls
+                  strokeWidth={2}
                 />
               </AreaChart>
             </ChartContainer>
