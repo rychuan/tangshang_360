@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '@/api/queryKeys';
 import { employeeManagement } from '@/api';
 import type { EmployeeDetail } from '@shared/api.interface';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,27 +31,13 @@ const roleLabels: Record<string, string> = {
 const EmployeeDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [emp, setEmp] = useState<EmployeeDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: emp, isLoading } = useQuery({
+    queryKey: queryKeys.employees.detail(id!),
+    queryFn: () => employeeManagement.detail(id!),
+    enabled: !!id,
+  });
 
-  const loadEmp = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    try {
-      const data = await employeeManagement.detail(id);
-      setEmp(data);
-    } catch (err: unknown) {
-      handleApiError(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
-
-  useEffect(() => {
-    loadEmp();
-  }, [loadEmp]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Spinner className="size-8" />
