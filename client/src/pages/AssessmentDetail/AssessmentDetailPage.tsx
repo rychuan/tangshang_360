@@ -348,7 +348,7 @@ const AssessmentDetailPage: React.FC = () => {
 	                      )}
 	                      <Badge
 	                        variant={stepTone.variant}
-	                        className={`text-[0.625rem] px-1.5 py-0 shrink-0 ${stepTone.badge}`}
+	                        className={`text-xs px-1.5 py-0 shrink-0 ${stepTone.badge}`}
 	                      >
                         {step.statusText}
                       </Badge>

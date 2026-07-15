@@ -56,7 +56,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     const score = canEditThis ? ratings[indicator.id]?.score : existingScore;
     const showScoreWarning = exceedsScoreCoefficient(score, indicator.weight);
     const scoreWarning = showScoreWarning ? (
-      <span className="flex h-3 items-center text-[0.625rem] leading-3 text-warning">
+      <span className="flex h-3 items-center text-xs leading-3 text-warning">
         超过1.2系数
       </span>
     ) : (
@@ -280,7 +280,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                         <TableCell className="font-medium whitespace-pre-wrap break-words w-[140px]">
                           {indicator.content}
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-[0.625rem] leading-4 whitespace-pre-wrap break-words w-[160px] hidden md:table-cell">
+                        <TableCell className="text-muted-foreground text-xs leading-4 whitespace-pre-wrap break-words w-[160px] hidden md:table-cell">
                           {indicator.description || '-'}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-xs whitespace-pre-wrap break-words max-w-[140px] hidden lg:table-cell">
