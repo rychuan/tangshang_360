@@ -41,6 +41,7 @@ import { Pie, PieChart } from 'recharts';
 import MultiMonthPicker from '@/components/ui/multi-month-picker';
 import { Users, TrendingUp, AlertCircle, Bell, Eye } from 'lucide-react';
 import { toast } from 'sonner';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo } from '@/hooks/usePermissions';
@@ -81,74 +82,35 @@ function currentMonth(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-const TeamPerformancePage: React.FC = () => {
+  const TeamPerformancePage: React.FC = () => {
   const navigate = useNavigate();
-  const [overview, setOverview] = useState<TeamOverviewResponse | null>(null);
-  const [subordinates, setSubordinates] = useState<SubordinateRecord[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [loadingList, setLoadingList] = useState<boolean>(true);
-  const [page, setPage] = useState<number>(1);
-  const [total, setTotal] = useState<number>(0);
-  const [statusFilter, setStatusFilter] = useState<string>('');
-  const [selectedPeriods, setSelectedPeriods] = useState<string[]>([
-    currentMonth(),
-  ]);
-  const [remindDialogOpen, setRemindDialogOpen] = useState<boolean>(false);
-  const [remindTarget, setRemindTarget] = useState<SubordinateRecord | null>(
-    null,
-  );
-  const [remindingIds, setRemindingIds] = useState<Set<string>>(new Set());
-  const subordinatesRequestIdRef = useRef(0);
-
+  const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [selectedPeriods, setSelectedPeriods] = useState([currentMonth()]);
   const activePeriods = selectedPeriods;
+  const [remindDialogOpen, setRemindDialogOpen] = useState(false);
+  const [remindTarget, setRemindTarget] = useState<SubordinateRecord | null>(null);
+  const [remindingIds, setRemindingIds] = useState<Set<string>>(new Set());
+  const [total, setTotal] = useState(0);
+  const pageSize = PAGE_SIZE;
 
-  const loadOverview = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await teamPerformanceApi.getOverview(
-        activePeriods.length > 0 ? activePeriods : undefined,
-      );
-      setOverview(result);
-    } catch (err: unknown) {
-      logger.error(`Failed to load team overview: ${JSON.stringify(err)}`);
-      handleApiError(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [activePeriods]);
+  const { data: overview = null, isLoading: loading } = useQuery({
+    queryKey: ['team-performance', 'overview', activePeriods],
+    queryFn: () => teamPerformanceApi.getOverview(activePeriods.length > 0 ? activePeriods : undefined),
+  });
 
-  const loadSubordinates = useCallback(async () => {
-    const requestId = ++subordinatesRequestIdRef.current;
-    setLoadingList(true);
-    try {
-      const result = await teamPerformanceApi.getSubordinates({
-        page,
-        pageSize: PAGE_SIZE,
-        status: statusFilter || undefined,
-        periods: activePeriods.length > 0 ? activePeriods : undefined,
-      });
-      if (requestId !== subordinatesRequestIdRef.current) return;
-      setSubordinates(result?.items ?? []);
-      setTotal(result.total);
-    } catch (err: unknown) {
-      if (requestId !== subordinatesRequestIdRef.current) return;
-      logger.error(`Failed to load subordinates: ${JSON.stringify(err)}`);
-      handleApiError(err);
-      setSubordinates([]);
-      setTotal(0);
-    } finally {
-      if (requestId === subordinatesRequestIdRef.current) {
-        setLoadingList(false);
-      }
-    }
-  }, [page, statusFilter, activePeriods]);
-
-  useEffect(() => {
-    loadOverview();
-  }, [loadOverview]);
-  useEffect(() => {
-    loadSubordinates();
-  }, [loadSubordinates]);
+  const { data: subordinates = [], isLoading: loadingList } = useQuery({
+    queryKey: ['team-performance', 'subordinates', { page, statusFilter, activePeriods }],
+    queryFn: () => teamPerformanceApi.getSubordinates({
+      page, pageSize: PAGE_SIZE,
+      status: statusFilter || undefined,
+      periods: activePeriods.length > 0 ? activePeriods : undefined,
+    }).then((res) => {
+      setTotal(res.total);
+      return res?.items ?? [];
+    }),
+  });
 
   const gradeChartData = useMemo(() => {
     const dist = overview?.gradeDistribution;
@@ -610,7 +572,7 @@ const TeamPerformancePage: React.FC = () => {
       toast.success(`已向 ${remindTarget.employeeName} 发送催办提醒`);
       setRemindDialogOpen(false);
       setRemindTarget(null);
-      loadSubordinates();
+      queryClient.invalidateQueries({ queryKey: ['team-performance'] });
     } catch (err: unknown) {
       logger.error(`Failed to send remind: ${JSON.stringify(err)}`);
       handleApiError(err);
