@@ -259,7 +259,7 @@ const MyAssessmentsPage: React.FC = () => {
                 />
                 <Area
                   dataKey="score"
-                  type="monotone"
+                  type="basis"
                   fill="url(#fillScore)"
                   fillOpacity={0.4}
                   stroke="var(--color-score)"
