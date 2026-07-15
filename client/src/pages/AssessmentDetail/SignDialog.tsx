@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -7,7 +7,12 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { Smartphone, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { logger } from '@lark-apaas/client-toolkit/logger';
 import SignaturePad from '@/components/SignaturePad';
+import * as signTokenApi from '@client/src/api/sign-token';
+import { handleApiError } from '@client/src/utils/api-error';
 
 interface SignDialogProps {
   open: boolean;
@@ -18,6 +23,8 @@ interface SignDialogProps {
   loading: boolean;
   onConfirm: () => void;
   onCancel?: () => void;
+  instanceId?: string;
+  onMobileSignComplete?: () => void;
 }
 
 const SignDialog: React.FC<SignDialogProps> = ({
@@ -29,7 +36,78 @@ const SignDialog: React.FC<SignDialogProps> = ({
   loading,
   onConfirm,
   onCancel,
+  instanceId,
+  onMobileSignComplete,
 }) => {
+  const [mobileSent, setMobileSent] = useState(false);
+  const [mobileSending, setMobileSending] = useState(false);
+  const [mobileToken, setMobileToken] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollStartRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (open) {
+      setMobileSent(false);
+      setMobileSending(false);
+      setMobileToken(null);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, []);
+
+  const startPolling = (token: string) => {
+    pollStartRef.current = Date.now();
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await signTokenApi.checkSignStatus(token);
+        if (res.signed) {
+          clearInterval(pollRef.current!);
+          pollRef.current = null;
+          toast.success('手机签名已完成');
+          setSignImage(null);
+          onMobileSignComplete?.();
+          return;
+        }
+        if (Date.now() - pollStartRef.current > 2 * 60 * 1000) {
+          clearInterval(pollRef.current!);
+          pollRef.current = null;
+          toast.warning('签名等待超时，请重新发起');
+          setMobileSent(false);
+          setMobileToken(null);
+        }
+      } catch {
+        // 轮询失败静默重试
+      }
+    }, 2000);
+  };
+
+  const handleSendToPhone = async () => {
+    if (!instanceId || mobileSending) return;
+    setMobileSending(true);
+    try {
+      const res = await signTokenApi.generateSignToken(
+        instanceId,
+        signType,
+      );
+      setMobileToken(res.token);
+      setMobileSent(true);
+      toast.success('已发送到飞书，请在手机上打开并签名');
+      startPolling(res.token);
+    } catch (err) {
+      logger.error('Generate sign token failed:', err);
+      handleApiError(err);
+    } finally {
+      setMobileSending(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -52,6 +130,56 @@ const SignDialog: React.FC<SignDialogProps> = ({
             <Button onClick={onConfirm} disabled={loading || !signImage}>
               确认签名
             </Button>
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">或者</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center gap-2 rounded-lg border bg-muted/30 p-4">
+            {mobileSent ? (
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="size-4 animate-spin text-primary" />
+                  <span className="text-sm font-medium text-primary">
+                    等待手机签名...
+                  </span>
+                </div>
+                <p className="text-center text-xs text-muted-foreground">
+                  已发送到您的飞书，请在手机上点击链接完成签名
+                </p>
+              </div>
+            ) : (
+              <>
+                <Smartphone className="size-8 text-muted-foreground" />
+                <p className="text-center text-sm text-muted-foreground">
+                  手机全屏签名更方便
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSendToPhone}
+                  disabled={mobileSending || !instanceId}
+                >
+                  {mobileSending ? (
+                    <>
+                      <Loader2 className="size-3.5 mr-1 animate-spin" />
+                      发送中...
+                    </>
+                  ) : (
+                    <>
+                      <Smartphone className="size-3.5 mr-1" />
+                      发送到手机签名
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </DialogContent>

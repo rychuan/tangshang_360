@@ -70,6 +70,7 @@ const AssessmentDetailPage: React.FC = () => {
     handleSaveDraft,
     handleSubmit,
     handleSubmitWithSign,
+    fetchDetail,
   } = useAssessmentDetail(id, currentUserId);
 
   const { setLabel } = useBreadcrumb();
@@ -466,6 +467,12 @@ const AssessmentDetailPage: React.FC = () => {
         loading={submitting}
         onConfirm={handleSign}
         onCancel={handleCancelSign}
+        instanceId={id}
+        onMobileSignComplete={() => {
+          setSignDialogOpen(false);
+          setSignImage(null);
+          void fetchDetail();
+        }}
       />
 
       <AlertDialog

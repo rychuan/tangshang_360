@@ -1,17 +1,26 @@
-import { Controller, Get, Post, Param, Body, Req } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Req, Query } from '@nestjs/common';
 import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import type { Request } from 'express';
 import { AssessmentOperationService } from './assessment-operation.service';
+import { SignTokenService } from './sign-token.service';
 import type {
   RatingSubmitRequest,
   RatingSubmitWithSignRequest,
   SignRequest,
+  SignTokenRequest,
+  SignTokenResponse,
+  SignSessionResponse,
+  SignByTokenRequest,
+  SignStatusResponse,
 } from '@shared/api.interface';
 
 @Controller('api/assessment-instances')
 export class AssessmentOperationController {
-  constructor(private readonly service: AssessmentOperationService) {}
+  constructor(
+    private readonly service: AssessmentOperationService,
+    private readonly signTokenService: SignTokenService,
+  ) {}
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
   @RequirePermission('my_assessments', 'view')
@@ -102,5 +111,82 @@ export class AssessmentOperationController {
       userName: string;
     };
     return this.service.sign(id, body, userId, userName);
+  }
+
+  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
+  @RequirePermission('my_assessments', 'edit')
+  @NeedLogin()
+  @Post(':id/sign-token')
+  async generateSignToken(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Body() body: SignTokenRequest,
+  ): Promise<SignTokenResponse> {
+    const { userId, userName } = req.userContext as {
+      userId: string;
+      userName: string;
+    };
+    const session = await this.service.generateSignSession(id, body.signType, userId, userName);
+    const token = this.signTokenService.generateToken({
+      instanceId: session.instanceId,
+      signType: session.signType,
+      userId,
+      userName,
+    });
+    const protocol = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'https';
+    const host = (req.headers['x-forwarded-host'] as string) || req.get('host') || '';
+    const appBaseUrl = `${protocol}://${host}`;
+    const signUrl = `${appBaseUrl}/mobile-sign?token=${encodeURIComponent(token)}`;
+
+    void this.signTokenService.sendSignMessage(
+      userId,
+      signUrl,
+      session.period,
+      session.signType,
+      session.employeeName,
+    );
+
+    return {
+      token,
+      signUrl,
+      instanceId: session.instanceId,
+      signType: session.signType,
+      employeeName: session.employeeName,
+      period: session.period,
+    };
+  }
+
+  @Get('sign-session')
+  async signSession(@Query('token') token: string): Promise<SignSessionResponse> {
+    if (!token) {
+      return { instanceId: '', signType: 'self', employeeName: '', period: '' };
+    }
+    const payload = this.signTokenService.validateToken(token);
+    if (!payload) {
+      return { instanceId: '', signType: 'self', employeeName: '', period: '' };
+    }
+    const session = await this.service.getSignSession(
+      payload.instanceId,
+      payload.signType,
+    );
+    return session;
+  }
+
+  @Post('sign-session')
+  async signByToken(
+    @Req() req: Request,
+    @Body() body: SignByTokenRequest,
+  ): Promise<{ success: boolean; status: string }> {
+    const payload = this.signTokenService.consumeToken(body.token);
+    if (!payload) {
+      return { success: false, status: 'expired' };
+    }
+    return this.service.signByToken(payload, body.signName, body.signImage);
+  }
+
+  @Get('sign-session/status')
+  async signStatus(@Query('token') token: string): Promise<SignStatusResponse> {
+    const payload = this.signTokenService.validateToken(token);
+    return { signed: !payload };
   }
 }

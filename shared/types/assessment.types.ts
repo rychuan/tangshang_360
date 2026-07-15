@@ -118,6 +118,7 @@ export interface PublishResponse {
 
 export interface AssessmentInstanceItem {
   id: string;
+  period: string;
   employeeId: string;
   employeeName: string;
   department: string;
@@ -471,4 +472,34 @@ export interface TeamUpdateEmployeeRequest {
 
 export interface CreateResponse {
   id: string;
+}
+
+export interface SignTokenRequest {
+  signType: 'self' | 'supervisor';
+}
+
+export interface SignTokenResponse {
+  token: string;
+  signUrl: string;
+  instanceId: string;
+  signType: 'self' | 'supervisor';
+  employeeName: string;
+  period: string;
+}
+
+export interface SignSessionResponse {
+  instanceId: string;
+  signType: 'self' | 'supervisor';
+  employeeName: string;
+  period: string;
+}
+
+export interface SignByTokenRequest {
+  token: string;
+  signName: string;
+  signImage?: string;
+}
+
+export interface SignStatusResponse {
+  signed: boolean;
 }

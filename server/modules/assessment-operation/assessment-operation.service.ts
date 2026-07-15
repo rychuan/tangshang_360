@@ -42,6 +42,8 @@ import type {
   RatingSubmitWithSignRequest,
   SignRequest,
   SupervisorRatingResponse,
+  SignTokenResponse,
+  SignSessionResponse,
 } from '@shared/api.interface';
 
 export type RatingValidationInput = {
@@ -1062,5 +1064,290 @@ export class AssessmentOperationService {
     );
 
     return { success: true, status: newStatus };
+  }
+
+  async generateSignSession(
+    id: string,
+    signType: 'self' | 'supervisor',
+    userId: string,
+    userName: string,
+  ): Promise<Omit<SignTokenResponse, 'token' | 'signUrl'>> {
+    validateUUID(id);
+    const rows = await this.db
+      .select({
+        id: assessmentInstance.id,
+        period: assessmentInstance.period,
+        employeeId: assessmentInstance.employeeId,
+        supervisorId: assessmentInstance.supervisorId,
+        status: assessmentInstance.status,
+        selfSignName: assessmentInstance.selfSignName,
+        supervisorSignName: assessmentInstance.supervisorSignName,
+      })
+      .from(assessmentInstance)
+      .where(eq(assessmentInstance.id, id))
+      .limit(1);
+
+    if (rows.length === 0) {
+      throw new NotFoundException('考核记录不存在');
+    }
+
+    const instance = rows[0];
+
+    if (!isSignAllowedInStatus(instance.status, signType)) {
+      throw new BadRequestException(
+        signType === 'self'
+          ? '当前状态不允许员工签名，请先完成自评'
+          : '当前状态不允许上级签名，请先完成上级评分',
+      );
+    }
+
+    if (signType === 'self') {
+      if (instance.selfSignName) {
+        throw new BadRequestException('本人已签名，不可重复签名');
+      }
+      if (instance.employeeId !== userId) {
+        throw new ForbiddenException('只能发起自己的员工签名');
+      }
+    } else {
+      if (instance.supervisorSignName) {
+        throw new BadRequestException('上级已签名，不可重复签名');
+      }
+      if (!instance.selfSignName) {
+        throw new BadRequestException('请先完成员工签名');
+      }
+      const empRows = await this.db
+        .select({
+          supervisorId: employee.supervisorId,
+          empDepartment: employee.department,
+        })
+        .from(employee)
+        .where(
+          and(
+            sql`(${employee.employeeId}).user_id = ${instance.employeeId}`,
+            isNull(employee.deletedAt),
+          ),
+        )
+        .limit(1);
+
+      if (empRows.length === 0) {
+        throw new NotFoundException('员工信息不存在');
+      }
+
+      const access = await this.checkAssessmentAccess(
+        instance.employeeId,
+        instance.supervisorId,
+        empRows[0].supervisorId,
+        empRows[0].empDepartment,
+        userId,
+      );
+
+      if (!access.isSupervisor && !access.isAdmin) {
+        throw new ForbiddenException('您不是该员工的直接上级或系统管理员');
+      }
+    }
+
+    const empRows = await this.db
+      .select({ name: employee.name })
+      .from(employee)
+      .where(
+        and(
+          eq(employee.employeeId, instance.employeeId),
+          isNull(employee.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    return {
+      instanceId: instance.id,
+      signType,
+      employeeName: empRows[0]?.name || '',
+      period: instance.period,
+    };
+  }
+
+  async getSignSession(
+    instanceId: string,
+    signType: 'self' | 'supervisor',
+  ): Promise<SignSessionResponse> {
+    const rows = await this.db
+      .select({
+        period: assessmentInstance.period,
+        employeeId: assessmentInstance.employeeId,
+        status: assessmentInstance.status,
+      })
+      .from(assessmentInstance)
+      .where(eq(assessmentInstance.id, instanceId))
+      .limit(1);
+
+    if (rows.length === 0) {
+      return { instanceId, signType, employeeName: '', period: '' };
+    }
+
+    if (!isSignAllowedInStatus(rows[0].status, signType)) {
+      return { instanceId, signType, employeeName: '', period: '' };
+    }
+
+    const empRows = await this.db
+      .select({ name: employee.name })
+      .from(employee)
+      .where(
+        and(
+          eq(employee.employeeId, rows[0].employeeId),
+          isNull(employee.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    return {
+      instanceId,
+      signType,
+      employeeName: empRows[0]?.name || '',
+      period: rows[0].period,
+    };
+  }
+
+  async signByToken(
+    payload: { instanceId: string; signType: 'self' | 'supervisor'; userId: string; userName: string },
+    signName: string,
+    signImage?: string,
+  ): Promise<{ success: boolean; status: string }> {
+    const id = payload.instanceId;
+    const signType = payload.signType;
+
+    const effectiveSignName = signName?.trim() || payload.userName || '';
+    if (!effectiveSignName) {
+      throw new BadRequestException('签名姓名不能为空');
+    }
+    if (effectiveSignName.length > 255) {
+      throw new BadRequestException('签名姓名不能超过255个字符');
+    }
+
+    const now: Date = new Date();
+    const rows = await this.db
+      .select({
+        status: assessmentInstance.status,
+        employeeId: assessmentInstance.employeeId,
+        selfSignName: assessmentInstance.selfSignName,
+        supervisorSignName: assessmentInstance.supervisorSignName,
+      })
+      .from(assessmentInstance)
+      .where(eq(assessmentInstance.id, id))
+      .limit(1);
+
+    if (rows.length === 0) {
+      throw new NotFoundException('考核记录不存在');
+    }
+
+    const instance = rows[0];
+
+    if (!isSignAllowedInStatus(instance.status, signType)) {
+      throw new BadRequestException(
+        signType === 'self'
+          ? '当前状态不允许员工签名，请先完成自评'
+          : '当前状态不允许上级签名，请先完成上级评分',
+      );
+    }
+
+    if (signType === 'self' && instance.selfSignName) {
+      throw new BadRequestException('本人已签名，不可重复签名');
+    }
+    if (signType === 'supervisor' && instance.supervisorSignName) {
+      throw new BadRequestException('上级已签名，不可重复签名');
+    }
+
+    let newStatus: string;
+
+    await this.db.transaction(async (tx) => {
+      const locked = await tx
+        .select({
+          status: assessmentInstance.status,
+          selfSignName: assessmentInstance.selfSignName,
+          supervisorSignName: assessmentInstance.supervisorSignName,
+          employeeId: assessmentInstance.employeeId,
+        })
+        .from(assessmentInstance)
+        .where(eq(assessmentInstance.id, id))
+        .for('update')
+        .limit(1);
+
+      if (locked.length === 0) {
+        throw new NotFoundException('考核记录不存在');
+      }
+
+      const current = locked[0];
+
+      if (!isSignAllowedInStatus(current.status, signType)) {
+        throw new BadRequestException(
+          signType === 'self'
+            ? '当前状态不允许员工签名'
+            : '当前状态不允许上级签名',
+        );
+      }
+
+      newStatus = getStatusAfterSign(current.status, signType);
+
+      if (signType === 'self') {
+        if (current.selfSignName) {
+          throw new BadRequestException('本人已签名');
+        }
+        const result = await tx
+          .update(assessmentInstance)
+          .set({
+            selfSignName: effectiveSignName,
+            selfSignAt: now,
+            selfSignImage: signImage || null,
+            status: newStatus,
+          })
+          .where(
+            and(
+              eq(assessmentInstance.id, id),
+              sql`${assessmentInstance.selfSignName} IS NULL`,
+            ),
+          )
+          .returning();
+        if (result.length === 0) {
+          throw new BadRequestException('本人签名已被他人抢先提交');
+        }
+      } else {
+        if (current.supervisorSignName) {
+          throw new BadRequestException('上级已签名');
+        }
+        if (!current.selfSignName) {
+          throw new BadRequestException('请先完成员工签名');
+        }
+        const result = await tx
+          .update(assessmentInstance)
+          .set({
+            supervisorSignName: effectiveSignName,
+            supervisorSignAt: now,
+            supervisorSignImage: signImage || null,
+            status: newStatus,
+            completedAt: now,
+          })
+          .where(
+            and(
+              eq(assessmentInstance.id, id),
+              sql`${assessmentInstance.supervisorSignName} IS NULL`,
+            ),
+          )
+          .returning();
+        if (result.length === 0) {
+          throw new BadRequestException('上级签名已被他人抢先提交');
+        }
+      }
+
+      await tx.insert(auditLog).values({
+        operatorId: payload.userId,
+        action: `sign_${signType}_by_token`,
+        targetType: 'assessment_instance',
+        targetId: id,
+      });
+    });
+
+    this.logger.log(
+      `Sign ${signType} by token for instance ${id}, status=${newStatus}`,
+    );
+
+    return { success: true, status: newStatus! };
   }
 }

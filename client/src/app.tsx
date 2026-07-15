@@ -31,6 +31,7 @@ import PermissionPage from './pages/EmployeeManagement/PermissionPage';
 import GradeConfigPage from './pages/GradeConfig/GradeConfigPage';
 import DictionaryConfigPage from './pages/DictionaryConfig/DictionaryConfigPage';
 import HomePage from './pages/HomePage/HomePage';
+import MobileSignPage from './pages/MobileSign/MobileSignPage';
 
 const ForbiddenPage: React.FC = () => (
   <div className="flex h-screen items-center justify-center">
@@ -173,6 +174,7 @@ const RoutesComponent = () => {
               />
               <Route path="403" element={<ForbiddenPage />} />
             </Route>
+            <Route path="mobile-sign" element={<MobileSignPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </PermissionsProvider>
