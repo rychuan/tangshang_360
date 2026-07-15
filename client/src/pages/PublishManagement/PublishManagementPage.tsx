@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { handleApiError } from '@/utils/api-error';
@@ -39,29 +40,37 @@ import { getAppBaseUrl } from '@/utils/app-url';
 const PAGE_SIZE: number = 20;
 
 const PublishManagementPage: React.FC = () => {
+  const queryClient = useQueryClient();
   const [period, setPeriod] = useState<string>(dayjs().format('YYYY-MM'));
 
-  const [statistics, setStatistics] = useState<PeriodStatisticsResponse | null>(
-    null,
-  );
-  const [loadingStatistics, setLoadingStatistics] = useState<boolean>(false);
+  const [pendingDeptFilter, setPendingDeptFilter] = useState<string>('');
+  const [pendingTplFilter, setPendingTplFilter] = useState<string>('');
+  const [instancesPage, setInstancesPage] = useState<number>(1);
+  const [statusFilter, setStatusFilter] = useState<string>('__all__');
+  const [deptFilter, setDeptFilter] = useState<string>('');
+  const [gradeFilter, setGradeFilter] = useState<string>('');
 
-  const [employees, setEmployees] = useState<PublishEmployeeItem[]>([]);
-  const [loadingEmployees, setLoadingEmployees] = useState<boolean>(false);
+  const statisticsQuery = useQuery({
+    queryKey: ['publish', 'statistics', period],
+    queryFn: () => getPeriodStatistics(period),
+    enabled: !!period,
+  });
+  const statistics = statisticsQuery.data ?? null;
+  const loadingStatistics = statisticsQuery.isLoading;
+
+  const employeesQuery = useQuery({
+    queryKey: ['publish', 'employees', period, pendingDeptFilter, pendingTplFilter],
+    queryFn: () => listEmployees(period, { department: pendingDeptFilter || undefined, templateId: pendingTplFilter || undefined }),
+    enabled: !!period,
+  });
+  const employees: PublishEmployeeItem[] = employeesQuery.data?.items ?? [];
+  const loadingEmployees = employeesQuery.isLoading;
+
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<Set<string>>(
     new Set(),
   );
   const [publishing, setPublishing] = useState<boolean>(false);
-  const [pendingDeptFilter, setPendingDeptFilter] = useState<string>('');
-  const [pendingTplFilter, setPendingTplFilter] = useState<string>('');
 
-  const [instances, setInstances] = useState<AssessmentInstanceItem[]>([]);
-  const [instancesTotal, setInstancesTotal] = useState<number>(0);
-  const [instancesPage, setInstancesPage] = useState<number>(1);
-  const [loadingInstances, setLoadingInstances] = useState<boolean>(false);
-  const [statusFilter, setStatusFilter] = useState<string>('__all__');
-  const [deptFilter, setDeptFilter] = useState<string>('');
-  const [gradeFilter, setGradeFilter] = useState<string>('');
   const [selectedInstanceIds, setSelectedInstanceIds] = useState<Set<string>>(
     new Set(),
   );
@@ -88,79 +97,18 @@ const PublishManagementPage: React.FC = () => {
     null,
   );
 
-  const fetchStatistics = useCallback(async (p: string): Promise<void> => {
-    if (!p) return;
-    setLoadingStatistics(true);
-    try {
-      const res = await getPeriodStatistics(p);
-      setStatistics(res);
-    } catch (err: unknown) {
-      logger.error('fetchStatistics failed', err);
-      handleApiError(err);
-    } finally {
-      setLoadingStatistics(false);
-    }
-  }, []);
-
-  const fetchEmployees = useCallback(
-    async (p: string, dept: string, tpl: string): Promise<void> => {
-      if (!p) return;
-      setLoadingEmployees(true);
-      try {
-        const res = await listEmployees(p, {
-          department: dept || undefined,
-          templateId: tpl || undefined,
-        });
-        setEmployees(res?.items ?? []);
-        setSelectedEmployeeIds(new Set());
-      } catch (err: unknown) {
-        logger.error('fetchEmployees failed', err);
-        handleApiError(err);
-      } finally {
-        setLoadingEmployees(false);
-      }
-    },
-    [],
-  );
-
-  const fetchInstances = useCallback(async (): Promise<void> => {
-    if (!period) return;
-    setLoadingInstances(true);
-    try {
-      const status = statusFilter === '__all__' ? undefined : statusFilter;
-      const res = await listInstances({
-        period,
-        page: instancesPage,
-        pageSize: PAGE_SIZE,
-        status,
-        department: deptFilter || undefined,
-        grade: gradeFilter || undefined,
-      });
-      setInstances(res?.items ?? []);
-      setInstancesTotal(res.total);
-    } catch (err: unknown) {
-      logger.error('fetchInstances failed', err);
-      handleApiError(err);
-    } finally {
-      setLoadingInstances(false);
-    }
-  }, [period, instancesPage, statusFilter, deptFilter, gradeFilter]);
-
-  useEffect(() => {
-    if (!period) return;
-    fetchStatistics(period);
-    fetchEmployees(period, pendingDeptFilter, pendingTplFilter);
-  }, [
-    period,
-    pendingDeptFilter,
-    pendingTplFilter,
-    fetchStatistics,
-    fetchEmployees,
-  ]);
-
-  useEffect(() => {
-    fetchInstances();
-  }, [fetchInstances]);
+  const instancesQuery = useQuery({
+    queryKey: ['publish', 'instances', { period, page: instancesPage, statusFilter, deptFilter, gradeFilter }],
+    queryFn: () => listInstances({
+      period, page: instancesPage, pageSize: PAGE_SIZE,
+      status: statusFilter === '__all__' ? undefined : statusFilter,
+      department: deptFilter || undefined, grade: gradeFilter || undefined,
+    }),
+    enabled: !!period,
+  });
+  const instances: AssessmentInstanceItem[] = instancesQuery.data?.items ?? [];
+  const instancesTotal: number = instancesQuery.data?.total ?? 0;
+  const loadingInstances = instancesQuery.isLoading;
 
   const departments: string[] = useMemo(() => {
     const set = new Set<string>();
@@ -227,9 +175,9 @@ const PublishManagementPage: React.FC = () => {
       });
       toast.success(`发布成功，共 ${result.publishedCount} 人`);
       setSelectedEmployeeIds(new Set());
-      fetchEmployees(period, pendingDeptFilter, pendingTplFilter);
-      fetchInstances();
-      fetchStatistics(period);
+      queryClient.invalidateQueries({ queryKey: ['publish'] });
+      queryClient.invalidateQueries({ queryKey: ['publish', 'instances'] });
+      queryClient.invalidateQueries({ queryKey: ['publish', 'statistics', period] });
     } catch (err: unknown) {
       logger.error('publish failed', err);
       handleApiError(err);
@@ -257,7 +205,7 @@ const PublishManagementPage: React.FC = () => {
       });
       toast.success('调整成功');
       setAdjustOpen(false);
-      fetchEmployees(period, pendingDeptFilter, pendingTplFilter);
+      queryClient.invalidateQueries({ queryKey: ['publish'] });
     } catch (err: unknown) {
       logger.error('adjust failed', err);
       handleApiError(err);
@@ -272,7 +220,7 @@ const PublishManagementPage: React.FC = () => {
     try {
       await deleteEmployeeSnapshot(emp.employeeId);
       toast.success('快照已删除');
-      fetchEmployees(period, pendingDeptFilter, pendingTplFilter);
+      queryClient.invalidateQueries({ queryKey: ['publish'] });
     } catch (err: unknown) {
       logger.error('deleteSnapshot failed', err);
       handleApiError(err);
@@ -350,8 +298,8 @@ const PublishManagementPage: React.FC = () => {
       }
       setUnlockOpen(false);
       setSelectedInstanceIds(new Set());
-      fetchInstances();
-      fetchStatistics(period);
+      queryClient.invalidateQueries({ queryKey: ['publish', 'instances'] });
+      queryClient.invalidateQueries({ queryKey: ['publish', 'statistics', period] });
     } catch (err: unknown) {
       logger.error('unlock failed', err);
       handleApiError(err);
@@ -432,9 +380,9 @@ const PublishManagementPage: React.FC = () => {
         toast.error('退回失败');
       }
       setSelectedInstanceIds(new Set());
-      fetchInstances();
-      fetchStatistics(period);
-      fetchEmployees(period, pendingDeptFilter, pendingTplFilter);
+      queryClient.invalidateQueries({ queryKey: ['publish', 'instances'] });
+      queryClient.invalidateQueries({ queryKey: ['publish', 'statistics', period] });
+      queryClient.invalidateQueries({ queryKey: ['publish'] });
     } catch (err: unknown) {
       logger.error('return failed', err);
       handleApiError(err);
@@ -478,9 +426,9 @@ const PublishManagementPage: React.FC = () => {
         toast.error(`退回失败，共 ${result.failedCount} 项`);
       }
       setSelectedInstanceIds(new Set());
-      fetchInstances();
-      fetchStatistics(period);
-      fetchEmployees(period, pendingDeptFilter, pendingTplFilter);
+      queryClient.invalidateQueries({ queryKey: ['publish', 'instances'] });
+      queryClient.invalidateQueries({ queryKey: ['publish', 'statistics', period] });
+      queryClient.invalidateQueries({ queryKey: ['publish'] });
     } catch (err: unknown) {
       logger.error('batchReturn failed', err);
       handleApiError(err);
