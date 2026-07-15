@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import dictApi from '@/api/dictionary';
 import type { DictEntry, CreateDictRequest } from '@shared/api.interface';
@@ -52,8 +53,13 @@ const DICT_TYPES: { type: string; label: string; desc: string }[] = [
 /** 单类型面板：独立管理一个字典类型的数据加载和 CRUD */
 const DictPanel: React.FC<{ dictType: string }> = ({ dictType }) => {
   const api = useMemo(() => dictApi(dictType), [dictType]);
-  const [items, setItems] = useState<DictEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+
+  const { data: items = [], isLoading: loading } = useQuery({
+    queryKey: ['dictionary', dictType],
+    queryFn: () => api.list().then((res: { items: DictEntry[] }) => res.items),
+  });
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<DictEntry | null>(null);
   const [form, setForm] = useState({ code: '', name: '', sortOrder: 0 });
@@ -61,22 +67,6 @@ const DictPanel: React.FC<{ dictType: string }> = ({ dictType }) => {
   const [deleteTarget, setDeleteTarget] = useState<DictEntry | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.list();
-      setItems(res.items);
-    } catch (e: unknown) {
-      handleApiError(e);
-    } finally {
-      setLoading(false);
-    }
-  }, [api]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
 
   const openCreate = () => {
     setEditingItem(null);
@@ -109,7 +99,7 @@ const DictPanel: React.FC<{ dictType: string }> = ({ dictType }) => {
         toast.success('已创建');
       }
       setDialogOpen(false);
-      load();
+      queryClient.invalidateQueries({ queryKey: ['dictionary', dictType] });
     } catch (e: unknown) {
       handleApiError(e);
     } finally {
@@ -124,7 +114,7 @@ const DictPanel: React.FC<{ dictType: string }> = ({ dictType }) => {
       await api.remove(deleteTarget.id);
       toast.success('已删除');
       setDeleteOpen(false);
-      load();
+      queryClient.invalidateQueries({ queryKey: ['dictionary', dictType] });
     } catch (e: unknown) {
       handleApiError(e);
     } finally {
