@@ -22,13 +22,18 @@ export class AssessmentOperationController {
     private readonly signTokenService: SignTokenService,
   ) {}
 
+  @NeedLogin()
   @Get('sign-session')
-  async signSession(@Query('token') token: string): Promise<SignSessionResponse> {
-    if (!token) {
-      return { instanceId: '', signType: 'self', employeeName: '', period: '' };
-    }
+  async signSession(
+    @Req() req: Request,
+    @Query('token') token: string,
+  ): Promise<SignSessionResponse> {
+    const { userId } = req.userContext as { userId: string };
     const payload = this.signTokenService.validateToken(token);
     if (!payload) {
+      return { instanceId: '', signType: 'self', employeeName: '', period: '' };
+    }
+    if (payload.userId !== userId) {
       return { instanceId: '', signType: 'self', employeeName: '', period: '' };
     }
     const session = await this.service.getSignSession(
@@ -38,18 +43,28 @@ export class AssessmentOperationController {
     return session;
   }
 
+  @NeedLogin()
   @Post('sign-session')
   async signByToken(
     @Req() req: Request,
     @Body() body: SignByTokenRequest,
   ): Promise<{ success: boolean; status: string }> {
-    const payload = this.signTokenService.consumeToken(body.token);
+    const { userId } = req.userContext as { userId: string };
+    const payload = this.signTokenService.validateToken(body.token);
     if (!payload) {
       return { success: false, status: 'expired' };
     }
-    return this.service.signByToken(payload, body.signName, body.signImage);
+    if (payload.userId !== userId) {
+      return { success: false, status: 'forbidden' };
+    }
+    const consumed = this.signTokenService.consumeToken(body.token);
+    if (!consumed) {
+      return { success: false, status: 'expired' };
+    }
+    return this.service.signByToken(consumed, body.signName, body.signImage);
   }
 
+  @NeedLogin()
   @Get('sign-session/status')
   async signStatus(@Query('token') token: string): Promise<SignStatusResponse> {
     const payload = this.signTokenService.validateToken(token);

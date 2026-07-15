@@ -189,6 +189,8 @@ const MobileSignPage: React.FC = () => {
       });
       if (result.success) {
         setDone(true);
+      } else if (result.status === 'forbidden') {
+        setError('此签名链接不属于您的账号，请使用发送签名请求的飞书账号打开');
       } else {
         setError('签名提交失败，请重试');
       }
