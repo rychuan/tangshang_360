@@ -133,7 +133,11 @@ const PermissionPage: React.FC = () => {
               >
                 <RoleMembersTab
                   role={selectedRole}
-                  onMembersChange={() => queryClient.invalidateQueries({ queryKey: ['roles', 'list'] })}
+                  onMembersChange={() =>
+                    queryClient.invalidateQueries({
+                      queryKey: ['roles', 'list'],
+                    })
+                  }
                 />
               </TabsContent>
             </Tabs>

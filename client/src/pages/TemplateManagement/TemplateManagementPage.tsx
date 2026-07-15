@@ -69,13 +69,32 @@ const TemplateManagementPage: React.FC = () => {
 
   const [deactivateId, setDeactivateId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [detailCache, setDetailCache] = useState<Record<string, AssessmentTemplateDetail>>({});
+  const [detailCache, setDetailCache] = useState<
+    Record<string, AssessmentTemplateDetail>
+  >({});
 
   const queryClient = useQueryClient();
 
   const listQuery = useQuery({
-    queryKey: ['templates', 'list', { page, pageSize, keyword: searchKeyword, position: filterPosition, status: filterStatus }],
-    queryFn: () => assessmentTemplateApi.list({ page, pageSize, keyword: searchKeyword || undefined, position: filterPosition || undefined, status: filterStatus || undefined }),
+    queryKey: [
+      'templates',
+      'list',
+      {
+        page,
+        pageSize,
+        keyword: searchKeyword,
+        position: filterPosition,
+        status: filterStatus,
+      },
+    ],
+    queryFn: () =>
+      assessmentTemplateApi.list({
+        page,
+        pageSize,
+        keyword: searchKeyword || undefined,
+        position: filterPosition || undefined,
+        status: filterStatus || undefined,
+      }),
   });
 
   const positionsQuery = useQuery({
@@ -87,7 +106,9 @@ const TemplateManagementPage: React.FC = () => {
   const loading = listQuery.isLoading;
   const items: AssessmentTemplateItem[] = listQuery.data?.items ?? [];
   const total = listQuery.data?.total ?? 0;
-  const positions: string[] = positionsQuery.data?.items?.map((p: { name: string }) => p.name) ?? POSITION_OPTIONS;
+  const positions: string[] =
+    positionsQuery.data?.items?.map((p: { name: string }) => p.name) ??
+    POSITION_OPTIONS;
   const positionsLoading = positionsQuery.isLoading;
 
   const handleSearch = () => {
