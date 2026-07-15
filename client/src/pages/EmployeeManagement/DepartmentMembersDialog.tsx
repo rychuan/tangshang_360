@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { employeeManagement } from '@/api';
 import type { EmployeeItem } from '@shared/api.interface';
 import { logger } from '@lark-apaas/client-toolkit/logger';
@@ -43,36 +44,19 @@ const DepartmentMembersDialog: React.FC<DepartmentMembersDialogProps> = ({
   departmentName,
 }) => {
   const navigate = useNavigate();
-  const [members, setMembers] = useState<EmployeeItem[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
 
-  const loadData = useCallback(async () => {
-    if (!departmentName) return;
-    setLoading(true);
-    try {
-      const res = await employeeManagement.list({
+  const { data: listData, isLoading: loading } = useQuery({
+    queryKey: ['employees', 'department-members', departmentName],
+    queryFn: () =>
+      employeeManagement.list({
         department: departmentName,
         page: 1,
         pageSize: 100,
-      });
-      setMembers(res?.items ?? []);
-      setTotal(res.total);
-    } catch (err: unknown) {
-      logger.error('Failed to fetch department members:', err);
-      handleApiError(err);
-      setMembers([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [departmentName]);
-
-  useEffect(() => {
-    if (open) {
-      loadData();
-    }
-  }, [open, loadData]);
+      }),
+    enabled: open && !!departmentName,
+  });
+  const members = listData?.items ?? [];
+  const total = listData?.total ?? 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

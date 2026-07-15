@@ -41,6 +41,7 @@ import { Pie, PieChart } from 'recharts';
 import MultiMonthPicker from '@/components/ui/multi-month-picker';
 import { Users, TrendingUp, AlertCircle, Bell, Eye } from 'lucide-react';
 import { toast } from 'sonner';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo } from '@/hooks/usePermissions';
@@ -83,72 +84,46 @@ function currentMonth(): string {
 
 const TeamPerformancePage: React.FC = () => {
   const navigate = useNavigate();
-  const [overview, setOverview] = useState<TeamOverviewResponse | null>(null);
-  const [subordinates, setSubordinates] = useState<SubordinateRecord[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [loadingList, setLoadingList] = useState<boolean>(true);
-  const [page, setPage] = useState<number>(1);
-  const [total, setTotal] = useState<number>(0);
-  const [statusFilter, setStatusFilter] = useState<string>('');
-  const [selectedPeriods, setSelectedPeriods] = useState<string[]>([
-    currentMonth(),
-  ]);
-  const [remindDialogOpen, setRemindDialogOpen] = useState<boolean>(false);
+  const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [selectedPeriods, setSelectedPeriods] = useState([currentMonth()]);
+  const activePeriods = selectedPeriods;
+  const [remindDialogOpen, setRemindDialogOpen] = useState(false);
   const [remindTarget, setRemindTarget] = useState<SubordinateRecord | null>(
     null,
   );
   const [remindingIds, setRemindingIds] = useState<Set<string>>(new Set());
-  const subordinatesRequestIdRef = useRef(0);
+  const [total, setTotal] = useState(0);
+  const pageSize = PAGE_SIZE;
 
-  const activePeriods = selectedPeriods;
-
-  const loadOverview = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await teamPerformanceApi.getOverview(
+  const { data: overview = null, isLoading: loading } = useQuery({
+    queryKey: ['team-performance', 'overview', activePeriods],
+    queryFn: () =>
+      teamPerformanceApi.getOverview(
         activePeriods.length > 0 ? activePeriods : undefined,
-      );
-      setOverview(result);
-    } catch (err: unknown) {
-      logger.error(`Failed to load team overview: ${JSON.stringify(err)}`);
-      handleApiError(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [activePeriods]);
+      ),
+  });
 
-  const loadSubordinates = useCallback(async () => {
-    const requestId = ++subordinatesRequestIdRef.current;
-    setLoadingList(true);
-    try {
-      const result = await teamPerformanceApi.getSubordinates({
-        page,
-        pageSize: PAGE_SIZE,
-        status: statusFilter || undefined,
-        periods: activePeriods.length > 0 ? activePeriods : undefined,
-      });
-      if (requestId !== subordinatesRequestIdRef.current) return;
-      setSubordinates(result?.items ?? []);
-      setTotal(result.total);
-    } catch (err: unknown) {
-      if (requestId !== subordinatesRequestIdRef.current) return;
-      logger.error(`Failed to load subordinates: ${JSON.stringify(err)}`);
-      handleApiError(err);
-      setSubordinates([]);
-      setTotal(0);
-    } finally {
-      if (requestId === subordinatesRequestIdRef.current) {
-        setLoadingList(false);
-      }
-    }
-  }, [page, statusFilter, activePeriods]);
-
-  useEffect(() => {
-    loadOverview();
-  }, [loadOverview]);
-  useEffect(() => {
-    loadSubordinates();
-  }, [loadSubordinates]);
+  const { data: subordinates = [], isLoading: loadingList } = useQuery({
+    queryKey: [
+      'team-performance',
+      'subordinates',
+      { page, statusFilter, activePeriods },
+    ],
+    queryFn: () =>
+      teamPerformanceApi
+        .getSubordinates({
+          page,
+          pageSize: PAGE_SIZE,
+          status: statusFilter || undefined,
+          periods: activePeriods.length > 0 ? activePeriods : undefined,
+        })
+        .then((res) => {
+          setTotal(res.total);
+          return res?.items ?? [];
+        }),
+  });
 
   const gradeChartData = useMemo(() => {
     const dist = overview?.gradeDistribution;
@@ -173,9 +148,9 @@ const TeamPerformancePage: React.FC = () => {
       .map((s, i) => ({
         employeeId: s.employeeId,
         name: s.employeeName,
-	        score: s.totalScore ?? 0,
-	        fill: RANKING_BAR_COLORS[i % RANKING_BAR_COLORS.length],
-	      }));
+        score: s.totalScore ?? 0,
+        fill: RANKING_BAR_COLORS[i % RANKING_BAR_COLORS.length],
+      }));
   }, [subordinates]);
 
   const teamColumns: PageTableColumn<SubordinateRecord>[] = useMemo(
@@ -333,31 +308,31 @@ const TeamPerformancePage: React.FC = () => {
                 </Empty>
               </div>
             ) : (
-	              <div className="flex flex-col gap-2">
-	                {scoreRankingData.map((entry) => {
-	                  const maxScore = scoreRankingData[0]?.score || 100;
-	                  const pct = Math.max((entry.score / maxScore) * 100, 4);
-	                  return (
-	                    <div
-	                      key={entry.employeeId}
-	                      className="grid grid-cols-[1fr_auto] items-center gap-2 text-xs"
-	                    >
-	                      <div className="flex min-w-0 items-center gap-2">
-	                        <div className="h-6 min-w-0 flex-1 rounded-sm bg-muted">
-	                          <div
-	                            className="flex h-full min-w-[32px] items-center justify-end rounded-sm pr-1.5"
-	                            style={{
-	                              width: `${pct}%`,
-	                              backgroundColor: entry.fill,
-	                            }}
-	                          >
-	                            <span className="text-xs font-mono font-bold text-white">
-	                              {entry.score}
-	                            </span>
-	                          </div>
-	                        </div>
-	                      </div>
-	                      <div className="flex shrink-0 items-center gap-1">
+              <div className="flex flex-col gap-2">
+                {scoreRankingData.map((entry) => {
+                  const maxScore = scoreRankingData[0]?.score || 100;
+                  const pct = Math.max((entry.score / maxScore) * 100, 4);
+                  return (
+                    <div
+                      key={entry.employeeId}
+                      className="grid grid-cols-[1fr_auto] items-center gap-2 text-xs"
+                    >
+                      <div className="flex min-w-0 items-center gap-2">
+                        <div className="h-6 min-w-0 flex-1 rounded-sm bg-muted">
+                          <div
+                            className="flex h-full min-w-[32px] items-center justify-end rounded-sm pr-1.5"
+                            style={{
+                              width: `${pct}%`,
+                              backgroundColor: entry.fill,
+                            }}
+                          >
+                            <span className="text-xs font-mono font-bold text-white">
+                              {entry.score}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
                         <UserDisplay
                           value={{
                             user_id: entry.employeeId,
@@ -424,7 +399,7 @@ const TeamPerformancePage: React.FC = () => {
               setStatusFilter(val === '__all' ? '' : val);
             }}
           >
-          <SelectTrigger className="w-full sm:w-36">
+            <SelectTrigger className="w-full sm:w-36">
               <SelectValue placeholder="全部状态" />
             </SelectTrigger>
             <SelectContent>
@@ -610,7 +585,7 @@ const TeamPerformancePage: React.FC = () => {
       toast.success(`已向 ${remindTarget.employeeName} 发送催办提醒`);
       setRemindDialogOpen(false);
       setRemindTarget(null);
-      loadSubordinates();
+      queryClient.invalidateQueries({ queryKey: ['team-performance'] });
     } catch (err: unknown) {
       logger.error(`Failed to send remind: ${JSON.stringify(err)}`);
       handleApiError(err);

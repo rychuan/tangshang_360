@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { roleManager } from '@/api';
 import type { ForceRoleDTO } from '@shared/api.interface';
 import { Button } from '@/components/ui/button';
@@ -29,8 +30,13 @@ import RoleMembersTab from './RoleMembersTab';
 import RoleFormDialog from './RoleFormDialog';
 
 const PermissionPage: React.FC = () => {
-  const [roles, setRoles] = useState<ForceRoleDTO[]>([]);
-  const [rolesLoading, setRolesLoading] = useState(true);
+  const queryClient = useQueryClient();
+
+  const { data: roles = [], isLoading: rolesLoading } = useQuery({
+    queryKey: ['roles', 'list'],
+    queryFn: () => roleManager.listRoles(),
+  });
+
   const [selectedRole, setSelectedRole] = useState<ForceRoleDTO | null>(null);
   const [activeTab, setActiveTab] = useState('permissions');
   const [formOpen, setFormOpen] = useState(false);
@@ -38,33 +44,6 @@ const PermissionPage: React.FC = () => {
   const [editingRole, setEditingRole] = useState<ForceRoleDTO | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ForceRoleDTO | null>(null);
   const [deleting, setDeleting] = useState(false);
-
-  const refreshRoles = useCallback(async (selectBizID?: string) => {
-    try {
-      const data = await roleManager.listRoles();
-      setRoles(data);
-      setSelectedRole((prev) => {
-        if (selectBizID) {
-          const found = data.find((r) => r.bizID === selectBizID);
-          if (found) return found;
-        }
-        if (prev && data.find((r) => r.bizID === prev.bizID)) {
-          return data.find((r) => r.bizID === prev.bizID) ?? prev;
-        }
-        return data[0] ?? null;
-      });
-    } catch (err) {
-      handleApiError(err);
-    }
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      setRolesLoading(true);
-      await refreshRoles();
-      setRolesLoading(false);
-    })();
-  }, [refreshRoles]);
 
   const handleCreateClick = () => {
     setFormMode('create');
@@ -80,9 +59,9 @@ const PermissionPage: React.FC = () => {
 
   const handleFormSuccess = () => {
     if (formMode === 'edit' && editingRole?.bizID) {
-      refreshRoles(editingRole.bizID);
+      queryClient.invalidateQueries({ queryKey: ['roles', 'list'] });
     } else {
-      refreshRoles();
+      queryClient.invalidateQueries({ queryKey: ['roles', 'list'] });
     }
   };
 
@@ -93,7 +72,7 @@ const PermissionPage: React.FC = () => {
       await roleManager.deleteRole(deleteTarget.bizID);
       toast.success('角色已删除');
       setDeleteTarget(null);
-      await refreshRoles();
+      await queryClient.invalidateQueries({ queryKey: ['roles', 'list'] });
     } catch (err) {
       handleApiError(err);
     } finally {
@@ -154,7 +133,11 @@ const PermissionPage: React.FC = () => {
               >
                 <RoleMembersTab
                   role={selectedRole}
-                  onMembersChange={() => refreshRoles(selectedRole.bizID)}
+                  onMembersChange={() =>
+                    queryClient.invalidateQueries({
+                      queryKey: ['roles', 'list'],
+                    })
+                  }
                 />
               </TabsContent>
             </Tabs>

@@ -1,0 +1,13 @@
+{
+  "id": "send_feishu_message_1",
+  "pluginKey": "@official-plugins/send-feishu-message",
+  "pluginVersion": "1.0.29",
+  "name": "发送飞书消息",
+  "description": "给指定人员或群组发送飞书消息",
+  "icon": "https://lf3-static.bytednsdoc.com/obj/eden-cn/fzgeh7nuhfboznulog/feishu_message.svg",
+  "paramsSchema": {},
+  "formValue": {},
+  "createdAt": 1784007303905,
+  "updatedAt": 1784007303905,
+  "createdBy": 7652289183771692275
+}

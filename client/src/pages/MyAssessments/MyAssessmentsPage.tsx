@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { logger } from '@lark-apaas/client-toolkit/logger';
-import { handleApiError } from '@client/src/utils/api-error';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '@/api/queryKeys';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -100,68 +100,40 @@ const MyAssessmentsPage: React.FC = () => {
     },
   ];
 
-  const [records, setRecords] = useState<MyAssessmentRecordItem[]>([]);
-  const [total, setTotal] = useState<number>(0);
-  const [page, setPage] = useState<number>(1);
+  const [page, setPage] = useState(1);
   const pageSize = 10;
-  const [loading, setLoading] = useState<boolean>(true);
-  const [recordsError, setRecordsError] = useState<string | null>(null);
-
-  const [yearFilter, setYearFilter] = useState<string>(
+  const [yearFilter, setYearFilter] = useState(
     String(new Date().getFullYear()),
   );
 
-  const [trendItems, setTrendItems] = useState<
-    Array<{ period: string; avgScore: number | null }>
-  >([]);
-  const [trendLoading, setTrendLoading] = useState<boolean>(true);
-  const [trendError, setTrendError] = useState<string | null>(null);
-
-  const fetchRecords = useCallback(async () => {
-    setLoading(true);
-    setRecordsError(null);
-    try {
-      const result = await myAssessmentApi.getRecords({
+  const recordsQuery = useQuery({
+    queryKey: queryKeys.myAssessments.records({
+      page,
+      pageSize,
+      periodStart: `${yearFilter}-01`,
+      periodEnd: `${yearFilter}-12`,
+    }),
+    queryFn: () =>
+      myAssessmentApi.getRecords({
         page,
         pageSize,
         periodStart: `${yearFilter}-01`,
         periodEnd: `${yearFilter}-12`,
-      });
-      setRecords(result?.items ?? []);
-      setTotal(result.total);
-    } catch (err: unknown) {
-      logger.error('Failed to fetch my assessment records:', err);
-      handleApiError(err);
-      setRecords([]);
-      setTotal(0);
-      setRecordsError('加载绩效记录失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, pageSize, yearFilter]);
+      }),
+  });
 
-  const fetchTrend = useCallback(async () => {
-    setTrendLoading(true);
-    setTrendError(null);
-    try {
-      const result = await myAssessmentApi.getTrend(yearFilter);
-      setTrendItems(result?.items ?? []);
-    } catch (err: unknown) {
-      logger.error('Failed to fetch my assessment trend:', err);
-      handleApiError(err);
-      setTrendItems([]);
-      setTrendError('加载趋势数据失败');
-    } finally {
-      setTrendLoading(false);
-    }
-  }, [yearFilter]);
+  const trendQuery = useQuery({
+    queryKey: queryKeys.myAssessments.trend(yearFilter),
+    queryFn: () => myAssessmentApi.getTrend(yearFilter),
+  });
 
-  useEffect(() => {
-    fetchRecords();
-  }, [fetchRecords]);
-  useEffect(() => {
-    fetchTrend();
-  }, [fetchTrend]);
+  const records = recordsQuery.data?.items ?? [];
+  const total = recordsQuery.data?.total ?? 0;
+  const loading = recordsQuery.isLoading;
+  const recordsError = recordsQuery.error ? '加载绩效记录失败' : null;
+  const trendItems = trendQuery.data?.items ?? [];
+  const trendLoading = trendQuery.isLoading;
+  const trendError = trendQuery.error ? '加载趋势数据失败' : null;
 
   const handlePrevYear = () => {
     setYearFilter(String(parseInt(yearFilter, 10) - 1));
@@ -202,10 +174,10 @@ const MyAssessmentsPage: React.FC = () => {
             >
               <ChevronRight />
             </Button>
-	            <Button
-	              variant="outline"
-	              size="sm"
-	              className="ml-1 hidden sm:inline-flex"
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-1 hidden sm:inline-flex"
               onClick={() => {
                 setYearFilter(String(new Date().getFullYear()));
                 setPage(1);
@@ -354,14 +326,22 @@ const MyAssessmentsPage: React.FC = () => {
                         </div>
                         <div className="grid grid-cols-2 gap-3 text-sm">
                           <div>
-                            <p className="text-xs text-muted-foreground">总分</p>
+                            <p className="text-xs text-muted-foreground">
+                              总分
+                            </p>
                             <p className="font-semibold">
                               {item.totalScore != null ? item.totalScore : '-'}
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs text-muted-foreground">等级</p>
-                            {item.grade ? <GradeBadge grade={item.grade} /> : '-'}
+                            <p className="text-xs text-muted-foreground">
+                              等级
+                            </p>
+                            {item.grade ? (
+                              <GradeBadge grade={item.grade} />
+                            ) : (
+                              '-'
+                            )}
                           </div>
                           <div className="col-span-2">
                             <p className="mb-1 text-xs text-muted-foreground">
@@ -376,7 +356,9 @@ const MyAssessmentsPage: React.FC = () => {
                         <div className="flex items-center justify-between gap-3">
                           <p className="text-xs text-muted-foreground">
                             {item.completedAt
-                              ? new Date(item.completedAt).toLocaleString('zh-CN')
+                              ? new Date(item.completedAt).toLocaleString(
+                                  'zh-CN',
+                                )
                               : '未完成'}
                           </p>
                           <ActionBadge

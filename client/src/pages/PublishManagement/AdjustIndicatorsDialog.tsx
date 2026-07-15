@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import {
@@ -87,53 +88,24 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
   onDeleteSnapshot,
   loading,
 }) => {
-  const [indicators, setIndicators] = useState<AdjustIndicatorInput[]>([]);
   const [previewMode, setPreviewMode] = useState<boolean>(false);
-  const [loadingIndicators, setLoadingIndicators] = useState<boolean>(false);
   const [addingDimension, setAddingDimension] = useState<boolean>(false);
   const [newDimName, setNewDimName] = useState<string>('');
   const [newDimWeight, setNewDimWeight] = useState<string>('');
 
-  const loadIndicators = useCallback(
-    async (employeeId: string): Promise<void> => {
-      setLoadingIndicators(true);
-      try {
-        const res = await getEmployeeSnapshot(employeeId);
-        if (res.indicators.length > 0) {
-          setIndicators(
-            res.indicators.map((ind: InstanceIndicatorItem) => ({
-              content: ind.content,
-              description: ind.description,
-              algorithm: ind.algorithm,
-              dataSource: ind.dataSource,
-              weight: ind.weight,
-              dimensionName: ind.dimensionName,
-              dimensionWeight: ind.dimensionWeight,
-            })),
-          );
-        } else {
-          setIndicators([]);
-        }
-      } catch (err: unknown) {
-        logger.error('loadIndicators failed', err);
-        toast.error('加载指标快照失败');
-        setIndicators([]);
-      } finally {
-        setLoadingIndicators(false);
-      }
-    },
-    [],
-  );
-
-  useEffect(() => {
-    if (open && employee?.employeeId) {
-      setPreviewMode(false);
-      setAddingDimension(false);
-      setNewDimName('');
-      setNewDimWeight('');
-      loadIndicators(employee.employeeId);
-    }
-  }, [open, employee?.employeeId, loadIndicators]);
+  const queryClient = useQueryClient();
+  const { data: indicators = [], isLoading: loadingIndicators } = useQuery({
+    queryKey: ['publish', 'snapshot', employee?.employeeId],
+    queryFn: () => getEmployeeSnapshot(employee!.employeeId).then((res) =>
+      res.indicators.length > 0 ? res.indicators.map((ind: InstanceIndicatorItem) => ({
+        content: ind.content, description: ind.description,
+        algorithm: ind.algorithm, dataSource: ind.dataSource,
+        weight: ind.weight, dimensionName: ind.dimensionName,
+        dimensionWeight: ind.dimensionWeight,
+      })) : []
+    ),
+    enabled: open && !!employee?.employeeId,
+  });
 
   const dimensionGroups: DimensionGroup[] = useMemo(() => {
     const groups: Record<string, DimensionGroup> = {};
@@ -177,7 +149,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
     dimensionName: string,
     dimensionWeight: number,
   ): void => {
-    setIndicators((prev: AdjustIndicatorInput[]) => {
+    queryClient.setQueryData(['publish', 'snapshot', employee?.employeeId], (prev: AdjustIndicatorInput[]) => {
       const existingSum: number = prev
         .filter(
           (ind: AdjustIndicatorInput) =>
@@ -201,7 +173,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
   };
 
   const handleRemoveIndicator = (flatIndex: number): void => {
-    setIndicators((prev: AdjustIndicatorInput[]) =>
+    queryClient.setQueryData(['publish', 'snapshot', employee?.employeeId], (prev: AdjustIndicatorInput[]) =>
       prev.filter((_: AdjustIndicatorInput, i: number) => i !== flatIndex),
     );
   };
@@ -211,7 +183,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
     field: keyof AdjustIndicatorInput,
     value: string | number,
   ): void => {
-    setIndicators((prev: AdjustIndicatorInput[]) => {
+    queryClient.setQueryData(['publish', 'snapshot', employee?.employeeId], (prev: AdjustIndicatorInput[]) => {
       const next: AdjustIndicatorInput[] = [...prev];
       next[flatIndex] = { ...next[flatIndex], [field]: value };
       return next;
@@ -223,7 +195,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
     field: 'dimensionName' | 'dimensionWeight',
     value: string | number,
   ): void => {
-    setIndicators((prev: AdjustIndicatorInput[]) => {
+    queryClient.setQueryData(['publish', 'snapshot', employee?.employeeId], (prev: AdjustIndicatorInput[]) => {
       const next: AdjustIndicatorInput[] = [...prev];
       for (const idx of group.flatIndices) {
         next[idx] = { ...next[idx], [field]: value };
@@ -234,7 +206,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
 
   const handleRemoveDimension = (group: DimensionGroup): void => {
     const removeSet: Set<number> = new Set(group.flatIndices);
-    setIndicators((prev: AdjustIndicatorInput[]) =>
+    queryClient.setQueryData(['publish', 'snapshot', employee?.employeeId], (prev: AdjustIndicatorInput[]) =>
       prev.filter((_: AdjustIndicatorInput, i: number) => !removeSet.has(i)),
     );
   };
@@ -250,7 +222,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
       toast.error('请输入有效的维度权重分');
       return;
     }
-    setIndicators((prev: AdjustIndicatorInput[]) => [
+    queryClient.setQueryData(['publish', 'snapshot', employee?.employeeId], (prev: AdjustIndicatorInput[]) => [
       ...prev,
       {
         ...EMPTY_INDICATOR,
@@ -272,7 +244,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
 
   const handleCopyTemplate = (): void => {
     if (!employee) return;
-    loadIndicators(employee.employeeId);
+    queryClient.invalidateQueries({ queryKey: ['publish', 'snapshot', employee?.employeeId] });
     toast.success('已重新加载绩效指标');
   };
 

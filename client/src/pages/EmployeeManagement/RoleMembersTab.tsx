@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { roleManager } from '@/api';
 import type {
   ForceRoleDTO,
@@ -114,28 +115,17 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
   role,
   onMembersChange,
 }) => {
-  const [memberData, setMemberData] = useState<RoleMemberDTO | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+
+  const { data: memberData = null, isLoading: loading } = useQuery({
+    queryKey: ['roles', 'members', role.bizID],
+    queryFn: () => roleManager.listMembers(role.bizID).then((res: { members: RoleMemberDTO | null }) => res.members ?? null),
+    enabled: !!role.bizID,
+  });
+
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [addOpen, setAddOpen] = useState(false);
   const [removing, setRemoving] = useState(false);
-
-  const fetchMembers = useCallback(async (bizID: string) => {
-    setLoading(true);
-    try {
-      const res = await roleManager.listMembers(bizID);
-      setMemberData(res.members ?? null);
-    } catch (err) {
-      handleApiError(err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    setSelected(new Set());
-    if (role.bizID) fetchMembers(role.bizID);
-  }, [role.bizID, fetchMembers]);
 
   const toggleSelect = (key: string) => {
     setSelected((prev) => {
@@ -155,7 +145,7 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
       });
       toast.success(`已移除 ${keys.size} 个成员`);
       setSelected(new Set());
-      await fetchMembers(role.bizID);
+      await queryClient.invalidateQueries({ queryKey: ['roles', 'members', role.bizID] });
       onMembersChange?.();
     } catch (err) {
       handleApiError(err);
@@ -336,7 +326,7 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
         existingDeptIds={depts.map((d) => String(d.id ?? ''))}
         existingChatIds={chats.map((c) => String(c.chatID ?? ''))}
         onAdded={() => {
-          if (role.bizID) fetchMembers(role.bizID);
+          if (role.bizID) queryClient.invalidateQueries({ queryKey: ['roles', 'members', role.bizID] });
           onMembersChange?.();
         }}
       />
