@@ -167,10 +167,7 @@ export class AssessmentOperationController {
       userId,
       userName,
     });
-    const protocol = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'https';
-    const host = (req.headers['x-forwarded-host'] as string) || req.get('host') || '';
-    const appBaseUrl = `${protocol}://${host}`;
-    const signUrl = `${appBaseUrl}/mobile-sign?token=${encodeURIComponent(token)}`;
+    const signUrl = `${body.appBaseUrl}/mobile-sign?token=${encodeURIComponent(token)}`;
 
     void this.signTokenService.sendSignMessage(
       userId,

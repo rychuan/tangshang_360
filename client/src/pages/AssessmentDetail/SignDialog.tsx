@@ -13,6 +13,7 @@ import { logger } from '@lark-apaas/client-toolkit/logger';
 import SignaturePad from '@/components/SignaturePad';
 import * as signTokenApi from '@client/src/api/sign-token';
 import { handleApiError } from '@client/src/utils/api-error';
+import { getAppBaseUrl } from '@client/src/utils/app-url';
 
 interface SignDialogProps {
   open: boolean;
@@ -100,6 +101,7 @@ const SignDialog: React.FC<SignDialogProps> = ({
       const res = await signTokenApi.generateSignToken(
         instanceId,
         signType,
+        getAppBaseUrl(),
       );
       setMobileToken(res.token);
       setMobileSent(true);

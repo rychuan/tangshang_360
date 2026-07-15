@@ -9,11 +9,12 @@ import type {
 export async function generateSignToken(
   id: string,
   signType: 'self' | 'supervisor',
+  appBaseUrl: string,
 ): Promise<SignTokenResponse> {
   const res = await axiosForBackend({
     url: `/api/assessment-instances/${id}/sign-token`,
     method: 'POST',
-    data: { signType },
+    data: { signType, appBaseUrl },
   });
   return unwrapApiData<SignTokenResponse>(res.data);
 }

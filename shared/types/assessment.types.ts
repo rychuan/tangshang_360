@@ -476,6 +476,7 @@ export interface CreateResponse {
 
 export interface SignTokenRequest {
   signType: 'self' | 'supervisor';
+  appBaseUrl: string;
 }
 
 export interface SignTokenResponse {
