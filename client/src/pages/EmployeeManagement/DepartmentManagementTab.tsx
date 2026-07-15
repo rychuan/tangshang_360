@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { department as departmentApi } from '@/api';
 import { handleApiError } from '@client/src/utils/api-error';
 import type {
@@ -87,9 +88,15 @@ function renderTreeOptions(
 }
 
 const DepartmentManagementTab: React.FC = () => {
-  const [items, setItems] = useState<DepartmentItem[]>([]);
-  const [tree, setTree] = useState<DepartmentTreeNode[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+
+  const { data: deptData, isLoading: loading } = useQuery({
+    queryKey: ['departments'],
+    queryFn: () => departmentApi.list(),
+  });
+  const items = deptData?.items ?? [];
+  const tree = deptData?.tree ?? [];
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingDept, setEditingDept] = useState<DepartmentItem | null>(null);
@@ -100,28 +107,8 @@ const DepartmentManagementTab: React.FC = () => {
     sortOrder: 0,
   });
 
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-
   const [membersDialogOpen, setMembersDialogOpen] = useState(false);
   const [membersDeptName, setMembersDeptName] = useState('');
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await departmentApi.list();
-      setItems(res?.items ?? []);
-      setTree(res.tree);
-      setExpanded(new Set(res.tree.map((n: DepartmentTreeNode) => n.id)));
-    } catch (err: unknown) {
-      handleApiError(err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
 
   const handleSave = async (): Promise<void> => {
     if (!formData.name.trim()) {
@@ -145,7 +132,7 @@ const DepartmentManagementTab: React.FC = () => {
       setDialogOpen(false);
       setEditingDept(null);
       setFormData({ name: '', parentId: '', headId: '', sortOrder: 0 });
-      loadData();
+      queryClient.invalidateQueries({ queryKey: ['departments'] });
     } catch (err: unknown) {
       handleApiError(err);
     }
@@ -170,7 +157,7 @@ const DepartmentManagementTab: React.FC = () => {
     try {
       await departmentApi.remove(dept.id);
       toast.success('部门已删除');
-      loadData();
+      queryClient.invalidateQueries({ queryKey: ['departments'] });
     } catch (err: unknown) {
       handleApiError(err);
     }
