@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/api/queryKeys';
 import { toast } from 'sonner';
 import { Plus, Eye, Ban, Trash2, Search, RotateCcw } from 'lucide-react';
 import { logger } from '@lark-apaas/client-toolkit/logger';
@@ -50,11 +52,8 @@ import type {
 } from '@shared/api.interface';
 
 const TemplateManagementPage: React.FC = () => {
-  const [loading, setLoading] = useState(false);
-  const [items, setItems] = useState<AssessmentTemplateItem[]>([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const pageSize = 20;
   const [keyword, setKeyword] = useState('');
   const [searchKeyword, setSearchKeyword] = useState('');
   const [filterPosition, setFilterPosition] = useState<string>('');
@@ -70,47 +69,26 @@ const TemplateManagementPage: React.FC = () => {
 
   const [deactivateId, setDeactivateId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [positions, setPositions] = useState<string[]>(POSITION_OPTIONS);
-  const [positionsLoading, setPositionsLoading] = useState(false);
-  const [detailCache, setDetailCache] = useState<
-    Record<string, AssessmentTemplateDetail>
-  >({});
+  const [detailCache, setDetailCache] = useState<Record<string, AssessmentTemplateDetail>>({});
 
-  const fetchList = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await assessmentTemplateApi.list({
-        page,
-        pageSize,
-        keyword: searchKeyword || undefined,
-        position: filterPosition || undefined,
-        status: filterStatus || undefined,
-      });
-      setItems(res?.items ?? []);
-      setTotal(res.total);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '加载失败';
-      logger.error('fetchList error:', msg);
-      handleApiError(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, pageSize, searchKeyword, filterPosition, filterStatus]);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    fetchList();
-  }, [fetchList]);
+  const listQuery = useQuery({
+    queryKey: ['templates', 'list', { page, pageSize, keyword: searchKeyword, position: filterPosition, status: filterStatus }],
+    queryFn: () => assessmentTemplateApi.list({ page, pageSize, keyword: searchKeyword || undefined, position: filterPosition || undefined, status: filterStatus || undefined }),
+  });
 
-  useEffect(() => {
-    setPositionsLoading(true);
-    dictionaryApi('position')
-      .list()
-      .then((res) =>
-        setPositions(res.items?.map((p) => p.name) ?? POSITION_OPTIONS),
-      )
-      .catch(() => {})
-      .finally(() => setPositionsLoading(false));
-  }, []);
+  const positionsQuery = useQuery({
+    queryKey: ['dictionary', 'position'],
+    queryFn: () => dictionaryApi('position').list(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const loading = listQuery.isLoading;
+  const items: AssessmentTemplateItem[] = listQuery.data?.items ?? [];
+  const total = listQuery.data?.total ?? 0;
+  const positions: string[] = positionsQuery.data?.items?.map((p: { name: string }) => p.name) ?? POSITION_OPTIONS;
+  const positionsLoading = positionsQuery.isLoading;
 
   const handleSearch = () => {
     setPage(1);
@@ -128,7 +106,7 @@ const TemplateManagementPage: React.FC = () => {
   const handleCreate = async (data: CreateTemplateRequest) => {
     await assessmentTemplateApi.create(data);
     toast.success('模板创建成功');
-    await fetchList();
+    await queryClient.invalidateQueries({ queryKey: ['templates'] });
   };
 
   const handleEdit = async (id: string) => {
@@ -152,7 +130,7 @@ const TemplateManagementPage: React.FC = () => {
       delete next[editingTemplate.id];
       return next;
     });
-    await fetchList();
+    await queryClient.invalidateQueries({ queryKey: ['templates'] });
   };
 
   const handlePreview = async (id: string) => {
@@ -178,7 +156,7 @@ const TemplateManagementPage: React.FC = () => {
       await assessmentTemplateApi.deactivate(deactivateId);
       toast.success('模板已停用');
       setDeactivateId(null);
-      await fetchList();
+      await queryClient.invalidateQueries({ queryKey: ['templates'] });
     } catch (err: unknown) {
       handleApiError(err);
     }
@@ -190,7 +168,7 @@ const TemplateManagementPage: React.FC = () => {
       await assessmentTemplateApi.remove(deleteId);
       toast.success('模板已删除');
       setDeleteId(null);
-      await fetchList();
+      await queryClient.invalidateQueries({ queryKey: ['templates'] });
     } catch (err: unknown) {
       handleApiError(err);
     }
