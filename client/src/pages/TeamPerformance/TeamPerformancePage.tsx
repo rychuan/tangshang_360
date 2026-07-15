@@ -82,7 +82,7 @@ function currentMonth(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-  const TeamPerformancePage: React.FC = () => {
+const TeamPerformancePage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
@@ -90,26 +90,39 @@ function currentMonth(): string {
   const [selectedPeriods, setSelectedPeriods] = useState([currentMonth()]);
   const activePeriods = selectedPeriods;
   const [remindDialogOpen, setRemindDialogOpen] = useState(false);
-  const [remindTarget, setRemindTarget] = useState<SubordinateRecord | null>(null);
+  const [remindTarget, setRemindTarget] = useState<SubordinateRecord | null>(
+    null,
+  );
   const [remindingIds, setRemindingIds] = useState<Set<string>>(new Set());
   const [total, setTotal] = useState(0);
   const pageSize = PAGE_SIZE;
 
   const { data: overview = null, isLoading: loading } = useQuery({
     queryKey: ['team-performance', 'overview', activePeriods],
-    queryFn: () => teamPerformanceApi.getOverview(activePeriods.length > 0 ? activePeriods : undefined),
+    queryFn: () =>
+      teamPerformanceApi.getOverview(
+        activePeriods.length > 0 ? activePeriods : undefined,
+      ),
   });
 
   const { data: subordinates = [], isLoading: loadingList } = useQuery({
-    queryKey: ['team-performance', 'subordinates', { page, statusFilter, activePeriods }],
-    queryFn: () => teamPerformanceApi.getSubordinates({
-      page, pageSize: PAGE_SIZE,
-      status: statusFilter || undefined,
-      periods: activePeriods.length > 0 ? activePeriods : undefined,
-    }).then((res) => {
-      setTotal(res.total);
-      return res?.items ?? [];
-    }),
+    queryKey: [
+      'team-performance',
+      'subordinates',
+      { page, statusFilter, activePeriods },
+    ],
+    queryFn: () =>
+      teamPerformanceApi
+        .getSubordinates({
+          page,
+          pageSize: PAGE_SIZE,
+          status: statusFilter || undefined,
+          periods: activePeriods.length > 0 ? activePeriods : undefined,
+        })
+        .then((res) => {
+          setTotal(res.total);
+          return res?.items ?? [];
+        }),
   });
 
   const gradeChartData = useMemo(() => {
@@ -135,9 +148,9 @@ function currentMonth(): string {
       .map((s, i) => ({
         employeeId: s.employeeId,
         name: s.employeeName,
-	        score: s.totalScore ?? 0,
-	        fill: RANKING_BAR_COLORS[i % RANKING_BAR_COLORS.length],
-	      }));
+        score: s.totalScore ?? 0,
+        fill: RANKING_BAR_COLORS[i % RANKING_BAR_COLORS.length],
+      }));
   }, [subordinates]);
 
   const teamColumns: PageTableColumn<SubordinateRecord>[] = useMemo(
@@ -295,31 +308,31 @@ function currentMonth(): string {
                 </Empty>
               </div>
             ) : (
-	              <div className="flex flex-col gap-2">
-	                {scoreRankingData.map((entry) => {
-	                  const maxScore = scoreRankingData[0]?.score || 100;
-	                  const pct = Math.max((entry.score / maxScore) * 100, 4);
-	                  return (
-	                    <div
-	                      key={entry.employeeId}
-	                      className="grid grid-cols-[1fr_auto] items-center gap-2 text-xs"
-	                    >
-	                      <div className="flex min-w-0 items-center gap-2">
-	                        <div className="h-6 min-w-0 flex-1 rounded-sm bg-muted">
-	                          <div
-	                            className="flex h-full min-w-[32px] items-center justify-end rounded-sm pr-1.5"
-	                            style={{
-	                              width: `${pct}%`,
-	                              backgroundColor: entry.fill,
-	                            }}
-	                          >
-	                            <span className="text-xs font-mono font-bold text-white">
-	                              {entry.score}
-	                            </span>
-	                          </div>
-	                        </div>
-	                      </div>
-	                      <div className="flex shrink-0 items-center gap-1">
+              <div className="flex flex-col gap-2">
+                {scoreRankingData.map((entry) => {
+                  const maxScore = scoreRankingData[0]?.score || 100;
+                  const pct = Math.max((entry.score / maxScore) * 100, 4);
+                  return (
+                    <div
+                      key={entry.employeeId}
+                      className="grid grid-cols-[1fr_auto] items-center gap-2 text-xs"
+                    >
+                      <div className="flex min-w-0 items-center gap-2">
+                        <div className="h-6 min-w-0 flex-1 rounded-sm bg-muted">
+                          <div
+                            className="flex h-full min-w-[32px] items-center justify-end rounded-sm pr-1.5"
+                            style={{
+                              width: `${pct}%`,
+                              backgroundColor: entry.fill,
+                            }}
+                          >
+                            <span className="text-xs font-mono font-bold text-white">
+                              {entry.score}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
                         <UserDisplay
                           value={{
                             user_id: entry.employeeId,
@@ -386,7 +399,7 @@ function currentMonth(): string {
               setStatusFilter(val === '__all' ? '' : val);
             }}
           >
-          <SelectTrigger className="w-full sm:w-36">
+            <SelectTrigger className="w-full sm:w-36">
               <SelectValue placeholder="全部状态" />
             </SelectTrigger>
             <SelectContent>
