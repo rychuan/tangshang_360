@@ -24,7 +24,8 @@ export async function listEmployees(
   period: string,
   filters?: { department?: string; templateId?: string },
 ): Promise<{ items: PublishEmployeeItem[] }> {
-  const params = new URLSearchParams({ period });
+  const params = new URLSearchParams();
+  params.set('periods', period);
   if (filters?.department) {
     params.set('department', filters.department);
   }
@@ -49,7 +50,7 @@ export async function publish(data: PublishRequest): Promise<PublishResponse> {
 }
 
 export async function listInstances(params: {
-  period: string;
+  periods?: string[];
   page: number;
   pageSize: number;
   status?: string;
@@ -57,10 +58,12 @@ export async function listInstances(params: {
   grade?: string;
 }): Promise<AssessmentInstanceListResponse> {
   const query = new URLSearchParams({
-    period: params.period,
     page: String(params.page),
     pageSize: String(params.pageSize),
   });
+  if (params.periods?.length) {
+    query.set('periods', params.periods.join(','));
+  }
   if (params.status) {
     query.set('status', params.status);
   }
@@ -125,7 +128,7 @@ export async function getPeriodStatistics(
   period: string,
 ): Promise<PeriodStatisticsResponse> {
   const res = await axiosForBackend({
-    url: `/api/publish/statistics?period=${encodeURIComponent(period)}`,
+    url: `/api/publish/statistics?periods=${encodeURIComponent(period)}`,
     method: 'GET',
   });
   return unwrapApiData<PeriodStatisticsResponse>(res.data);
@@ -153,12 +156,15 @@ export async function batchUnlock(
 }
 
 export async function previewUnfinishedReminders(params: {
-  period: string;
+  periods?: string[];
   department?: string;
   status?: string;
   grade?: string;
 }): Promise<ReminderPreviewResponse> {
-  const query = new URLSearchParams({ period: params.period });
+  const query = new URLSearchParams();
+  if (params.periods?.length) {
+    query.set('periods', params.periods.join(','));
+  }
   if (params.department) {
     query.set('department', params.department);
   }

@@ -305,7 +305,8 @@ export interface ReminderPreviewResponse {
 }
 
 export interface UnfinishedReminderRequest {
-  period: string;
+  period?: string;
+  periods?: string[];
   department?: string;
   status?: string;
   grade?: string;

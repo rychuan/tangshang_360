@@ -108,24 +108,30 @@ export class AssessmentPublishService {
   }
 
   async listEmployees(
-    period: string,
+    periods: string[],
     department: string,
     templateId: string,
     userId: string,
   ): Promise<{ items: PublishEmployeeItem[] }> {
     this.logger.log(
-      `listEmployees period=${period} department=${department} templateId=${templateId}`,
+      `listEmployees periods=${JSON.stringify(periods)} department=${department} templateId=${templateId}`,
     );
-    if (!period) {
+    if (!periods || periods.length === 0) {
       return { items: [] };
     }
+    const latestPeriod = periods[0]; // periods are sorted desc
     const conditions: SQL[] = [
       eq(employeeBinding.status, true),
-      lte(employeeBinding.effectiveFrom, period),
+      lte(employeeBinding.effectiveFrom, latestPeriod),
       isNull(employee.deletedAt),
       eq(employee.status, true),
       eq(assessmentTemplate.isActive, true),
-      sql`NOT EXISTS (SELECT 1 FROM ${assessmentInstance} WHERE (${assessmentInstance.employeeId}).user_id = (${employeeBinding.employeeId}).user_id AND ${assessmentInstance.period} = ${period})`,
+      periods.length === 1
+        ? sql`NOT EXISTS (SELECT 1 FROM ${assessmentInstance} WHERE (${assessmentInstance.employeeId}).user_id = (${employeeBinding.employeeId}).user_id AND ${assessmentInstance.period} = ${periods[0]})`
+        : sql`NOT EXISTS (SELECT 1 FROM ${assessmentInstance} WHERE (${assessmentInstance.employeeId}).user_id = (${employeeBinding.employeeId}).user_id AND ${assessmentInstance.period} IN (${sql.join(
+            periods.map((p: string) => sql`${p}`),
+            sql`,`,
+          )}) )`,
     ];
     if (department) {
       conditions.push(eq(employee.department, department));
@@ -435,7 +441,7 @@ export class AssessmentPublishService {
   }
 
   async listInstances(
-    period: string,
+    periods: string[],
     page: string,
     pageSize: string,
     status: string,
@@ -447,11 +453,13 @@ export class AssessmentPublishService {
     const ps: number = parseInt(pageSize, 10) || 20;
     const offset: number = (p - 1) * ps;
 
-    if (!period) {
+    if (!periods || periods.length === 0) {
       return { items: [], total: 0 };
     }
     const conditions: SQL[] = [
-      eq(assessmentInstance.period, period),
+      periods.length === 1
+        ? eq(assessmentInstance.period, periods[0])
+        : inArray(assessmentInstance.period, periods),
       isNull(employee.deletedAt),
     ];
     if (status) {
@@ -591,12 +599,12 @@ export class AssessmentPublishService {
   }
 
   async getPeriodStatistics(
-    period: string,
+    periods: string[],
     userId: string,
   ): Promise<PeriodStatisticsResponse> {
-    this.logger.log(`getPeriodStatistics period=${period}`);
+    this.logger.log(`getPeriodStatistics periods=${JSON.stringify(periods)}`);
 
-    if (!period) {
+    if (!periods || periods.length === 0) {
       return {
         toPublishCount: 0,
         publishedCount: 0,
@@ -605,10 +613,11 @@ export class AssessmentPublishService {
       };
     }
 
+    const latestPeriod = periods[0]; // periods are sorted desc
     const scopeCondition = await this.buildPublishEmployeeScope(userId);
     const bindingConditions: SQL[] = [
       eq(employeeBinding.status, true),
-      lte(employeeBinding.effectiveFrom, period),
+      lte(employeeBinding.effectiveFrom, latestPeriod),
       isNull(employee.deletedAt),
       eq(employee.status, true),
     ];
@@ -627,7 +636,9 @@ export class AssessmentPublishService {
     );
 
     const instanceConditions: SQL[] = [
-      eq(assessmentInstance.period, period),
+      periods.length === 1
+        ? eq(assessmentInstance.period, periods[0])
+        : inArray(assessmentInstance.period, periods),
       isNull(employee.deletedAt),
     ];
     if (scopeCondition) {
@@ -822,7 +833,7 @@ export class AssessmentPublishService {
   }
 
   private async getUnfinishedReminderTargets(
-    period: string,
+    periods: string[],
     department: string | undefined,
     status: string | undefined,
     grade: string | undefined,
@@ -837,12 +848,14 @@ export class AssessmentPublishService {
       status: string;
     }>
   > {
-    if (!period) {
+    if (!periods || periods.length === 0) {
       throw new BadRequestException('绩效周期不能为空');
     }
 
     const conditions: SQL[] = [
-      eq(assessmentInstance.period, period),
+      periods.length === 1
+        ? eq(assessmentInstance.period, periods[0])
+        : inArray(assessmentInstance.period, periods),
       inArray(assessmentInstance.status, [
         'self_review',
         'pending_sign',
@@ -925,14 +938,14 @@ export class AssessmentPublishService {
   }
 
   async previewUnfinishedReminders(
-    period: string,
+    periods: string[],
     department: string,
     status: string,
     grade: string,
     userId: string,
   ): Promise<ReminderPreviewResponse> {
     const targets = await this.getUnfinishedReminderTargets(
-      period,
+      periods,
       department || undefined,
       status || undefined,
       grade || undefined,
@@ -946,8 +959,13 @@ export class AssessmentPublishService {
     userId: string,
   ): Promise<UnfinishedReminderResponse> {
     const appBaseUrl = normalizeAppBaseUrl(body.appBaseUrl);
+    const periodList = body.periods?.length
+      ? body.periods
+      : body.period
+        ? [body.period]
+        : [];
     const targets = await this.getUnfinishedReminderTargets(
-      body.period,
+      periodList,
       body.department,
       body.status,
       body.grade,

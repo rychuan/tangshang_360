@@ -32,12 +32,18 @@ export class AssessmentPublishController {
   @Get('publish/employees')
   async listEmployees(
     @Req() req: Request,
-    @Query('period') period: string,
+    @Query('periods') periods: string,
     @Query('department') department: string,
     @Query('templateId') templateId: string,
   ) {
     const { userId } = req.userContext;
-    return this.service.listEmployees(period, department, templateId, userId);
+    const periodList = periods ? periods.split(',').filter(Boolean) : [];
+    return this.service.listEmployees(
+      periodList,
+      department,
+      templateId,
+      userId,
+    );
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
@@ -45,7 +51,7 @@ export class AssessmentPublishController {
   @Get('assessment-instances')
   async listInstances(
     @Req() req: Request,
-    @Query('period') period: string,
+    @Query('periods') periods: string,
     @Query('page') page: string,
     @Query('pageSize') pageSize: string,
     @Query('status') status: string,
@@ -53,8 +59,9 @@ export class AssessmentPublishController {
     @Query('grade') grade: string,
   ) {
     const { userId } = req.userContext;
+    const periodList = periods ? periods.split(',').filter(Boolean) : [];
     return this.service.listInstances(
-      period,
+      periodList,
       page,
       pageSize,
       status,
@@ -67,9 +74,10 @@ export class AssessmentPublishController {
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('publish_management', 'view')
   @Get('publish/statistics')
-  async getStatistics(@Req() req: Request, @Query('period') period: string) {
+  async getStatistics(@Req() req: Request, @Query('periods') periods: string) {
     const { userId } = req.userContext;
-    return this.service.getPeriodStatistics(period, userId);
+    const periodList = periods ? periods.split(',').filter(Boolean) : [];
+    return this.service.getPeriodStatistics(periodList, userId);
   }
 
   @CanRole(['admin', 'hrd'])
@@ -87,14 +95,15 @@ export class AssessmentPublishController {
   @Get('assessment-instances/reminder-preview')
   async reminderPreview(
     @Req() req: Request,
-    @Query('period') period: string,
+    @Query('periods') periods: string,
     @Query('department') department: string,
     @Query('status') status: string,
     @Query('grade') grade: string,
   ) {
     const { userId } = req.userContext;
+    const periodList = periods ? periods.split(',').filter(Boolean) : [];
     return this.service.previewUnfinishedReminders(
-      period,
+      periodList,
       department,
       status,
       grade,

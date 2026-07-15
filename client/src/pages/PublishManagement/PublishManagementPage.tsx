@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { handleApiError } from '@/utils/api-error';
 import { Label } from '@/components/ui/label';
-import MonthPicker from './MonthPicker';
+import MultiMonthPicker from '@/components/ui/multi-month-picker';
 import dayjs from 'dayjs';
 import {
   listEmployees,
@@ -39,9 +39,14 @@ import { getAppBaseUrl } from '@/utils/app-url';
 
 const PAGE_SIZE: number = 20;
 
+function currentMonth(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
 const PublishManagementPage: React.FC = () => {
   const queryClient = useQueryClient();
-  const [period, setPeriod] = useState<string>(dayjs().format('YYYY-MM'));
+  const [periods, setPeriods] = useState<string[]>([currentMonth()]);
 
   const [pendingDeptFilter, setPendingDeptFilter] = useState<string>('');
   const [pendingTplFilter, setPendingTplFilter] = useState<string>('');
@@ -50,10 +55,12 @@ const PublishManagementPage: React.FC = () => {
   const [deptFilter, setDeptFilter] = useState<string>('');
   const [gradeFilter, setGradeFilter] = useState<string>('');
 
+  const effectivePeriod = periods[0] ?? currentMonth();
+
   const statisticsQuery = useQuery({
-    queryKey: ['publish', 'statistics', period],
-    queryFn: () => getPeriodStatistics(period),
-    enabled: !!period,
+    queryKey: ['publish', 'statistics', effectivePeriod],
+    queryFn: () => getPeriodStatistics(effectivePeriod),
+    enabled: !!effectivePeriod,
   });
   const statistics = statisticsQuery.data ?? null;
   const loadingStatistics = statisticsQuery.isLoading;
@@ -62,16 +69,16 @@ const PublishManagementPage: React.FC = () => {
     queryKey: [
       'publish',
       'employees',
-      period,
+      effectivePeriod,
       pendingDeptFilter,
       pendingTplFilter,
     ],
     queryFn: () =>
-      listEmployees(period, {
+      listEmployees(effectivePeriod, {
         department: pendingDeptFilter || undefined,
         templateId: pendingTplFilter || undefined,
       }),
-    enabled: !!period,
+    enabled: !!effectivePeriod,
   });
   const employees: PublishEmployeeItem[] = employeesQuery.data?.items ?? [];
   const loadingEmployees = employeesQuery.isLoading;
@@ -111,18 +118,18 @@ const PublishManagementPage: React.FC = () => {
     queryKey: [
       'publish',
       'instances',
-      { period, page: instancesPage, statusFilter, deptFilter, gradeFilter },
+      { periods, page: instancesPage, statusFilter, deptFilter, gradeFilter },
     ],
     queryFn: () =>
       listInstances({
-        period,
+        periods: periods.length > 0 ? periods : undefined,
         page: instancesPage,
         pageSize: PAGE_SIZE,
         status: statusFilter === '__all__' ? undefined : statusFilter,
         department: deptFilter || undefined,
         grade: gradeFilter || undefined,
       }),
-    enabled: !!period,
+    enabled: periods.length > 0,
   });
   const instances: AssessmentInstanceItem[] = instancesQuery.data?.items ?? [];
   const instancesTotal: number = instancesQuery.data?.total ?? 0;
@@ -150,8 +157,8 @@ const PublishManagementPage: React.FC = () => {
     }));
   }, [employees]);
 
-  const handlePeriodChange = (value: string): void => {
-    setPeriod(value);
+  const handlePeriodChange = (value: string[]): void => {
+    setPeriods(value);
     setInstancesPage(1);
     setSelectedInstanceIds(new Set());
   };
@@ -187,7 +194,7 @@ const PublishManagementPage: React.FC = () => {
     setPublishing(true);
     try {
       const result = await publish({
-        period,
+        period: effectivePeriod,
         employeeIds: Array.from(selectedEmployeeIds),
         appBaseUrl: getAppBaseUrl(),
       });
@@ -196,7 +203,7 @@ const PublishManagementPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['publish'] });
       queryClient.invalidateQueries({ queryKey: ['publish', 'instances'] });
       queryClient.invalidateQueries({
-        queryKey: ['publish', 'statistics', period],
+        queryKey: ['publish', 'statistics', effectivePeriod],
       });
     } catch (err: unknown) {
       logger.error('publish failed', err);
@@ -320,7 +327,7 @@ const PublishManagementPage: React.FC = () => {
       setSelectedInstanceIds(new Set());
       queryClient.invalidateQueries({ queryKey: ['publish', 'instances'] });
       queryClient.invalidateQueries({
-        queryKey: ['publish', 'statistics', period],
+        queryKey: ['publish', 'statistics', effectivePeriod],
       });
     } catch (err: unknown) {
       logger.error('unlock failed', err);
@@ -334,7 +341,7 @@ const PublishManagementPage: React.FC = () => {
     setReminderPreviewLoading(true);
     try {
       const preview = await previewUnfinishedReminders({
-        period,
+        periods: periods.length > 0 ? periods : undefined,
         department: deptFilter || undefined,
         status: statusFilter === '__all__' ? undefined : statusFilter,
         grade: gradeFilter || undefined,
@@ -357,7 +364,7 @@ const PublishManagementPage: React.FC = () => {
     setReminderSending(true);
     try {
       const result = await remindUnfinishedAssessments({
-        period,
+        periods: periods.length > 0 ? periods : undefined,
         department: deptFilter || undefined,
         status: statusFilter === '__all__' ? undefined : statusFilter,
         grade: gradeFilter || undefined,
@@ -404,7 +411,7 @@ const PublishManagementPage: React.FC = () => {
       setSelectedInstanceIds(new Set());
       queryClient.invalidateQueries({ queryKey: ['publish', 'instances'] });
       queryClient.invalidateQueries({
-        queryKey: ['publish', 'statistics', period],
+        queryKey: ['publish', 'statistics', effectivePeriod],
       });
       queryClient.invalidateQueries({ queryKey: ['publish'] });
     } catch (err: unknown) {
@@ -452,7 +459,7 @@ const PublishManagementPage: React.FC = () => {
       setSelectedInstanceIds(new Set());
       queryClient.invalidateQueries({ queryKey: ['publish', 'instances'] });
       queryClient.invalidateQueries({
-        queryKey: ['publish', 'statistics', period],
+        queryKey: ['publish', 'statistics', effectivePeriod],
       });
       queryClient.invalidateQueries({ queryKey: ['publish'] });
     } catch (err: unknown) {
@@ -488,7 +495,7 @@ const PublishManagementPage: React.FC = () => {
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, '绩效列表');
-        XLSX.writeFile(wb, `绩效列表_${period}.xlsx`);
+        XLSX.writeFile(wb, `绩效列表_${effectivePeriod}.xlsx`);
         toast.success('导出成功');
       })
       .catch((err: unknown) => {
@@ -503,9 +510,11 @@ const PublishManagementPage: React.FC = () => {
         <PageHeader title="绩效发布管理" />
       </div>
 
-      <div className="flex items-center gap-3">
-        <Label className="shrink-0 text-sm font-medium">绩效周期</Label>
-        <MonthPicker value={period} onChange={handlePeriodChange} />
+      <div className="flex flex-col gap-1.5">
+        <Label className="text-xs text-muted-foreground h-4 leading-4">
+          绩效周期
+        </Label>
+        <MultiMonthPicker value={periods} onChange={handlePeriodChange} />
       </div>
 
       <>
@@ -616,7 +625,7 @@ const PublishManagementPage: React.FC = () => {
             if (!reminderSending) setReminderOpen(open);
           }}
           preview={reminderPreview}
-          period={period}
+          period={effectivePeriod}
           department={deptFilter || undefined}
           statusLabel={
             statusFilter === 'employee_processing'
