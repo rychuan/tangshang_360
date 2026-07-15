@@ -102,19 +102,24 @@ const MyAssessmentsPage: React.FC = () => {
 
   const [page, setPage] = useState(1);
   const pageSize = 10;
-  const [yearFilter, setYearFilter] = useState(String(new Date().getFullYear()));
+  const [yearFilter, setYearFilter] = useState(
+    String(new Date().getFullYear()),
+  );
 
   const recordsQuery = useQuery({
     queryKey: queryKeys.myAssessments.records({
-      page, pageSize,
+      page,
+      pageSize,
       periodStart: `${yearFilter}-01`,
       periodEnd: `${yearFilter}-12`,
     }),
-    queryFn: () => myAssessmentApi.getRecords({
-      page, pageSize,
-      periodStart: `${yearFilter}-01`,
-      periodEnd: `${yearFilter}-12`,
-    }),
+    queryFn: () =>
+      myAssessmentApi.getRecords({
+        page,
+        pageSize,
+        periodStart: `${yearFilter}-01`,
+        periodEnd: `${yearFilter}-12`,
+      }),
   });
 
   const trendQuery = useQuery({
@@ -169,10 +174,10 @@ const MyAssessmentsPage: React.FC = () => {
             >
               <ChevronRight />
             </Button>
-	            <Button
-	              variant="outline"
-	              size="sm"
-	              className="ml-1 hidden sm:inline-flex"
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-1 hidden sm:inline-flex"
               onClick={() => {
                 setYearFilter(String(new Date().getFullYear()));
                 setPage(1);
@@ -321,14 +326,22 @@ const MyAssessmentsPage: React.FC = () => {
                         </div>
                         <div className="grid grid-cols-2 gap-3 text-sm">
                           <div>
-                            <p className="text-xs text-muted-foreground">总分</p>
+                            <p className="text-xs text-muted-foreground">
+                              总分
+                            </p>
                             <p className="font-semibold">
                               {item.totalScore != null ? item.totalScore : '-'}
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs text-muted-foreground">等级</p>
-                            {item.grade ? <GradeBadge grade={item.grade} /> : '-'}
+                            <p className="text-xs text-muted-foreground">
+                              等级
+                            </p>
+                            {item.grade ? (
+                              <GradeBadge grade={item.grade} />
+                            ) : (
+                              '-'
+                            )}
                           </div>
                           <div className="col-span-2">
                             <p className="mb-1 text-xs text-muted-foreground">
@@ -343,7 +356,9 @@ const MyAssessmentsPage: React.FC = () => {
                         <div className="flex items-center justify-between gap-3">
                           <p className="text-xs text-muted-foreground">
                             {item.completedAt
-                              ? new Date(item.completedAt).toLocaleString('zh-CN')
+                              ? new Date(item.completedAt).toLocaleString(
+                                  'zh-CN',
+                                )
                               : '未完成'}
                           </p>
                           <ActionBadge

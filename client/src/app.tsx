@@ -59,121 +59,124 @@ const getPermissionApiUrl = (): string => {
 const RoutesComponent = () => {
   return (
     <QueryClientProvider client={queryClient}>
-    <AuthProvider config={{ permissionApi: { url: getPermissionApiUrl() } }}>
-      <PermissionsProvider>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route index element={<Navigate to="/my-assessments" replace />} />
-            <Route
-              path="dashboard"
-              element={
-                <ProtectedRoute roles={ALL_ROLES}>
-                  <HomePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="template-management"
-              element={
-                <ProtectedRoute roles={TEMPLATE_ROLES}>
-                  <TemplateManagementPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="publish-management"
-              element={
-                <ProtectedRoute roles={MANAGER_ROLES}>
-                  <PublishManagementPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="assessment/:id"
-              element={
-                <ProtectedRoute roles={ALL_ROLES}>
-                  <AssessmentDetailPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="statistics"
-              element={
-                <ProtectedRoute roles={MANAGER_ROLES}>
-                  <StatisticsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="my-assessments"
-              element={
-                <ProtectedRoute roles={ALL_ROLES}>
-                  <MyAssessmentsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="team-performance"
-              element={
-                <ProtectedRoute roles={MANAGER_ROLES}>
-                  <TeamPerformancePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="employees"
-              element={
-                <ProtectedRoute roles={MANAGER_ROLES}>
-                  <EmployeeManagementPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="employees/:id"
-              element={
-                <ProtectedRoute roles={MANAGER_ROLES}>
-                  <EmployeeDetailPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="permissions"
-              element={
-                <ProtectedRoute roles={ADMIN_HRD_ROLES}>
-                  <PermissionPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="grade-config"
-              element={
-                <ProtectedRoute roles={ADMIN_HRD_ROLES}>
-                  <GradeConfigPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="dictionary"
-              element={
-                <ProtectedRoute roles={ADMIN_HRD_ROLES}>
-                  <DictionaryConfigPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="dictionary/:type"
-              element={
-                <ProtectedRoute roles={ADMIN_HRD_ROLES}>
-                  <DictionaryConfigPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="403" element={<ForbiddenPage />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </PermissionsProvider>
-    </AuthProvider>
+      <AuthProvider config={{ permissionApi: { url: getPermissionApiUrl() } }}>
+        <PermissionsProvider>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route
+                index
+                element={<Navigate to="/my-assessments" replace />}
+              />
+              <Route
+                path="dashboard"
+                element={
+                  <ProtectedRoute roles={ALL_ROLES}>
+                    <HomePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="template-management"
+                element={
+                  <ProtectedRoute roles={TEMPLATE_ROLES}>
+                    <TemplateManagementPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="publish-management"
+                element={
+                  <ProtectedRoute roles={MANAGER_ROLES}>
+                    <PublishManagementPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="assessment/:id"
+                element={
+                  <ProtectedRoute roles={ALL_ROLES}>
+                    <AssessmentDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="statistics"
+                element={
+                  <ProtectedRoute roles={MANAGER_ROLES}>
+                    <StatisticsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="my-assessments"
+                element={
+                  <ProtectedRoute roles={ALL_ROLES}>
+                    <MyAssessmentsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="team-performance"
+                element={
+                  <ProtectedRoute roles={MANAGER_ROLES}>
+                    <TeamPerformancePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="employees"
+                element={
+                  <ProtectedRoute roles={MANAGER_ROLES}>
+                    <EmployeeManagementPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="employees/:id"
+                element={
+                  <ProtectedRoute roles={MANAGER_ROLES}>
+                    <EmployeeDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="permissions"
+                element={
+                  <ProtectedRoute roles={ADMIN_HRD_ROLES}>
+                    <PermissionPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="grade-config"
+                element={
+                  <ProtectedRoute roles={ADMIN_HRD_ROLES}>
+                    <GradeConfigPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="dictionary"
+                element={
+                  <ProtectedRoute roles={ADMIN_HRD_ROLES}>
+                    <DictionaryConfigPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="dictionary/:type"
+                element={
+                  <ProtectedRoute roles={ADMIN_HRD_ROLES}>
+                    <DictionaryConfigPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="403" element={<ForbiddenPage />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </PermissionsProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 };

@@ -1,7 +1,11 @@
 export const queryKeys = {
   myAssessments: {
-    records: (params: { page: number; pageSize: number; periodStart: string; periodEnd: string }) =>
-      ['my-assessments', 'records', params] as const,
+    records: (params: {
+      page: number;
+      pageSize: number;
+      periodStart: string;
+      periodEnd: string;
+    }) => ['my-assessments', 'records', params] as const,
     trend: (year: string) => ['my-assessments', 'trend', year] as const,
     summary: () => ['my-assessments', 'summary'] as const,
   },
@@ -11,12 +15,18 @@ export const queryKeys = {
   publishEmployees: (period: string, filters?: Record<string, string>) =>
     ['publish-employees', period, filters] as const,
   statistics: {
-    records: (params: Record<string, unknown>) => ['statistics', 'records', params] as const,
-    charts: (params: Record<string, unknown>) => ['statistics', 'charts', params] as const,
+    records: (params: Record<string, unknown>) =>
+      ['statistics', 'records', params] as const,
+    charts: (params: Record<string, unknown>) =>
+      ['statistics', 'charts', params] as const,
   },
-  dashboard: () => ['dashboard'] as const,
+  dashboard: {
+    todos: () => ['dashboard', 'todos'] as const,
+    overview: () => ['dashboard', 'overview'] as const,
+  },
   employees: {
-    list: (params: Record<string, unknown>) => ['employees', 'list', params] as const,
+    list: (params: Record<string, unknown>) =>
+      ['employees', 'list', params] as const,
     detail: (id: string) => ['employees', 'detail', id] as const,
     positions: () => ['employees', 'positions'] as const,
   },
@@ -25,12 +35,14 @@ export const queryKeys = {
     active: () => ['grades', 'active'] as const,
   },
   templates: {
-    list: (params: Record<string, unknown>) => ['templates', 'list', params] as const,
+    list: (params: Record<string, unknown>) =>
+      ['templates', 'list', params] as const,
     detail: (id: string) => ['templates', 'detail', id] as const,
   },
   teamPerformance: {
     overview: () => ['team-performance', 'overview'] as const,
-    subordinates: (params: Record<string, unknown>) => ['team-performance', 'subordinates', params] as const,
+    subordinates: (params: Record<string, unknown>) =>
+      ['team-performance', 'subordinates', params] as const,
   },
   department: {
     list: () => ['department', 'list'] as const,

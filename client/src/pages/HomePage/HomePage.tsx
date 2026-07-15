@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import {
   ClipboardCheckIcon,
@@ -9,8 +9,8 @@ import {
   AreaChartIcon,
   BarChart3Icon,
 } from 'lucide-react';
-import { logger } from '@lark-apaas/client-toolkit/logger';
-import { handleApiError } from '@client/src/utils/api-error';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '@/api/queryKeys';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -41,10 +41,6 @@ import {
 } from 'recharts';
 import { PageHeader } from '@/components/business-ui/page-header';
 import { getTodos, getOverview } from '@/api/dashboard';
-import type {
-  DashboardTodosResponse,
-  DashboardOverviewResponse,
-} from '@shared/api.interface';
 
 const TODO_ICONS: Record<
   string,
@@ -65,35 +61,33 @@ const TODO_COLORS: Record<string, string> = {
 };
 
 const HomePage: React.FC = () => {
-  const [todos, setTodos] = useState<DashboardTodosResponse['items']>([]);
-  const [overview, setOverview] = useState<DashboardOverviewResponse | null>(
-    null,
-  );
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: todos = [],
+    isLoading: todosLoading,
+    error: todosError,
+    refetch: refetchTodos,
+  } = useQuery({
+    queryKey: queryKeys.dashboard.todos(),
+    queryFn: getTodos,
+    select: (data) => data?.items ?? [],
+  });
 
-  const loadDashboard = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [todosRes, overviewRes] = await Promise.all([
-        getTodos(),
-        getOverview(),
-      ]);
-      setTodos(todosRes?.items ?? []);
-      setOverview(overviewRes ?? null);
-    } catch (e: unknown) {
-      logger.error('Dashboard load error:', e);
-      handleApiError(e);
-      setError('加载失败');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const {
+    data: overview = null,
+    isLoading: overviewLoading,
+    error: overviewError,
+    refetch: refetchOverview,
+  } = useQuery({
+    queryKey: queryKeys.dashboard.overview(),
+    queryFn: getOverview,
+  });
 
-  useEffect(() => {
-    loadDashboard();
-  }, [loadDashboard]);
+  const loading = todosLoading || overviewLoading;
+  const error = todosError || overviewError;
+  const retry = () => {
+    refetchTodos();
+    refetchOverview();
+  };
 
   if (loading) {
     return (
@@ -106,8 +100,10 @@ const HomePage: React.FC = () => {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-muted-foreground gap-4">
-        <p className="text-destructive">{error}</p>
-        <Button variant="outline" size="sm" onClick={loadDashboard}>
+        <p className="text-destructive">
+          {error instanceof Error ? error.message : '加载失败'}
+        </p>
+        <Button variant="outline" size="sm" onClick={retry}>
           重试
         </Button>
       </div>
