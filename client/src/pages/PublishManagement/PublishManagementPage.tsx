@@ -59,8 +59,18 @@ const PublishManagementPage: React.FC = () => {
   const loadingStatistics = statisticsQuery.isLoading;
 
   const employeesQuery = useQuery({
-    queryKey: ['publish', 'employees', period, pendingDeptFilter, pendingTplFilter],
-    queryFn: () => listEmployees(period, { department: pendingDeptFilter || undefined, templateId: pendingTplFilter || undefined }),
+    queryKey: [
+      'publish',
+      'employees',
+      period,
+      pendingDeptFilter,
+      pendingTplFilter,
+    ],
+    queryFn: () =>
+      listEmployees(period, {
+        department: pendingDeptFilter || undefined,
+        templateId: pendingTplFilter || undefined,
+      }),
     enabled: !!period,
   });
   const employees: PublishEmployeeItem[] = employeesQuery.data?.items ?? [];
@@ -98,12 +108,20 @@ const PublishManagementPage: React.FC = () => {
   );
 
   const instancesQuery = useQuery({
-    queryKey: ['publish', 'instances', { period, page: instancesPage, statusFilter, deptFilter, gradeFilter }],
-    queryFn: () => listInstances({
-      period, page: instancesPage, pageSize: PAGE_SIZE,
-      status: statusFilter === '__all__' ? undefined : statusFilter,
-      department: deptFilter || undefined, grade: gradeFilter || undefined,
-    }),
+    queryKey: [
+      'publish',
+      'instances',
+      { period, page: instancesPage, statusFilter, deptFilter, gradeFilter },
+    ],
+    queryFn: () =>
+      listInstances({
+        period,
+        page: instancesPage,
+        pageSize: PAGE_SIZE,
+        status: statusFilter === '__all__' ? undefined : statusFilter,
+        department: deptFilter || undefined,
+        grade: gradeFilter || undefined,
+      }),
     enabled: !!period,
   });
   const instances: AssessmentInstanceItem[] = instancesQuery.data?.items ?? [];
@@ -177,7 +195,9 @@ const PublishManagementPage: React.FC = () => {
       setSelectedEmployeeIds(new Set());
       queryClient.invalidateQueries({ queryKey: ['publish'] });
       queryClient.invalidateQueries({ queryKey: ['publish', 'instances'] });
-      queryClient.invalidateQueries({ queryKey: ['publish', 'statistics', period] });
+      queryClient.invalidateQueries({
+        queryKey: ['publish', 'statistics', period],
+      });
     } catch (err: unknown) {
       logger.error('publish failed', err);
       handleApiError(err);
@@ -299,7 +319,9 @@ const PublishManagementPage: React.FC = () => {
       setUnlockOpen(false);
       setSelectedInstanceIds(new Set());
       queryClient.invalidateQueries({ queryKey: ['publish', 'instances'] });
-      queryClient.invalidateQueries({ queryKey: ['publish', 'statistics', period] });
+      queryClient.invalidateQueries({
+        queryKey: ['publish', 'statistics', period],
+      });
     } catch (err: unknown) {
       logger.error('unlock failed', err);
       handleApiError(err);
@@ -381,7 +403,9 @@ const PublishManagementPage: React.FC = () => {
       }
       setSelectedInstanceIds(new Set());
       queryClient.invalidateQueries({ queryKey: ['publish', 'instances'] });
-      queryClient.invalidateQueries({ queryKey: ['publish', 'statistics', period] });
+      queryClient.invalidateQueries({
+        queryKey: ['publish', 'statistics', period],
+      });
       queryClient.invalidateQueries({ queryKey: ['publish'] });
     } catch (err: unknown) {
       logger.error('return failed', err);
@@ -427,7 +451,9 @@ const PublishManagementPage: React.FC = () => {
       }
       setSelectedInstanceIds(new Set());
       queryClient.invalidateQueries({ queryKey: ['publish', 'instances'] });
-      queryClient.invalidateQueries({ queryKey: ['publish', 'statistics', period] });
+      queryClient.invalidateQueries({
+        queryKey: ['publish', 'statistics', period],
+      });
       queryClient.invalidateQueries({ queryKey: ['publish'] });
     } catch (err: unknown) {
       logger.error('batchReturn failed', err);

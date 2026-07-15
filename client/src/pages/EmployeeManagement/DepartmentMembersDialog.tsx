@@ -47,7 +47,12 @@ const DepartmentMembersDialog: React.FC<DepartmentMembersDialogProps> = ({
 
   const { data: listData, isLoading: loading } = useQuery({
     queryKey: ['employees', 'department-members', departmentName],
-    queryFn: () => employeeManagement.list({ department: departmentName, page: 1, pageSize: 100 }),
+    queryFn: () =>
+      employeeManagement.list({
+        department: departmentName,
+        page: 1,
+        pageSize: 100,
+      }),
     enabled: open && !!departmentName,
   });
   const members = listData?.items ?? [];
