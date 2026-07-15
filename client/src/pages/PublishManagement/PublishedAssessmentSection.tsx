@@ -281,6 +281,9 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
                 <TableHead className="py-3 pr-4 font-medium text-left">
                   员工
                 </TableHead>
+                <TableHead className="py-3 pr-4 font-medium text-left">
+                  周期
+                </TableHead>
                 <TableHead className="py-3 pr-4 font-medium text-left hidden md:table-cell">
                   部门
                 </TableHead>
@@ -329,6 +332,11 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
                   </TableCell>
                   <TableCell className="py-3 pr-4">
                     <UserDisplay value={[record.employeeId]} size="small" />
+                  </TableCell>
+                  <TableCell className="py-3 pr-4">
+                    <Badge variant="outline" className="text-xs font-mono">
+                      {record.period}
+                    </Badge>
                   </TableCell>
                   <TableCell className="py-3 pr-4 hidden md:table-cell">
                     {record.department}

@@ -478,6 +478,7 @@ const PublishManagementPage: React.FC = () => {
     import('xlsx')
       .then((XLSX: typeof import('xlsx')) => {
         const data = instances.map((inst: AssessmentInstanceItem) => ({
+          周期: inst.period,
           员工: inst.employeeName,
           部门: inst.department,
           岗位: inst.position,
@@ -534,6 +535,7 @@ const PublishManagementPage: React.FC = () => {
           onTemplateFilterChange={setPendingTplFilter}
           departments={departments}
           templates={templates}
+          period={effectivePeriod}
           onAdjust={handleOpenAdjust}
           onDeleteSnapshot={handleDeleteSnapshot}
         />

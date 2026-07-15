@@ -492,19 +492,20 @@ export class AssessmentPublishService {
 
     const total: number = parseInt(String(totalResult[0]?.count ?? '0'), 10);
 
-    const rows = await this.db
-      .select({
-        id: assessmentInstance.id,
-        employeeId: assessmentInstance.employeeId,
-        employeeName: employee.name,
-        department: employee.department,
-        position: assessmentInstance.position,
-        supervisorId: assessmentInstance.supervisorId,
-        status: assessmentInstance.status,
-        totalScore: assessmentInstance.totalScore,
-        grade: assessmentInstance.grade,
-        publishedAt: assessmentInstance.publishedAt,
-        publishedById: assessmentInstance.publishedBy,
+        const rows = await this.db
+          .select({
+            id: assessmentInstance.id,
+            period: assessmentInstance.period,
+            employeeId: assessmentInstance.employeeId,
+            employeeName: employee.name,
+            department: employee.department,
+            position: assessmentInstance.position,
+            supervisorId: assessmentInstance.supervisorId,
+            status: assessmentInstance.status,
+            totalScore: assessmentInstance.totalScore,
+            grade: assessmentInstance.grade,
+            publishedAt: assessmentInstance.publishedAt,
+            publishedById: assessmentInstance.publishedBy,
         publishedByName: sql<string>`COALESCE((SELECT pub.name FROM employee pub WHERE (pub.employee_id).user_id = (${assessmentInstance.publishedBy}).user_id AND pub.deleted_at IS NULL LIMIT 1), '')`,
         selfReviewSubmitted: sql<boolean>`EXISTS(SELECT 1 FROM ${ratingRecord} WHERE ${ratingRecord.instanceId} = ${assessmentInstance.id} AND ${ratingRecord.ratingType} = 'self' AND ${ratingRecord.isDraft} = false)`,
         supervisorReviewSubmitted: sql<boolean>`EXISTS(SELECT 1 FROM ${ratingRecord} WHERE ${ratingRecord.instanceId} = ${assessmentInstance.id} AND ${ratingRecord.ratingType} = 'supervisor' AND ${ratingRecord.isDraft} = false)`,
@@ -524,6 +525,7 @@ export class AssessmentPublishService {
     const items: AssessmentInstanceItem[] = rows.map(
       (row: (typeof rows)[number]) => ({
         id: row.id,
+        period: row.period,
         employeeId: row.employeeId,
         employeeName: row.employeeName,
         department: row.department,

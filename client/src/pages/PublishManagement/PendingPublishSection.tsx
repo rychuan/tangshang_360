@@ -47,6 +47,7 @@ interface PendingPublishSectionProps {
   onTemplateFilterChange: (value: string) => void;
   departments: string[];
   templates: Array<{ id: string; name: string }>;
+  period: string;
   onAdjust: (emp: PublishEmployeeItem) => void;
   onDeleteSnapshot: (emp: PublishEmployeeItem) => void;
 }
@@ -74,6 +75,7 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
   onTemplateFilterChange,
   departments,
   templates,
+  period,
   onAdjust,
   onDeleteSnapshot,
 }) => {
@@ -190,6 +192,9 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
                 绩效模板
               </TableHead>
               <TableHead className="py-3 pr-4 font-medium hidden md:table-cell">
+                周期
+              </TableHead>
+              <TableHead className="py-3 pr-4 font-medium hidden md:table-cell">
                 上月绩效
               </TableHead>
               <TableHead className="py-3 pr-4 font-medium sticky right-0 bg-background z-20 border-l">
@@ -222,6 +227,9 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
                 </TableCell>
                 <TableCell className="py-3 pr-4 hidden md:table-cell">
                   {emp.templateName}
+                </TableCell>
+                <TableCell className="py-3 pr-4 hidden md:table-cell">
+                  {period}
                 </TableCell>
                 <TableCell className="py-3 pr-4 hidden md:table-cell">
                   {emp.lastPeriodStatus ? (
