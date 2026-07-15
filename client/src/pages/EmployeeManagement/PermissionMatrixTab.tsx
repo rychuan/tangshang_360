@@ -83,7 +83,10 @@ const PermissionMatrixTab: React.FC<PermissionMatrixTabProps> = ({ role }) => {
 
   const { data: permissions = [], isLoading: loading } = useQuery({
     queryKey: ['roles', 'permissions', role.bizID],
-    queryFn: () => roleManager.getRolePermissions(role.bizID).then((config) => clonePermissions(config.permissions || [])),
+    queryFn: () =>
+      roleManager
+        .getRolePermissions(role.bizID)
+        .then((config) => clonePermissions(config.permissions || [])),
     enabled: !!role.bizID,
   });
 
@@ -98,31 +101,34 @@ const PermissionMatrixTab: React.FC<PermissionMatrixTabProps> = ({ role }) => {
     resource: PermissionResource,
     action: PermissionAction,
   ) => {
-    queryClient.setQueryData(['roles', 'permissions', role.bizID], (prev: PermissionItem[]) => {
-      const copy = clonePermissions(prev);
-      const existing = copy.find((p) => p.resource === resource);
-      if (!existing) {
-        if (action === 'view') copy.push({ resource, actions: ['view'] });
+    queryClient.setQueryData(
+      ['roles', 'permissions', role.bizID],
+      (prev: PermissionItem[]) => {
+        const copy = clonePermissions(prev);
+        const existing = copy.find((p) => p.resource === resource);
+        if (!existing) {
+          if (action === 'view') copy.push({ resource, actions: ['view'] });
+          return copy;
+        }
+        if (existing.actions.includes(action)) {
+          existing.actions = existing.actions.filter((a) => a !== action);
+          if (existing.actions.length === 0) {
+            return copy.filter((p) => p.resource !== resource);
+          }
+          // 取消「查看」时自动移除所有其他权限，防止保存为 edit 不含 view 的不一致状态
+          if (action === 'view') {
+            existing.actions = [];
+            return copy.filter((p) => p.resource !== resource);
+          }
+        } else {
+          existing.actions.push(action);
+          if (action !== 'view' && !existing.actions.includes('view')) {
+            existing.actions.unshift('view');
+          }
+        }
         return copy;
-      }
-      if (existing.actions.includes(action)) {
-        existing.actions = existing.actions.filter((a) => a !== action);
-        if (existing.actions.length === 0) {
-          return copy.filter((p) => p.resource !== resource);
-        }
-        // 取消「查看」时自动移除所有其他权限，防止保存为 edit 不含 view 的不一致状态
-        if (action === 'view') {
-          existing.actions = [];
-          return copy.filter((p) => p.resource !== resource);
-        }
-      } else {
-        existing.actions.push(action);
-        if (action !== 'view' && !existing.actions.includes('view')) {
-          existing.actions.unshift('view');
-        }
-      }
-      return copy;
-    });
+      },
+    );
   };
 
   const handleSave = async () => {
@@ -143,7 +149,10 @@ const PermissionMatrixTab: React.FC<PermissionMatrixTabProps> = ({ role }) => {
       role.bizID ?? ''
     ];
     if (preset) {
-      queryClient.setQueryData(['roles', 'permissions', role.bizID], clonePermissions(preset));
+      queryClient.setQueryData(
+        ['roles', 'permissions', role.bizID],
+        clonePermissions(preset),
+      );
       toast.info('已重置为预设权限，点击保存生效');
     } else {
       toast('当前角色无预设权限');

@@ -119,7 +119,10 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
 
   const { data: memberData = null, isLoading: loading } = useQuery({
     queryKey: ['roles', 'members', role.bizID],
-    queryFn: () => roleManager.listMembers(role.bizID).then((res: { members: RoleMemberDTO | null }) => res.members ?? null),
+    queryFn: () =>
+      roleManager
+        .listMembers(role.bizID)
+        .then((res: { members: RoleMemberDTO | null }) => res.members ?? null),
     enabled: !!role.bizID,
   });
 
@@ -145,7 +148,9 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
       });
       toast.success(`已移除 ${keys.size} 个成员`);
       setSelected(new Set());
-      await queryClient.invalidateQueries({ queryKey: ['roles', 'members', role.bizID] });
+      await queryClient.invalidateQueries({
+        queryKey: ['roles', 'members', role.bizID],
+      });
       onMembersChange?.();
     } catch (err) {
       handleApiError(err);
@@ -238,7 +243,13 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
                       content={
                         <div className="flex flex-1 items-center gap-3">
                           {id ? (
-                            <UserDisplay value={{ user_id: id, name: i18nText(u.name) || undefined }} size="small" />
+                            <UserDisplay
+                              value={{
+                                user_id: id,
+                                name: i18nText(u.name) || undefined,
+                              }}
+                              size="small"
+                            />
                           ) : (
                             <span className="text-sm">
                               {i18nText(u.name) || '未知用户'}
@@ -326,7 +337,10 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
         existingDeptIds={depts.map((d) => String(d.id ?? ''))}
         existingChatIds={chats.map((c) => String(c.chatID ?? ''))}
         onAdded={() => {
-          if (role.bizID) queryClient.invalidateQueries({ queryKey: ['roles', 'members', role.bizID] });
+          if (role.bizID)
+            queryClient.invalidateQueries({
+              queryKey: ['roles', 'members', role.bizID],
+            });
           onMembersChange?.();
         }}
       />

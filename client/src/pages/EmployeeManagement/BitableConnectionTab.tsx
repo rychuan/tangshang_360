@@ -48,13 +48,17 @@ import type {
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { handleApiError } from '@client/src/utils/api-error';
 
-
 const BitableConnectionTab: React.FC = () => {
   const queryClient = useQueryClient();
 
-  const { data: connections = [], isLoading: loading, error: queryError } = useQuery({
+  const {
+    data: connections = [],
+    isLoading: loading,
+    error: queryError,
+  } = useQuery({
     queryKey: ['bitable-connections'],
-    queryFn: () => api.list({ page: 1, pageSize: 100 }).then((res) => res.items),
+    queryFn: () =>
+      api.list({ page: 1, pageSize: 100 }).then((res) => res.items),
   });
   const error = queryError ? '获取连接列表失败' : null;
 
@@ -347,7 +351,15 @@ const BitableConnectionTab: React.FC = () => {
           <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
             <XCircle className="size-8 opacity-30 text-destructive" />
             <p className="text-sm text-destructive">{error}</p>
-            <Button variant="outline" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ['bitable-connections'] })}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                queryClient.invalidateQueries({
+                  queryKey: ['bitable-connections'],
+                })
+              }
+            >
               重试
             </Button>
           </CardContent>

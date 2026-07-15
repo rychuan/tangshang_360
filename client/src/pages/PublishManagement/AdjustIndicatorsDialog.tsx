@@ -96,14 +96,20 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
   const queryClient = useQueryClient();
   const { data: indicators = [], isLoading: loadingIndicators } = useQuery({
     queryKey: ['publish', 'snapshot', employee?.employeeId],
-    queryFn: () => getEmployeeSnapshot(employee!.employeeId).then((res) =>
-      res.indicators.length > 0 ? res.indicators.map((ind: InstanceIndicatorItem) => ({
-        content: ind.content, description: ind.description,
-        algorithm: ind.algorithm, dataSource: ind.dataSource,
-        weight: ind.weight, dimensionName: ind.dimensionName,
-        dimensionWeight: ind.dimensionWeight,
-      })) : []
-    ),
+    queryFn: () =>
+      getEmployeeSnapshot(employee!.employeeId).then((res) =>
+        res.indicators.length > 0
+          ? res.indicators.map((ind: InstanceIndicatorItem) => ({
+              content: ind.content,
+              description: ind.description,
+              algorithm: ind.algorithm,
+              dataSource: ind.dataSource,
+              weight: ind.weight,
+              dimensionName: ind.dimensionName,
+              dimensionWeight: ind.dimensionWeight,
+            }))
+          : [],
+      ),
     enabled: open && !!employee?.employeeId,
   });
 
@@ -149,32 +155,37 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
     dimensionName: string,
     dimensionWeight: number,
   ): void => {
-    queryClient.setQueryData(['publish', 'snapshot', employee?.employeeId], (prev: AdjustIndicatorInput[]) => {
-      const existingSum: number = prev
-        .filter(
-          (ind: AdjustIndicatorInput) =>
-            (ind.dimensionName || '未分组') === (dimensionName || '未分组'),
-        )
-        .reduce(
-          (sum: number, ind: AdjustIndicatorInput) => sum + (ind.weight ?? 0),
-          0,
-        );
-      const remaining: number = Math.max(0, dimensionWeight - existingSum);
-      return [
-        ...prev,
-        {
-          ...EMPTY_INDICATOR,
-          weight: remaining,
-          dimensionName,
-          dimensionWeight,
-        },
-      ];
-    });
+    queryClient.setQueryData(
+      ['publish', 'snapshot', employee?.employeeId],
+      (prev: AdjustIndicatorInput[]) => {
+        const existingSum: number = prev
+          .filter(
+            (ind: AdjustIndicatorInput) =>
+              (ind.dimensionName || '未分组') === (dimensionName || '未分组'),
+          )
+          .reduce(
+            (sum: number, ind: AdjustIndicatorInput) => sum + (ind.weight ?? 0),
+            0,
+          );
+        const remaining: number = Math.max(0, dimensionWeight - existingSum);
+        return [
+          ...prev,
+          {
+            ...EMPTY_INDICATOR,
+            weight: remaining,
+            dimensionName,
+            dimensionWeight,
+          },
+        ];
+      },
+    );
   };
 
   const handleRemoveIndicator = (flatIndex: number): void => {
-    queryClient.setQueryData(['publish', 'snapshot', employee?.employeeId], (prev: AdjustIndicatorInput[]) =>
-      prev.filter((_: AdjustIndicatorInput, i: number) => i !== flatIndex),
+    queryClient.setQueryData(
+      ['publish', 'snapshot', employee?.employeeId],
+      (prev: AdjustIndicatorInput[]) =>
+        prev.filter((_: AdjustIndicatorInput, i: number) => i !== flatIndex),
     );
   };
 
@@ -183,11 +194,14 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
     field: keyof AdjustIndicatorInput,
     value: string | number,
   ): void => {
-    queryClient.setQueryData(['publish', 'snapshot', employee?.employeeId], (prev: AdjustIndicatorInput[]) => {
-      const next: AdjustIndicatorInput[] = [...prev];
-      next[flatIndex] = { ...next[flatIndex], [field]: value };
-      return next;
-    });
+    queryClient.setQueryData(
+      ['publish', 'snapshot', employee?.employeeId],
+      (prev: AdjustIndicatorInput[]) => {
+        const next: AdjustIndicatorInput[] = [...prev];
+        next[flatIndex] = { ...next[flatIndex], [field]: value };
+        return next;
+      },
+    );
   };
 
   const handleDimensionChange = (
@@ -195,19 +209,24 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
     field: 'dimensionName' | 'dimensionWeight',
     value: string | number,
   ): void => {
-    queryClient.setQueryData(['publish', 'snapshot', employee?.employeeId], (prev: AdjustIndicatorInput[]) => {
-      const next: AdjustIndicatorInput[] = [...prev];
-      for (const idx of group.flatIndices) {
-        next[idx] = { ...next[idx], [field]: value };
-      }
-      return next;
-    });
+    queryClient.setQueryData(
+      ['publish', 'snapshot', employee?.employeeId],
+      (prev: AdjustIndicatorInput[]) => {
+        const next: AdjustIndicatorInput[] = [...prev];
+        for (const idx of group.flatIndices) {
+          next[idx] = { ...next[idx], [field]: value };
+        }
+        return next;
+      },
+    );
   };
 
   const handleRemoveDimension = (group: DimensionGroup): void => {
     const removeSet: Set<number> = new Set(group.flatIndices);
-    queryClient.setQueryData(['publish', 'snapshot', employee?.employeeId], (prev: AdjustIndicatorInput[]) =>
-      prev.filter((_: AdjustIndicatorInput, i: number) => !removeSet.has(i)),
+    queryClient.setQueryData(
+      ['publish', 'snapshot', employee?.employeeId],
+      (prev: AdjustIndicatorInput[]) =>
+        prev.filter((_: AdjustIndicatorInput, i: number) => !removeSet.has(i)),
     );
   };
 
@@ -222,15 +241,18 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
       toast.error('请输入有效的维度权重分');
       return;
     }
-    queryClient.setQueryData(['publish', 'snapshot', employee?.employeeId], (prev: AdjustIndicatorInput[]) => [
-      ...prev,
-      {
-        ...EMPTY_INDICATOR,
-        weight,
-        dimensionName: name,
-        dimensionWeight: weight,
-      },
-    ]);
+    queryClient.setQueryData(
+      ['publish', 'snapshot', employee?.employeeId],
+      (prev: AdjustIndicatorInput[]) => [
+        ...prev,
+        {
+          ...EMPTY_INDICATOR,
+          weight,
+          dimensionName: name,
+          dimensionWeight: weight,
+        },
+      ],
+    );
     setAddingDimension(false);
     setNewDimName('');
     setNewDimWeight('');
@@ -244,7 +266,9 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
 
   const handleCopyTemplate = (): void => {
     if (!employee) return;
-    queryClient.invalidateQueries({ queryKey: ['publish', 'snapshot', employee?.employeeId] });
+    queryClient.invalidateQueries({
+      queryKey: ['publish', 'snapshot', employee?.employeeId],
+    });
     toast.success('已重新加载绩效指标');
   };
 
