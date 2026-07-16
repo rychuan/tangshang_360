@@ -247,11 +247,11 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                 <Table className="table-fixed w-full">
                   <TableHeader>
                     <TableRow className="bg-muted/30">
-                      <TableHead className="w-[16%] text-xs">指标</TableHead>
-                      <TableHead className="w-[18%] text-xs hidden md:table-cell">
+                      <TableHead className="w-[10%] text-xs">指标</TableHead>
+                      <TableHead className="w-[12%] text-xs hidden md:table-cell">
                         说明
                       </TableHead>
-                      <TableHead className="w-[8%] text-xs hidden lg:table-cell">
+                      <TableHead className="w-[20%] text-xs hidden lg:table-cell">
                         算法/描述
                       </TableHead>
                       <TableHead className="w-[8%] text-xs hidden lg:table-cell">
