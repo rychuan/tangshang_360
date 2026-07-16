@@ -1296,6 +1296,7 @@ export class AssessmentOperationService {
     const validatedSignImage = validateSignImage(signImage);
 
     const now: Date = new Date();
+    const accessScope = await this.accessScopeService.getScope(userId);
     const result = await this.db.transaction(async (tx) => {
       const sessionRows = await tx
         .select()
@@ -1397,7 +1398,7 @@ export class AssessmentOperationService {
             ),
           )
           .limit(1);
-        const scope = await this.accessScopeService.getScope(userId);
+        const scope = accessScope;
         const canOperate =
           scope.kind === 'global' ||
           current.supervisorId === userId ||
