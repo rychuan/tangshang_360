@@ -11,6 +11,7 @@ export type PermissionAction =
   | 'publish';
 
 export type PermissionResource =
+  | 'dashboard'
   | 'my_assessments'
   | 'employees'
   | 'template_management'
@@ -30,11 +31,15 @@ export interface PermissionItem {
 
 export const DEFAULT_PERMISSIONS: Record<string, PermissionItem[]> = {
   admin: [
+    { resource: 'dashboard', actions: ['view'] },
     { resource: 'my_assessments', actions: ['view', 'edit'] },
     { resource: 'employees', actions: ['view', 'edit', 'delete'] },
     { resource: 'template_management', actions: ['view', 'edit', 'delete'] },
     { resource: 'employee_binding', actions: ['view', 'edit'] },
-    { resource: 'publish_management', actions: ['view', 'edit', 'publish'] },
+    {
+      resource: 'publish_management',
+      actions: ['view', 'edit', 'export', 'publish'],
+    },
     { resource: 'statistics', actions: ['view', 'export'] },
     { resource: 'team_performance', actions: ['view'] },
     { resource: 'organization', actions: ['view', 'edit', 'delete'] },
@@ -43,11 +48,15 @@ export const DEFAULT_PERMISSIONS: Record<string, PermissionItem[]> = {
     { resource: 'dictionary_config', actions: ['view', 'edit'] },
   ],
   hrd: [
+    { resource: 'dashboard', actions: ['view'] },
     { resource: 'my_assessments', actions: ['view'] },
     { resource: 'employees', actions: ['view'] },
     { resource: 'template_management', actions: ['view', 'edit', 'delete'] },
     { resource: 'employee_binding', actions: ['view', 'edit'] },
-    { resource: 'publish_management', actions: ['view', 'edit', 'publish'] },
+    {
+      resource: 'publish_management',
+      actions: ['view', 'edit', 'export', 'publish'],
+    },
     { resource: 'statistics', actions: ['view', 'export'] },
     { resource: 'team_performance', actions: ['view'] },
     { resource: 'organization', actions: ['view', 'edit'] },
@@ -56,22 +65,27 @@ export const DEFAULT_PERMISSIONS: Record<string, PermissionItem[]> = {
     { resource: 'dictionary_config', actions: ['view', 'edit'] },
   ],
   dept_head: [
+    { resource: 'dashboard', actions: ['view'] },
     { resource: 'my_assessments', actions: ['view'] },
     { resource: 'employees', actions: ['view'] },
     { resource: 'template_management', actions: ['view'] },
     { resource: 'employee_binding', actions: ['view'] },
-    { resource: 'publish_management', actions: ['view'] },
+    { resource: 'publish_management', actions: ['view', 'export'] },
     { resource: 'statistics', actions: ['view', 'export'] },
     { resource: 'organization', actions: ['view', 'edit'] },
     { resource: 'team_performance', actions: ['view', 'edit'] },
   ],
   supervisor: [
+    { resource: 'dashboard', actions: ['view'] },
     { resource: 'my_assessments', actions: ['view', 'edit'] },
     { resource: 'employees', actions: ['view'] },
     { resource: 'statistics', actions: ['view'] },
     { resource: 'team_performance', actions: ['view', 'edit'] },
   ],
-  employee: [{ resource: 'my_assessments', actions: ['view', 'edit'] }],
+  employee: [
+    { resource: 'dashboard', actions: ['view'] },
+    { resource: 'my_assessments', actions: ['view', 'edit'] },
+  ],
 };
 
 export type {

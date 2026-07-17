@@ -291,6 +291,10 @@ export interface BatchReturnRequest {
   instanceIds: string[];
 }
 
+export interface PublishExportRequest {
+  instanceIds: string[];
+}
+
 export interface BatchOperationResponse {
   success: boolean;
   successCount: number;

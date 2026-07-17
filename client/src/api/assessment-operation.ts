@@ -34,6 +34,16 @@ export async function detail(id: string): Promise<AssessmentInstanceDetail> {
   return normalizeAssessmentDetailResponse(res.data);
 }
 
+export async function exportDetail(
+  id: string,
+): Promise<AssessmentInstanceDetail> {
+  const res = await axiosForBackend({
+    url: `/api/assessment-instances/${id}/export-detail`,
+    method: 'GET',
+  });
+  return normalizeAssessmentDetailResponse(res.data);
+}
+
 export async function submitSelfRating(
   id: string,
   data: RatingSubmitRequest,

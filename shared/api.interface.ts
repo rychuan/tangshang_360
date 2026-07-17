@@ -34,6 +34,7 @@ export {
   type UnlockRequest,
   type BatchUnlockRequest,
   type BatchReturnRequest,
+  type PublishExportRequest,
   type BatchOperationResponse,
   type ReminderPreviewResponse,
   type UnfinishedReminderRequest,

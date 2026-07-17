@@ -75,6 +75,14 @@ export function getPublishedAssessmentStatuses(status: string): string[] {
   return PUBLISHED_ASSESSMENT_STATUS_GROUPS[status] ?? [status];
 }
 
+export function normalizePublishExportIds(instanceIds: string[]): string[] {
+  const uniqueIds = Array.from(new Set(instanceIds || []));
+  if (uniqueIds.length > 1000) {
+    throw new BadRequestException('单次最多导出 1000 条绩效记录');
+  }
+  return uniqueIds;
+}
+
 async function runWithConcurrency<T, R>(
   items: T[],
   concurrency: number,
@@ -492,24 +500,62 @@ export class AssessmentPublishService {
 
     const total: number = parseInt(String(totalResult[0]?.count ?? '0'), 10);
 
-        const rows = await this.db
-          .select({
-            id: assessmentInstance.id,
-            period: assessmentInstance.period,
-            employeeId: assessmentInstance.employeeId,
-            employeeName: employee.name,
-            department: employee.department,
-            position: assessmentInstance.position,
-            supervisorId: assessmentInstance.supervisorId,
-            status: assessmentInstance.status,
-            totalScore: assessmentInstance.totalScore,
-            grade: assessmentInstance.grade,
-            publishedAt: assessmentInstance.publishedAt,
-            publishedById: assessmentInstance.publishedBy,
+    const items = await this.selectInstanceItems(conditions, ps, offset);
+
+    return { items, total };
+  }
+
+  async exportInstances(
+    requestedIds: string[],
+    userId: string,
+  ): Promise<{ items: AssessmentInstanceItem[] }> {
+    const instanceIds = normalizePublishExportIds(requestedIds);
+    if (instanceIds.length === 0) {
+      return { items: [] };
+    }
+    for (const id of instanceIds) {
+      validateUUID(id);
+    }
+
+    const conditions: SQL[] = [
+      inArray(assessmentInstance.id, instanceIds),
+      isNull(employee.deletedAt),
+    ];
+    const scopeCondition = await this.buildPublishEmployeeScope(userId);
+    if (scopeCondition) {
+      conditions.push(scopeCondition);
+    }
+
+    const items = await this.selectInstanceItems(
+      conditions,
+      instanceIds.length,
+      0,
+    );
+    return { items };
+  }
+
+  private async selectInstanceItems(
+    conditions: SQL[],
+    limit: number,
+    offset: number,
+  ): Promise<AssessmentInstanceItem[]> {
+    const rows = await this.db
+      .select({
+        id: assessmentInstance.id,
+        period: assessmentInstance.period,
+        employeeId: assessmentInstance.employeeId,
+        employeeName: employee.name,
+        department: employee.department,
+        position: assessmentInstance.position,
+        supervisorId: assessmentInstance.supervisorId,
+        status: assessmentInstance.status,
+        totalScore: assessmentInstance.totalScore,
+        grade: assessmentInstance.grade,
+        publishedAt: assessmentInstance.publishedAt,
+        publishedById: assessmentInstance.publishedBy,
         publishedByName: sql<string>`COALESCE((SELECT pub.name FROM employee pub WHERE (pub.employee_id).user_id = (${assessmentInstance.publishedBy}).user_id AND pub.deleted_at IS NULL LIMIT 1), '')`,
         selfReviewSubmitted: sql<boolean>`EXISTS(SELECT 1 FROM ${ratingRecord} WHERE ${ratingRecord.instanceId} = ${assessmentInstance.id} AND ${ratingRecord.ratingType} = 'self' AND ${ratingRecord.isDraft} = false)`,
         supervisorReviewSubmitted: sql<boolean>`EXISTS(SELECT 1 FROM ${ratingRecord} WHERE ${ratingRecord.instanceId} = ${assessmentInstance.id} AND ${ratingRecord.ratingType} = 'supervisor' AND ${ratingRecord.isDraft} = false)`,
-        // 2.5: JOIN 上级姓名
         supervisorName: sql<string>`COALESCE((SELECT sup.name FROM employee sup WHERE (sup.employee_id).user_id = (${assessmentInstance.supervisorId}).user_id AND sup.deleted_at IS NULL LIMIT 1), '')`,
       })
       .from(assessmentInstance)
@@ -519,31 +565,27 @@ export class AssessmentPublishService {
       )
       .where(and(...conditions))
       .orderBy(desc(assessmentInstance.createdAt))
-      .limit(ps)
+      .limit(limit)
       .offset(offset);
 
-    const items: AssessmentInstanceItem[] = rows.map(
-      (row: (typeof rows)[number]) => ({
-        id: row.id,
-        period: row.period,
-        employeeId: row.employeeId,
-        employeeName: row.employeeName,
-        department: row.department,
-        position: row.position,
-        supervisorId: row.supervisorId ?? undefined,
-        supervisorName: row.supervisorName,
-        status: row.status,
-        totalScore: row.totalScore ? Number(row.totalScore) : undefined,
-        grade: row.grade ?? undefined,
-        publishedAt: row.publishedAt ? String(row.publishedAt) : '',
-        publishedById: row.publishedById ?? undefined,
-        publishedByName: row.publishedByName,
-        selfReviewCompleted: row.selfReviewSubmitted,
-        supervisorReviewCompleted: row.supervisorReviewSubmitted,
-      }),
-    );
-
-    return { items, total };
+    return rows.map((row: (typeof rows)[number]) => ({
+      id: row.id,
+      period: row.period,
+      employeeId: row.employeeId,
+      employeeName: row.employeeName,
+      department: row.department,
+      position: row.position,
+      supervisorId: row.supervisorId ?? undefined,
+      supervisorName: row.supervisorName,
+      status: row.status,
+      totalScore: row.totalScore ? Number(row.totalScore) : undefined,
+      grade: row.grade ?? undefined,
+      publishedAt: row.publishedAt ? String(row.publishedAt) : '',
+      publishedById: row.publishedById ?? undefined,
+      publishedByName: row.publishedByName,
+      selfReviewCompleted: row.selfReviewSubmitted,
+      supervisorReviewCompleted: row.supervisorReviewSubmitted,
+    }));
   }
 
   async getEmployeeSnapshot(

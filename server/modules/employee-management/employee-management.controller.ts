@@ -32,6 +32,7 @@ export class EmployeeManagementController {
   @RequirePermission('employees', 'view')
   @Get()
   async list(
+    @Req() req: Request,
     @Query('page') page: string,
     @Query('pageSize') pageSize: string,
     @Query('keyword') keyword?: string,
@@ -42,17 +43,20 @@ export class EmployeeManagementController {
     @Query('status') status?: string,
     @Query('binding') binding?: string,
   ): Promise<EmployeeListResponse> {
-    return this.service.list({
-      page: parseInt(page, 10) || 1,
-      pageSize: Math.min(parseInt(pageSize, 10) || 20, 100),
-      keyword,
-      department,
-      positions: positions ? positions.split(',').filter(Boolean) : undefined,
-      title,
-      role,
-      status,
-      binding,
-    });
+    return this.service.list(
+      {
+        page: parseInt(page, 10) || 1,
+        pageSize: Math.min(parseInt(pageSize, 10) || 20, 100),
+        keyword,
+        department,
+        positions: positions ? positions.split(',').filter(Boolean) : undefined,
+        title,
+        role,
+        status,
+        binding,
+      },
+      req.userContext?.userId || '',
+    );
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
@@ -85,16 +89,20 @@ export class EmployeeManagementController {
   @RequirePermission('employee_binding', 'view')
   @Get(':id/binding-history')
   async bindingHistory(
+    @Req() req: Request,
     @Param('id') id: string,
   ): Promise<EmployeeBindingHistoryResponse> {
-    return this.service.bindingHistory(id);
+    return this.service.bindingHistory(id, req.userContext?.userId || '');
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('employees', 'view')
   @Get(':id')
-  async detail(@Param('id') id: string): Promise<EmployeeDetail> {
-    return this.service.detail(id);
+  async detail(
+    @Req() req: Request,
+    @Param('id') id: string,
+  ): Promise<EmployeeDetail> {
+    return this.service.detail(id, req.userContext?.userId || '');
   }
 
   @CanRole(['admin'])
