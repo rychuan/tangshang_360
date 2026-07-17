@@ -16,6 +16,7 @@ import {
   filterVisibleNavGroups,
   flattenNavItems,
   getCurrentNavLabel,
+  getDefaultLandingPath,
   hasRoleAndPermissionAccess,
 } from '@/components/app-shell/app-shell-utils';
 import {
@@ -45,6 +46,7 @@ const LayoutContent: React.FC = () => {
   );
 
   const allItems = flattenNavItems(visibleGroups);
+  const homePath = loading ? '/' : getDefaultLandingPath(visibleGroups);
   const currentLabel = getCurrentNavLabel(
     pathname,
     visibleGroups,
@@ -68,6 +70,7 @@ const LayoutContent: React.FC = () => {
           pathname={pathname}
           appName={appName}
           canViewEmployees={false}
+          homePath={homePath}
         />
         <SidebarInset className="min-w-0 overflow-hidden bg-background md:rounded-lg">
           <div className="flex flex-1 flex-col" />
@@ -85,6 +88,7 @@ const LayoutContent: React.FC = () => {
         pathname={pathname}
         appName={appName}
         canViewEmployees={canViewEmployees}
+        homePath={homePath}
       />
       <SidebarInset className="min-w-0 overflow-hidden bg-background md:rounded-lg">
         <AppTopbar

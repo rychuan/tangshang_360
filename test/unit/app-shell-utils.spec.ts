@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   filterNavItems,
   filterVisibleNavGroups,
@@ -110,6 +112,20 @@ describe('app shell navigation utilities', () => {
 
   it('没有可访问导航时默认入口返回 403', () => {
     expect(getDefaultLandingPath([])).toBe('/403');
+  });
+
+  it('品牌链接使用动态 home path 而不是固定 dashboard', () => {
+    const source = readFileSync(
+      resolve(
+        __dirname,
+        '../../client/src/components/app-shell/AppSidebar.tsx',
+      ),
+      'utf8',
+    );
+
+    expect(source).toContain('homePath: string;');
+    expect(source).toContain('<Link to={homePath}');
+    expect(source).not.toContain('<Link to="/dashboard"');
   });
 
   it('按页面名称过滤命令结果', () => {

@@ -22,6 +22,7 @@ export interface AppSidebarProps {
   pathname: string;
   appName?: string | null;
   canViewEmployees: boolean;
+  homePath: string;
 }
 
 function isActivePath(pathname: string, path: string): boolean {
@@ -33,11 +34,12 @@ export function AppSidebar({
   pathname,
   appName,
   canViewEmployees,
+  homePath,
 }: AppSidebarProps) {
   return (
     <Sidebar variant="inset" collapsible="offcanvas" className="[font-size:14px]">
       <SidebarHeader className="gap-3 p-3">
-        <Link to="/dashboard" className="flex h-10 items-center gap-3 px-2">
+        <Link to={homePath} className="flex h-10 items-center gap-3 px-2">
           <span className="grid size-8 place-items-center rounded-lg bg-[#171720] text-white">
             <Gauge className="size-4" />
           </span>
