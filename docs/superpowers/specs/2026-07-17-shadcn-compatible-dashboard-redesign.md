@@ -1,290 +1,339 @@
-# Shadcn-Compatible Dashboard Redesign
+# Shadcn 兼容式全局框架与首页改造设计
 
-## Goal
+## 目标
 
-Redesign the performance assessment application's global shell and dashboard to match the approved visual prototype while preserving the existing shadcn/ui component system, route permissions, API contracts, and business-page behavior.
+按照已经确认的 HTML Demo，重新设计绩效考评系统的全局框架和工作台首页，同时保留现有的 shadcn/ui 组件体系、路由权限、接口契约和业务页面行为。
 
-The approved direction is a quiet, compact enterprise workspace:
+最终视觉方向是一套安静、紧凑、适合企业日常操作的工作台：
 
-- light gray application canvas;
-- white main workspace;
-- compact grouped sidebar;
-- restrained top toolbar;
-- high-information dashboard cards;
-- readable 14px-oriented navigation and body typography;
-- minimal shadows, subtle borders, and small corner radii.
+- 页面外层使用浅灰色背景；
+- 主工作区使用白色背景；
+- 左侧导航紧凑分组；
+- 顶部工具栏保持克制；
+- 首页以高信息密度卡片组织内容；
+- 导航和正文以约 14px 的可读字号为基准；
+- 主要通过细边框区分层级，仅在必要位置使用阴影；
+- 使用较小圆角，避免卡片过度圆润。
 
-## Scope
+## 改造范围
 
-### Included
+### 本次包含
 
-- Redesign `client/src/components/Layout.tsx`.
-- Redesign `client/src/pages/HomePage/HomePage.tsx`.
-- Add narrowly scoped presentation components when they make the dashboard easier to understand and maintain.
-- Preserve responsive desktop and mobile navigation.
-- Reuse the current dashboard APIs and role-aware navigation.
-- Apply the new shell around all existing desktop business pages.
+- 重构 `client/src/components/Layout.tsx`；
+- 重构 `client/src/pages/HomePage/HomePage.tsx`；
+- 在确实有助于维护和理解时，增加职责单一的展示组件；
+- 保留桌面端和移动端响应式导航；
+- 继续使用现有仪表盘接口和权限导航；
+- 让所有现有桌面业务页面运行在新的全局框架内。
 
-### Excluded
+### 本次不包含
 
-- Redesigning every table, dialog, form, and business component.
-- Changing backend endpoints or database structures.
-- Changing role or permission behavior.
-- Replacing shadcn/ui base components.
-- Adding a new global search backend.
-- Implementing notification persistence or a notification center.
+- 重新设计所有表格、弹窗、表单和业务组件；
+- 修改后端接口或数据库结构；
+- 修改角色与权限规则；
+- 替换 shadcn/ui 基础组件；
+- 新增后端全局搜索能力；
+- 实现通知中心或通知持久化。
 
-## Compatibility Strategy
+## Shadcn 兼容策略
 
-The implementation will build on the project's existing shadcn/ui primitives:
+改造继续建立在项目现有的 shadcn/ui 基础组件之上：
 
-- `SidebarProvider`, `Sidebar`, and related sidebar components;
-- `Button`, `Card`, `Input`, `Badge`, `Avatar`, `Tooltip`, and `Sheet`;
-- existing Tailwind utilities and semantic color tokens;
-- `lucide-react` icons.
+- `SidebarProvider`、`Sidebar` 及相关侧边栏组件；
+- `Button`、`Card`、`Input`、`Badge`、`Avatar`、`Tooltip`、`Sheet`；
+- 现有 Tailwind 工具类和语义化颜色变量；
+- `lucide-react` 图标。
 
-The redesign must not rewrite files under `client/src/components/ui/` unless a confirmed defect in an existing primitive blocks the work. Visual changes should be expressed through:
+除非确认现有基础组件存在阻塞问题，否则不修改 `client/src/components/ui/` 下的文件。
 
-- composition and classes in `Layout.tsx`;
-- page-scoped dashboard components;
-- a small number of additional semantic shell tokens only if repeated styles cannot be expressed cleanly with existing tokens.
+视觉调整主要通过以下方式实现：
 
-Global typography tokens in `client/src/tailwind-theme.css` will not be changed as part of this work. The approved type scale will be scoped to the redesigned shell and dashboard to avoid regressions in dense forms, dialogs, and tables.
+- 调整 `Layout.tsx` 的组件组合和局部类名；
+- 创建仅供首页使用的展示组件；
+- 只有在同一套样式被多处重复使用、现有变量无法清晰表达时，才增加少量全局框架语义变量。
 
-## Global Shell
+本次不修改 `client/src/tailwind-theme.css` 中的全局字号变量。新框架和首页使用局部字号规则，避免员工管理、表单、弹窗和密集表格发生全局回归。
 
-### Desktop Structure
+## 全局框架
 
-The desktop application uses a two-column shell:
+### 桌面端结构
 
-- sidebar width: approximately 220px;
-- sidebar background: light neutral gray;
-- main workspace background: white;
-- outer application background: slightly darker neutral gray;
-- content padding: 20px to 24px depending on viewport width.
+桌面端采用左右两列布局：
 
-The sidebar retains the existing permission-filtered navigation groups:
+- 侧边栏宽度约为 220px；
+- 侧边栏使用浅灰色背景；
+- 主工作区使用白色背景；
+- 应用外层使用略深的中性灰背景；
+- 页面内容左右间距根据屏幕宽度控制在 20px 至 24px。
 
-- 工作台;
-- 绩效管理;
-- 系统设置.
+侧边栏继续保留现有的权限过滤和导航分组：
 
-The sidebar header contains:
+- 工作台；
+- 绩效管理；
+- 系统设置。
 
-- application brand;
-- current assessment-cycle label.
+侧边栏顶部包含：
 
-The cycle label shows the current month derived from the current date. It is not interactive and does not introduce a new filter contract.
+- 应用品牌；
+- 当前考核周期标签。
 
-The sidebar footer retains the current user identity and theme toggle. The approved "invite team members" treatment links to `/employees` when the current user has employee-management access and is hidden when the user lacks that permission.
+考核周期标签显示根据当前日期计算出的年月，例如“2026 年 7 月考核周期”。该标签不可点击，不新增周期筛选接口。
 
-### Top Toolbar
+侧边栏底部继续保留当前用户信息和主题切换。
 
-The top toolbar contains:
+已经确认的“邀请团队成员”区域按照以下规则处理：
 
-- current page title;
-- a navigation command entry;
-- theme toggle;
-- current user avatar.
+- 当前用户拥有员工管理权限时显示；
+- 点击后跳转到 `/employees`；
+- 当前用户没有员工管理权限时完全隐藏。
 
-The command entry opens a local route-navigation menu built from the user's visible navigation items. It opens through click or `Cmd/Ctrl+K`, filters routes by label, and navigates to the selected route. It does not search employees or assessment records and its placeholder must describe route or function search accurately.
+### 顶部工具栏
 
-A notification button is not rendered in this iteration because the application has no notification data source.
+顶部工具栏包含：
 
-### Existing Business Pages
+- 当前页面名称；
+- 本地导航命令入口；
+- 明暗主题切换；
+- 当前用户头像。
 
-All routed business pages continue rendering through `<Outlet />`. The shell will provide:
+导航命令入口只搜索当前用户有权访问的页面和功能：
 
-- consistent page padding;
-- the neutral canvas;
-- page transition styling;
-- a stable content width;
-- mobile overflow handling.
+- 点击输入框或按下 `Cmd/Ctrl+K` 打开；
+- 按导航名称过滤；
+- 选择结果后跳转到对应路由；
+- 不搜索员工、考核实例或数据库记录；
+- 输入框提示文字必须明确表达“搜索功能或页面”，不能暗示全局业务数据搜索。
 
-It will not add card containers around complete page sections and will not change the internal table or form hierarchy.
+由于当前系统没有通知数据源，本次不显示通知按钮，避免出现不可用的假操作。
 
-## Dashboard
+### 现有业务页面
 
-### Header
+所有现有业务页面继续通过 `<Outlet />` 渲染。
 
-The dashboard starts with:
+新的全局框架只统一以下内容：
 
-- a time-appropriate greeting using the current user's display name;
-- a short work-focused subtitle;
-- a primary "发布考核" action only when the user can access publish management.
+- 页面外层背景；
+- 内容区域边距；
+- 页面切换动效；
+- 主内容宽度；
+- 移动端溢出处理。
 
-For users without publish permission, the action is omitted rather than disabled.
+新的全局框架不会：
 
-### Assessment Progress Feature
+- 给整个业务页面额外套一层卡片；
+- 改变现有表格结构；
+- 改变现有表单结构；
+- 改变页面内部的数据请求和交互逻辑。
 
-The blue feature panel communicates the current cycle:
+## 工作台首页
 
-- month and assessment type;
-- overall progress;
-- relevant deadline when available;
-- completed and total participant counts;
-- a context-sensitive primary action.
+### 欢迎区域
 
-The current overview API does not guarantee all prototype fields. The component therefore follows these rules:
+首页顶部包含：
 
-- use real API values when available;
-- derive progress only when both numerator and denominator are trustworthy;
-- omit unsupported deadline text rather than hardcode business data;
-- fall back to a general "查看我的绩效" action for users without management access.
+- 根据当前时间显示的问候语；
+- 当前用户姓名；
+- 一句简短、工作导向的说明；
+- 有发布管理权限时显示“发布考核”主按钮。
 
-### Quick Actions
+没有发布管理权限的用户不显示该按钮，不使用禁用按钮占位。
 
-Quick actions come from `overview.shortcuts` and existing permission-aware routes. The dashboard provides icon and accent metadata locally by route.
+### 当前考核进度
 
-Typical actions include:
+蓝色重点面板用于展示当前周期的主要状态：
 
-- template management;
-- publish management;
-- statistics;
-- employee management.
+- 当前月份和考核类型；
+- 整体完成进度；
+- 有可靠数据时显示截止时间；
+- 已完成人数和总人数；
+- 根据权限显示对应的主要操作。
 
-Only actions returned by the backend or confirmed accessible through current permissions are rendered.
+现有首页接口不一定包含 Demo 中的全部字段，因此实现时遵循以下规则：
 
-### Pending Assessments
+- 接口有真实数据时才展示；
+- 只有分子和分母都可信时才计算百分比；
+- 接口没有截止时间时不使用硬编码日期；
+- 管理角色优先跳转到发布管理或团队绩效；
+- 普通员工使用“查看我的绩效”操作。
 
-The existing `getTodos()` response remains the data source. Pending items render as compact rows or cards containing:
+### 常用操作
 
-- assessment title;
-- period;
-- workflow type;
-- status treatment;
-- link to `/assessment/:id`.
+常用操作主要来自 `overview.shortcuts` 和当前用户有权限访问的路由。
 
-The layout uses three columns on wide desktop, two columns on medium screens, and one column on mobile. It must remain readable with long Chinese names and assessment titles.
+首页根据路由在前端配置对应的图标和辅助色。
 
-### Performance Summary
+常见入口包括：
 
-The existing `getOverview()` data continues to drive:
+- 模板管理；
+- 发布管理；
+- 统计查询；
+- 员工管理。
 
-- pending count;
-- completed count;
-- average score;
-- trend;
-- grade distribution.
+只有满足以下任一条件时才显示入口：
 
-The first dashboard viewport prioritizes pending work and completion progress. Trend and grade-distribution visualizations remain available below the summary area rather than being removed.
+- 后端快捷入口数据中包含该入口；
+- 当前权限模型明确允许用户访问该路由。
 
-Charts continue using the existing shadcn chart wrapper and Recharts. Empty datasets render explicit empty states.
+### 待办评分
 
-## Typography And Visual Tokens
+待办数据继续使用现有 `getTodos()` 接口。
 
-The approved prototype uses the following target scale:
+每个待办项目展示：
 
-- sidebar navigation and primary body text: approximately 14px;
-- secondary metadata and table-support text: approximately 12px;
-- section titles: approximately 14px to 16px;
-- page title: approximately 28px to 34px;
-- feature-panel title: approximately 26px to 28px.
+- 考核标题；
+- 考核周期；
+- 流程类型；
+- 状态标识；
+- 指向 `/assessment/:id` 的详情链接。
 
-Controls increase in height with the type scale:
+响应式布局：
 
-- compact navigation rows: approximately 40px;
-- toolbar controls: approximately 36px;
-- primary buttons: approximately 36px to 38px.
+- 宽屏桌面端最多三列；
+- 中等宽度使用两列；
+- 移动端使用一列。
 
-Visual treatment:
+员工姓名或考核标题较长时必须正确截断或换行，不允许挤压状态标签。
 
-- card radius no greater than 8px in production;
-- borders define most surfaces;
-- shadows are reserved for the application frame, overlays, and primary floating actions;
-- blue is the main feature accent;
-- orange, green, and purple identify distinct data categories without dominating the interface.
+### 绩效概览
 
-## Responsive Behavior
+继续使用 `getOverview()` 接口提供的数据：
 
-### Desktop
+- 待处理数量；
+- 已完成数量；
+- 平均分；
+- 绩效趋势；
+- 等级分布。
 
-- Persistent sidebar.
-- Dashboard uses two-column feature and quick-action composition.
-- Pending work uses up to three columns.
+首屏优先展示待办任务和完成进度。
 
-### Tablet
+现有的趋势图和等级分布图继续保留，放在概览区域下方，不会因为视觉改造被删除。
 
-- Sidebar remains available where space permits.
-- Feature and quick-action panels stack.
-- Pending work uses two columns.
-- Tables retain horizontal scrolling inside their existing page boundaries.
+图表继续使用：
 
-### Mobile
+- 现有 shadcn 图表封装；
+- Recharts；
+- 明确的空数据状态。
 
-- Sidebar uses the existing shadcn sheet behavior.
-- Top toolbar reduces to the menu trigger, compact search or page title, and user affordance.
-- Dashboard panels stack in one column.
-- Primary actions remain reachable without overlapping titles.
-- Fixed-format elements receive stable dimensions so labels and loading states do not shift layout.
+## 字体与视觉规范
 
-## Data Flow
+确认后的目标字号：
 
-1. `Layout.tsx` obtains app information, user profile, auth ability, and permission resources exactly as it does today.
-2. Visible navigation groups are derived from roles and permission resources.
-3. `HomePage.tsx` loads todos and overview through React Query.
-4. Dashboard presentation components receive normalized view models rather than calling APIs independently.
-5. Routes and links remain the source of navigation behavior.
+- 侧边栏导航和主要正文：约 14px；
+- 次要说明、辅助信息：约 12px；
+- 区块标题：约 14px 至 16px；
+- 页面主标题：约 28px 至 34px；
+- 蓝色重点面板标题：约 26px 至 28px。
 
-No new global state store is required.
+控件尺寸随字号同步调整：
 
-## Loading And Error States
+- 导航行高约 40px；
+- 顶部工具栏控件高度约 36px；
+- 主要按钮高度约 36px 至 38px。
 
-- The shell renders a stable skeleton while auth and permissions load.
-- Dashboard loading preserves the final layout footprint where practical.
-- A failed todos request does not erase valid overview data.
-- A failed overview request does not erase valid todo data.
-- Each failed dashboard section exposes a local retry action.
-- Empty data is visually distinct from failed data.
+视觉规则：
 
-This is a deliberate improvement over the current all-or-nothing dashboard error state.
+- 生产页面卡片圆角不超过 8px；
+- 大部分区域通过边框划分；
+- 阴影只用于应用外框、浮层和主要悬浮操作；
+- 蓝色作为主要重点色；
+- 橙色、绿色、紫色用于区分不同数据类型；
+- 不使用大面积单一蓝色或紫色主导整个页面。
 
-## Component Boundaries
+## 响应式设计
 
-Expected focused components:
+### 桌面端
 
-- `AppSidebar`: brand, cycle label, permission-aware navigation, footer;
-- `AppTopbar`: page title, command entry, theme, user;
-- `DashboardHero`: greeting and primary publish action;
-- `AssessmentProgressPanel`: current-cycle progress;
-- `DashboardQuickActions`: permission-aware shortcuts;
-- `DashboardTodoGrid`: pending assessments;
-- `DashboardSummary`: counts and compact metrics;
-- existing chart sections retained or extracted only when extraction improves readability.
+- 侧边栏常驻；
+- 当前考核进度和常用操作并排；
+- 待办项目最多三列。
 
-These components should remain close to their owning feature. Shared shell components belong under `client/src/components/`; dashboard-only components belong under `client/src/pages/HomePage/`.
+### 平板端
 
-## Testing
+- 空间允许时保留侧边栏；
+- 当前考核进度和常用操作改为上下排列；
+- 待办项目改为两列；
+- 表格只在自身容器内横向滚动。
 
-### Automated
+### 移动端
 
-- Permission-filtered navigation still hides inaccessible routes.
-- Publish action is omitted without publish-management access.
-- Quick actions render only accessible routes.
-- Todo cards link to the correct assessment detail route.
-- Partial dashboard API failures preserve successful sections.
-- Loading, empty, and error states render independently.
-- Greeting selection is deterministic for representative times.
+- 继续使用现有 shadcn `Sheet` 侧边栏；
+- 顶部工具栏缩减为菜单按钮、页面名称或紧凑搜索入口、用户区域；
+- 首页所有模块改为单列；
+- 主操作按钮不能遮挡标题；
+- 固定格式模块使用稳定尺寸，避免加载状态和长文本导致布局跳动。
 
-### Verification
+## 数据流
 
-- Run client type checking.
-- Run existing unit tests.
-- Run lint for touched files or the project lint command.
-- Verify desktop layout at approximately 1440x900.
-- Verify tablet layout near 1024px width.
-- Verify mobile layout near 390px width.
-- Confirm no horizontal page overflow outside intentional table containers.
-- Confirm the employee-management page remains usable inside the redesigned shell.
-- Confirm light and dark themes remain readable.
+1. `Layout.tsx` 按照现有方式获取应用信息、用户资料、角色能力和权限资源；
+2. 根据角色与权限生成用户可见导航；
+3. `HomePage.tsx` 通过 React Query 请求待办和概览数据；
+4. 首页展示组件接收整理后的视图数据，不在各组件内部重复调用接口；
+5. 所有页面跳转继续使用现有 React Router 路由。
 
-## Acceptance Criteria
+本次不增加新的全局状态管理库。
 
-- The application shell visually matches the approved larger-type prototype.
-- Existing shadcn/ui primitives remain the foundation.
-- Existing role and permission behavior is unchanged.
-- Existing business pages render correctly inside the new shell.
-- The dashboard uses real API data and does not hardcode operational metrics.
-- Dashboard sections handle loading, empty, partial-error, and success states.
-- Desktop and mobile navigation remain usable.
-- No backend or database change is required.
+## 加载、空数据与错误状态
+
+- 权限和用户信息加载期间，全局框架显示稳定的骨架结构；
+- 首页加载状态尽量保持与最终布局相同的占位尺寸；
+- 待办请求失败时，已经成功加载的概览数据继续显示；
+- 概览请求失败时，已经成功加载的待办数据继续显示；
+- 每个失败区块提供独立重试操作；
+- 空数据状态与请求失败状态必须有明显区别。
+
+这会改善当前首页任一请求失败就整页报错的行为。
+
+## 组件边界
+
+计划拆分以下职责明确的组件：
+
+- `AppSidebar`：品牌、周期标签、权限导航和底部区域；
+- `AppTopbar`：页面名称、导航命令、主题和用户；
+- `DashboardHero`：问候语和发布考核操作；
+- `AssessmentProgressPanel`：当前考核进度；
+- `DashboardQuickActions`：权限快捷入口；
+- `DashboardTodoGrid`：待办考核列表；
+- `DashboardSummary`：数量和概览指标；
+- 图表区域仅在拆分能明显提升可读性时提取为独立组件。
+
+组件存放规则：
+
+- 全局框架组件放在 `client/src/components/`；
+- 首页专用组件放在 `client/src/pages/HomePage/`；
+- 不把首页专用逻辑放入通用 `ui` 基础组件目录。
+
+## 测试方案
+
+### 自动化测试
+
+- 没有访问权限的导航继续被隐藏；
+- 没有发布权限时不显示发布考核按钮；
+- 常用操作只显示有权访问的路由；
+- 待办卡片跳转到正确的考核详情地址；
+- 一个首页接口失败时，另一个成功区块继续显示；
+- 加载、空数据和错误状态能够独立渲染；
+- 不同时间段的问候语结果稳定可测试。
+
+### 人工与浏览器验证
+
+- 运行前端 TypeScript 类型检查；
+- 运行现有单元测试；
+- 运行项目 Lint 或仅检查本次修改文件；
+- 在约 1440x900 的桌面视口验证；
+- 在约 1024px 宽度的平板视口验证；
+- 在约 390px 宽度的移动端视口验证；
+- 除表格自身的横向滚动外，页面不得出现意外横向滚动；
+- 员工管理页面在新框架内仍然能够正常操作；
+- 明亮和暗色主题均保持可读；
+- 检查文字、按钮、状态标签和图标不存在重叠。
+
+## 验收标准
+
+- 全局框架视觉与确认后的大字号 Demo 一致；
+- 继续使用现有 shadcn/ui 基础组件；
+- 现有角色和权限行为不变；
+- 所有现有业务页面能够在新框架内正常使用；
+- 首页只使用真实接口数据，不硬编码运营指标；
+- 首页能够分别处理加载、空数据、部分失败和成功状态；
+- 桌面端与移动端导航均可正常使用；
+- 不需要修改后端或数据库。
