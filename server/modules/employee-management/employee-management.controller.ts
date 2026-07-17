@@ -21,6 +21,7 @@ import type {
   CreateEmployeeRequest,
   UpdateEmployeeRequest,
   CreateBindingRequest,
+  BindingTemplateOption,
   EmployeeBindingHistoryResponse,
 } from '@shared/api.interface';
 
@@ -64,6 +65,13 @@ export class EmployeeManagementController {
   @Get('positions')
   async getPositions(): Promise<{ positions: string[] }> {
     return this.service.getPositions();
+  }
+
+  @CanRole(['admin', 'hrd'])
+  @RequirePermission('employee_binding', 'edit')
+  @Get('binding-templates')
+  async bindingTemplates(): Promise<{ items: BindingTemplateOption[] }> {
+    return this.service.bindingTemplates();
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])

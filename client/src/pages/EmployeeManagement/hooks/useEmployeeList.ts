@@ -6,11 +6,9 @@ import {
   type SetStateAction,
 } from 'react';
 import { employeeManagement } from '@/api';
-import { assessmentTemplate as templateApi } from '@/api';
-import dictionaryApi from '@/api/dictionary';
 import type {
   EmployeeItem,
-  AssessmentTemplateItem,
+  BindingTemplateOption,
 } from '@shared/api.interface';
 import { handleApiError } from '@/utils/api-error';
 import type { EmployeeFilters } from './useEmployeeFilters';
@@ -22,7 +20,7 @@ interface UseEmployeeListReturn {
   total: number;
   loading: boolean;
   positions: string[];
-  templates: AssessmentTemplateItem[];
+  templates: BindingTemplateOption[];
   selectedRowKeys: string[];
   setSelectedRowKeys: Dispatch<SetStateAction<string[]>>;
   refetch: () => void;
@@ -34,12 +32,13 @@ interface UseEmployeeListReturn {
  */
 export function useEmployeeList(
   filters: EmployeeFilters,
+  options: { loadTemplates: boolean },
 ): UseEmployeeListReturn {
   const [employees, setEmployees] = useState<EmployeeItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [positions, setPositions] = useState<string[]>([]);
-  const [templates, setTemplates] = useState<AssessmentTemplateItem[]>([]);
+  const [templates, setTemplates] = useState<BindingTemplateOption[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
 
   const fetchEmployees = useCallback(async () => {
@@ -77,21 +76,25 @@ export function useEmployeeList(
 
   const fetchPositions = useCallback(async () => {
     try {
-      const res = await dictionaryApi('position').list();
-      setPositions(res.items.map((p) => p.name));
+      const res = await employeeManagement.getPositions();
+      setPositions(res.positions);
     } catch (error: unknown) {
       handleApiError(error);
     }
   }, []);
 
   const fetchTemplates = useCallback(async () => {
+    if (!options.loadTemplates) {
+      setTemplates([]);
+      return;
+    }
     try {
-      const res = await templateApi.list({ page: 1, pageSize: 200 });
+      const res = await employeeManagement.bindingTemplates();
       setTemplates(res.items);
     } catch (error: unknown) {
       handleApiError(error);
     }
-  }, []);
+  }, [options.loadTemplates]);
 
   useEffect(() => {
     fetchEmployees();

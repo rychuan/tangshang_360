@@ -64,6 +64,13 @@ export interface CreateBindingRequest {
   effectiveFrom: string;
 }
 
+export interface BindingTemplateOption {
+  id: string;
+  name: string;
+  position: string;
+  type: 'monthly' | 'probation';
+}
+
 export interface BindingHistoryItem {
   templateName: string;
   effectiveFrom: string;
