@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { toast } from 'sonner';
-import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo } from '@/hooks/usePermissions';
 import { handleApiError } from '@/utils/api-error';
 import * as XLSX from 'xlsx';
@@ -75,6 +74,7 @@ import type {
   StatisticsRecordItem,
   ChartsResponse,
 } from '@shared/api.interface';
+import { COMMAND_PERMISSIONS } from '@/components/permission-policy';
 
 const CHART_COLORS = [
   'hsl(var(--chart-1))',
@@ -439,21 +439,19 @@ const StatisticsPage: React.FC = () => {
                   <SearchIcon data-icon="inline-start" />
                   查询
                 </Button>
-                <CanRole roles={['admin', 'hrd', 'dept_head']}>
-                  <CanDo resource="statistics" action="export">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleExport}
-                      disabled={exporting}
-                      className="shrink-0"
-                    >
-                      <DownloadIcon data-icon="inline-start" />
-                      {exporting && <Spinner className="mr-2 size-4" />}导出
-                    </Button>
-                  </CanDo>
-                </CanRole>
-                <CanRole roles={['admin', 'hrd']}>
+                <CanDo resource="statistics" action="export">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExport}
+                    disabled={exporting}
+                    className="shrink-0"
+                  >
+                    <DownloadIcon data-icon="inline-start" />
+                    {exporting && <Spinner className="mr-2 size-4" />}导出
+                  </Button>
+                </CanDo>
+                <CanDo resource="statistics" action="export">
                   <Button
                     variant="outline"
                     size="sm"
@@ -465,7 +463,7 @@ const StatisticsPage: React.FC = () => {
                     {syncingOut && <Spinner className="mr-2 size-4" />}
                     同步
                   </Button>
-                </CanRole>
+                </CanDo>
               </div>
             </div>
           </div>
@@ -680,11 +678,9 @@ const StatisticsPage: React.FC = () => {
                       <TableHead className="text-left py-3 px-4 font-medium hidden lg:table-cell">
                         完成时间
                       </TableHead>
-                      <CanRole roles={['admin', 'hrd', 'dept_head']}>
-                        <TableHead className="py-3 px-4 font-medium sticky right-0 bg-background z-20 border-l">
-                          操作
-                        </TableHead>
-                      </CanRole>
+                      <TableHead className="py-3 px-4 font-medium sticky right-0 bg-background z-20 border-l">
+                        操作
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -722,35 +718,33 @@ const StatisticsPage: React.FC = () => {
                               )
                             : '-'}
                         </TableCell>
-                        <CanRole roles={['admin', 'hrd', 'dept_head']}>
-                          <TableCell className="py-3 px-4 sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
-                            <div className="flex items-center gap-1">
+                        <TableCell className="py-3 px-4 sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
+                          <div className="flex items-center gap-1">
+                            <CanDo {...COMMAND_PERMISSIONS.assessmentView}>
                               <ActionBadge
                                 actionType="view"
                                 icon={<Eye className="size-3" />}
                                 label="详情"
+                                onClick={() => navigate(`../assessment/${r.id}`)}
+                              />
+                            </CanDo>
+                            <CanDo resource="statistics" action="export">
+                              <ActionBadge
+                                actionType="preview"
+                                icon={<FileDown className="size-3" />}
+                                label="导出"
+                                disabled={exportingPdfId === r.id}
                                 onClick={() =>
-                                  navigate(`../assessment/${r.id}`)
+                                  handleExportPdf(
+                                    r.id,
+                                    r.employeeName,
+                                    r.period,
+                                  )
                                 }
                               />
-                              <CanDo resource="statistics" action="export">
-                                <ActionBadge
-                                  actionType="preview"
-                                  icon={<FileDown className="size-3" />}
-                                  label="导出"
-                                  disabled={exportingPdfId === r.id}
-                                  onClick={() =>
-                                    handleExportPdf(
-                                      r.id,
-                                      r.employeeName,
-                                      r.period,
-                                    )
-                                  }
-                                />
-                              </CanDo>
-                            </div>
-                          </TableCell>
-                        </CanRole>
+                            </CanDo>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

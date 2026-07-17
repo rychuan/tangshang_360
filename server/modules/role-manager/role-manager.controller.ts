@@ -117,7 +117,9 @@ export class RoleManagerController {
     @Param('bizID') bizID: string,
     @Body() dto: AddMembersRequest,
   ) {
-    return this.authzSDK.members.add(bizID, dto);
+    const result = await this.authzSDK.members.add(bizID, dto);
+    this.invalidateMemberCaches(dto);
+    return result;
   }
 
   @CanRole(['admin'])
@@ -128,7 +130,9 @@ export class RoleManagerController {
     @Param('bizID') bizID: string,
     @Body() dto: RemoveMembersRequest,
   ) {
-    return this.authzSDK.members.remove(bizID, dto);
+    const result = await this.authzSDK.members.remove(bizID, dto);
+    this.invalidateMemberCaches(dto);
+    return result;
   }
 
   @CanRole(['admin', 'hrd'])
@@ -170,5 +174,19 @@ export class RoleManagerController {
       dto.permissions,
     );
     return { success: true };
+  }
+
+  private invalidateMemberCaches(
+    dto: AddMembersRequest | RemoveMembersRequest,
+  ): void {
+    const members = dto.members as {
+      userList?: Array<{ userID?: string; user_id?: string }>;
+    };
+    for (const user of members.userList || []) {
+      const userId = user.userID || user.user_id;
+      if (userId) {
+        this.roleManagerService.invalidateUserRoleCache(userId);
+      }
+    }
   }
 }

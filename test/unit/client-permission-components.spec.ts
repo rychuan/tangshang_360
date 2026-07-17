@@ -82,7 +82,7 @@ describe('client permission component wiring', () => {
     const html = renderToStaticMarkup(
       React.createElement(
         ProtectedRoute,
-        { roles: ['employee'], resources: ['dashboard'] },
+        { resources: ['dashboard'] },
         React.createElement('span', { 'data-page': 'child' }),
       ),
     );
@@ -98,7 +98,7 @@ describe('client permission component wiring', () => {
     const html = renderToStaticMarkup(
       React.createElement(
         ProtectedRoute,
-        { roles: ['employee'], resources: ['dashboard'] },
+        { resources: ['dashboard'] },
         React.createElement('span', { 'data-page': 'child' }),
       ),
     );
@@ -107,13 +107,14 @@ describe('client permission component wiring', () => {
     expect(html).not.toContain('data-page="child"');
   });
 
-  it('mounts a protected page only when role and resource both match', () => {
-    mockRoles = ['employee'];
+  it('mounts a protected page when resource view matches', () => {
+    mockRoles = [];
+    mockPermissions = [{ resource: 'dashboard', actions: ['view'] }];
 
     const html = renderToStaticMarkup(
       React.createElement(
         ProtectedRoute,
-        { roles: ['employee'], resources: ['dashboard'] },
+        { resources: ['dashboard'] },
         React.createElement('span', { 'data-page': 'child' }),
       ),
     );
@@ -122,7 +123,42 @@ describe('client permission component wiring', () => {
     expect(html).not.toContain('data-navigate');
   });
 
-  it('does not mount denied employee management tabs', () => {
+  it('allows an unknown custom role when resource permission matches', () => {
+    mockRoles = [];
+    mockPermissions = [{ resource: 'statistics', actions: ['view'] }];
+
+    const html = renderToStaticMarkup(
+      React.createElement(
+        ProtectedRoute,
+        { resources: ['statistics'] },
+        React.createElement('span', { 'data-page': 'custom-role' }),
+      ),
+    );
+
+    expect(html).toContain('data-page="custom-role"');
+  });
+
+  it('retains explicit identity-role restrictions', () => {
+    mockRoles = [];
+    mockPermissions = [
+      { resource: 'permission_management', actions: ['view'] },
+    ];
+
+    const html = renderToStaticMarkup(
+      React.createElement(
+        ProtectedRoute,
+        {
+          resources: ['permission_management'],
+          identityRoles: ['admin', 'hrd'],
+        },
+        React.createElement('span', { 'data-page': 'permissions' }),
+      ),
+    );
+
+    expect(html).toContain('data-navigate="/403"');
+  });
+
+  it('mounts only the employee tab for a non-global employee viewer', () => {
     mockRoles = ['supervisor'];
     mockPermissions = DEFAULT_PERMISSIONS.supervisor;
 
@@ -133,6 +169,19 @@ describe('client permission component wiring', () => {
     expect(html).toContain('data-tab="employees"');
     expect(html).not.toContain('data-tab="departments"');
     expect(html).not.toContain('data-tab="bitable"');
+  });
+
+  it('mounts employee, department, and Bitable tabs for a global viewer', () => {
+    mockRoles = ['hrd'];
+    mockPermissions = DEFAULT_PERMISSIONS.hrd;
+
+    const html = renderToStaticMarkup(
+      React.createElement(EmployeeManagementPage),
+    );
+
+    expect(html).toContain('data-tab="employees"');
+    expect(html).toContain('data-tab="departments"');
+    expect(html).toContain('data-tab="bitable"');
   });
 
   it('mounts only the organization tab when employees view is absent', () => {

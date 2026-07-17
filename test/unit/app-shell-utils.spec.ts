@@ -6,13 +6,9 @@ import {
   formatCurrentCycle,
   getDefaultLandingPath,
   getCurrentNavLabel,
-  hasRoleAndPermissionAccess,
+  hasPermissionAccess,
 } from '../../client/src/components/app-shell/app-shell-utils';
 import type { NavGroup } from '../../client/src/components/navigation';
-import {
-  ADMIN_HRD_ROLES,
-  MANAGER_ROLES,
-} from '../../client/src/components/role-constants';
 
 const groups: NavGroup[] = [
   {
@@ -23,21 +19,18 @@ const groups: NavGroup[] = [
         label: '绩效工作台',
         path: '/dashboard',
         icon: (() => null) as never,
-        roles: ['employee'],
         permissionResources: ['dashboard'],
       },
       {
         label: '员工管理',
         path: '/employees',
         icon: (() => null) as never,
-        roles: ['hrd'],
         permissionResources: ['employees', 'organization'],
       },
       {
         label: '我的绩效',
         path: '/my-assessments',
         icon: (() => null) as never,
-        roles: ['employee'],
         permissionResources: ['my_assessments'],
       },
     ],
@@ -45,10 +38,10 @@ const groups: NavGroup[] = [
 ];
 
 describe('app shell navigation utilities', () => {
-  it('同时应用角色和资源查看权限', () => {
+  it('使用资源查看权限过滤普通导航', () => {
     const visible = filterVisibleNavGroups({
       groups,
-      canRole: (role) => role === 'employee',
+      canRole: () => false,
       permissions: [{ resource: 'dashboard', actions: ['view'] }],
     });
     expect(visible[0].items.map((item) => item.path)).toEqual(['/dashboard']);
@@ -57,14 +50,14 @@ describe('app shell navigation utilities', () => {
   it('导航配置多个资源时任一资源具备查看权限即可显示', () => {
     const visible = filterVisibleNavGroups({
       groups,
-      canRole: (role) => role === 'hrd',
+      canRole: () => false,
       permissions: [{ resource: 'organization', actions: ['view'] }],
     });
 
     expect(visible[0].items.map((item) => item.path)).toEqual(['/employees']);
   });
 
-  it('快捷入口同时要求角色能力和资源动作', () => {
+  it('快捷入口只要求资源动作', () => {
     const publishPermission = [
       { resource: 'publish_management' as const, actions: ['publish' as const] },
     ];
@@ -73,47 +66,32 @@ describe('app shell navigation utilities', () => {
     ];
 
     expect(
-      hasRoleAndPermissionAccess({
-        roles: ADMIN_HRD_ROLES,
-        canRole: (role) => role === 'dept_head',
-        permissions: publishPermission,
-        resource: 'publish_management',
-        action: 'publish',
-      }),
-    ).toBe(false);
-    expect(
-      hasRoleAndPermissionAccess({
-        roles: ADMIN_HRD_ROLES,
-        canRole: (role) => role === 'admin',
-        permissions: [],
-        resource: 'publish_management',
-        action: 'publish',
-      }),
-    ).toBe(false);
-    expect(
-      hasRoleAndPermissionAccess({
-        roles: ADMIN_HRD_ROLES,
-        canRole: (role) => role === 'hrd',
+      hasPermissionAccess({
         permissions: publishPermission,
         resource: 'publish_management',
         action: 'publish',
       }),
     ).toBe(true);
     expect(
-      hasRoleAndPermissionAccess({
-        roles: MANAGER_ROLES,
-        canRole: (role) => role === 'employee',
+      hasPermissionAccess({
+        permissions: [],
+        resource: 'publish_management',
+        action: 'publish',
+      }),
+    ).toBe(false);
+    expect(
+      hasPermissionAccess({
         permissions: employeePermission,
         resource: 'employees',
         action: 'view',
       }),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('默认入口选择角色和资源过滤后的第一个真实路径', () => {
     const visible = filterVisibleNavGroups({
       groups,
-      canRole: (role) => role === 'employee',
+      canRole: () => false,
       permissions: [{ resource: 'my_assessments', actions: ['view'] }],
     });
 

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ActionBadge } from '@/components/business-ui/action-badge';
-import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo } from '@/hooks/usePermissions';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -144,17 +143,15 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
               </SelectContent>
             </Select>
           </div>
-          <CanRole roles={['admin', 'hrd']}>
-            <CanDo resource="publish_management" action="publish">
-              <Button
-                data-ai-section-type="button"
-                disabled={selectedIds.size === 0 || publishing}
-                onClick={onPublish}
-              >
-                {publishing ? '发布中...' : `发布选中 (${selectedIds.size})`}
-              </Button>
-            </CanDo>
-          </CanRole>
+          <CanDo resource="publish_management" action="publish">
+            <Button
+              data-ai-section-type="button"
+              disabled={selectedIds.size === 0 || publishing}
+              onClick={onPublish}
+            >
+              {publishing ? '发布中...' : `发布选中 (${selectedIds.size})`}
+            </Button>
+          </CanDo>
         </div>
       </div>
 
@@ -243,24 +240,22 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
                 </TableCell>
                 <TableCell className="py-3 pr-4 sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
                   <div className="flex items-center gap-1">
-                    <CanRole roles={['admin', 'hrd']}>
-                      <CanDo resource="publish_management" action="edit">
-                        <ActionBadge
-                          actionType="edit"
-                          icon={<Settings2 className="size-3" />}
-                          label="调整"
-                          onClick={() => onAdjust(emp)}
-                        />
-                      </CanDo>
-                      <CanDo resource="publish_management" action="edit">
-                        <ActionBadge
-                          actionType="delete"
-                          icon={<Trash2 className="size-3" />}
-                          label="删除快照"
-                          onClick={() => onDeleteSnapshot(emp)}
-                        />
-                      </CanDo>
-                    </CanRole>
+                    <CanDo resource="publish_management" action="edit">
+                      <ActionBadge
+                        actionType="edit"
+                        icon={<Settings2 className="size-3" />}
+                        label="调整"
+                        onClick={() => onAdjust(emp)}
+                      />
+                    </CanDo>
+                    <CanDo resource="publish_management" action="edit">
+                      <ActionBadge
+                        actionType="delete"
+                        icon={<Trash2 className="size-3" />}
+                        label="删除快照"
+                        onClick={() => onDeleteSnapshot(emp)}
+                      />
+                    </CanDo>
                   </div>
                 </TableCell>
               </TableRow>

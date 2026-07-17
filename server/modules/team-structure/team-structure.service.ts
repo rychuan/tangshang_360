@@ -1,4 +1,10 @@
-import { Injectable, Inject, Logger, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  Logger,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
@@ -14,6 +20,8 @@ import {
 import { EmployeeBindingService } from '../employee-management/employee-binding.service';
 import { RoleManagerService } from '../role-manager/role-manager.service';
 import { AccessScopeService } from '@server/common/access/access-scope.service';
+import { LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY } from '../employee-management/admin-safety';
+import type { TeamUpdateEmployeeRequest } from '@shared/api.interface';
 
 @Injectable()
 export class TeamStructureService {
@@ -154,12 +162,88 @@ export class TeamStructureService {
     if (employeeIds.length === 0) {
       return { success: true, deactivatedCount: 0 };
     }
+    await this.assertEmployeeMutationScopes(operatorId, employeeIds);
 
-    return this.db.transaction(async (tx) => {
+    const requestedIds = [...new Set(employeeIds)];
+    const requestedIdParams = sql.join(
+      requestedIds.map((id) => sql`${id}`),
+      sql`, `,
+    );
+    const targetRows = await this.db
+      .select({
+        employeeId: sql<string>`(${employee.employeeId}).user_id`,
+        role: employee.role,
+      })
+      .from(employee)
+      .where(
+        and(
+          sql`(${employee.employeeId}).user_id IN (${requestedIdParams})`,
+          eq(employee.status, true),
+          isNull(employee.deletedAt),
+        ),
+      );
+    const deactivatedIds = targetRows.map((row) => row.employeeId);
+    if (deactivatedIds.length === 0) {
+      return { success: true, deactivatedCount: 0 };
+    }
+
+    const deactivatedAdminCount = targetRows.filter((row) =>
+      String(row.role || '')
+        .split(',')
+        .map((role) => role.trim())
+        .includes('admin'),
+    ).length;
+    if (deactivatedAdminCount > 0) {
+      const adminCountRows = await this.db
+        .select({ cnt: sql<number>`count(*)` })
+        .from(employee)
+        .where(
+          and(
+            sql`'admin' = ANY(string_to_array(COALESCE(${employee.role}, ''), ','))`,
+            eq(employee.status, true),
+            isNull(employee.deletedAt),
+          ),
+        );
+      if (Number(adminCountRows[0]?.cnt || 0) <= deactivatedAdminCount) {
+        throw new BadRequestException(
+          '系统中至少保留一个系统管理员，无法批量停用',
+        );
+      }
+    }
+    const roleSnapshots = new Map(
+      await Promise.all(
+        deactivatedIds.map(async (employeeId) => [
+          employeeId,
+          await this.roleManagerService.getUserRolesStrict(employeeId),
+        ] as const),
+      ),
+    );
+
+    const result = await this.db.transaction(async (tx) => {
       const idParams = sql.join(
-        employeeIds.map((id) => sql`${id}`),
+        deactivatedIds.map((id) => sql`${id}`),
         sql`, `,
       );
+      if (deactivatedAdminCount > 0) {
+        await tx.execute(
+          sql`SELECT pg_advisory_xact_lock(${LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY})`,
+        );
+        const adminCountRows = await tx
+          .select({ cnt: sql<number>`count(*)` })
+          .from(employee)
+          .where(
+            and(
+              sql`'admin' = ANY(string_to_array(COALESCE(${employee.role}, ''), ','))`,
+              eq(employee.status, true),
+              isNull(employee.deletedAt),
+            ),
+          );
+        if (Number(adminCountRows[0]?.cnt || 0) <= deactivatedAdminCount) {
+          throw new BadRequestException(
+            '系统中至少保留一个系统管理员，无法批量停用',
+          );
+        }
+      }
 
       await tx.execute(sql`
         UPDATE ${employee}
@@ -174,26 +258,34 @@ export class TeamStructureService {
           AND status = true
       `);
 
-      for (const eId of employeeIds) {
+      for (const eId of deactivatedIds) {
         await tx.insert(auditLog).values({
           operatorId,
-          action: 'delete_employee',
+          action: 'deactivate_employee',
           targetType: 'employee',
           targetId: eId,
           changes: {
-            before: { status: true },
+            before: {
+              status: true,
+              roleSnapshot: roleSnapshots.get(eId) || [],
+            },
             after: { status: false },
           },
-          reason: '批量删除员工',
+          reason: '批量停用员工',
         });
       }
-
       this.logger.log(
-        `Batch deactivated ${employeeIds.length} employees: ${employeeIds.join(', ')}`,
+        `Batch deactivated ${deactivatedIds.length} employees: ${deactivatedIds.join(', ')}`,
       );
 
-      return { success: true, deactivatedCount: employeeIds.length };
+      return { success: true, deactivatedCount: deactivatedIds.length };
     });
+
+    for (const employeeId of deactivatedIds) {
+      await this.roleManagerService.syncUserRolesStrict(employeeId, []);
+    }
+
+    return result;
   }
 
   /**
@@ -274,19 +366,19 @@ export class TeamStructureService {
    */
   async updateEmployee(
     id: string,
-    body: Record<string, unknown>,
+    body: TeamUpdateEmployeeRequest,
     operatorId: string,
   ) {
+    await this.assertEmployeeMutationScope(operatorId, id);
+
     const updateData: Record<string, unknown> = {};
     const fields = [
       'name',
       'position',
       'department',
       'supervisorId',
-      'status',
       'employeeNo',
       'title',
-      'role',
       'phone',
       'hireDate',
       'probationMonths',
@@ -347,6 +439,29 @@ export class TeamStructureService {
     );
     if (!allowed) {
       throw new ForbiddenException('无权查看员工绑定信息');
+    }
+  }
+
+  private async assertEmployeeMutationScopes(
+    userId: string,
+    employeeIds: string[],
+  ): Promise<void> {
+    for (const employeeId of new Set(employeeIds)) {
+      await this.assertEmployeeMutationScope(userId, employeeId);
+    }
+  }
+
+  private async assertEmployeeMutationScope(
+    userId: string,
+    employeeId: string,
+  ): Promise<void> {
+    const canAccess = await this.accessScopeService.canAccessEmployee(
+      userId,
+      employeeId,
+      { includeSelf: true },
+    );
+    if (!canAccess) {
+      throw new ForbiddenException('无权操作该员工');
     }
   }
 }

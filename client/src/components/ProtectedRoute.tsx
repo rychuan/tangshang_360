@@ -6,14 +6,14 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { hasAnyViewPermission } from './permission-policy';
 
 interface ProtectedRouteProps {
-  roles: string[];
   resources?: PermissionResource[];
+  identityRoles?: string[];
   children: React.ReactNode;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
-  roles,
   resources,
+  identityRoles,
   children,
 }) => {
   const { ability, isLoading } = useAuth();
@@ -31,11 +31,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/403" replace />;
   }
 
-  const hasAccess = roles.some((r) => ability.can(r, ROLE_SUBJECT));
   const hasResourceAccess =
     !resources || hasAnyViewPermission(permissions, resources);
+  const hasIdentityAccess =
+    !identityRoles || identityRoles.some((r) => ability.can(r, ROLE_SUBJECT));
 
-  if (!hasAccess || !hasResourceAccess) {
+  if (!hasIdentityAccess || !hasResourceAccess) {
     return <Navigate to="/403" replace />;
   }
 

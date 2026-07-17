@@ -9,8 +9,11 @@ export const COMMAND_PERMISSIONS = {
   departmentDelete: { resource: 'organization', action: 'delete' },
   dictionaryEdit: { resource: 'dictionary_config', action: 'edit' },
   employeeSync: { resource: 'employees', action: 'edit' },
+  employeeSyncLog: { resource: 'employees', action: 'view' },
   employeeBindingEdit: { resource: 'employee_binding', action: 'edit' },
   employeeBindingView: { resource: 'employee_binding', action: 'view' },
+  assessmentView: { resource: 'my_assessments', action: 'view' },
+  assessmentEdit: { resource: 'my_assessments', action: 'edit' },
 } as const satisfies Record<
   string,
   { resource: PermissionResource; action: PermissionAction }

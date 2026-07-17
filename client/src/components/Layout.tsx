@@ -5,7 +5,6 @@ import { useAppInfo } from '@lark-apaas/client-toolkit/hooks/useAppInfo';
 import { useAuth, ROLE_SUBJECT } from '@lark-apaas/client-toolkit/auth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { navGroups } from './navigation';
-import { MANAGER_ROLES } from './role-constants';
 import {
   SidebarInset,
   SidebarProvider,
@@ -17,8 +16,8 @@ import {
   flattenNavItems,
   getCurrentNavLabel,
   getDefaultLandingPath,
-  hasRoleAndPermissionAccess,
 } from '@/components/app-shell/app-shell-utils';
+import { hasPermission } from './permission-policy';
 import {
   useBreadcrumb,
   BreadcrumbProvider,
@@ -52,13 +51,7 @@ const LayoutContent: React.FC = () => {
     visibleGroups,
     breadcrumbLabel,
   );
-  const canViewEmployees = hasRoleAndPermissionAccess({
-    roles: MANAGER_ROLES,
-    canRole: (role) => ability.can(role, ROLE_SUBJECT),
-    permissions,
-    resource: 'employees',
-    action: 'view',
-  });
+  const canViewEmployees = hasPermission(permissions, 'employees', 'view');
 
   if (loading) {
     return (

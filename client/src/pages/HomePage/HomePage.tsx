@@ -1,12 +1,10 @@
 import React from 'react';
-import { ROLE_SUBJECT, useAuth } from '@lark-apaas/client-toolkit/auth';
 import { useQuery } from '@tanstack/react-query';
 import { useCurrentUserProfile } from '@lark-apaas/client-toolkit/hooks/useCurrentUserProfile';
 import { getOverview, getTodos } from '@/api/dashboard';
 import { queryKeys } from '@/api/queryKeys';
-import { hasRoleAndPermissionAccess } from '@/components/app-shell/app-shell-utils';
+import { hasPermissionAccess } from '@/components/app-shell/app-shell-utils';
 import { PageHeader } from '@/components/business-ui/page-header';
-import { ADMIN_HRD_ROLES } from '@/components/role-constants';
 import { usePermissions } from '@/hooks/usePermissions';
 import { AssessmentProgressPanel } from './AssessmentProgressPanel';
 import { DashboardCharts } from './DashboardCharts';
@@ -18,7 +16,6 @@ import { buildQuickActions, buildVisiblePaths } from './dashboard-utils';
 
 const HomePage: React.FC = () => {
   const userInfo = useCurrentUserProfile();
-  const { ability } = useAuth();
   const { permissions, loading: permissionsLoading } = usePermissions();
 
   const todosQuery = useQuery({
@@ -33,9 +30,7 @@ const HomePage: React.FC = () => {
   });
 
   const visiblePaths = buildVisiblePaths(permissions);
-  const canPublish = hasRoleAndPermissionAccess({
-    roles: ADMIN_HRD_ROLES,
-    canRole: (role) => ability.can(role, ROLE_SUBJECT),
+  const canPublish = hasPermissionAccess({
     permissions,
     resource: 'publish_management',
     action: 'publish',

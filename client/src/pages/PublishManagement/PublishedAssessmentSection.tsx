@@ -11,7 +11,6 @@ import {
   SelectValue,
   SelectGroup,
 } from '@/components/ui/select';
-import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo, usePermission } from '@/hooks/usePermissions';
 import { UserDisplay } from '@/components/business-ui/user-display';
 import { Unlock, BellRing, Download, Award, Undo2 } from 'lucide-react';
@@ -138,19 +137,17 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-lg font-semibold">已发布绩效</h2>
-          <CanRole roles={['admin', 'hrd']}>
-            <CanDo resource="publish_management" action="edit">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onRemindUnfinished}
-                disabled={reminderLoading}
-              >
-                <BellRing data-icon="inline-start" />
-                {reminderLoading ? '加载中...' : '通知未完成任务'}
-              </Button>
-            </CanDo>
-          </CanRole>
+          <CanDo resource="publish_management" action="edit">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRemindUnfinished}
+              disabled={reminderLoading}
+            >
+              <BellRing data-icon="inline-start" />
+              {reminderLoading ? '加载中...' : '通知未完成任务'}
+            </Button>
+          </CanDo>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
@@ -411,15 +408,13 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
                   <TableCell className="py-3 pr-4 sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
                     <div className="flex items-center gap-1">
                       {record.status === 'self_review' && (
-                        <CanRole roles={['admin', 'hrd']}>
-                          <CanDo resource="publish_management" action="edit">
-                            <ActionBadge
-                              actionType="toggle"
-                              label="退回"
-                              onClick={() => onReturn(record)}
-                            />
-                          </CanDo>
-                        </CanRole>
+                        <CanDo resource="publish_management" action="edit">
+                          <ActionBadge
+                            actionType="toggle"
+                            label="退回"
+                            onClick={() => onReturn(record)}
+                          />
+                        </CanDo>
                       )}
                       {[
                         'completed',
@@ -427,23 +422,21 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
                         'pending_sign',
                         'supervisor_review',
                       ].includes(record.status) && (
-                        <CanRole roles={['admin', 'hrd']}>
-                          <CanDo resource="publish_management" action="edit">
-                            <ActionBadge
-                              actionType="toggle"
-                              label="解锁"
-                              onClick={() => onUnlock(record)}
-                            />
-                          </CanDo>
-                        </CanRole>
+                        <CanDo resource="publish_management" action="edit">
+                          <ActionBadge
+                            actionType="toggle"
+                            label="解锁"
+                            onClick={() => onUnlock(record)}
+                          />
+                        </CanDo>
                       )}
-                      <CanRole roles={['admin', 'hrd']}>
+                      <CanDo resource="publish_management" action="view">
                         <ActionBadge
                           actionType="history"
                           label="解锁历史"
                           onClick={() => onHistory(record)}
                         />
-                      </CanRole>
+                      </CanDo>
                     </div>
                   </TableCell>
                 </TableRow>

@@ -3,16 +3,21 @@ import {
   Logger,
   Inject,
   BadRequestException,
+  ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
 import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { eq, and, asc, count, sql, isNull } from 'drizzle-orm';
+import { eq, and, asc, count, sql, isNull, inArray } from 'drizzle-orm';
 import { department, employee, auditLog } from '@server/database/schema';
 import { EmployeeRepository } from '../employee-management/employee.repository';
 import { RoleManagerService } from '../role-manager/role-manager.service';
+import {
+  AccessScopeService,
+  type AccessScope,
+} from '@server/common/access/access-scope.service';
 import type {
   DepartmentItem,
   DepartmentTreeNode,
@@ -28,9 +33,15 @@ export class DepartmentService {
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
     private readonly employeeRepo: EmployeeRepository,
     private readonly roleManagerService: RoleManagerService,
+    private readonly accessScopeService: AccessScopeService,
   ) {}
 
-  async list(): Promise<DepartmentListResponse> {
+  async list(userId: string): Promise<DepartmentListResponse> {
+    const scope = await this.getReadableScope(userId);
+    const scopeCondition =
+      scope.kind === 'managed'
+        ? inArray(department.id, scope.departmentIds)
+        : undefined;
     const rows = await this.db
       .select({
         id: department.id,
@@ -44,6 +55,7 @@ export class DepartmentService {
         parentName: sql`COALESCE((SELECT d2.name FROM department d2 WHERE d2.id = ${department.parentId} LIMIT 1), '')`,
       })
       .from(department)
+      .where(scopeCondition)
       .orderBy(asc(department.sortOrder), asc(department.name));
 
     const memberCountMap = await this.employeeRepo.getDepartmentMemberCounts();
@@ -69,7 +81,10 @@ export class DepartmentService {
     return { items, tree };
   }
 
-  async detail(id: string): Promise<DepartmentTreeNode> {
+  async detail(id: string, userId: string): Promise<DepartmentTreeNode> {
+    const scope = await this.getReadableScope(userId);
+    this.assertDepartmentInScope(scope, id);
+
     const rows = await this.db
       .select({
         id: department.id,
@@ -109,6 +124,13 @@ export class DepartmentService {
           : String(r.createdAt),
     };
 
+    const childCondition =
+      scope.kind === 'managed'
+        ? and(
+            eq(department.parentId, id),
+            inArray(department.id, scope.departmentIds),
+          )
+        : eq(department.parentId, id);
     const children = await this.db
       .select({
         id: department.id,
@@ -122,7 +144,7 @@ export class DepartmentService {
         parentName: sql`''`,
       })
       .from(department)
-      .where(eq(department.parentId, id))
+      .where(childCondition)
       .orderBy(asc(department.sortOrder), asc(department.name));
 
     const childItems: DepartmentItem[] = children.map((c) => ({
@@ -151,6 +173,12 @@ export class DepartmentService {
     body: CreateDepartmentRequest,
     userId: string,
   ): Promise<{ id: string }> {
+    await this.assertGlobalScope(userId);
+
+    if (body.headId) {
+      await this.assertHeadMutationPermission(userId);
+    }
+
     const existing = await this.db
       .select({ id: department.id })
       .from(department)
@@ -160,30 +188,34 @@ export class DepartmentService {
       throw new BadRequestException('部门名称已存在');
     }
 
-    const [inserted] = await this.db
-      .insert(department)
-      .values({
-        name: body.name,
-        parentId: body.parentId || null,
-        headId: body.headId || null,
-        sortOrder: body.sortOrder ?? 0,
-      })
-      .returning({ id: department.id });
+    return this.db.transaction(async (tx) => {
+      const [inserted] = await tx
+        .insert(department)
+        .values({
+          name: body.name,
+          parentId: body.parentId || null,
+          headId: body.headId || null,
+          sortOrder: body.sortOrder ?? 0,
+        })
+        .returning({ id: department.id });
 
-    await this.db.insert(auditLog).values({
-      operatorId: userId,
-      action: 'create_department',
-      targetType: 'department',
-      targetId: inserted.id,
-      changes: { after: body },
+      await tx.insert(auditLog).values({
+        operatorId: userId,
+        action: 'create_department',
+        targetType: 'department',
+        targetId: inserted.id,
+        changes: { after: body },
+      });
+
+      if (body.headId) {
+        await this.roleManagerService.ensureUserRoleStrict(
+          body.headId,
+          'dept_head',
+        );
+      }
+
+      return { id: inserted.id };
     });
-
-    // 新部门负责人自动获得 dept_head 角色
-    if (body.headId) {
-      await this.roleManagerService.ensureUserRole(body.headId, 'dept_head');
-    }
-
-    return { id: inserted.id };
   }
 
   async update(
@@ -191,6 +223,15 @@ export class DepartmentService {
     body: CreateDepartmentRequest,
     userId: string,
   ): Promise<{ success: boolean }> {
+    const scope = await this.getReadableScope(userId);
+    this.assertDepartmentInScope(scope, id);
+    if (body.parentId && body.parentId === id) {
+      throw new BadRequestException('部门不能将自己设为上级');
+    }
+    if (body.parentId) {
+      this.assertDepartmentInScope(scope, body.parentId);
+    }
+
     const rows = await this.db
       .select({
         id: department.id,
@@ -205,13 +246,13 @@ export class DepartmentService {
       throw new NotFoundException('部门不存在');
     }
 
-    if (body.parentId && body.parentId === id) {
-      throw new BadRequestException('部门不能将自己设为上级');
-    }
-
     const oldDept = rows[0];
     const oldHeadId = oldDept.oldHeadId || null;
     const newHeadId = body.headId || null;
+    const headChanged = newHeadId !== oldHeadId;
+    if (headChanged) {
+      await this.assertHeadMutationPermission(userId);
+    }
 
     await this.db.transaction(async (tx) => {
       await tx
@@ -248,30 +289,41 @@ export class DepartmentService {
           `Department "${deptName}" head changed, synced employees supervisor to new head`,
         );
       }
-    });
 
-    // 部门负责人变更后同步角色
-    if (oldHeadId && oldHeadId !== newHeadId) {
-      // 旧负责人被移除：检查是否仍为其他部门负责人
-      const stillHead = await this.db
-        .select({ id: department.id })
-        .from(department)
-        .where(eq(department.headId, oldHeadId))
-        .limit(1);
-      if (stillHead.length === 0) {
-        await this.roleManagerService.removeUserRole(oldHeadId, 'dept_head');
+      if (oldHeadId && oldHeadId !== newHeadId) {
+        const stillHead = await tx
+          .select({ id: department.id })
+          .from(department)
+          .where(eq(department.headId, oldHeadId))
+          .limit(1);
+        if (stillHead.length === 0) {
+          await this.roleManagerService.removeUserRoleStrict(
+            oldHeadId,
+            'dept_head',
+          );
+        }
       }
-    }
-    if (newHeadId && newHeadId !== oldHeadId) {
-      await this.roleManagerService.ensureUserRole(newHeadId, 'dept_head');
-    }
+      if (newHeadId && newHeadId !== oldHeadId) {
+        await this.roleManagerService.ensureUserRoleStrict(
+          newHeadId,
+          'dept_head',
+        );
+      }
+    });
 
     return { success: true };
   }
 
   async remove(id: string, userId: string): Promise<{ success: boolean }> {
+    const scope = await this.getReadableScope(userId);
+    this.assertDepartmentInScope(scope, id);
+
     const rows = await this.db
-      .select({ id: department.id, name: department.name })
+      .select({
+        id: department.id,
+        name: department.name,
+        headId: department.headId,
+      })
       .from(department)
       .where(eq(department.id, id))
       .limit(1);
@@ -288,20 +340,50 @@ export class DepartmentService {
       throw new BadRequestException('该部门下还有子部门，无法删除');
     }
 
-    await this.db.delete(department).where(eq(department.id, id));
+    const headId = rows[0].headId || null;
+    let removesFinalHeadRole = false;
+    if (headId) {
+      const otherHeadRows = await this.db
+        .select({ id: department.id })
+        .from(department)
+        .where(
+          and(
+            eq(department.headId, headId),
+            sql`${department.id} <> ${id}`,
+          ),
+        )
+        .limit(1);
+      removesFinalHeadRole = otherHeadRows.length === 0;
+      if (removesFinalHeadRole) {
+        await this.assertHeadMutationPermission(userId);
+      }
+    }
 
-    await this.db.insert(auditLog).values({
-      operatorId: userId,
-      action: 'delete_department',
-      targetType: 'department',
-      targetId: id,
-      changes: { before: { name: rows[0].name } },
+    await this.db.transaction(async (tx) => {
+      await tx.delete(department).where(eq(department.id, id));
+
+      await tx.insert(auditLog).values({
+        operatorId: userId,
+        action: 'delete_department',
+        targetType: 'department',
+        targetId: id,
+        changes: { before: { name: rows[0].name } },
+      });
+
+      if (headId && removesFinalHeadRole) {
+        await this.roleManagerService.removeUserRoleStrict(headId, 'dept_head');
+      }
     });
 
     return { success: true };
   }
 
-  async listFlat() {
+  async listFlat(userId: string) {
+    const scope = await this.getReadableScope(userId);
+    const scopeCondition =
+      scope.kind === 'managed'
+        ? inArray(department.id, scope.departmentIds)
+        : undefined;
     const rows = await this.db
       .select({
         id: department.id,
@@ -315,7 +397,11 @@ export class DepartmentService {
         headName: sql`COALESCE(${this.employeeRepo.nameSubquery(department.headId)}, '')`,
       })
       .from(department)
-      .where(eq(department.isActive, true))
+      .where(
+        scopeCondition
+          ? and(eq(department.isActive, true), scopeCondition)
+          : eq(department.isActive, true),
+      )
       .orderBy(asc(department.sortOrder), asc(department.name));
 
     const memberCountMap = await this.employeeRepo.getDepartmentMemberCounts();
@@ -335,6 +421,33 @@ export class DepartmentService {
           ? r.createdAt.toISOString()
           : String(r.createdAt),
     }));
+  }
+
+  private async getReadableScope(userId: string): Promise<AccessScope> {
+    const scope = await this.accessScopeService.getScope(userId);
+    if (scope.kind === 'global') {
+      return scope;
+    }
+    if (scope.kind === 'managed' && scope.departmentIds.length > 0) {
+      return scope;
+    }
+    throw new ForbiddenException('无权访问部门数据');
+  }
+
+  private async assertGlobalScope(userId: string): Promise<void> {
+    const scope = await this.accessScopeService.getScope(userId);
+    if (scope.kind !== 'global') {
+      throw new ForbiddenException('只有全局范围用户可创建部门');
+    }
+  }
+
+  private assertDepartmentInScope(scope: AccessScope, id: string): void {
+    if (scope.kind === 'global') {
+      return;
+    }
+    if (scope.kind !== 'managed' || !scope.departmentIds.includes(id)) {
+      throw new ForbiddenException('无权访问该部门');
+    }
   }
 
   private buildTree(items: DepartmentItem[]): DepartmentTreeNode[] {
@@ -363,5 +476,20 @@ export class DepartmentService {
     sortNodes(roots);
 
     return roots;
+  }
+
+  private async assertHeadMutationPermission(userId: string): Promise<void> {
+    const roles = await this.roleManagerService.getUserRoles(userId);
+    if (!roles.includes('admin')) {
+      throw new ForbiddenException('只有系统管理员可修改部门负责人');
+    }
+    const canEditRoles = await this.roleManagerService.checkUserPermission(
+      userId,
+      'permission_management',
+      'edit',
+    );
+    if (!canEditRoles) {
+      throw new ForbiddenException('无权修改部门负责人');
+    }
   }
 }

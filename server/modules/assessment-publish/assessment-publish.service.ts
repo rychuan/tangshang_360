@@ -4,6 +4,7 @@ import {
   Logger,
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   DRIZZLE_DATABASE,
@@ -192,10 +193,13 @@ export class AssessmentPublishService {
       `publish period=${period} employeeIds=${JSON.stringify(employeeIds)}`,
     );
 
-    const targetEmployeeIds: string[] =
-      employeeIds && employeeIds.length > 0
-        ? employeeIds
-        : await this.getEmployeeIdsForPeriod(period);
+    const hasExplicitTargets = Boolean(employeeIds && employeeIds.length > 0);
+    const targetEmployeeIds: string[] = hasExplicitTargets
+      ? employeeIds!
+      : await this.getEmployeeIdsForPeriod(period, userId);
+    if (hasExplicitTargets) {
+      await this.assertEmployeeScopes(userId, targetEmployeeIds);
+    }
 
     if (targetEmployeeIds.length === 0) {
       throw new BadRequestException('没有符合条件的员工可发布');
@@ -516,6 +520,7 @@ export class AssessmentPublishService {
     for (const id of instanceIds) {
       validateUUID(id);
     }
+    await this.assertInstanceScopes(userId, instanceIds);
 
     const conditions: SQL[] = [
       inArray(assessmentInstance.id, instanceIds),
@@ -590,7 +595,9 @@ export class AssessmentPublishService {
 
   async getEmployeeSnapshot(
     employeeId: string,
+    userId: string,
   ): Promise<EmployeeSnapshotResponse> {
+    await this.assertEmployeeScope(userId, employeeId);
     return this.employeeSnapshotService.getSnapshot(employeeId);
   }
 
@@ -600,6 +607,7 @@ export class AssessmentPublishService {
     userId: string,
   ): Promise<{ success: boolean }> {
     this.logger.log(`adjustEmployeeSnapshot employeeId=${employeeId}`);
+    await this.assertEmployeeScope(userId, employeeId);
 
     const bindingRows = await this.db
       .select({ templateId: employeeBinding.templateId })
@@ -626,7 +634,9 @@ export class AssessmentPublishService {
 
   async deleteEmployeeSnapshot(
     employeeId: string,
+    userId: string,
   ): Promise<{ success: boolean }> {
+    await this.assertEmployeeScope(userId, employeeId);
     return this.employeeSnapshotService.deleteSnapshot(employeeId);
   }
 
@@ -638,8 +648,11 @@ export class AssessmentPublishService {
     return this.unlockService.unlock(instanceId, body, userId);
   }
 
-  async getUnlockHistory(instanceId: string): Promise<UnlockHistoryItem[]> {
-    return this.unlockService.getUnlockHistory(instanceId);
+  async getUnlockHistory(
+    instanceId: string,
+    userId: string,
+  ): Promise<UnlockHistoryItem[]> {
+    return this.unlockService.getUnlockHistory(instanceId, userId);
   }
 
   async getPeriodStatistics(
@@ -753,8 +766,10 @@ export class AssessmentPublishService {
 
   async getInstanceIndicators(
     instanceId: string,
+    userId: string,
   ): Promise<InstanceIndicatorsResponse> {
     validateUUID(instanceId);
+    await this.assertInstanceScope(userId, instanceId);
     this.logger.log(`getInstanceIndicators instanceId=${instanceId}`);
     const rows = await this.db
       .select({
@@ -799,6 +814,10 @@ export class AssessmentPublishService {
     userId: string,
   ): Promise<BatchOperationResponse> {
     assertBatchSize(instanceIds, '实例');
+    for (const instanceId of instanceIds) {
+      validateUUID(instanceId, '实例ID');
+    }
+    await this.assertInstanceScopes(userId, instanceIds);
     this.logger.log(
       `batchReturn instanceIds=${JSON.stringify(instanceIds)} userId=${userId}`,
     );
@@ -808,8 +827,6 @@ export class AssessmentPublishService {
 
     for (const instanceId of instanceIds) {
       try {
-        validateUUID(instanceId, '实例ID');
-
         await this.db.transaction(async (tx) => {
           const instanceRows = await tx
             .select()
@@ -1066,20 +1083,81 @@ export class AssessmentPublishService {
     };
   }
 
-  private async getEmployeeIdsForPeriod(period: string): Promise<string[]> {
+  private async getEmployeeIdsForPeriod(
+    period: string,
+    userId: string,
+  ): Promise<string[]> {
+    const conditions: SQL[] = [
+      eq(employeeBinding.status, true),
+      lte(employeeBinding.effectiveFrom, period),
+      isNull(employee.deletedAt),
+      eq(employee.status, true),
+    ];
+    const scopeCondition = await this.buildPublishEmployeeScope(userId);
+    if (scopeCondition) {
+      conditions.push(scopeCondition);
+    }
+
     const rows = await this.db
       .select({ employeeId: employeeBinding.employeeId })
       .from(employeeBinding)
       .innerJoin(employee, eq(employeeBinding.employeeId, employee.employeeId))
-      .where(
-        and(
-          eq(employeeBinding.status, true),
-          lte(employeeBinding.effectiveFrom, period),
-          isNull(employee.deletedAt),
-          eq(employee.status, true),
-        ),
-      );
+      .where(and(...conditions));
 
     return rows.map((r: (typeof rows)[number]) => r.employeeId);
+  }
+
+  private async assertEmployeeScopes(
+    userId: string,
+    employeeIds: string[],
+  ): Promise<void> {
+    for (const employeeId of new Set(employeeIds)) {
+      await this.assertEmployeeScope(userId, employeeId);
+    }
+  }
+
+  private async assertEmployeeScope(
+    userId: string,
+    employeeId: string,
+  ): Promise<void> {
+    const canAccess = await this.accessScopeService.canAccessEmployee(
+      userId,
+      employeeId,
+      { includeSelf: false },
+    );
+    if (!canAccess) {
+      throw new ForbiddenException('无权操作该员工');
+    }
+  }
+
+  private async assertInstanceScopes(
+    userId: string,
+    instanceIds: string[],
+  ): Promise<void> {
+    for (const instanceId of new Set(instanceIds)) {
+      await this.assertInstanceScope(userId, instanceId);
+    }
+  }
+
+  private async assertInstanceScope(
+    userId: string,
+    instanceId: string,
+  ): Promise<void> {
+    const rows = await this.db
+      .select({ employeeId: assessmentInstance.employeeId })
+      .from(assessmentInstance)
+      .where(eq(assessmentInstance.id, instanceId))
+      .limit(1);
+    if (rows.length === 0) {
+      throw new NotFoundException(`实例 ${instanceId} 不存在`);
+    }
+    const canAccess = await this.accessScopeService.canAccessEmployee(
+      userId,
+      rows[0].employeeId,
+      { includeSelf: false },
+    );
+    if (!canAccess) {
+      throw new ForbiddenException('无权操作该考核实例');
+    }
   }
 }

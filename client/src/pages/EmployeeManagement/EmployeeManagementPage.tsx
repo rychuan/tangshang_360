@@ -6,28 +6,27 @@ import DepartmentManagementTab from './DepartmentManagementTab';
 import BitableConnectionTab from './BitableConnectionTab';
 import { UserCog } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
-import { ROLE_SUBJECT, useAuth } from '@lark-apaas/client-toolkit/auth';
+import { useAuth, ROLE_SUBJECT } from '@lark-apaas/client-toolkit/auth';
+import { BUILTIN_ROLE_CODES } from '@shared/api.interface';
 import {
   getDefaultEmployeeManagementTab,
   getVisibleEmployeeManagementTabs,
   type EmployeeManagementTab,
 } from './employee-management-permissions';
 
-const MANAGER_ROLE_CODES = ['admin', 'hrd', 'dept_head', 'supervisor'];
-
 const EmployeeManagementPage: React.FC = () => {
   const { permissions } = usePermissions();
   const { ability } = useAuth();
-  const activeRoles = useMemo(
+  const identityRoles = useMemo(
     () =>
       ability
-        ? MANAGER_ROLE_CODES.filter((role) => ability.can(role, ROLE_SUBJECT))
+        ? BUILTIN_ROLE_CODES.filter((role) => ability.can(role, ROLE_SUBJECT))
         : [],
     [ability],
   );
   const visibleTabs = useMemo(
-    () => getVisibleEmployeeManagementTabs(permissions, activeRoles),
-    [permissions, activeRoles],
+    () => getVisibleEmployeeManagementTabs(permissions, identityRoles),
+    [identityRoles, permissions],
   );
   const defaultTab = getDefaultEmployeeManagementTab(visibleTabs);
   const [activeTab, setActiveTab] =

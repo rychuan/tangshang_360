@@ -83,7 +83,12 @@ describe('published assessment export permission', () => {
   });
 
   it('applies the current user scope when exporting selected records', async () => {
-    const query = {
+    const instanceScopeQuery = {
+      from: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockResolvedValue([{ employeeId: 'employee-1' }]),
+    };
+    const itemsQuery = {
       from: jest.fn().mockReturnThis(),
       innerJoin: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
@@ -91,9 +96,15 @@ describe('published assessment export permission', () => {
       limit: jest.fn().mockReturnThis(),
       offset: jest.fn().mockResolvedValue([]),
     };
-    const db = { select: jest.fn().mockReturnValue(query) };
+    const db = {
+      select: jest
+        .fn()
+        .mockReturnValueOnce(instanceScopeQuery)
+        .mockReturnValueOnce(itemsQuery),
+    };
     const accessScopeService = {
       buildEmployeeScopeCondition: jest.fn().mockResolvedValue(sql`TRUE`),
+      canAccessEmployee: jest.fn().mockResolvedValue(true),
     };
     const service = new (AssessmentPublishService as any)(
       db,

@@ -5,11 +5,6 @@ import { ROLE_LABELS as roleLabels } from './role-utils';
 import { hasEmployeeRowMenuAction } from './employee-management-permissions';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  CanRole,
-  ROLE_SUBJECT,
-  useAuth,
-} from '@lark-apaas/client-toolkit/auth';
 import { CanDo, usePermissions } from '@/hooks/usePermissions';
 import { COMMAND_PERMISSIONS } from '@/components/permission-policy';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -70,18 +65,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
 }) => {
   const navigate = useNavigate();
   const { permissions } = usePermissions();
-  const { ability } = useAuth();
-  const employeeManagerRoles = React.useMemo(
-    () =>
-      ability
-        ? ['admin', 'hrd'].filter((role) => ability.can(role, ROLE_SUBJECT))
-        : [],
-    [ability],
-  );
-  const showRowMenu = hasEmployeeRowMenuAction(
-    permissions,
-    employeeManagerRoles,
-  );
+  const showRowMenu = hasEmployeeRowMenuAction(permissions);
 
   const allChecked =
     employees.length > 0 &&
@@ -257,16 +241,14 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
                   className="flex items-center gap-1"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <CanRole roles={['admin']}>
-                    <CanDo resource="employees" action="edit">
-                      <ActionBadge
-                        actionType="edit"
-                        icon={<Pencil className="size-3" />}
-                        label="编辑"
-                        onClick={() => onEdit(row.original)}
-                      />
-                    </CanDo>
-                  </CanRole>
+                  <CanDo resource="employees" action="edit">
+                    <ActionBadge
+                      actionType="edit"
+                      icon={<Pencil className="size-3" />}
+                      label="编辑"
+                      onClick={() => onEdit(row.original)}
+                    />
+                  </CanDo>
                   {showRowMenu && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -278,27 +260,23 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
                         align="end"
                         className="min-w-[130px]"
                       >
-                        <CanRole roles={['admin', 'hrd']}>
+                        <CanDo resource="employee_binding" action="edit">
+                          <DropdownMenuItem
+                            onClick={() => onBind(row.original)}
+                          >
+                            <Link2 className="size-4" />
+                            绑定模板
+                          </DropdownMenuItem>
+                        </CanDo>
+                        {row.original.currentBinding && (
                           <CanDo resource="employee_binding" action="edit">
                             <DropdownMenuItem
-                              onClick={() => onBind(row.original)}
+                              onClick={() => onUnbind(row.original)}
                             >
-                              <Link2 className="size-4" />
-                              绑定模板
+                              <Unlink className="size-4" />
+                              解绑
                             </DropdownMenuItem>
                           </CanDo>
-                        </CanRole>
-                        {row.original.currentBinding && (
-                          <CanRole roles={['admin', 'hrd']}>
-                            <CanDo resource="employee_binding" action="edit">
-                              <DropdownMenuItem
-                                onClick={() => onUnbind(row.original)}
-                              >
-                                <Unlink className="size-4" />
-                                解绑
-                              </DropdownMenuItem>
-                            </CanDo>
-                          </CanRole>
                         )}
                         <CanDo {...COMMAND_PERMISSIONS.employeeBindingView}>
                           <DropdownMenuItem
@@ -308,31 +286,27 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
                             绑定历史
                           </DropdownMenuItem>
                         </CanDo>
-                        <CanRole roles={['admin']}>
-                          <CanDo resource="employees" action="edit">
-                            <DropdownMenuItem
-                              onClick={() => onToggleStatus(row.original)}
-                            >
-                              {row.original.status ? (
-                                <Ban className="size-4" />
-                              ) : (
-                                <CheckCircle className="size-4" />
-                              )}
-                              {row.original.status ? '禁用' : '启用'}
-                            </DropdownMenuItem>
-                          </CanDo>
-                        </CanRole>
-                        <CanRole roles={['admin']}>
-                          <CanDo resource="employees" action="delete">
-                            <DropdownMenuItem
-                              onClick={() => onDelete(row.original)}
-                              variant="destructive"
-                            >
-                              <Trash2 className="size-4" />
-                              删除
-                            </DropdownMenuItem>
-                          </CanDo>
-                        </CanRole>
+                        <CanDo resource="employees" action="edit">
+                          <DropdownMenuItem
+                            onClick={() => onToggleStatus(row.original)}
+                          >
+                            {row.original.status ? (
+                              <Ban className="size-4" />
+                            ) : (
+                              <CheckCircle className="size-4" />
+                            )}
+                            {row.original.status ? '禁用' : '启用'}
+                          </DropdownMenuItem>
+                        </CanDo>
+                        <CanDo resource="employees" action="delete">
+                          <DropdownMenuItem
+                            onClick={() => onDelete(row.original)}
+                            variant="destructive"
+                          >
+                            <Trash2 className="size-4" />
+                            删除
+                          </DropdownMenuItem>
+                        </CanDo>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}

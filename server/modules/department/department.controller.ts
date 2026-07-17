@@ -8,7 +8,7 @@ import {
   Body,
   Req,
 } from '@nestjs/common';
-import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
+import { NeedLogin } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { DepartmentService } from './department.service';
 import type { Request } from 'express';
@@ -22,28 +22,33 @@ import type {
 export class DepartmentController {
   constructor(private readonly service: DepartmentService) {}
 
-  @CanRole(['admin', 'hrd', 'dept_head'])
   @RequirePermission('organization', 'view')
+  @NeedLogin()
   @Get()
-  async list(): Promise<DepartmentListResponse> {
-    return this.service.list();
+  async list(@Req() req: Request): Promise<DepartmentListResponse> {
+    const { userId } = req.userContext as { userId: string };
+    return this.service.list(userId);
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head'])
   @RequirePermission('organization', 'view')
+  @NeedLogin()
   @Get('flat')
-  async listFlat() {
-    return this.service.listFlat();
+  async listFlat(@Req() req: Request) {
+    const { userId } = req.userContext as { userId: string };
+    return this.service.listFlat(userId);
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head'])
   @RequirePermission('organization', 'view')
+  @NeedLogin()
   @Get(':id')
-  async detail(@Param('id') id: string): Promise<DepartmentTreeNode> {
-    return this.service.detail(id);
+  async detail(
+    @Req() req: Request,
+    @Param('id') id: string,
+  ): Promise<DepartmentTreeNode> {
+    const { userId } = req.userContext as { userId: string };
+    return this.service.detail(id, userId);
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head'])
   @RequirePermission('organization', 'edit')
   @NeedLogin()
   @Post()
@@ -55,7 +60,6 @@ export class DepartmentController {
     return this.service.create(body, userId);
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head'])
   @RequirePermission('organization', 'edit')
   @NeedLogin()
   @Put(':id')
@@ -68,7 +72,6 @@ export class DepartmentController {
     return this.service.update(id, body, userId);
   }
 
-  @CanRole(['admin'])
   @RequirePermission('organization', 'delete')
   @NeedLogin()
   @Delete(':id')

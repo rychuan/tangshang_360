@@ -6,20 +6,15 @@ import type {
 import type { NavGroup, NavItem } from '../navigation';
 import { hasAnyViewPermission } from '../permission-policy';
 
-export function hasRoleAndPermissionAccess(args: {
-  roles: string[];
-  canRole: (role: string) => boolean;
+export function hasPermissionAccess(args: {
   permissions: PermissionItem[];
   resource: PermissionResource;
   action: PermissionAction;
 }): boolean {
-  return (
-    args.roles.some(args.canRole) &&
-    args.permissions.some(
-      (permission) =>
-        permission.resource === args.resource &&
-        permission.actions.includes(args.action),
-    )
+  return args.permissions.some(
+    (permission) =>
+      permission.resource === args.resource &&
+      permission.actions.includes(args.action),
   );
 }
 
@@ -32,7 +27,12 @@ export function filterVisibleNavGroups(args: {
     .map((group) => ({
       ...group,
       items: group.items.filter((item) => {
-        if (!item.roles.some(args.canRole)) return false;
+        if (
+          item.identityRoles &&
+          !item.identityRoles.some(args.canRole)
+        ) {
+          return false;
+        }
         if (!item.permissionResources) return true;
         return hasAnyViewPermission(
           args.permissions,

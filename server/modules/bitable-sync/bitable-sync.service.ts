@@ -4,15 +4,20 @@ import {
   type PostgresJsDatabase,
   CapabilityService,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { eq, and, isNull, isNotNull, sql, inArray } from 'drizzle-orm';
+import { eq, and, isNull, sql, inArray } from 'drizzle-orm';
 import {
   employee,
   auditLog,
   department,
   systemDict,
 } from '@server/database/schema';
-import { RoleManagerService } from '../role-manager/role-manager.service';
-import type { BitablePluginSyncResponse } from '@shared/api.interface';
+import { AccessScopeService } from '@server/common/access/access-scope.service';
+import { EmployeeManagementService } from '../employee-management/employee-management.service';
+import type {
+  BitablePluginSyncResponse,
+  CreateEmployeeRequest,
+  UpdateEmployeeRequest,
+} from '@shared/api.interface';
 
 const PLUGIN_INSTANCE_ID = 'management_feishu_multitable_crud_analysis_1';
 
@@ -55,7 +60,8 @@ export class BitableSyncService {
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
     @Inject(CapabilityService)
     private readonly capabilityService: CapabilityService,
-    private readonly roleManagerService: RoleManagerService,
+    private readonly accessScopeService: AccessScopeService,
+    private readonly employeeManagementService: EmployeeManagementService,
   ) {}
 
   private async resolveReferences(
@@ -90,7 +96,7 @@ export class BitableSyncService {
     return result;
   }
 
-  async importFromBitable(): Promise<BitablePluginSyncResponse> {
+  async importFromBitable(userId: string): Promise<BitablePluginSyncResponse> {
     const allRecords: BitableRecord[] = [];
     let pageToken: string | undefined;
     do {
@@ -162,7 +168,7 @@ export class BitableSyncService {
           ),
         );
       for (const r of rows) {
-        byUserId.set(String(r.id), r);
+        byUserId.set(String(r.employeeId), r);
       }
     }
 
@@ -198,62 +204,29 @@ export class BitableSyncService {
             continue;
           }
           try {
-            const softDeleted = await this.db
-              .select()
-              .from(employee)
-              .where(
-                and(
-                  sql`(${employee.employeeId}).user_id = ${p.sudaUserId}`,
-                  isNotNull(employee.deletedAt),
-                ),
-              )
-              .limit(1);
-
-            if (softDeleted.length > 0) {
-              const refs = await this.resolveReferences(
-                p.department,
-                p.position,
+            const refs = await this.resolveReferences(
+              p.department,
+              p.position,
+            );
+            const createBody: CreateEmployeeRequest = {
+              id: p.sudaUserId,
+              name: '',
+              position: p.position || '',
+              positionCode: refs.positionCode ?? undefined,
+              department: p.department || '',
+              departmentId: refs.departmentId ?? undefined,
+              role: (p.role || 'employee') as CreateEmployeeRequest['role'],
+              employeeNo: p.employeeNo || undefined,
+              supervisorId: p.supervisorUserId || undefined,
+            };
+            await this.employeeManagementService.create(createBody, userId);
+            if (p.status === 'inactive') {
+              await this.employeeManagementService.deactivate(
+                p.sudaUserId,
+                userId,
               );
-              await this.db
-                .update(employee)
-                .set({
-                  position: p.position || '',
-                  positionCode: refs.positionCode ?? null,
-                  department: p.department || '',
-                  departmentId: refs.departmentId,
-                  role: p.role || 'employee',
-                  status: p.status !== 'inactive',
-                  employeeNo: p.employeeNo || null,
-                  supervisorId: p.supervisorUserId || null,
-                  deletedAt: null,
-                })
-                .where(eq(employee.id, softDeleted[0].id));
-            } else {
-              const refs = await this.resolveReferences(
-                p.department,
-                p.position,
-              );
-              await this.db.insert(employee).values({
-                employeeId: p.sudaUserId,
-                name: null,
-                position: p.position || '',
-                positionCode: refs.positionCode ?? null,
-                department: p.department || '',
-                departmentId: refs.departmentId,
-                role: p.role || 'employee',
-                status: p.status !== 'inactive',
-                employeeNo: p.employeeNo || null,
-                supervisorId: p.supervisorUserId || null,
-              });
             }
             created++;
-            try {
-              await this.roleManagerService.addUserToEmployeeRole(p.sudaUserId);
-            } catch (err) {
-              this.logger.warn(
-                `Failed to add ${p.sudaUserId} to employee role: ${err}`,
-              );
-            }
           } catch (err) {
             failed++;
             const cause = (
@@ -273,33 +246,41 @@ export class BitableSyncService {
           continue;
         }
 
+        const existingEmployeeId = String(existing.employeeId);
         const refs = await this.resolveReferences(p.department, p.position);
-        const updateData: Record<string, unknown> = {};
-        if (p.position) {
-          updateData.position = p.position;
-          updateData.positionCode = refs.positionCode ?? null;
-        }
-        if (p.department) {
-          updateData.department = p.department;
-          updateData.departmentId = refs.departmentId;
-        }
-        if (p.role) updateData.role = p.role;
-        if (p.status) updateData.status = p.status !== 'inactive';
-        if (p.employeeNo) updateData.employeeNo = p.employeeNo;
-        // supervisorId is userProfile composite type — cannot assign plain string.
-        // Skipped here; use bitable-connection if supervisor sync via 工号 is needed.
-
-        if (Object.keys(updateData).length > 0) {
-          await this.db
-            .update(employee)
-            .set(updateData)
-            .where(
-              sql`(id).user_id = ${p.sudaUserId || sql`(${existing.id}).user_id`}`,
-            );
-          updated++;
-        } else {
-          skipped++;
-        }
+        const updateBody: UpdateEmployeeRequest = {
+          name: existing.name || '',
+          position: p.position || existing.position,
+          positionCode: p.position
+            ? refs.positionCode ?? undefined
+            : existing.positionCode || undefined,
+          department: p.department || existing.department,
+          departmentId: p.department
+            ? refs.departmentId ?? undefined
+            : existing.departmentId || undefined,
+          title: existing.title || undefined,
+          role: (p.role ||
+            existing.role ||
+            'employee') as UpdateEmployeeRequest['role'],
+          supervisorId:
+            p.supervisorUserId ||
+            String(existing.supervisorId || '') ||
+            undefined,
+          phone: existing.phone || undefined,
+          hireDate: this.toDateString(existing.hireDate),
+          probationMonths: existing.probationMonths || undefined,
+          employeeNo: p.employeeNo || existing.employeeNo || undefined,
+        };
+        const desiredStatus = p.status
+          ? p.status !== 'inactive'
+          : existing.status;
+        await this.employeeManagementService.syncImportedEmployee(
+          existingEmployeeId,
+          updateBody,
+          desiredStatus,
+          userId,
+        );
+        updated++;
       } catch (err) {
         failed++;
         this.logger.error(
@@ -309,6 +290,7 @@ export class BitableSyncService {
     }
 
     await this.db.insert(auditLog).values({
+      operatorId: userId,
       action: 'import_from_bitable_plugin',
       targetType: 'bitable_sync',
       targetId: PLUGIN_INSTANCE_ID,
@@ -331,7 +313,16 @@ export class BitableSyncService {
     };
   }
 
-  async exportToBitable(): Promise<BitablePluginSyncResponse> {
+  async exportToBitable(userId: string): Promise<BitablePluginSyncResponse> {
+    const scopeCondition =
+      await this.accessScopeService.buildEmployeeScopeCondition(userId, {
+        includeSelf: true,
+      });
+    const conditions = [isNull(employee.deletedAt)];
+    if (scopeCondition) {
+      conditions.push(scopeCondition);
+    }
+
     // Extract user_id from userProfile composite type via SQL
     const employees = await this.db
       .select({
@@ -346,7 +337,7 @@ export class BitableSyncService {
         supervisorUserId: sql<string>`COALESCE((${employee.supervisorId}).user_id, '')`,
       })
       .from(employee)
-      .where(isNull(employee.deletedAt));
+      .where(and(...conditions));
 
     const bitableRecordByEmpNo = new Map<string, string>();
     const bitableRecordByUserId = new Map<string, string>();
@@ -445,6 +436,7 @@ export class BitableSyncService {
     }
 
     await this.db.insert(auditLog).values({
+      operatorId: userId,
       action: 'export_to_bitable_plugin',
       targetType: 'bitable_sync',
       targetId: PLUGIN_INSTANCE_ID,
@@ -464,5 +456,10 @@ export class BitableSyncService {
       failed,
       message: `导出完成：新增 ${created} 条，更新 ${updated} 条，失败 ${failed} 条`,
     };
+  }
+
+  private toDateString(value: Date | string | null): string | undefined {
+    if (!value) return undefined;
+    return value instanceof Date ? value.toISOString() : value;
   }
 }

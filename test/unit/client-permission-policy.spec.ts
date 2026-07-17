@@ -4,6 +4,7 @@ import {
   hasAnyViewPermission,
   hasPermission,
 } from '../../client/src/components/permission-policy';
+import * as departmentPermissions from '../../client/src/pages/EmployeeManagement/employee-management-permissions';
 
 const permissions: PermissionItem[] = [
   { resource: 'employees', actions: ['view'] },
@@ -21,6 +22,15 @@ describe('client permission policy', () => {
       hasAnyViewPermission(permissions, ['employees', 'organization']),
     ).toBe(true);
     expect(hasAnyViewPermission(permissions, ['statistics'])).toBe(false);
+  });
+
+  it('requires view access for the requested resource', () => {
+    expect(
+      hasAnyViewPermission(
+        [{ resource: 'statistics', actions: ['edit'] }],
+        ['statistics'],
+      ),
+    ).toBe(false);
   });
 
   it('fails closed when permissions or requirements are empty', () => {
@@ -43,5 +53,42 @@ describe('client permission policy', () => {
         action: 'view',
       },
     });
+  });
+
+  it('requires organization edit and a global built-in identity to create departments', () => {
+    const canCreateDepartment = (
+      departmentPermissions as typeof departmentPermissions & {
+        canCreateDepartment?: (
+          permissions: PermissionItem[],
+          identityRoles: string[],
+        ) => boolean;
+      }
+    ).canCreateDepartment;
+
+    expect(canCreateDepartment).toBeDefined();
+    expect(
+      canCreateDepartment?.(
+        [{ resource: 'organization', actions: ['edit'] }],
+        ['admin'],
+      ),
+    ).toBe(true);
+    expect(
+      canCreateDepartment?.(
+        [{ resource: 'organization', actions: ['edit'] }],
+        ['hrd'],
+      ),
+    ).toBe(true);
+    expect(
+      canCreateDepartment?.(
+        [{ resource: 'organization', actions: ['edit'] }],
+        ['dept_head'],
+      ),
+    ).toBe(false);
+    expect(
+      canCreateDepartment?.(
+        [{ resource: 'organization', actions: ['view'] }],
+        ['admin'],
+      ),
+    ).toBe(false);
   });
 });

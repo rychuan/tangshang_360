@@ -4,13 +4,14 @@ import {
   type PostgresJsDatabase,
   CapabilityService,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { sql, isNull } from 'drizzle-orm';
+import { sql, isNull, and } from 'drizzle-orm';
 import {
   assessmentInstance,
   employee,
   auditLog,
 } from '@server/database/schema';
 import type { BitablePluginSyncResponse } from '@shared/api.interface';
+import { AccessScopeService } from '@server/common/access/access-scope.service';
 
 const PLUGIN_INSTANCE_ID =
   'performance_template_sync_feishu_multitable_crud_analysis_2';
@@ -57,10 +58,18 @@ export class PerformanceSyncService {
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
     @Inject(CapabilityService)
     private readonly capabilityService: CapabilityService,
+    private readonly accessScopeService: AccessScopeService,
   ) {}
 
-  async exportToBitable(): Promise<BitablePluginSyncResponse> {
+  async exportToBitable(userId: string): Promise<BitablePluginSyncResponse> {
     const conditions = [isNull(employee.deletedAt)];
+    const scopeCondition =
+      await this.accessScopeService.buildEmployeeScopeCondition(userId, {
+        includeSelf: true,
+      });
+    if (scopeCondition) {
+      conditions.push(scopeCondition);
+    }
 
     const instances = await this.db
       .select({
@@ -81,9 +90,7 @@ export class PerformanceSyncService {
         employee,
         sql`(${assessmentInstance.employeeId}).user_id = (${employee.employeeId}).user_id`,
       )
-      .where(
-        conditions.length > 0 ? sql.join(conditions, sql` AND `) : sql`TRUE`,
-      );
+      .where(and(...conditions));
 
     this.logger.log(`Export to bitable: full sync, ${instances.length} instances`);
 
@@ -184,6 +191,7 @@ export class PerformanceSyncService {
     }
 
     await this.db.insert(auditLog).values({
+      operatorId: userId,
       action: 'export_performance_to_bitable',
       targetType: 'bitable_sync_performance',
       targetId: PLUGIN_INSTANCE_ID,

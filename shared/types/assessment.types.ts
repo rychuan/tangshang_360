@@ -472,7 +472,6 @@ export interface TeamUpdateEmployeeRequest {
   position?: string;
   department?: string;
   supervisorId?: string;
-  status?: boolean;
   employeeNo?: string;
   title?: string;
   role?: string;

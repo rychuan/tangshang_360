@@ -8,28 +8,20 @@ import {
   Body,
   Req,
 } from '@nestjs/common';
-import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
+import { NeedLogin } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { TeamStructureService } from './team-structure.service';
 import type { Request } from 'express';
 import type {
   CreateBindingRequest,
   BatchDeactivateRequest,
+  TeamUpdateEmployeeRequest,
 } from '@shared/api.interface';
-
-type PatchEmployeeRequest = {
-  name?: string;
-  position?: string;
-  department?: string;
-  supervisorId?: string;
-  status?: string;
-};
 
 @Controller('api/team-structure')
 export class TeamStructureController {
   constructor(private readonly service: TeamStructureService) {}
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('employees', 'view')
   @Get()
   async list(
@@ -54,7 +46,6 @@ export class TeamStructureController {
     );
   }
 
-  @CanRole(['admin'])
   @RequirePermission('employee_binding', 'edit')
   @NeedLogin()
   @Post()
@@ -63,7 +54,6 @@ export class TeamStructureController {
     return this.service.create(body, userId);
   }
 
-  @CanRole(['admin'])
   @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Patch('employees/deactivate')
@@ -75,27 +65,24 @@ export class TeamStructureController {
     return this.service.batchDeactivate(body.employeeIds, userId);
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('employees', 'view')
   @Get('employee/:id')
   async getEmployee(@Req() req: Request, @Param('id') id: string) {
     return this.service.getEmployee(id, req.userContext?.userId || '');
   }
 
-  @CanRole(['admin'])
   @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Patch('employee/:id')
   async updateEmployee(
     @Req() req: Request,
     @Param('id') id: string,
-    @Body() body: PatchEmployeeRequest,
+    @Body() body: TeamUpdateEmployeeRequest,
   ) {
     const { userId } = req.userContext as { userId: string };
     return this.service.updateEmployee(id, body, userId);
   }
 
-  @CanRole(['admin'])
   @RequirePermission('employee_binding', 'edit')
   @NeedLogin()
   @Patch(':id/deactivate')
@@ -104,7 +91,6 @@ export class TeamStructureController {
     return this.service.deactivate(id, userId);
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('employee_binding', 'view')
   @Get(':employeeId/history')
   async history(@Req() req: Request, @Param('employeeId') employeeId: string) {

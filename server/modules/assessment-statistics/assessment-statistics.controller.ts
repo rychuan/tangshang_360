@@ -1,5 +1,5 @@
 import { Controller, Get, Query, Req } from '@nestjs/common';
-import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
+import { NeedLogin } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import {
   AssessmentStatisticsService,
@@ -14,7 +14,6 @@ import type { Request } from 'express';
 export class AssessmentStatisticsController {
   constructor(private readonly service: AssessmentStatisticsService) {}
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('statistics', 'view')
   @Get('records')
   async records(
@@ -44,7 +43,6 @@ export class AssessmentStatisticsController {
     return this.service.records(query, userId);
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('statistics', 'view')
   @Get('charts')
   async charts(
@@ -66,7 +64,6 @@ export class AssessmentStatisticsController {
     return this.service.charts(query, userId);
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head'])
   @RequirePermission('statistics', 'export')
   @NeedLogin()
   @Get('export')

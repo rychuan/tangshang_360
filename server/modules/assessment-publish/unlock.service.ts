@@ -4,12 +4,13 @@ import {
   Inject,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc, inArray, sql } from 'drizzle-orm';
 import {
   assessmentInstance,
   ratingRecord,
@@ -18,6 +19,7 @@ import {
 } from '@server/database/schema';
 import { validateUUID } from '@server/common/utils/validation';
 import { assertBatchSize } from '@server/common/utils/batch';
+import { AccessScopeService } from '@server/common/access/access-scope.service';
 import type {
   UnlockRequest,
   BatchOperationResponse,
@@ -102,6 +104,7 @@ export class UnlockService {
 
   constructor(
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
+    private readonly accessScopeService: AccessScopeService,
   ) {}
 
   async unlockInstanceInTransaction(
@@ -162,6 +165,7 @@ export class UnlockService {
     userId: string,
   ): Promise<{ success: boolean }> {
     validateUUID(instanceId);
+    await this.assertInstanceScope(userId, instanceId);
     this.logger.log(
       `unlock instanceId=${instanceId} reason=${body.reason} userId=${userId}`,
     );
@@ -169,8 +173,12 @@ export class UnlockService {
     return { success: true };
   }
 
-  async getUnlockHistory(instanceId: string): Promise<UnlockHistoryItem[]> {
+  async getUnlockHistory(
+    instanceId: string,
+    userId: string,
+  ): Promise<UnlockHistoryItem[]> {
     validateUUID(instanceId);
+    await this.assertInstanceScope(userId, instanceId);
     this.logger.log(`getUnlockHistory instanceId=${instanceId}`);
 
     const rows = await this.db
@@ -215,6 +223,10 @@ export class UnlockService {
     userId: string,
   ): Promise<BatchOperationResponse> {
     assertBatchSize(instanceIds, '实例');
+    for (const instanceId of instanceIds) {
+      validateUUID(instanceId, '实例ID');
+    }
+    await this.assertInstanceScopes(userId, instanceIds);
     this.logger.log(
       `batchUnlock instanceIds=${JSON.stringify(instanceIds)} reason=${reason} userId=${userId}`,
     );
@@ -224,7 +236,6 @@ export class UnlockService {
 
     for (const instanceId of instanceIds) {
       try {
-        validateUUID(instanceId, '实例ID');
         await this.unlockInstanceInTransaction(instanceId, reason, userId);
         successCount++;
       } catch (err) {
@@ -236,5 +247,61 @@ export class UnlockService {
     }
 
     return { success: failedCount === 0, successCount, failedCount };
+  }
+
+  private async assertInstanceScopes(
+    userId: string,
+    instanceIds: string[],
+  ): Promise<void> {
+    const uniqueIds = [...new Set(instanceIds)];
+    if (uniqueIds.length === 0) return;
+
+    const rows = await this.db
+      .select({
+        id: assessmentInstance.id,
+        employeeId: assessmentInstance.employeeId,
+      })
+      .from(assessmentInstance)
+      .where(inArray(assessmentInstance.id, uniqueIds));
+    const employeeByInstanceId = new Map(
+      rows.map((row) => [row.id, row.employeeId]),
+    );
+
+    for (const instanceId of uniqueIds) {
+      const employeeId = employeeByInstanceId.get(instanceId);
+      if (!employeeId) {
+        throw new NotFoundException(`实例 ${instanceId} 不存在`);
+      }
+      await this.assertEmployeeScope(userId, employeeId);
+    }
+  }
+
+  private async assertInstanceScope(
+    userId: string,
+    instanceId: string,
+  ): Promise<void> {
+    const rows = await this.db
+      .select({ employeeId: assessmentInstance.employeeId })
+      .from(assessmentInstance)
+      .where(eq(assessmentInstance.id, instanceId))
+      .limit(1);
+    if (rows.length === 0) {
+      throw new NotFoundException('考核实例不存在');
+    }
+    await this.assertEmployeeScope(userId, rows[0].employeeId);
+  }
+
+  private async assertEmployeeScope(
+    userId: string,
+    employeeId: string,
+  ): Promise<void> {
+    const canAccess = await this.accessScopeService.canAccessEmployee(
+      userId,
+      employeeId,
+      { includeSelf: false },
+    );
+    if (!canAccess) {
+      throw new ForbiddenException('无权操作该考核实例');
+    }
   }
 }
