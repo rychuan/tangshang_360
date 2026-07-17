@@ -94,6 +94,16 @@ export function getDepartmentCommandCapabilities(
   };
 }
 
+export function canCreateDepartment(
+  permissions: PermissionItem[],
+  identityRoles: string[],
+): boolean {
+  return (
+    hasPermission(permissions, 'organization', 'edit') &&
+    identityRoles.some((role) => ['admin', 'hrd'].includes(role))
+  );
+}
+
 export function canManageDepartmentHead(
   permissions: PermissionItem[],
   identityRoles: string[],

@@ -50,7 +50,8 @@ function whereQuery<T>(rows: T[]) {
 
 function fromQuery<T>(rows: T[]) {
   return {
-    from: jest.fn().mockResolvedValue(rows),
+    from: jest.fn().mockReturnThis(),
+    where: jest.fn().mockResolvedValue(rows),
   };
 }
 

@@ -24,6 +24,7 @@ describe('employee management access scope', () => {
       checkUserPermission: jest.fn().mockResolvedValue(false),
       getUserRoles: jest.fn().mockResolvedValue(['custom-role']),
       syncUserRoles: jest.fn().mockResolvedValue(undefined),
+      syncUserRolesStrict: jest.fn().mockResolvedValue(undefined),
     };
     const bindingService = {
       history: jest.fn().mockResolvedValue({ items: [] }),
@@ -365,7 +366,7 @@ describe('employee management access scope', () => {
     ).resolves.toEqual({ id: 'employee-new' });
 
     expect(accessScopeService.getScope).toHaveBeenCalledWith('hrd-1');
-    expect(roleManagerService.syncUserRoles).toHaveBeenCalledWith(
+    expect(roleManagerService.syncUserRolesStrict).toHaveBeenCalledWith(
       'employee-new',
       ['employee'],
     );

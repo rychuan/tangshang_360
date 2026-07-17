@@ -4,8 +4,8 @@ import {
   type PostgresJsDatabase,
   AuthorizationSDK,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { eq, inArray } from 'drizzle-orm';
-import { rolePermissionConfig } from '@server/database/schema';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { employee, rolePermissionConfig } from '@server/database/schema';
 import type {
   RolePermissionConfig,
   PermissionItem,
@@ -288,6 +288,8 @@ export class RoleManagerService {
     resource: PermissionResource,
     action: PermissionAction,
   ): Promise<boolean> {
+    if (!(await this.hasActiveEmployee(userId))) return false;
+
     const userRoles = await this.getUserRoles(userId);
     if (userRoles.length === 0) return false;
 
@@ -329,6 +331,8 @@ export class RoleManagerService {
    * 获取当前用户所有角色的有效权限（取并集）
    */
   async getUserEffectivePermissions(userId: string): Promise<PermissionItem[]> {
+    if (!(await this.hasActiveEmployee(userId))) return [];
+
     const userRoles = await this.getUserRoles(userId);
     if (userRoles.length === 0) return [];
 
@@ -372,6 +376,21 @@ export class RoleManagerService {
       resource,
       actions: Array.from(actions),
     }));
+  }
+
+  private async hasActiveEmployee(userId: string): Promise<boolean> {
+    const rows = await this.db
+      .select({ id: employee.employeeId })
+      .from(employee)
+      .where(
+        and(
+          sql`(${employee.employeeId}).user_id = ${userId}`,
+          isNull(employee.deletedAt),
+          eq(employee.status, true),
+        ),
+      )
+      .limit(1);
+    return rows.length > 0;
   }
 
   private cacheUserRoles(userId: string, roles: string[]): void {

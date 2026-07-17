@@ -85,4 +85,25 @@ describe('frontend final permission boundaries', () => {
       'COMMAND_PERMISSIONS.employeeSyncLog',
     );
   });
+
+  it('guards both top-level and inline department creation by global identity', () => {
+    const source = readClient(
+      'pages/EmployeeManagement/DepartmentManagementTab.tsx',
+    );
+    const policySource = readClient(
+      'pages/EmployeeManagement/employee-management-permissions.ts',
+    );
+
+    expect(policySource).toContain('canCreateDepartment');
+    expect(source).toMatch(
+      /canCreateDepartment\(permissions, identityRoles\)/,
+    );
+    expect(source).toMatch(
+      /canCreateDepartment\(permissions, identityRoles\)[\s\S]*新建部门/,
+    );
+    expect(source).toMatch(
+      /canCreateDepartment\(permissions, identityRoles\)[\s\S]*ActionBadge[\s\S]*actionType="bind"/,
+    );
+    expect(source).toContain('getDepartmentCommandCapabilities(permissions)');
+  });
 });

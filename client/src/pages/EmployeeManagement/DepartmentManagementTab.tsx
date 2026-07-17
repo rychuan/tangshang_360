@@ -61,6 +61,7 @@ import { COMMAND_PERMISSIONS } from '@/components/permission-policy';
 import { BUILTIN_ROLE_CODES } from '@shared/api.interface';
 import {
   canManageDepartmentHead,
+  canCreateDepartment,
   getDepartmentCommandCapabilities,
 } from './employee-management-permissions';
 
@@ -107,6 +108,7 @@ const DepartmentManagementTab: React.FC = () => {
     [ability],
   );
   const { canEdit, canDelete } = getDepartmentCommandCapabilities(permissions);
+  const canCreate = canCreateDepartment(permissions, identityRoles);
   const canManageHead = canManageDepartmentHead(permissions, identityRoles);
   const canViewEmployees = usePermission('employees', 'view');
 
@@ -261,6 +263,8 @@ const DepartmentManagementTab: React.FC = () => {
                     label=""
                     onClick={() => handleEdit(node)}
                   />
+                </CanDo>
+                {canCreate && (
                   <ActionBadge
                     actionType="bind"
                     icon={<Plus className="size-3" />}
@@ -276,7 +280,7 @@ const DepartmentManagementTab: React.FC = () => {
                       setDialogOpen(true);
                     }}
                   />
-                </CanDo>
+                )}
                 <CanDo {...COMMAND_PERMISSIONS.departmentDelete}>
                   <ActionBadge
                     actionType="delete"
@@ -307,7 +311,7 @@ const DepartmentManagementTab: React.FC = () => {
             if (!v) setEditingDept(null);
           }}
         >
-          <CanDo {...COMMAND_PERMISSIONS.departmentEdit}>
+          {canCreate && (
             <DialogTrigger asChild>
               <Button
                 onClick={() => {
@@ -324,7 +328,7 @@ const DepartmentManagementTab: React.FC = () => {
                 新建部门
               </Button>
             </DialogTrigger>
-          </CanDo>
+          )}
           <DialogContent className="w-[95vw] sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>{editingDept ? '编辑部门' : '新建部门'}</DialogTitle>

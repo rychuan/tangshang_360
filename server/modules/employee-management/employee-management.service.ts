@@ -339,8 +339,9 @@ export class EmployeeManagementService {
           },
         },
       });
-      await this.roleManagerService.syncUserRolesStrict(id, []);
     });
+
+    await this.roleManagerService.syncUserRolesStrict(id, []);
 
     this.logger.log(`Employee deleted: ${emp.name} (${id})`);
 
@@ -572,9 +573,9 @@ export class EmployeeManagementService {
 
     this.logger.log(`Employee created: ${body.name} (${inserted.id})`);
 
-    // 同步角色到 AuthorizationSDK（事务外）
+    // 同步角色到 AuthorizationSDK（事务提交后）
     const roles = (body.role || 'employee').split(',').filter(Boolean);
-    await this.roleManagerService.syncUserRoles(body.id, roles);
+    await this.roleManagerService.syncUserRolesStrict(body.id, roles);
 
     return { id: String(inserted.id) };
   }
@@ -720,10 +721,11 @@ export class EmployeeManagementService {
           reason: '多维表格导入停用员工',
         });
       }
-      if (rolesToSync) {
-        await this.roleManagerService.syncUserRolesStrict(id, rolesToSync);
-      }
     });
+
+    if (rolesToSync) {
+      await this.roleManagerService.syncUserRolesStrict(id, rolesToSync);
+    }
 
     return { success: true };
   }
@@ -827,13 +829,14 @@ export class EmployeeManagementService {
         targetId: id,
         changes: { after: values },
       });
-      if (roleChanged) {
-        await this.roleManagerService.syncUserRolesStrict(
-          id,
-          this.parseRoles(nextRole),
-        );
-      }
     });
+
+    if (roleChanged) {
+      await this.roleManagerService.syncUserRolesStrict(
+        id,
+        this.parseRoles(nextRole),
+      );
+    }
 
     this.logger.log(`Employee updated: ${id}`);
 
@@ -872,8 +875,9 @@ export class EmployeeManagementService {
         targetType: 'employee',
         targetId: id,
       });
-      await this.roleManagerService.syncUserRolesStrict(id, rolesToRestore);
     });
+
+    await this.roleManagerService.syncUserRolesStrict(id, rolesToRestore);
 
     return { success: true };
   }
@@ -952,8 +956,9 @@ export class EmployeeManagementService {
           after: { status: false },
         },
       });
-      await this.roleManagerService.syncUserRolesStrict(id, []);
     });
+
+    await this.roleManagerService.syncUserRolesStrict(id, []);
 
     return { success: true };
   }

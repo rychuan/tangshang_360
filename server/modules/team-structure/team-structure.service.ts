@@ -274,16 +274,16 @@ export class TeamStructureService {
           reason: '批量停用员工',
         });
       }
-      for (const employeeId of deactivatedIds) {
-        await this.roleManagerService.syncUserRolesStrict(employeeId, []);
-      }
-
       this.logger.log(
         `Batch deactivated ${deactivatedIds.length} employees: ${deactivatedIds.join(', ')}`,
       );
 
       return { success: true, deactivatedCount: deactivatedIds.length };
     });
+
+    for (const employeeId of deactivatedIds) {
+      await this.roleManagerService.syncUserRolesStrict(employeeId, []);
+    }
 
     return result;
   }

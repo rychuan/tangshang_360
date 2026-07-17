@@ -191,7 +191,7 @@ describe('employee authorization lifecycle', () => {
 
     expect(tx.update).toHaveBeenCalled();
     expect(tx.insert).toHaveBeenCalled();
-    expect(roleManagerService.syncUserRoles).toHaveBeenCalledWith(
+    expect(roleManagerService.syncUserRolesStrict).toHaveBeenCalledWith(
       'employee-restored',
       ['supervisor'],
     );
@@ -237,6 +237,7 @@ describe('employee authorization lifecycle', () => {
 
   it('saves a fresh custom-role snapshot and strictly revokes roles for imported deactivation', async () => {
     const { tx, auditInsert } = transactionWithAudit();
+    let transactionCallbackActive = false;
     const db = {
       select: jest.fn().mockReturnValue(
         limitedQuery([
@@ -247,8 +248,15 @@ describe('employee authorization lifecycle', () => {
           },
         ]),
       ),
-      transaction: jest.fn(async (callback: (value: unknown) => unknown) =>
-        callback(tx),
+      transaction: jest.fn(
+        async (callback: (value: unknown) => unknown) => {
+          transactionCallbackActive = true;
+          try {
+            return await callback(tx);
+          } finally {
+            transactionCallbackActive = false;
+          }
+        },
       ),
     };
     const { service, roleManagerService } = createEmployeeService(db);
@@ -256,9 +264,10 @@ describe('employee authorization lifecycle', () => {
       'employee',
       'custom-reviewer',
     ]);
-    roleManagerService.syncUserRolesStrict.mockRejectedValue(
-      new Error('sdk import revoke failed'),
-    );
+    roleManagerService.syncUserRolesStrict.mockImplementation(async () => {
+      expect(transactionCallbackActive).toBe(false);
+      throw new Error('sdk import revoke failed');
+    });
 
     await expect(
       service.syncImportedEmployee(
@@ -359,9 +368,10 @@ describe('employee authorization lifecycle', () => {
   });
 
   it.each(['deactivate', 'delete'] as const)(
-    'strictly revokes SDK roles during the employee database %s transaction',
+    'strictly revokes SDK roles after the employee database %s transaction commits',
     async (operation) => {
       const { tx } = transactionWithAudit();
+      let transactionCallbackActive = false;
       const db = {
         select: jest
           .fn()
@@ -378,11 +388,21 @@ describe('employee authorization lifecycle', () => {
             ]),
           )
           .mockReturnValueOnce(countQuery(2)),
-        transaction: jest.fn(async (callback: (value: unknown) => unknown) =>
-          callback(tx),
+        transaction: jest.fn(
+          async (callback: (value: unknown) => unknown) => {
+            transactionCallbackActive = true;
+            try {
+              return await callback(tx);
+            } finally {
+              transactionCallbackActive = false;
+            }
+          },
         ),
       };
       const { service, roleManagerService } = createEmployeeService(db);
+      roleManagerService.syncUserRolesStrict.mockImplementation(async () => {
+        expect(transactionCallbackActive).toBe(false);
+      });
 
       await service[operation]('employee-2', 'admin-1');
 
@@ -398,6 +418,7 @@ describe('employee authorization lifecycle', () => {
 
   it('saves fresh custom roles before deactivation and propagates strict SDK revoke failure', async () => {
     const { tx, auditInsert } = transactionWithAudit();
+    let transactionCallbackActive = false;
     const db = {
       select: jest.fn().mockReturnValue(
         limitedQuery([
@@ -408,8 +429,15 @@ describe('employee authorization lifecycle', () => {
           },
         ]),
       ),
-      transaction: jest.fn(async (callback: (value: unknown) => unknown) =>
-        callback(tx),
+      transaction: jest.fn(
+        async (callback: (value: unknown) => unknown) => {
+          transactionCallbackActive = true;
+          try {
+            return await callback(tx);
+          } finally {
+            transactionCallbackActive = false;
+          }
+        },
       ),
     };
     const { service, roleManagerService } = createEmployeeService(db);
@@ -417,9 +445,10 @@ describe('employee authorization lifecycle', () => {
       'employee',
       'custom-reviewer',
     ]);
-    roleManagerService.syncUserRolesStrict.mockRejectedValue(
-      new Error('sdk revoke failed'),
-    );
+    roleManagerService.syncUserRolesStrict.mockImplementation(async () => {
+      expect(transactionCallbackActive).toBe(false);
+      throw new Error('sdk revoke failed');
+    });
 
     await expect(
       service.deactivate('employee-2', 'admin-1'),
@@ -617,6 +646,7 @@ describe('employee authorization lifecycle', () => {
 
   it('revokes roles for every employee deactivated through the legacy batch path', async () => {
     const batchAuditValues = jest.fn().mockResolvedValue(undefined);
+    let transactionCallbackActive = false;
     const tx = {
       execute: jest.fn().mockResolvedValue(undefined),
       insert: jest.fn().mockReturnValue({
@@ -631,8 +661,15 @@ describe('employee authorization lifecycle', () => {
           { employeeId: 'employee-2', role: 'employee' },
         ]),
       }),
-      transaction: jest.fn(async (callback: (value: unknown) => unknown) =>
-        callback(tx),
+      transaction: jest.fn(
+        async (callback: (value: unknown) => unknown) => {
+          transactionCallbackActive = true;
+          try {
+            return await callback(tx);
+          } finally {
+            transactionCallbackActive = false;
+          }
+        },
       ),
     };
     const roleManagerService = {
@@ -642,7 +679,9 @@ describe('employee authorization lifecycle', () => {
           'employee',
           `custom-${employeeId}`,
         ]),
-      syncUserRolesStrict: jest.fn().mockResolvedValue(undefined),
+      syncUserRolesStrict: jest.fn().mockImplementation(async () => {
+        expect(transactionCallbackActive).toBe(false);
+      }),
     };
     const accessScopeService = {
       canAccessEmployee: jest.fn().mockResolvedValue(true),

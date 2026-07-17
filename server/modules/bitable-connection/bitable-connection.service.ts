@@ -555,7 +555,8 @@ export class BitableConnectionService {
           name: assessmentTemplate.name,
           id: assessmentTemplate.id,
         })
-        .from(assessmentTemplate);
+        .from(assessmentTemplate)
+        .where(eq(assessmentTemplate.isActive, true));
       const templateMap = new Map(templateRows.map((t) => [t.name, t.id]));
 
       const now = new Date().toISOString().substring(0, 7); // YYYY-MM

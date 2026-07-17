@@ -43,6 +43,26 @@ export class AccessScopeService {
   ) {}
 
   async getScope(userId: string): Promise<AccessScope> {
+    const activeEmployeeRows = await this.db
+      .select({ id: employee.employeeId })
+      .from(employee)
+      .where(
+        and(
+          sql`(${employee.employeeId}).user_id = ${userId}`,
+          isNull(employee.deletedAt),
+          eq(employee.status, true),
+        ),
+      )
+      .limit(1);
+    if (activeEmployeeRows.length === 0) {
+      return {
+        kind: 'self',
+        roles: [],
+        departmentIds: [],
+        subordinateIds: [],
+      };
+    }
+
     const roles = await this.roleManagerService.getUserRoles(userId);
     const isDeptHead = roles.includes('dept_head');
     const isSupervisor = roles.includes('supervisor');

@@ -18,7 +18,16 @@ function whereQuery<T>(rows: T[]) {
 
 function fromQuery<T>(rows: T[]) {
   return {
-    from: jest.fn().mockResolvedValue(rows),
+    from: jest.fn().mockReturnThis(),
+    where: jest.fn().mockResolvedValue(
+      rows.filter(
+        (row) =>
+          typeof row !== 'object' ||
+          row === null ||
+          !('isActive' in row) ||
+          (row as { isActive?: boolean }).isActive !== false,
+      ),
+    ),
   };
 }
 
@@ -92,7 +101,7 @@ function createPluginImportService(options: {
 function createConnectionImportService(options: {
   fields: Record<string, unknown>;
   existing?: Record<string, unknown>[];
-  templates?: Array<{ name: string; id: string }>;
+  templates?: Array<{ name: string; id: string; isActive?: boolean }>;
   activeBindings?: Array<{ id: string }>;
   syncError?: Error;
   access?: (includeSelf: boolean | undefined) => boolean;
@@ -550,6 +559,53 @@ describe('Bitable import employee lifecycle', () => {
     expect(
       employeeManagementService.syncImportedEmployee,
     ).not.toHaveBeenCalled();
+    expect(bindingService.bind).not.toHaveBeenCalled();
+  });
+
+  it('skips inactive template rows before employee lifecycle or binding side effects', async () => {
+    const {
+      service,
+      syncLogValues,
+      bindingService,
+      employeeManagementService,
+    } = createConnectionImportService({
+      fields: {
+        飞书用户ID: 'employee-7',
+        姓名: '员工七',
+        工号: 'E007',
+        岗位: '工程师',
+        考核模板: '已停用模板',
+      },
+      templates: [
+        { name: '已停用模板', id: 'template-7', isActive: false },
+      ],
+    });
+
+    const result = await service.importEmployees(
+      'connection-1',
+      'operator-1',
+    );
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        createdCount: 0,
+        updatedCount: 0,
+        skippedCount: 1,
+        failedCount: 0,
+      }),
+    );
+    expect(syncLogValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        details: [
+          expect.objectContaining({
+            status: 'skipped',
+            reason: '考核模板「已停用模板」不存在',
+          }),
+        ],
+      }),
+    );
+    expect(employeeManagementService.create).not.toHaveBeenCalled();
+    expect(employeeManagementService.syncImportedEmployee).not.toHaveBeenCalled();
     expect(bindingService.bind).not.toHaveBeenCalled();
   });
 
