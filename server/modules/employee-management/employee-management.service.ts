@@ -279,6 +279,8 @@ export class EmployeeManagementService {
   }
 
   async delete(id: string, userId: string): Promise<{ success: boolean }> {
+    await this.assertEmployeeMutationScope(userId, id);
+
     const rows = await this.db
       .select()
       .from(employee)
@@ -473,6 +475,14 @@ export class EmployeeManagementService {
     body: CreateEmployeeRequest,
     userId: string,
   ): Promise<{ id: string }> {
+    await this.assertGlobalEmployeeScope(userId);
+    if (body.role && body.role !== 'employee') {
+      await this.assertBuiltInAdminIdentity(
+        userId,
+        '只有系统管理员可修改员工角色',
+      );
+    }
+
     const existing = await this.db
       .select({ id: employee.employeeId })
       .from(employee)
@@ -539,14 +549,34 @@ export class EmployeeManagementService {
     body: UpdateEmployeeRequest,
     userId: string,
   ): Promise<{ success: boolean }> {
+    await this.assertEmployeeMutationScope(userId, id);
+
     const rows = await this.db
-      .select({ id: employee.employeeId })
+      .select({ id: employee.employeeId, role: employee.role })
       .from(employee)
       .where(and(eq(employee.employeeId, id), isNull(employee.deletedAt)))
       .limit(1);
 
     if (rows.length === 0) {
       throw new NotFoundException('员工不存在');
+    }
+
+    const currentRole = String(rows[0].role || 'employee');
+    const nextRole = body.role || currentRole;
+    const roleChanged = nextRole !== currentRole;
+    if (roleChanged) {
+      await this.assertBuiltInAdminIdentity(
+        userId,
+        '只有系统管理员可修改员工角色',
+      );
+      if (currentRole === 'admin' && nextRole !== 'admin') {
+        const adminCount = await this.validateAdminsExist();
+        if (adminCount <= 1) {
+          throw new BadRequestException(
+            '系统中至少保留一个系统管理员，无法修改角色',
+          );
+        }
+      }
     }
 
     // 自动解析 departmentId / positionCode
@@ -562,7 +592,7 @@ export class EmployeeManagementService {
       position: body.position,
       positionCode,
       title: body.title || null,
-      role: body.role || 'employee',
+      role: nextRole,
       department: body.department || '',
       departmentId,
       supervisorId: await this.resolveSupervisor(
@@ -576,6 +606,23 @@ export class EmployeeManagementService {
     };
 
     await this.db.transaction(async (tx) => {
+      if (roleChanged && currentRole === 'admin' && nextRole !== 'admin') {
+        const adminCountRows = await tx
+          .select({ cnt: count() })
+          .from(employee)
+          .where(
+            and(
+              eq(employee.role, 'admin'),
+              eq(employee.status, true),
+              isNull(employee.deletedAt),
+            ),
+          );
+        if (Number(adminCountRows[0]?.cnt || 0) <= 1) {
+          throw new BadRequestException(
+            '系统中至少保留一个系统管理员，无法修改角色',
+          );
+        }
+      }
       await tx.update(employee).set(values).where(eq(employee.employeeId, id));
       await tx.insert(auditLog).values({
         operatorId: userId,
@@ -588,14 +635,19 @@ export class EmployeeManagementService {
 
     this.logger.log(`Employee updated: ${id}`);
 
-    // 同步角色到 AuthorizationSDK
-    const newRoles = (body.role || 'employee').split(',').filter(Boolean);
-    await this.roleManagerService.syncUserRoles(id, newRoles);
+    if (roleChanged) {
+      await this.roleManagerService.syncUserRoles(
+        id,
+        nextRole.split(',').filter(Boolean),
+      );
+    }
 
     return { success: true };
   }
 
   async activate(id: string, userId: string): Promise<{ success: boolean }> {
+    await this.assertEmployeeMutationScope(userId, id);
+
     const rows = await this.db
       .select({ id: employee.employeeId })
       .from(employee)
@@ -623,6 +675,8 @@ export class EmployeeManagementService {
   }
 
   async deactivate(id: string, userId: string): Promise<{ success: boolean }> {
+    await this.assertEmployeeMutationScope(userId, id);
+
     const rows = await this.db
       .select({ id: employee.employeeId })
       .from(employee)
@@ -697,6 +751,12 @@ export class EmployeeManagementService {
     permissions: unknown[],
     operatorUserId: string,
   ): Promise<{ success: boolean }> {
+    await this.assertEmployeeMutationScope(operatorUserId, employeeId);
+    await this.assertBuiltInAdminIdentity(
+      operatorUserId,
+      '只有系统管理员可修改员工权限',
+    );
+
     const rows = await this.db
       .select({
         id: employee.employeeId,
@@ -756,6 +816,38 @@ export class EmployeeManagementService {
       );
     return Number(rows[0]?.cnt || 0);
   }
+
+  private async assertEmployeeMutationScope(
+    userId: string,
+    employeeId: string,
+  ): Promise<void> {
+    const canAccess = await this.accessScopeService.canAccessEmployee(
+      userId,
+      employeeId,
+      { includeSelf: true },
+    );
+    if (!canAccess) {
+      throw new ForbiddenException('无权操作该员工');
+    }
+  }
+
+  private async assertGlobalEmployeeScope(userId: string): Promise<void> {
+    const scope = await this.accessScopeService.getScope(userId);
+    if (scope.kind !== 'global') {
+      throw new ForbiddenException('只有全局范围用户可创建员工');
+    }
+  }
+
+  private async assertBuiltInAdminIdentity(
+    userId: string,
+    message: string,
+  ): Promise<void> {
+    const roles = await this.roleManagerService.getUserRoles(userId);
+    if (!roles.includes('admin')) {
+      throw new ForbiddenException(message);
+    }
+  }
+
   /**
    * 解析上级：优先使用指定的 supervisorId，否则根据部门查找部门负责人
    */

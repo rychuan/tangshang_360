@@ -1,4 +1,6 @@
 import * as React from 'react';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 jest.mock('@client/src/components/ui/dialog', () => ({
@@ -141,5 +143,22 @@ describe('template management permission boundary', () => {
     );
 
     expect(html).toContain('编辑模式');
+  });
+
+  it('uses edit permission to deactivate and delete permission to permanently delete', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        __dirname,
+        '../../client/src/pages/TemplateManagement/TemplateManagementPage.tsx',
+      ),
+      'utf8',
+    );
+
+    expect(source).toMatch(
+      /item\.isActive && \(\s*<CanDo resource="template_management" action="edit">/,
+    );
+    expect(source).toMatch(
+      /!item\.isActive && \(\s*<CanDo resource="template_management" action="delete">/,
+    );
   });
 });

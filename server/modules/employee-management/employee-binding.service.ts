@@ -5,6 +5,7 @@ import {
   NotFoundException,
   BadRequestException,
   InternalServerErrorException,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   DRIZZLE_DATABASE,
@@ -19,6 +20,7 @@ import {
   auditLog,
 } from '@server/database/schema';
 import { EmployeeSnapshotService } from '../employee-snapshot/employee-snapshot.service';
+import { AccessScopeService } from '@server/common/access/access-scope.service';
 import type {
   BindingHistoryItem,
   EmployeeBindingHistoryResponse,
@@ -35,6 +37,7 @@ export class EmployeeBindingService {
   constructor(
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
     private readonly employeeSnapshotService: EmployeeSnapshotService,
+    private readonly accessScopeService: AccessScopeService,
   ) {}
 
   /**
@@ -52,6 +55,7 @@ export class EmployeeBindingService {
         `生效期间格式错误（应为 YYYY-MM）：${effectiveFrom}`,
       );
     }
+    await this.assertEmployeeScope(userId, employeeId);
 
     const tplRows = await this.db
       .select({
@@ -176,6 +180,7 @@ export class EmployeeBindingService {
       );
     }
     if (employeeIds.length === 0) return { ids: [] };
+    await this.assertEmployeeScopes(userId, employeeIds);
 
     // 1. 批量验证模板
     const tplRows = await this.db
@@ -282,6 +287,8 @@ export class EmployeeBindingService {
     userId: string,
     deleteSnapshot: boolean = false,
   ): Promise<{ success: boolean }> {
+    await this.assertEmployeeScope(userId, employeeId);
+
     const existing = await this.db
       .select({
         id: employeeBinding.id,
@@ -337,7 +344,11 @@ export class EmployeeBindingService {
     userId: string,
   ): Promise<{ success: boolean; message?: string }> {
     const [existing] = await this.db
-      .select({ id: employeeBinding.id, status: employeeBinding.status })
+      .select({
+        id: employeeBinding.id,
+        employeeId: employeeBinding.employeeId,
+        status: employeeBinding.status,
+      })
       .from(employeeBinding)
       .where(eq(employeeBinding.id, bindingId));
 
@@ -345,6 +356,7 @@ export class EmployeeBindingService {
       this.logger.log(`Binding not found: ${bindingId}`);
       return { success: false, message: '绑定记录不存在' };
     }
+    await this.assertEmployeeScope(userId, String(existing.employeeId));
 
     await this.db.transaction(async (tx) => {
       await tx
@@ -411,5 +423,28 @@ export class EmployeeBindingService {
    */
   private isValidPeriod(period: string): boolean {
     return /^\d{4}-(0[1-9]|1[0-2])$/.test(period);
+  }
+
+  private async assertEmployeeScopes(
+    userId: string,
+    employeeIds: string[],
+  ): Promise<void> {
+    for (const employeeId of new Set(employeeIds)) {
+      await this.assertEmployeeScope(userId, employeeId);
+    }
+  }
+
+  private async assertEmployeeScope(
+    userId: string,
+    employeeId: string,
+  ): Promise<void> {
+    const canAccess = await this.accessScopeService.canAccessEmployee(
+      userId,
+      employeeId,
+      { includeSelf: false },
+    );
+    if (!canAccess) {
+      throw new ForbiddenException('无权操作该员工');
+    }
   }
 }

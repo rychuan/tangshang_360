@@ -94,4 +94,89 @@ describe('team structure permission enforcement', () => {
     expect(db.select).not.toHaveBeenCalled();
     expect(bindingService.history).not.toHaveBeenCalled();
   });
+
+  it('rejects legacy employee updates outside the current scope before writing', async () => {
+    const db = { transaction: jest.fn() };
+    const accessScopeService = {
+      canAccessEmployee: jest.fn().mockResolvedValue(false),
+    };
+    const service = new (TeamStructureService as any)(
+      db,
+      {},
+      {},
+      accessScopeService,
+    ) as TeamStructureService;
+
+    await expect(
+      service.updateEmployee(
+        'employee-2',
+        { name: '越权更新' },
+        'manager-1',
+      ),
+    ).rejects.toThrow('无权操作该员工');
+
+    expect(accessScopeService.canAccessEmployee).toHaveBeenCalledWith(
+      'manager-1',
+      'employee-2',
+      { includeSelf: true },
+    );
+    expect(db.transaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects a batch deactivate request containing an out-of-scope employee', async () => {
+    const db = { transaction: jest.fn() };
+    const accessScopeService = {
+      canAccessEmployee: jest.fn().mockResolvedValue(false),
+    };
+    const service = new (TeamStructureService as any)(
+      db,
+      {},
+      {},
+      accessScopeService,
+    ) as TeamStructureService;
+
+    await expect(
+      service.batchDeactivate(['employee-2'], 'manager-1'),
+    ).rejects.toThrow('无权操作该员工');
+
+    expect(accessScopeService.canAccessEmployee).toHaveBeenCalledWith(
+      'manager-1',
+      'employee-2',
+      { includeSelf: true },
+    );
+    expect(db.transaction).not.toHaveBeenCalled();
+  });
+
+  it('does not accept the legacy role field in a team-structure employee update', async () => {
+    const updateQuery = {
+      set: jest.fn().mockReturnThis(),
+      where: jest.fn().mockResolvedValue(undefined),
+    };
+    const auditInsert = {
+      values: jest.fn().mockResolvedValue(undefined),
+    };
+    const db = {
+      update: jest.fn().mockReturnValue(updateQuery),
+      insert: jest.fn().mockReturnValue(auditInsert),
+    };
+    const accessScopeService = {
+      canAccessEmployee: jest.fn().mockResolvedValue(true),
+    };
+    const service = new (TeamStructureService as any)(
+      db,
+      {},
+      {},
+      accessScopeService,
+    ) as TeamStructureService;
+
+    await expect(
+      service.updateEmployee(
+        'employee-1',
+        { name: '员工一', role: 'admin' },
+        'manager-1',
+      ),
+    ).resolves.toEqual({ success: true });
+
+    expect(updateQuery.set).toHaveBeenCalledWith({ name: '员工一' });
+  });
 });

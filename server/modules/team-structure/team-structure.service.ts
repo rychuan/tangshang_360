@@ -154,6 +154,7 @@ export class TeamStructureService {
     if (employeeIds.length === 0) {
       return { success: true, deactivatedCount: 0 };
     }
+    await this.assertEmployeeMutationScopes(operatorId, employeeIds);
 
     return this.db.transaction(async (tx) => {
       const idParams = sql.join(
@@ -277,6 +278,8 @@ export class TeamStructureService {
     body: Record<string, unknown>,
     operatorId: string,
   ) {
+    await this.assertEmployeeMutationScope(operatorId, id);
+
     const updateData: Record<string, unknown> = {};
     const fields = [
       'name',
@@ -286,7 +289,6 @@ export class TeamStructureService {
       'status',
       'employeeNo',
       'title',
-      'role',
       'phone',
       'hireDate',
       'probationMonths',
@@ -347,6 +349,29 @@ export class TeamStructureService {
     );
     if (!allowed) {
       throw new ForbiddenException('无权查看员工绑定信息');
+    }
+  }
+
+  private async assertEmployeeMutationScopes(
+    userId: string,
+    employeeIds: string[],
+  ): Promise<void> {
+    for (const employeeId of new Set(employeeIds)) {
+      await this.assertEmployeeMutationScope(userId, employeeId);
+    }
+  }
+
+  private async assertEmployeeMutationScope(
+    userId: string,
+    employeeId: string,
+  ): Promise<void> {
+    const canAccess = await this.accessScopeService.canAccessEmployee(
+      userId,
+      employeeId,
+      { includeSelf: true },
+    );
+    if (!canAccess) {
+      throw new ForbiddenException('无权操作该员工');
     }
   }
 }

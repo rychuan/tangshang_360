@@ -256,7 +256,7 @@ const TemplateManagementPage: React.FC = () => {
             onClick={() => handleEdit(item.id)}
           />
           {item.isActive && (
-            <CanDo resource="template_management" action="delete">
+            <CanDo resource="template_management" action="edit">
               <ActionBadge
                 actionType="deactivate"
                 icon={<Ban className="size-3" />}

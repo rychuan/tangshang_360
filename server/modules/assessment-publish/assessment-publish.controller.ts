@@ -161,9 +161,11 @@ export class AssessmentPublishController {
   @NeedLogin()
   @Get('publish/employees/:employeeId/indicators')
   async getEmployeeSnapshot(
+    @Req() req: Request,
     @Param('employeeId') employeeId: string,
   ): Promise<EmployeeSnapshotResponse> {
-    return this.service.getEmployeeSnapshot(employeeId);
+    const { userId } = req.userContext;
+    return this.service.getEmployeeSnapshot(employeeId, userId);
   }
 
   @RequirePermission('publish_management', 'edit')
@@ -181,19 +183,25 @@ export class AssessmentPublishController {
   @RequirePermission('publish_management', 'edit')
   @NeedLogin()
   @Delete('publish/employees/:employeeId/indicators')
-  async deleteEmployeeSnapshot(@Param('employeeId') employeeId: string) {
-    return this.service.deleteEmployeeSnapshot(employeeId);
+  async deleteEmployeeSnapshot(
+    @Req() req: Request,
+    @Param('employeeId') employeeId: string,
+  ) {
+    const { userId } = req.userContext;
+    return this.service.deleteEmployeeSnapshot(employeeId, userId);
   }
 
   @RequirePermission('publish_management', 'view')
   @Get('assessment-instances/:id/unlock-history')
-  async getUnlockHistory(@Param('id') id: string) {
-    return this.service.getUnlockHistory(id);
+  async getUnlockHistory(@Req() req: Request, @Param('id') id: string) {
+    const { userId } = req.userContext;
+    return this.service.getUnlockHistory(id, userId);
   }
 
   @RequirePermission('publish_management', 'view')
   @Get('assessment-instances/:id/indicators')
-  async getInstanceIndicators(@Param('id') id: string) {
-    return this.service.getInstanceIndicators(id);
+  async getInstanceIndicators(@Req() req: Request, @Param('id') id: string) {
+    const { userId } = req.userContext;
+    return this.service.getInstanceIndicators(id, userId);
   }
 }
