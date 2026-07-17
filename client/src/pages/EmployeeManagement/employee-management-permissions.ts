@@ -44,3 +44,61 @@ export function getDefaultEmployeeManagementTab(
 ): EmployeeManagementTab | null {
   return tabs[0] ?? null;
 }
+
+export function hasEmployeeRowMenuAction(
+  permissions: PermissionItem[],
+  roles: string[],
+): boolean {
+  if (hasPermission(permissions, 'employee_binding', 'view')) {
+    return true;
+  }
+
+  const canManageBindings =
+    roles.some((role) => role === 'admin' || role === 'hrd') &&
+    hasPermission(permissions, 'employee_binding', 'edit');
+  const canManageEmployees =
+    roles.includes('admin') &&
+    (hasPermission(permissions, 'employees', 'edit') ||
+      hasPermission(permissions, 'employees', 'delete'));
+
+  return canManageBindings || canManageEmployees;
+}
+
+export function getEmployeeListCapabilities(
+  permissions: PermissionItem[],
+  roles: string[],
+): {
+  loadTemplates: boolean;
+  showBindings: boolean;
+  showSelection: boolean;
+  showActions: boolean;
+} {
+  const canManageBindings =
+    roles.some((role) => role === 'admin' || role === 'hrd') &&
+    hasPermission(permissions, 'employee_binding', 'edit');
+
+  return {
+    loadTemplates: canManageBindings,
+    showBindings: hasPermission(permissions, 'employee_binding', 'view'),
+    showSelection: canManageBindings,
+    showActions: hasEmployeeRowMenuAction(permissions, roles),
+  };
+}
+
+export function getDepartmentCommandCapabilities(
+  permissions: PermissionItem[],
+  roles: string[],
+): {
+  canEdit: boolean;
+  canDelete: boolean;
+} {
+  return {
+    canEdit:
+      roles.some(
+        (role) => role === 'admin' || role === 'hrd' || role === 'dept_head',
+      ) && hasPermission(permissions, 'organization', 'edit'),
+    canDelete:
+      roles.includes('admin') &&
+      hasPermission(permissions, 'organization', 'delete'),
+  };
+}

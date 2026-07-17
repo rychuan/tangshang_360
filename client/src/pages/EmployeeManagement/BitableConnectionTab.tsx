@@ -518,13 +518,15 @@ const BitableConnectionTab: React.FC = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              data-variant="destructive"
-            >
-              确认删除
-            </AlertDialogAction>
+            <CanDo {...COMMAND_PERMISSIONS.employeeSync}>
+              <AlertDialogAction
+                onClick={handleDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                data-variant="destructive"
+              >
+                确认删除
+              </AlertDialogAction>
+            </CanDo>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -1,9 +1,9 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger, ForbiddenException } from '@nestjs/common';
 import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { eq, and, isNull, like } from 'drizzle-orm';
+import { eq, and, isNull, like, type SQL } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 import {
   employeeBinding,
@@ -12,6 +12,8 @@ import {
   auditLog,
 } from '@server/database/schema';
 import { EmployeeBindingService } from '../employee-management/employee-binding.service';
+import { RoleManagerService } from '../role-manager/role-manager.service';
+import { AccessScopeService } from '@server/common/access/access-scope.service';
 
 @Injectable()
 export class TeamStructureService {
@@ -20,24 +22,40 @@ export class TeamStructureService {
   constructor(
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
     private readonly bindingService: EmployeeBindingService,
+    private readonly roleManagerService: RoleManagerService,
+    private readonly accessScopeService: AccessScopeService,
   ) {}
 
   /**
    * 团队结构列表 — Drizzle ORM 版本，替代原原始 SQL 实现。
    */
-  async list(query: {
-    employeeName?: string;
-    department?: string;
-    position?: string;
-    templateId?: string;
-    page?: string;
-    pageSize?: string;
-  }) {
+  async list(
+    query: {
+      employeeName?: string;
+      department?: string;
+      position?: string;
+      templateId?: string;
+      page?: string;
+      pageSize?: string;
+    },
+    userId: string,
+  ) {
+    await this.assertBindingView(userId);
     const pageNum = parseInt(query.page || '1', 10);
     const pageSizeNum = parseInt(query.pageSize || '10', 10);
     const offset = (pageNum - 1) * pageSizeNum;
 
-    const conditions = [eq(employee.status, true), isNull(employee.deletedAt)];
+    const conditions: SQL[] = [
+      eq(employee.status, true),
+      isNull(employee.deletedAt),
+    ];
+    const scopeCondition =
+      await this.accessScopeService.buildEmployeeScopeCondition(userId, {
+        includeSelf: true,
+      });
+    if (scopeCondition) {
+      conditions.push(scopeCondition);
+    }
 
     if (query.employeeName) {
       conditions.push(like(employee.name, `%${query.employeeName}%`));
@@ -188,7 +206,17 @@ export class TeamStructureService {
   /**
    * 获取员工详情 — Drizzle ORM 版本。
    */
-  async getEmployee(id: string) {
+  async getEmployee(id: string, userId: string) {
+    await this.assertBindingView(userId);
+    const canAccess = await this.accessScopeService.canAccessEmployee(
+      userId,
+      id,
+      { includeSelf: true },
+    );
+    if (!canAccess) {
+      throw new ForbiddenException('无权查看该员工');
+    }
+
     const result = await this.db
       .select({
         employeeId: sql<string>`(${employee.employeeId}).user_id`,
@@ -298,7 +326,27 @@ export class TeamStructureService {
   /**
    * 绑定历史 — 委托给 EmployeeBindingService。
    */
-  async history(employeeId: string) {
+  async history(employeeId: string, userId: string) {
+    await this.assertBindingView(userId);
+    const canAccess = await this.accessScopeService.canAccessEmployee(
+      userId,
+      employeeId,
+      { includeSelf: true },
+    );
+    if (!canAccess) {
+      throw new ForbiddenException('无权查看该员工');
+    }
     return this.bindingService.history(employeeId);
+  }
+
+  private async assertBindingView(userId: string): Promise<void> {
+    const allowed = await this.roleManagerService.checkUserPermission(
+      userId,
+      'employee_binding',
+      'view',
+    );
+    if (!allowed) {
+      throw new ForbiddenException('无权查看员工绑定信息');
+    }
   }
 }

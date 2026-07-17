@@ -41,6 +41,7 @@ import type {
   CreateBindingRequest,
   EmployeeBindingHistoryResponse,
   EmployeeCurrentBinding,
+  BindingTemplateOption,
   BindingHistoryItem,
 } from '@shared/api.interface';
 import { RoleManagerService } from '../role-manager/role-manager.service';
@@ -73,6 +74,11 @@ export class EmployeeManagementService {
     userId: string,
   ): Promise<EmployeeListResponse> {
     const conditions: SQL[] = [isNull(employee.deletedAt)];
+    const canViewBindings = await this.roleManagerService.checkUserPermission(
+      userId,
+      'employee_binding',
+      'view',
+    );
     const scopeCondition =
       await this.accessScopeService.buildEmployeeScopeCondition(userId, {
         includeSelf: true,
@@ -122,6 +128,9 @@ export class EmployeeManagementService {
     }
     if (query.status === 'true' || query.status === 'false') {
       conditions.push(eq(employee.status, query.status === 'true'));
+    }
+    if (query.binding && !canViewBindings) {
+      throw new ForbiddenException('无权筛选员工绑定状态');
     }
     if (query.binding === 'bound') {
       conditions.push(
@@ -184,6 +193,10 @@ export class EmployeeManagementService {
 
     const employeeIds: string[] = mapped.map((m: EmployeeItem) => m.id);
 
+    if (!canViewBindings) {
+      return { items: mapped, total };
+    }
+
     const bindingRows =
       employeeIds.length > 0
         ? await this.db
@@ -237,6 +250,32 @@ export class EmployeeManagementService {
       .orderBy(employee.position);
     const positions = [...new Set(rows.map((r) => r.position))];
     return { positions };
+  }
+
+  async bindingTemplates(): Promise<{ items: BindingTemplateOption[] }> {
+    const rows = await this.db
+      .select({
+        id: assessmentTemplate.id,
+        name: assessmentTemplate.name,
+        position: assessmentTemplate.position,
+        type: assessmentTemplate.type,
+      })
+      .from(assessmentTemplate)
+      .where(
+        and(
+          eq(assessmentTemplate.isActive, true),
+          isNull(assessmentTemplate.deletedAt),
+        ),
+      )
+      .orderBy(assessmentTemplate.name);
+
+    return {
+      items: rows.map((row) => ({
+        ...row,
+        id: String(row.id),
+        type: row.type as BindingTemplateOption['type'],
+      })),
+    };
   }
 
   async delete(id: string, userId: string): Promise<{ success: boolean }> {
@@ -304,6 +343,11 @@ export class EmployeeManagementService {
     if (!canAccess) {
       throw new ForbiddenException('无权查看该员工');
     }
+    const canViewBindings = await this.roleManagerService.checkUserPermission(
+      userId,
+      'employee_binding',
+      'view',
+    );
 
     const rows = await this.db
       .select({
@@ -340,15 +384,17 @@ export class EmployeeManagementService {
       avgRows,
       latestGradeRows,
     ] = await Promise.all([
-      this.db
-        .select({ cnt: count() })
-        .from(employeeBinding)
-        .where(
-          and(
-            eq(employeeBinding.employeeId, id),
-            eq(employeeBinding.status, true),
-          ),
-        ),
+      canViewBindings
+        ? this.db
+            .select({ cnt: count() })
+            .from(employeeBinding)
+            .where(
+              and(
+                eq(employeeBinding.employeeId, id),
+                eq(employeeBinding.status, true),
+              ),
+            )
+        : Promise.resolve([]),
       this.db
         .select({ cnt: count() })
         .from(assessmentInstance)
@@ -409,7 +455,9 @@ export class EmployeeManagementService {
           ? emp.createdAt.toISOString()
           : String(emp.createdAt),
       stats: {
-        activeBindings: Number(activeBindingRows[0]?.cnt || 0),
+        ...(canViewBindings
+          ? { activeBindings: Number(activeBindingRows[0]?.cnt || 0) }
+          : {}),
         totalAssessments: Number(assessCountRows[0]?.cnt || 0),
         completedAssessments: Number(completedRows[0]?.cnt || 0),
         avgScore:

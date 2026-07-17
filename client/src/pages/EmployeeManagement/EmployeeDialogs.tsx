@@ -21,7 +21,7 @@ import {
 import { Label } from '@/components/ui/label';
 import type {
   BindingHistoryItem,
-  AssessmentTemplateItem,
+  BindingTemplateOption,
 } from '@shared/api.interface';
 import { Spinner } from '@/components/ui/spinner';
 
@@ -41,7 +41,7 @@ export interface BindDialogProps {
   setBindTemplateId: (v: string) => void;
   bindSubmitting: boolean;
   onConfirm: () => void;
-  templates: AssessmentTemplateItem[];
+  templates: BindingTemplateOption[];
 }
 
 const BindDialog: React.FC<BindDialogProps> = ({
@@ -100,7 +100,7 @@ const BindDialog: React.FC<BindDialogProps> = ({
                 <SelectValue placeholder="请选择模板" />
               </SelectTrigger>
               <SelectContent>
-                {templates.map((t: AssessmentTemplateItem) => (
+                {templates.map((t: BindingTemplateOption) => (
                   <SelectItem key={t.id} value={t.id}>
                     {t.name}
                   </SelectItem>

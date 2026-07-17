@@ -55,9 +55,14 @@ import {
 } from 'lucide-react';
 import { showConfirm } from '@lark-apaas/client-toolkit';
 import DepartmentMembersDialog from './DepartmentMembersDialog';
-import { CanRole } from '@lark-apaas/client-toolkit/auth';
-import { CanDo, usePermission } from '@/hooks/usePermissions';
+import {
+  CanRole,
+  ROLE_SUBJECT,
+  useAuth,
+} from '@lark-apaas/client-toolkit/auth';
+import { CanDo, usePermission, usePermissions } from '@/hooks/usePermissions';
 import { COMMAND_PERMISSIONS } from '@/components/permission-policy';
+import { getDepartmentCommandCapabilities } from './employee-management-permissions';
 
 interface DeptFormData {
   name: string;
@@ -92,13 +97,20 @@ function renderTreeOptions(
 
 const DepartmentManagementTab: React.FC = () => {
   const queryClient = useQueryClient();
-  const canEdit = usePermission(
-    COMMAND_PERMISSIONS.departmentEdit.resource,
-    COMMAND_PERMISSIONS.departmentEdit.action,
+  const { permissions } = usePermissions();
+  const { ability } = useAuth();
+  const departmentRoles = React.useMemo(
+    () =>
+      ability
+        ? ['admin', 'hrd', 'dept_head'].filter((role) =>
+            ability.can(role, ROLE_SUBJECT),
+          )
+        : [],
+    [ability],
   );
-  const canDelete = usePermission(
-    COMMAND_PERMISSIONS.departmentDelete.resource,
-    COMMAND_PERMISSIONS.departmentDelete.action,
+  const { canEdit, canDelete } = getDepartmentCommandCapabilities(
+    permissions,
+    departmentRoles,
   );
   const canViewEmployees = usePermission('employees', 'view');
 

@@ -30,9 +30,10 @@ export class TeamStructureController {
   constructor(private readonly service: TeamStructureService) {}
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
-  @RequirePermission('organization', 'view')
+  @RequirePermission('employees', 'view')
   @Get()
   async list(
+    @Req() req: Request,
     @Query('employeeName') employeeName?: string,
     @Query('department') department?: string,
     @Query('position') position?: string,
@@ -40,18 +41,21 @@ export class TeamStructureController {
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ) {
-    return this.service.list({
-      employeeName,
-      department,
-      position,
-      templateId,
-      page,
-      pageSize,
-    });
+    return this.service.list(
+      {
+        employeeName,
+        department,
+        position,
+        templateId,
+        page,
+        pageSize,
+      },
+      req.userContext?.userId || '',
+    );
   }
 
   @CanRole(['admin'])
-  @RequirePermission('organization', 'edit')
+  @RequirePermission('employee_binding', 'edit')
   @NeedLogin()
   @Post()
   async create(@Req() req: Request, @Body() body: CreateBindingRequest) {
@@ -60,7 +64,7 @@ export class TeamStructureController {
   }
 
   @CanRole(['admin'])
-  @RequirePermission('organization', 'edit')
+  @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Patch('employees/deactivate')
   async batchDeactivate(
@@ -72,14 +76,14 @@ export class TeamStructureController {
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
-  @RequirePermission('organization', 'view')
+  @RequirePermission('employees', 'view')
   @Get('employee/:id')
-  async getEmployee(@Param('id') id: string) {
-    return this.service.getEmployee(id);
+  async getEmployee(@Req() req: Request, @Param('id') id: string) {
+    return this.service.getEmployee(id, req.userContext?.userId || '');
   }
 
   @CanRole(['admin'])
-  @RequirePermission('organization', 'edit')
+  @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Patch('employee/:id')
   async updateEmployee(
@@ -92,7 +96,7 @@ export class TeamStructureController {
   }
 
   @CanRole(['admin'])
-  @RequirePermission('organization', 'edit')
+  @RequirePermission('employee_binding', 'edit')
   @NeedLogin()
   @Patch(':id/deactivate')
   async deactivate(@Req() req: Request, @Param('id') id: string) {
@@ -101,9 +105,9 @@ export class TeamStructureController {
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
-  @RequirePermission('organization', 'view')
+  @RequirePermission('employee_binding', 'view')
   @Get(':employeeId/history')
-  async history(@Param('employeeId') employeeId: string) {
-    return this.service.history(employeeId);
+  async history(@Req() req: Request, @Param('employeeId') employeeId: string) {
+    return this.service.history(employeeId, req.userContext?.userId || '');
   }
 }

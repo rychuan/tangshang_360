@@ -7,6 +7,7 @@ export {
   type CreateTemplateRequest,
   type UpdateTemplateRequest,
   type CreateBindingRequest,
+  type BindingTemplateOption,
   type BindingHistoryItem,
   type EmployeeBindingHistoryResponse,
   type TeamStructureItem,
@@ -130,7 +131,7 @@ export interface EmployeeDetail extends EmployeeItem {
   probationMonths: number;
   createdAt: string;
   stats: {
-    activeBindings: number;
+    activeBindings?: number;
     totalAssessments: number;
     completedAssessments: number;
     avgScore?: number;

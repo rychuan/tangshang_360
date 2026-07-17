@@ -51,12 +51,17 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
-import { CanRole } from '@lark-apaas/client-toolkit/auth';
-import { CanDo } from '@/hooks/usePermissions';
+import {
+  CanRole,
+  ROLE_SUBJECT,
+  useAuth,
+} from '@lark-apaas/client-toolkit/auth';
+import { CanDo, usePermissions } from '@/hooks/usePermissions';
 import { useEmployeeFilters } from './hooks/useEmployeeFilters';
 import { useEmployeeList } from './hooks/useEmployeeList';
 import { useEmployeeDialogs } from './hooks/useEmployeeDialogs';
 import { COMMAND_PERMISSIONS } from '@/components/permission-policy';
+import { getEmployeeListCapabilities } from './employee-management-permissions';
 
 const PAGE_SIZE = 20;
 
@@ -65,6 +70,16 @@ const EmployeeListTab: React.FC = () => {
     '' | 'import' | 'export'
   >('');
   const [filters, setters] = useEmployeeFilters();
+  const { permissions } = usePermissions();
+  const { ability } = useAuth();
+  const activeRoles = React.useMemo(
+    () =>
+      ability
+        ? ['admin', 'hrd'].filter((role) => ability.can(role, ROLE_SUBJECT))
+        : [],
+    [ability],
+  );
+  const capabilities = getEmployeeListCapabilities(permissions, activeRoles);
   const {
     employees,
     total,
@@ -74,7 +89,9 @@ const EmployeeListTab: React.FC = () => {
     selectedRowKeys,
     setSelectedRowKeys,
     refetch,
-  } = useEmployeeList(filters);
+  } = useEmployeeList(filters, {
+    loadTemplates: capabilities.loadTemplates,
+  });
   const dialogs = useEmployeeDialogs(refetch);
 
   const toggleAll = (): void => {
@@ -252,24 +269,30 @@ const EmployeeListTab: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs text-muted-foreground">参与绩效</Label>
-              <Select
-                value={filters.binding || 'all'}
-                onValueChange={(v) => setters.setBinding(v === 'all' ? '' : v)}
-              >
-                <SelectTrigger className="w-30 h-9 text-sm">
-                  <SelectValue placeholder="全部" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value="all">全部</SelectItem>
-                    <SelectItem value="bound">已参与</SelectItem>
-                    <SelectItem value="unbound">未参与</SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
+            {capabilities.showBindings && (
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs text-muted-foreground">
+                  参与绩效
+                </Label>
+                <Select
+                  value={filters.binding || 'all'}
+                  onValueChange={(v) =>
+                    setters.setBinding(v === 'all' ? '' : v)
+                  }
+                >
+                  <SelectTrigger className="w-30 h-9 text-sm">
+                    <SelectValue placeholder="全部" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="all">全部</SelectItem>
+                      <SelectItem value="bound">已参与</SelectItem>
+                      <SelectItem value="unbound">未参与</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -289,6 +312,9 @@ const EmployeeListTab: React.FC = () => {
             onHistory={dialogs.openHistoryDialog}
             onToggleStatus={dialogs.handleToggleStatus}
             onDelete={dialogs.openDeleteDialog}
+            showBindings={capabilities.showBindings}
+            showSelection={capabilities.showSelection}
+            showActions={capabilities.showActions}
           />
         </CardContent>
       </Card>
