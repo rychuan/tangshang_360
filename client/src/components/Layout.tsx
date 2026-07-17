@@ -4,6 +4,7 @@ import { useCurrentUserProfile } from '@lark-apaas/client-toolkit/hooks/useCurre
 import { useAppInfo } from '@lark-apaas/client-toolkit/hooks/useAppInfo';
 import { useAuth, ROLE_SUBJECT } from '@lark-apaas/client-toolkit/auth';
 import { usePermissions } from '@/hooks/usePermissions';
+import { hasAnyViewPermission } from './permission-policy';
 import { navGroups } from './navigation';
 import type { NavItem } from './navigation';
 import { ALL_ROLES, MANAGER_ROLES } from './role-constants';
@@ -67,11 +68,8 @@ const LayoutContent: React.FC = () => {
   const { label: breadcrumbLabel } = useBreadcrumb();
 
   const hasPermAccess = (item: NavItem): boolean => {
-    if (!item.permissionResource) return true;
-    return permissions.some(
-      (p) =>
-        p.resource === item.permissionResource && p.actions.includes('view'),
-    );
+    if (!item.permissionResources) return true;
+    return hasAnyViewPermission(permissions, item.permissionResources);
   };
 
   const visibleGroups = useMemo(() => {
