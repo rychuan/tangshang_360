@@ -64,6 +64,14 @@ export class AssessmentOperationController {
     return this.service.getSignStatus(token, userId);
   }
 
+  @RequirePermission('statistics', 'export')
+  @NeedLogin()
+  @Get(':id/export-detail')
+  async exportDetail(@Req() req: Request, @Param('id') id: string) {
+    const { userId } = req.userContext as { userId: string };
+    return this.service.detail(id, userId);
+  }
+
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
   @RequirePermission('my_assessments', 'view')
   @Get(':id')
@@ -204,5 +212,4 @@ export class AssessmentOperationController {
       period: session.period,
     };
   }
-
 }

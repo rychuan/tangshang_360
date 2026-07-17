@@ -18,7 +18,7 @@ import { handleApiError } from '@/utils/api-error';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { detail as getAssessmentDetail } from '@/api/assessment-operation';
+import { exportDetail as getAssessmentExportDetail } from '@/api/assessment-operation';
 import { useStatisticsData } from './useStatisticsData';
 import type { FilterState } from './useStatisticsData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -181,7 +181,7 @@ const StatisticsPage: React.FC = () => {
 
     try {
       setExportingPdfId(id);
-      const detail = await getAssessmentDetail(id);
+      const detail = await getAssessmentExportDetail(id);
 
       // Build group data
       const groupMap = new Map<
@@ -733,19 +733,21 @@ const StatisticsPage: React.FC = () => {
                                   navigate(`../assessment/${r.id}`)
                                 }
                               />
-                              <ActionBadge
-                                actionType="preview"
-                                icon={<FileDown className="size-3" />}
-                                label="导出"
-                                disabled={exportingPdfId === r.id}
-                                onClick={() =>
-                                  handleExportPdf(
-                                    r.id,
-                                    r.employeeName,
-                                    r.period,
-                                  )
-                                }
-                              />
+                              <CanDo resource="statistics" action="export">
+                                <ActionBadge
+                                  actionType="preview"
+                                  icon={<FileDown className="size-3" />}
+                                  label="导出"
+                                  disabled={exportingPdfId === r.id}
+                                  onClick={() =>
+                                    handleExportPdf(
+                                      r.id,
+                                      r.employeeName,
+                                      r.period,
+                                    )
+                                  }
+                                />
+                              </CanDo>
                             </div>
                           </TableCell>
                         </CanRole>
