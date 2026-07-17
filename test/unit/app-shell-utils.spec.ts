@@ -2,9 +2,15 @@ import {
   filterNavItems,
   filterVisibleNavGroups,
   formatCurrentCycle,
+  getDefaultLandingPath,
   getCurrentNavLabel,
+  hasRoleAndPermissionAccess,
 } from '../../client/src/components/app-shell/app-shell-utils';
 import type { NavGroup } from '../../client/src/components/navigation';
+import {
+  ADMIN_HRD_ROLES,
+  MANAGER_ROLES,
+} from '../../client/src/components/role-constants';
 
 const groups: NavGroup[] = [
   {
@@ -25,6 +31,13 @@ const groups: NavGroup[] = [
         roles: ['hrd'],
         permissionResource: 'employees',
       },
+      {
+        label: '我的绩效',
+        path: '/my-assessments',
+        icon: (() => null) as never,
+        roles: ['employee'],
+        permissionResource: 'my_assessments',
+      },
     ],
   },
 ];
@@ -39,10 +52,70 @@ describe('app shell navigation utilities', () => {
     expect(visible[0].items.map((item) => item.path)).toEqual(['/dashboard']);
   });
 
+  it('快捷入口同时要求角色能力和资源动作', () => {
+    const publishPermission = [
+      { resource: 'publish_management' as const, actions: ['publish' as const] },
+    ];
+    const employeePermission = [
+      { resource: 'employees' as const, actions: ['view' as const] },
+    ];
+
+    expect(
+      hasRoleAndPermissionAccess({
+        roles: ADMIN_HRD_ROLES,
+        canRole: (role) => role === 'dept_head',
+        permissions: publishPermission,
+        resource: 'publish_management',
+        action: 'publish',
+      }),
+    ).toBe(false);
+    expect(
+      hasRoleAndPermissionAccess({
+        roles: ADMIN_HRD_ROLES,
+        canRole: (role) => role === 'admin',
+        permissions: [],
+        resource: 'publish_management',
+        action: 'publish',
+      }),
+    ).toBe(false);
+    expect(
+      hasRoleAndPermissionAccess({
+        roles: ADMIN_HRD_ROLES,
+        canRole: (role) => role === 'hrd',
+        permissions: publishPermission,
+        resource: 'publish_management',
+        action: 'publish',
+      }),
+    ).toBe(true);
+    expect(
+      hasRoleAndPermissionAccess({
+        roles: MANAGER_ROLES,
+        canRole: (role) => role === 'employee',
+        permissions: employeePermission,
+        resource: 'employees',
+        action: 'view',
+      }),
+    ).toBe(false);
+  });
+
+  it('默认入口选择角色和资源过滤后的第一个真实路径', () => {
+    const visible = filterVisibleNavGroups({
+      groups,
+      canRole: (role) => role === 'employee',
+      permissions: [{ resource: 'my_assessments', actions: ['view'] }],
+    });
+
+    expect(getDefaultLandingPath(visible)).toBe('/my-assessments');
+  });
+
+  it('没有可访问导航时默认入口返回 403', () => {
+    expect(getDefaultLandingPath([])).toBe('/403');
+  });
+
   it('按页面名称过滤命令结果', () => {
-    expect(filterNavItems(groups[0].items, '员工').map((item) => item.path)).toEqual([
-      '/employees',
-    ]);
+    expect(
+      filterNavItems(groups[0].items, '员工').map((item) => item.path),
+    ).toEqual(['/employees']);
   });
 
   it('优先匹配完整路径并支持详情页标题回退', () => {

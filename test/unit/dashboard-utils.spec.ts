@@ -1,6 +1,7 @@
 import {
   buildProgress,
   buildQuickActions,
+  buildVisiblePaths,
   getGreeting,
   mapGradeDistribution,
   resolveSectionStatus,
@@ -9,8 +10,10 @@ import {
 describe('dashboard view utilities', () => {
   it.each([
     [8, '早上好'],
-    [14, '下午好'],
-    [20, '晚上好'],
+    [11, '早上好'],
+    [12, '下午好'],
+    [17, '下午好'],
+    [18, '晚上好'],
   ])('根据小时 %s 返回问候语', (hour, expected) => {
     const date = new Date('2026-07-17T00:00:00+08:00');
     date.setHours(hour);
@@ -45,6 +48,50 @@ describe('dashboard view utilities', () => {
       new Set(['/employees']),
     );
     expect(result.map((item) => item.path)).toEqual(['/employees']);
+  });
+
+  it('保留导航支持的全部合法快捷入口', () => {
+    const paths = [
+      '/permissions',
+      '/team-performance',
+      '/grade-config',
+      '/dictionary',
+    ];
+    const result = buildQuickActions(
+      paths.map((path) => ({ title: path, path })),
+      new Set(paths),
+    );
+
+    expect(result.map((item) => item.path)).toEqual(paths);
+  });
+
+  it('从资源查看权限构建全部可见导航路径', () => {
+    expect(
+      [...buildVisiblePaths([
+        { resource: 'dashboard', actions: ['view'] },
+        { resource: 'my_assessments', actions: ['view'] },
+        { resource: 'employees', actions: ['view'] },
+        { resource: 'template_management', actions: ['view'] },
+        { resource: 'publish_management', actions: ['view'] },
+        { resource: 'statistics', actions: ['view'] },
+        { resource: 'team_performance', actions: ['view'] },
+        { resource: 'permission_management', actions: ['view'] },
+        { resource: 'grade_config', actions: ['view'] },
+        { resource: 'dictionary_config', actions: ['view'] },
+        { resource: 'organization', actions: ['edit'] },
+      ])],
+    ).toEqual([
+      '/dashboard',
+      '/my-assessments',
+      '/employees',
+      '/template-management',
+      '/publish-management',
+      '/statistics',
+      '/team-performance',
+      '/permissions',
+      '/grade-config',
+      '/dictionary',
+    ]);
   });
 
   it('将等级分布稳定排序', () => {

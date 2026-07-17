@@ -48,10 +48,10 @@ export function AssessmentProgressPanel({
           </span>
           <div className="min-w-0">
             <CardTitle className="text-[14px] leading-5">
-              本期考核进度
+              考核处理概览
             </CardTitle>
             <CardDescription className="text-[12px]">
-              完成情况基于当前考核数据
+              汇总全部考核的已完成与待处理数量
             </CardDescription>
           </div>
         </div>
@@ -78,8 +78,8 @@ export function AssessmentProgressPanel({
               <EmptyMedia variant="icon">
                 <CircleAlert className="size-5" />
               </EmptyMedia>
-              <EmptyTitle className="text-[14px]">进度加载失败</EmptyTitle>
-              <EmptyDescription>暂时无法获取本期考核进度。</EmptyDescription>
+              <EmptyTitle className="text-[14px]">处理概览加载失败</EmptyTitle>
+              <EmptyDescription>暂时无法获取考核处理汇总。</EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
               <Button variant="outline" size="sm" onClick={onRetry}>
@@ -121,7 +121,7 @@ function ProgressContent({
           <p className="text-[34px] font-semibold leading-none tabular-nums">
             {progress.percentage}%
           </p>
-          <p className="mt-2 text-[12px] text-muted-foreground">整体完成率</p>
+          <p className="mt-2 text-[12px] text-muted-foreground">累计完成率</p>
         </div>
         <p className="text-[13px] text-muted-foreground">
           已完成{' '}
@@ -133,14 +133,14 @@ function ProgressContent({
       </div>
       <Progress
         value={progress.percentage}
-        aria-label={`本期考核完成率 ${progress.percentage}%`}
+        aria-label={`累计考核处理完成率 ${progress.percentage}%`}
         className="mt-5"
       />
       <div className="mt-5 grid grid-cols-3 gap-3">
         {[
           ['已完成', progress.completed],
           ['待处理', progress.pending],
-          ['任务总数', progress.total],
+          ['合计', progress.total],
         ].map(([label, value]) => (
           <div key={label} className="min-w-0">
             <p className="text-[17px] font-semibold tabular-nums">{value}</p>

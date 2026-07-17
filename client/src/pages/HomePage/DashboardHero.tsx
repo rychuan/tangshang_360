@@ -22,7 +22,10 @@ export function DashboardHero({
         </p>
       </div>
       {canPublish && (
-        <Button asChild className="h-10 rounded-lg bg-[#171720] px-4">
+        <Button
+          asChild
+          className="h-10 rounded-lg bg-foreground px-4 text-background hover:bg-foreground/90"
+        >
           <Link to="/publish-management">
             <Plus className="size-4" />
             发布考核

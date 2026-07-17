@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import { AuthProvider } from '@lark-apaas/client-toolkit/auth';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -11,6 +11,7 @@ const queryClient = new QueryClient({
 
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import { DefaultLandingRoute } from './components/app-shell/DefaultLandingRoute';
 import {
   ALL_ROLES,
   MANAGER_ROLES,
@@ -64,10 +65,7 @@ const RoutesComponent = () => {
         <PermissionsProvider>
           <Routes>
             <Route element={<Layout />}>
-              <Route
-                index
-                element={<Navigate to="/dashboard" replace />}
-              />
+              <Route index element={<DefaultLandingRoute />} />
               <Route
                 path="dashboard"
                 element={

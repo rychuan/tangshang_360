@@ -1,5 +1,7 @@
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { NavItem } from '@/components/navigation';
+import { filterNavItems } from '@/components/app-shell/app-shell-utils';
 import {
   CommandDialog,
   CommandEmpty,
@@ -21,26 +23,37 @@ export function NavigationCommand({
   onOpenChange,
 }: NavigationCommandProps) {
   const navigate = useNavigate();
+  const [query, setQuery] = React.useState('');
+  const filteredItems = filterNavItems(items, query);
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) setQuery('');
+    onOpenChange(nextOpen);
+  };
 
   return (
     <CommandDialog
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={handleOpenChange}
       title="搜索功能或页面"
       description="仅搜索当前有权访问的系统功能"
       className="max-w-xl rounded-lg"
     >
-      <CommandInput placeholder="搜索功能或页面" />
+      <CommandInput
+        value={query}
+        onValueChange={setQuery}
+        placeholder="搜索功能或页面"
+      />
       <CommandList>
         <CommandEmpty>没有匹配的功能</CommandEmpty>
         <CommandGroup heading="可访问页面">
-          {items.map((item) => (
+          {filteredItems.map((item) => (
             <CommandItem
               key={item.path}
               value={`${item.label} ${item.path}`}
               onSelect={() => {
                 navigate(item.path);
-                onOpenChange(false);
+                handleOpenChange(false);
               }}
             >
               <item.icon className="size-4" />

@@ -50,7 +50,7 @@ export function DashboardSummary({
       <div className="mb-3">
         <h2 className="text-[14px] font-semibold">绩效摘要</h2>
         <p className="mt-1 text-[12px] text-muted-foreground">
-          当前考核数据的关键概览
+          累计考核数据的关键概览
         </p>
       </div>
 
@@ -103,14 +103,14 @@ export function DashboardSummary({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <SummaryCard
             title="待处理"
-            description="当前需要推进的考核任务"
+            description="尚待处理的考核数量"
             value={stats.pendingCount}
             icon={Clock3}
             tone="bg-warning/10 text-warning"
           />
           <SummaryCard
             title="已完成"
-            description="当前已完成的考核数量"
+            description="累计已完成的考核数量"
             value={stats.completedCount}
             icon={CheckCircle2}
             tone="bg-success/10 text-success"

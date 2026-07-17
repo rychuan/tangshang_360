@@ -1,12 +1,19 @@
 import {
+  Award,
   BarChart3,
+  BookOpen,
   ClipboardList,
   FileText,
   Send,
+  Shield,
   UserCog,
+  Users,
   type LucideIcon,
 } from 'lucide-react';
-import type { DashboardOverviewResponse, PermissionItem } from '@shared/api.interface';
+import type {
+  DashboardOverviewResponse,
+  PermissionItem,
+} from '@shared/api.interface';
 import type { PermissionResource } from '@shared/api.interface';
 
 export interface DashboardQuickAction {
@@ -25,6 +32,10 @@ const QUICK_ACTION_META: Record<
   '/statistics': { icon: BarChart3, tone: 'purple' },
   '/employees': { icon: UserCog, tone: 'green' },
   '/my-assessments': { icon: ClipboardList, tone: 'blue' },
+  '/permissions': { icon: Shield, tone: 'purple' },
+  '/team-performance': { icon: Users, tone: 'green' },
+  '/grade-config': { icon: Award, tone: 'orange' },
+  '/dictionary': { icon: BookOpen, tone: 'blue' },
 };
 
 export function getGreeting(date: Date): '早上好' | '下午好' | '晚上好' {

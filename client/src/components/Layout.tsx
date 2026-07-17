@@ -5,6 +5,7 @@ import { useAppInfo } from '@lark-apaas/client-toolkit/hooks/useAppInfo';
 import { useAuth, ROLE_SUBJECT } from '@lark-apaas/client-toolkit/auth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { navGroups } from './navigation';
+import { MANAGER_ROLES } from './role-constants';
 import {
   SidebarInset,
   SidebarProvider,
@@ -15,6 +16,7 @@ import {
   filterVisibleNavGroups,
   flattenNavItems,
   getCurrentNavLabel,
+  hasRoleAndPermissionAccess,
 } from '@/components/app-shell/app-shell-utils';
 import {
   useBreadcrumb,
@@ -26,19 +28,20 @@ const LayoutContent: React.FC = () => {
   const userInfo = useCurrentUserProfile();
   const { appName } = useAppInfo();
   const { ability, isLoading } = useAuth();
-  const { permissions } = usePermissions();
+  const { permissions, loading: permissionsLoading } = usePermissions();
   const { label: breadcrumbLabel } = useBreadcrumb();
+  const loading = isLoading || permissionsLoading;
 
   const visibleGroups = React.useMemo(
     () =>
-      isLoading
+      loading
         ? []
         : filterVisibleNavGroups({
             groups: navGroups,
             canRole: (role) => ability.can(role, ROLE_SUBJECT),
             permissions,
           }),
-    [ability, isLoading, permissions],
+    [ability, loading, permissions],
   );
 
   const allItems = flattenNavItems(visibleGroups);
@@ -47,12 +50,15 @@ const LayoutContent: React.FC = () => {
     visibleGroups,
     breadcrumbLabel,
   );
-  const canViewEmployees = permissions.some(
-    (permission) =>
-      permission.resource === 'employees' && permission.actions.includes('view'),
-  );
+  const canViewEmployees = hasRoleAndPermissionAccess({
+    roles: MANAGER_ROLES,
+    canRole: (role) => ability.can(role, ROLE_SUBJECT),
+    permissions,
+    resource: 'employees',
+    action: 'view',
+  });
 
-  if (isLoading) {
+  if (loading) {
     return (
       <SidebarProvider
         style={{ '--sidebar-width': '220px' } as React.CSSProperties}
@@ -63,7 +69,7 @@ const LayoutContent: React.FC = () => {
           appName={appName}
           canViewEmployees={false}
         />
-        <SidebarInset className="min-w-0 overflow-hidden bg-white md:rounded-lg">
+        <SidebarInset className="min-w-0 overflow-hidden bg-background md:rounded-lg">
           <div className="flex flex-1 flex-col" />
         </SidebarInset>
       </SidebarProvider>
@@ -80,7 +86,7 @@ const LayoutContent: React.FC = () => {
         appName={appName}
         canViewEmployees={canViewEmployees}
       />
-      <SidebarInset className="min-w-0 overflow-hidden bg-white md:rounded-lg">
+      <SidebarInset className="min-w-0 overflow-hidden bg-background md:rounded-lg">
         <AppTopbar
           currentLabel={currentLabel}
           items={allItems}

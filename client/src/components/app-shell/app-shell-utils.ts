@@ -1,5 +1,26 @@
-import type { PermissionItem } from '@shared/api.interface';
+import type {
+  PermissionAction,
+  PermissionItem,
+  PermissionResource,
+} from '@shared/api.interface';
 import type { NavGroup, NavItem } from '../navigation';
+
+export function hasRoleAndPermissionAccess(args: {
+  roles: string[];
+  canRole: (role: string) => boolean;
+  permissions: PermissionItem[];
+  resource: PermissionResource;
+  action: PermissionAction;
+}): boolean {
+  return (
+    args.roles.some(args.canRole) &&
+    args.permissions.some(
+      (permission) =>
+        permission.resource === args.resource &&
+        permission.actions.includes(args.action),
+    )
+  );
+}
 
 export function filterVisibleNavGroups(args: {
   groups: NavGroup[];
@@ -10,15 +31,14 @@ export function filterVisibleNavGroups(args: {
     .map((group) => ({
       ...group,
       items: group.items.filter((item) => {
-        const roleAllowed = item.roles.some(args.canRole);
-        const permissionAllowed =
-          !item.permissionResource ||
-          args.permissions.some(
-            (permission) =>
-              permission.resource === item.permissionResource &&
-              permission.actions.includes('view'),
-          );
-        return roleAllowed && permissionAllowed;
+        if (!item.permissionResource) return item.roles.some(args.canRole);
+        return hasRoleAndPermissionAccess({
+          roles: item.roles,
+          canRole: args.canRole,
+          permissions: args.permissions,
+          resource: item.permissionResource,
+          action: 'view',
+        });
       }),
     }))
     .filter((group) => group.items.length > 0);
@@ -26,6 +46,14 @@ export function filterVisibleNavGroups(args: {
 
 export function flattenNavItems(groups: NavGroup[]): NavItem[] {
   return groups.flatMap((group) => group.items);
+}
+
+export function getDefaultLandingPath(groups: NavGroup[]): string {
+  return (
+    flattenNavItems(groups).find(
+      (item) => item.path.startsWith('/') && item.path !== '/',
+    )?.path ?? '/403'
+  );
 }
 
 export function filterNavItems(items: NavItem[], query: string): NavItem[] {
