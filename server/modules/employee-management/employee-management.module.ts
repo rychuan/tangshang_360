@@ -5,9 +5,10 @@ import { EmployeeBindingService } from './employee-binding.service';
 import { EmployeeRepository } from './employee.repository';
 import { EmployeeSnapshotModule } from '../employee-snapshot/employee-snapshot.module';
 import { RoleManagerModule } from '../role-manager/role-manager.module';
+import { AccessScopeModule } from '@server/common/access/access-scope.module';
 
 @Module({
-  imports: [EmployeeSnapshotModule, RoleManagerModule],
+  imports: [EmployeeSnapshotModule, RoleManagerModule, AccessScopeModule],
   controllers: [EmployeeManagementController],
   providers: [
     EmployeeManagementService,

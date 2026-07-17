@@ -5,12 +5,23 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { eq, and, like, count, desc, sql, inArray, isNull } from 'drizzle-orm';
+import {
+  eq,
+  and,
+  like,
+  count,
+  desc,
+  sql,
+  inArray,
+  isNull,
+  type SQL,
+} from 'drizzle-orm';
 import {
   employee,
   employeeBinding,
@@ -34,6 +45,7 @@ import type {
 } from '@shared/api.interface';
 import { RoleManagerService } from '../role-manager/role-manager.service';
 import { DEFAULT_PERMISSIONS } from '@shared/api.interface';
+import { AccessScopeService } from '@server/common/access/access-scope.service';
 
 @Injectable()
 export class EmployeeManagementService {
@@ -43,20 +55,31 @@ export class EmployeeManagementService {
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
     private readonly roleManagerService: RoleManagerService,
     private readonly bindingService: EmployeeBindingService,
+    private readonly accessScopeService: AccessScopeService,
   ) {}
 
-  async list(query: {
-    page: number;
-    pageSize: number;
-    keyword?: string;
-    department?: string;
-    positions?: string[];
-    title?: string;
-    role?: string;
-    status?: string;
-    binding?: string; // 'bound' | 'unbound'
-  }): Promise<EmployeeListResponse> {
-    const conditions: ReturnType<typeof eq>[] = [isNull(employee.deletedAt)];
+  async list(
+    query: {
+      page: number;
+      pageSize: number;
+      keyword?: string;
+      department?: string;
+      positions?: string[];
+      title?: string;
+      role?: string;
+      status?: string;
+      binding?: string; // 'bound' | 'unbound'
+    },
+    userId: string,
+  ): Promise<EmployeeListResponse> {
+    const conditions: SQL[] = [isNull(employee.deletedAt)];
+    const scopeCondition =
+      await this.accessScopeService.buildEmployeeScopeCondition(userId, {
+        includeSelf: true,
+      });
+    if (scopeCondition) {
+      conditions.push(scopeCondition);
+    }
 
     if (query.keyword) {
       conditions.push(like(employee.name, `%${query.keyword}%`));
@@ -272,7 +295,16 @@ export class EmployeeManagementService {
     return { success: true };
   }
 
-  async detail(id: string): Promise<EmployeeDetail> {
+  async detail(id: string, userId: string): Promise<EmployeeDetail> {
+    const canAccess = await this.accessScopeService.canAccessEmployee(
+      userId,
+      id,
+      { includeSelf: true },
+    );
+    if (!canAccess) {
+      throw new ForbiddenException('无权查看该员工');
+    }
+
     const rows = await this.db
       .select({
         employeeId: employee.employeeId,
@@ -761,7 +793,16 @@ export class EmployeeManagementService {
 
   async bindingHistory(
     employeeId: string,
+    userId: string,
   ): Promise<EmployeeBindingHistoryResponse> {
+    const canAccess = await this.accessScopeService.canAccessEmployee(
+      userId,
+      employeeId,
+      { includeSelf: true },
+    );
+    if (!canAccess) {
+      throw new ForbiddenException('无权查看该员工');
+    }
     return this.bindingService.history(employeeId);
   }
 }
