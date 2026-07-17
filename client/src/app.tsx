@@ -66,7 +66,7 @@ const RoutesComponent = () => {
             <Route element={<Layout />}>
               <Route
                 index
-                element={<Navigate to="/my-assessments" replace />}
+                element={<Navigate to="/dashboard" replace />}
               />
               <Route
                 path="dashboard"
