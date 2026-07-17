@@ -19,6 +19,7 @@ import type {
   UnlockRequest,
   BatchUnlockRequest,
   BatchReturnRequest,
+  PublishExportRequest,
   UnfinishedReminderRequest,
   EmployeeSnapshotResponse,
 } from '@shared/api.interface';
@@ -44,6 +45,17 @@ export class AssessmentPublishController {
       templateId,
       userId,
     );
+  }
+
+  @RequirePermission('publish_management', 'export')
+  @NeedLogin()
+  @Post('assessment-instances/export')
+  async exportInstances(
+    @Req() req: Request,
+    @Body() body: PublishExportRequest,
+  ) {
+    const { userId } = req.userContext;
+    return this.service.exportInstances(body.instanceIds, userId);
   }
 
   @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])

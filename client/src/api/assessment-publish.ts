@@ -80,6 +80,17 @@ export async function listInstances(params: {
   return unwrapApiData<AssessmentInstanceListResponse>(res.data);
 }
 
+export async function exportInstances(
+  instanceIds: string[],
+): Promise<AssessmentInstanceItem[]> {
+  const res = await axiosForBackend({
+    url: '/api/assessment-instances/export',
+    method: 'POST',
+    data: { instanceIds },
+  });
+  return unwrapApiData<{ items: AssessmentInstanceItem[] }>(res.data).items;
+}
+
 export async function getEmployeeSnapshot(
   employeeId: string,
 ): Promise<EmployeeSnapshotResponse> {

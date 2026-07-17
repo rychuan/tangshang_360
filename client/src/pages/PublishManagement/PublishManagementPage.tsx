@@ -10,6 +10,7 @@ import {
   listEmployees,
   publish,
   listInstances,
+  exportInstances,
   adjustEmployeeSnapshot,
   deleteEmployeeSnapshot,
   batchUnlock,
@@ -470,39 +471,41 @@ const PublishManagementPage: React.FC = () => {
     }
   };
 
-  const handleExport = (): void => {
-    if (instances.length === 0) {
-      toast.error('暂无数据可导出');
+  const handleExport = async (): Promise<void> => {
+    if (selectedInstanceIds.size === 0) {
+      toast.error('请选择要导出的绩效');
       return;
     }
-    import('xlsx')
-      .then((XLSX: typeof import('xlsx')) => {
-        const data = instances.map((inst: AssessmentInstanceItem) => ({
-          周期: inst.period,
-          员工: inst.employeeName,
-          部门: inst.department,
-          岗位: inst.position,
-          上级: inst.supervisorName,
-          状态: PUBLISHED_STATUS_LABELS[inst.status] || inst.status,
-          自评完成: inst.selfReviewCompleted ? '是' : '否',
-          上级评分完成: inst.supervisorReviewCompleted ? '是' : '否',
-          总分: inst.totalScore ?? '',
-          等级: inst.grade ?? '',
-          发布时间: inst.publishedAt
-            ? dayjs(inst.publishedAt).format('YYYY-MM-DD HH:mm')
-            : '',
-          发布人: inst.publishedByName,
-        }));
-        const ws = XLSX.utils.json_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, '绩效列表');
-        XLSX.writeFile(wb, `绩效列表_${effectivePeriod}.xlsx`);
-        toast.success('导出成功');
-      })
-      .catch((err: unknown) => {
-        logger.error('export failed', err);
-        handleApiError(err);
-      });
+    try {
+      const [XLSX, exportedInstances] = await Promise.all([
+        import('xlsx'),
+        exportInstances([...selectedInstanceIds]),
+      ]);
+      const data = exportedInstances.map((inst: AssessmentInstanceItem) => ({
+        周期: inst.period,
+        员工: inst.employeeName,
+        部门: inst.department,
+        岗位: inst.position,
+        上级: inst.supervisorName,
+        状态: PUBLISHED_STATUS_LABELS[inst.status] || inst.status,
+        自评完成: inst.selfReviewCompleted ? '是' : '否',
+        上级评分完成: inst.supervisorReviewCompleted ? '是' : '否',
+        总分: inst.totalScore ?? '',
+        等级: inst.grade ?? '',
+        发布时间: inst.publishedAt
+          ? dayjs(inst.publishedAt).format('YYYY-MM-DD HH:mm')
+          : '',
+        发布人: inst.publishedByName,
+      }));
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, '绩效列表');
+      XLSX.writeFile(wb, `绩效列表_${effectivePeriod}.xlsx`);
+      toast.success(`导出成功，共 ${exportedInstances.length} 条`);
+    } catch (err: unknown) {
+      logger.error('export failed', err);
+      handleApiError(err);
+    }
   };
 
   return (

@@ -66,7 +66,7 @@ const PERMISSION_MATRIX: Record<PermissionResource, PermissionAction[]> = {
   employees: ['view', 'edit', 'delete'],
   template_management: ['view', 'edit', 'delete'],
   employee_binding: ['view', 'edit'],
-  publish_management: ['view', 'edit', 'publish'],
+  publish_management: ['view', 'edit', 'export', 'publish'],
   statistics: ['view', 'export'],
   team_performance: ['view', 'edit'],
   organization: ['view', 'edit', 'delete'],

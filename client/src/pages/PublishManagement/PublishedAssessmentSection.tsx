@@ -12,7 +12,7 @@ import {
   SelectGroup,
 } from '@/components/ui/select';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
-import { CanDo } from '@/hooks/usePermissions';
+import { CanDo, usePermission } from '@/hooks/usePermissions';
 import { UserDisplay } from '@/components/business-ui/user-display';
 import { Unlock, BellRing, Download, Award, Undo2 } from 'lucide-react';
 import dayjs from 'dayjs';
@@ -99,6 +99,9 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
   departments,
 }) => {
   const totalPages = Math.ceil(total / pageSize);
+  const canEdit = usePermission('publish_management', 'edit');
+  const canExport = usePermission('publish_management', 'export');
+  const canSelect = canEdit || canExport;
   const allSelected =
     instances.length > 0 && selectedInstanceIds.size === instances.length;
 
@@ -226,28 +229,32 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
             已选择 {selectedInstanceIds.size} 项
           </span>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onBatchReturn}
-              disabled={batchReturnLoading}
-            >
-              <Undo2 data-icon="inline-start" />
-              {batchReturnLoading ? '退回中...' : '批量退回'}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onBatchUnlock}
-              disabled={batchUnlockLoading}
-            >
-              <Unlock data-icon="inline-start" />
-              {batchUnlockLoading ? '解锁中...' : '批量解锁'}
-            </Button>
-            <Button variant="outline" size="sm" onClick={onExport}>
-              <Download data-icon="inline-start" />
-              导出列表
-            </Button>
+            <CanDo resource="publish_management" action="edit">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onBatchReturn}
+                disabled={batchReturnLoading}
+              >
+                <Undo2 data-icon="inline-start" />
+                {batchReturnLoading ? '退回中...' : '批量退回'}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onBatchUnlock}
+                disabled={batchUnlockLoading}
+              >
+                <Unlock data-icon="inline-start" />
+                {batchUnlockLoading ? '解锁中...' : '批量解锁'}
+              </Button>
+            </CanDo>
+            <CanDo resource="publish_management" action="export">
+              <Button variant="outline" size="sm" onClick={onExport}>
+                <Download data-icon="inline-start" />
+                导出列表
+              </Button>
+            </CanDo>
           </div>
         </div>
       )}
@@ -270,14 +277,16 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
           <Table>
             <TableHeader>
               <TableRow className="border-b text-muted-foreground">
-                <TableHead className="w-10 py-3 pr-4 font-medium">
-                  <Checkbox
-                    checked={allSelected}
-                    onCheckedChange={(checked: boolean) =>
-                      handleSelectAll(checked)
-                    }
-                  />
-                </TableHead>
+                {canSelect && (
+                  <TableHead className="w-10 py-3 pr-4 font-medium">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={(checked: boolean) =>
+                        handleSelectAll(checked)
+                      }
+                    />
+                  </TableHead>
+                )}
                 <TableHead className="py-3 pr-4 font-medium text-left">
                   员工
                 </TableHead>
@@ -322,14 +331,16 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
                   key={record.id}
                   className="group border-b hover:bg-muted/50"
                 >
-                  <TableCell className="py-3 pr-4">
-                    <Checkbox
-                      checked={selectedInstanceIds.has(record.id)}
-                      onCheckedChange={(checked: boolean) =>
-                        handleSelectOne(record.id, checked)
-                      }
-                    />
-                  </TableCell>
+                  {canSelect && (
+                    <TableCell className="py-3 pr-4">
+                      <Checkbox
+                        checked={selectedInstanceIds.has(record.id)}
+                        onCheckedChange={(checked: boolean) =>
+                          handleSelectOne(record.id, checked)
+                        }
+                      />
+                    </TableCell>
+                  )}
                   <TableCell className="py-3 pr-4">
                     <UserDisplay value={[record.employeeId]} size="small" />
                   </TableCell>
@@ -449,14 +460,20 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
                   <PaginationItem>
                     <PaginationPrevious
                       aria-disabled={page <= 1}
-                      className={page <= 1 ? 'pointer-events-none opacity-50' : ''}
+                      className={
+                        page <= 1 ? 'pointer-events-none opacity-50' : ''
+                      }
                       onClick={() => onPageChange(page - 1)}
                     />
                   </PaginationItem>
                   <PaginationItem>
                     <PaginationNext
                       aria-disabled={page >= totalPages}
-                      className={page >= totalPages ? 'pointer-events-none opacity-50' : ''}
+                      className={
+                        page >= totalPages
+                          ? 'pointer-events-none opacity-50'
+                          : ''
+                      }
                       onClick={() => onPageChange(page + 1)}
                     />
                   </PaginationItem>
