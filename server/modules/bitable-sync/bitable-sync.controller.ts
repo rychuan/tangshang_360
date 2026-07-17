@@ -1,5 +1,5 @@
 import { Controller, Post } from '@nestjs/common';
-import { CanRole, NeedLogin } from '@lark-apaas/fullstack-nestjs-core';
+import { NeedLogin } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { BitableSyncService } from './bitable-sync.service';
 import { PerformanceSyncService } from './performance-sync.service';
@@ -12,7 +12,6 @@ export class BitableSyncController {
     private readonly performanceSyncService: PerformanceSyncService,
   ) {}
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Post('import')
@@ -20,7 +19,6 @@ export class BitableSyncController {
     return this.syncService.importFromBitable();
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Post('export')
@@ -28,7 +26,6 @@ export class BitableSyncController {
     return this.syncService.exportToBitable();
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('statistics', 'export')
   @NeedLogin()
   @Post('performance-export')

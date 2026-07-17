@@ -9,7 +9,7 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
-import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
+import { NeedLogin } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { SystemDictService } from './system-dict.service';
 import type { Request } from 'express';
@@ -23,7 +23,6 @@ import type {
 export class SystemDictController {
   constructor(private readonly service: SystemDictService) {}
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('dictionary_config', 'view')
   @Get(':type')
   async list(
@@ -34,7 +33,6 @@ export class SystemDictController {
     return this.service.list(type, keyword, onlyActive === 'true');
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('dictionary_config', 'edit')
   @NeedLogin()
   @Post(':type')
@@ -47,7 +45,6 @@ export class SystemDictController {
     return this.service.create(type, body, userId);
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('dictionary_config', 'edit')
   @NeedLogin()
   @Put(':type/:id')
@@ -61,7 +58,6 @@ export class SystemDictController {
     return this.service.update(type, id, body, userId);
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('dictionary_config', 'edit')
   @NeedLogin()
   @Delete(':type/:id')

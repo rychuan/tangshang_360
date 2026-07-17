@@ -9,7 +9,7 @@ import {
   Body,
   Req,
 } from '@nestjs/common';
-import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
+import { NeedLogin } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { BitableConnectionService } from './bitable-connection.service';
 import type { Request } from 'express';
@@ -27,7 +27,6 @@ import type {
 export class BitableConnectionController {
   constructor(private readonly service: BitableConnectionService) {}
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('employees', 'view')
   @Get()
   async list(
@@ -40,7 +39,6 @@ export class BitableConnectionController {
     });
   }
 
-  @CanRole(['admin'])
   @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Post()
@@ -52,7 +50,6 @@ export class BitableConnectionController {
     return this.service.create(body, userId);
   }
 
-  @CanRole(['admin'])
   @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Put(':id')
@@ -65,7 +62,6 @@ export class BitableConnectionController {
     return this.service.update(id, body, userId);
   }
 
-  @CanRole(['admin'])
   @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Delete(':id')
@@ -77,14 +73,12 @@ export class BitableConnectionController {
     return this.service.remove(id, userId);
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('employees', 'view')
   @Get(':id')
   async detail(@Param('id') id: string): Promise<BitableConnectionItem> {
     return this.service.detail(id);
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Post(':id/import')
@@ -96,7 +90,6 @@ export class BitableConnectionController {
     return this.service.importEmployees(id, userId);
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Post(':id/export')
@@ -108,7 +101,6 @@ export class BitableConnectionController {
     return this.service.exportEmployees(id, userId);
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('employees', 'view')
   @Get(':id/logs')
   async getLogs(
@@ -122,7 +114,6 @@ export class BitableConnectionController {
     });
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('employees', 'view')
   @Get(':id/logs/:logId')
   async getLogDetail(

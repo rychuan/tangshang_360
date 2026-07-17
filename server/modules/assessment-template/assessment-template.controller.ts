@@ -10,7 +10,7 @@ import {
   Body,
   Req,
 } from '@nestjs/common';
-import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
+import { NeedLogin } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { AssessmentTemplateService } from './assessment-template.service';
 import type { Request } from 'express';
@@ -27,7 +27,6 @@ import type {
 export class AssessmentTemplateController {
   constructor(private readonly service: AssessmentTemplateService) {}
 
-  @CanRole(['admin', 'hrd', 'dept_head'])
   @RequirePermission('template_management', 'view')
   @Get()
   async list(
@@ -42,14 +41,12 @@ export class AssessmentTemplateController {
     return this.service.list(p, ps, keyword, position, status);
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head'])
   @RequirePermission('template_management', 'view')
   @Get(':id')
   async detail(@Param('id') id: string): Promise<AssessmentTemplateDetail> {
     return this.service.detail(id);
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('template_management', 'edit')
   @NeedLogin()
   @Post()
@@ -57,7 +54,6 @@ export class AssessmentTemplateController {
     return this.service.create(body);
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('template_management', 'edit')
   @NeedLogin()
   @Put(':id')
@@ -68,7 +64,6 @@ export class AssessmentTemplateController {
     return this.service.update(id, body);
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('template_management', 'edit')
   @NeedLogin()
   @Patch(':id/deactivate')
@@ -76,7 +71,6 @@ export class AssessmentTemplateController {
     return this.service.deactivate(id);
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('template_management', 'delete')
   @NeedLogin()
   @Delete(':id')

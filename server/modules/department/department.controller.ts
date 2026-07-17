@@ -8,7 +8,7 @@ import {
   Body,
   Req,
 } from '@nestjs/common';
-import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
+import { NeedLogin } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { DepartmentService } from './department.service';
 import type { Request } from 'express';
@@ -22,28 +22,24 @@ import type {
 export class DepartmentController {
   constructor(private readonly service: DepartmentService) {}
 
-  @CanRole(['admin', 'hrd', 'dept_head'])
   @RequirePermission('organization', 'view')
   @Get()
   async list(): Promise<DepartmentListResponse> {
     return this.service.list();
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head'])
   @RequirePermission('organization', 'view')
   @Get('flat')
   async listFlat() {
     return this.service.listFlat();
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head'])
   @RequirePermission('organization', 'view')
   @Get(':id')
   async detail(@Param('id') id: string): Promise<DepartmentTreeNode> {
     return this.service.detail(id);
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head'])
   @RequirePermission('organization', 'edit')
   @NeedLogin()
   @Post()
@@ -55,7 +51,6 @@ export class DepartmentController {
     return this.service.create(body, userId);
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head'])
   @RequirePermission('organization', 'edit')
   @NeedLogin()
   @Put(':id')
@@ -68,7 +63,6 @@ export class DepartmentController {
     return this.service.update(id, body, userId);
   }
 
-  @CanRole(['admin'])
   @RequirePermission('organization', 'delete')
   @NeedLogin()
   @Delete(':id')
