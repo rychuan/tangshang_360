@@ -109,7 +109,7 @@ const DimensionCard: React.FC<DimensionCardProps> = ({
               <TableHead className="text-center w-[12%] text-xs">
                 权重分
               </TableHead>
-              <TableHead className="w-[0%] text-xs" />
+              <TableHead className="w-10 text-xs" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -212,6 +212,7 @@ const DimensionCard: React.FC<DimensionCardProps> = ({
                       variant="ghost"
                       size="icon"
                       className="text-destructive size-7"
+                      aria-label="删除指标"
                       onClick={() => removeInd(indIdx)}
                     >
                       <Trash2 className="size-3" />
