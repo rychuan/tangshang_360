@@ -1,4 +1,3 @@
-import { DEFAULT_PERMISSIONS } from '../../shared/api.interface';
 import {
   getDepartmentCommandCapabilities,
   getEmployeeListCapabilities,
@@ -8,26 +7,20 @@ import {
 } from '../../client/src/pages/EmployeeManagement/employee-management-permissions';
 
 describe('employee management tab permissions', () => {
-  it('shows supervisors only the employee list', () => {
+  it('shows organization viewers only the department tab', () => {
     expect(
-      getVisibleEmployeeManagementTabs(DEFAULT_PERMISSIONS.supervisor, [
-        'supervisor',
+      getVisibleEmployeeManagementTabs([
+        { resource: 'organization', actions: ['view'] },
       ]),
-    ).toEqual(['employees']);
+    ).toEqual(['departments']);
   });
 
-  it('shows department heads employee and department tabs', () => {
+  it('shows employees and bitable tabs for employee viewers', () => {
     expect(
-      getVisibleEmployeeManagementTabs(DEFAULT_PERMISSIONS.dept_head, [
-        'dept_head',
+      getVisibleEmployeeManagementTabs([
+        { resource: 'employees', actions: ['view'] },
       ]),
-    ).toEqual(['employees', 'departments']);
-  });
-
-  it('shows HRD all currently supported tabs', () => {
-    expect(
-      getVisibleEmployeeManagementTabs(DEFAULT_PERMISSIONS.hrd, ['hrd']),
-    ).toEqual(['employees', 'departments', 'bitable']);
+    ).toEqual(['employees', 'bitable']);
   });
 
   it('defaults to the first visible tab', () => {
@@ -39,35 +32,30 @@ describe('employee management tab permissions', () => {
 
   it('hides the employee row menu when no menu command is allowed', () => {
     expect(
-      hasEmployeeRowMenuAction(
-        [{ resource: 'employees', actions: ['view'] }],
-        ['supervisor'],
-      ),
+      hasEmployeeRowMenuAction([{ resource: 'employees', actions: ['view'] }]),
     ).toBe(false);
   });
 
   it('shows the employee row menu for binding history viewers', () => {
     expect(
-      hasEmployeeRowMenuAction(
-        [{ resource: 'employee_binding', actions: ['view'] }],
-        ['supervisor'],
-      ),
+      hasEmployeeRowMenuAction([
+        { resource: 'employee_binding', actions: ['view'] },
+      ]),
     ).toBe(true);
   });
 
-  it('requires both a supported role and permission for mutations', () => {
+  it('requires only binding edit permission for mutations', () => {
     const bindingEdit = [
       { resource: 'employee_binding' as const, actions: ['edit' as const] },
     ];
 
-    expect(hasEmployeeRowMenuAction(bindingEdit, ['hrd'])).toBe(true);
-    expect(hasEmployeeRowMenuAction(bindingEdit, ['supervisor'])).toBe(false);
+    expect(hasEmployeeRowMenuAction(bindingEdit)).toBe(true);
   });
 
-  it('loads only employee-scoped reference data for supervisors', () => {
+  it('loads only employee-scoped reference data when binding edit is missing', () => {
     expect(
-      getEmployeeListCapabilities(DEFAULT_PERMISSIONS.supervisor, [
-        'supervisor',
+      getEmployeeListCapabilities([
+        { resource: 'employees', actions: ['view'] },
       ]),
     ).toEqual({
       loadTemplates: false,
@@ -79,7 +67,10 @@ describe('employee management tab permissions', () => {
 
   it('loads binding templates and selection controls for binding managers', () => {
     expect(
-      getEmployeeListCapabilities(DEFAULT_PERMISSIONS.hrd, ['hrd']),
+      getEmployeeListCapabilities([
+        { resource: 'employees', actions: ['view', 'edit'] },
+        { resource: 'employee_binding', actions: ['view', 'edit'] },
+      ]),
     ).toEqual({
       loadTemplates: true,
       showBindings: true,
@@ -88,20 +79,16 @@ describe('employee management tab permissions', () => {
     });
   });
 
-  it('combines department roles with dynamic command permissions', () => {
+  it('uses organization permissions for department commands', () => {
     const permissions = [
       {
         resource: 'organization' as const,
-        actions: ['edit', 'delete'] as const,
+        actions: ['view', 'delete'] as const,
       },
     ];
 
-    expect(getDepartmentCommandCapabilities(permissions, ['hrd'])).toEqual({
-      canEdit: true,
-      canDelete: false,
-    });
-    expect(getDepartmentCommandCapabilities(permissions, ['admin'])).toEqual({
-      canEdit: true,
+    expect(getDepartmentCommandCapabilities(permissions)).toEqual({
+      canEdit: false,
       canDelete: true,
     });
   });

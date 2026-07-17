@@ -158,7 +158,7 @@ describe('client permission component wiring', () => {
     expect(html).toContain('data-navigate="/403"');
   });
 
-  it('does not mount denied employee management tabs', () => {
+  it('mounts employee and bitable tabs when employees view is present', () => {
     mockRoles = ['supervisor'];
     mockPermissions = DEFAULT_PERMISSIONS.supervisor;
 
@@ -168,7 +168,7 @@ describe('client permission component wiring', () => {
 
     expect(html).toContain('data-tab="employees"');
     expect(html).not.toContain('data-tab="departments"');
-    expect(html).not.toContain('data-tab="bitable"');
+    expect(html).toContain('data-tab="bitable"');
   });
 
   it('mounts only the organization tab when employees view is absent', () => {

@@ -51,11 +51,6 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
-import {
-  CanRole,
-  ROLE_SUBJECT,
-  useAuth,
-} from '@lark-apaas/client-toolkit/auth';
 import { CanDo, usePermissions } from '@/hooks/usePermissions';
 import { useEmployeeFilters } from './hooks/useEmployeeFilters';
 import { useEmployeeList } from './hooks/useEmployeeList';
@@ -71,15 +66,7 @@ const EmployeeListTab: React.FC = () => {
   >('');
   const [filters, setters] = useEmployeeFilters();
   const { permissions } = usePermissions();
-  const { ability } = useAuth();
-  const activeRoles = React.useMemo(
-    () =>
-      ability
-        ? ['admin', 'hrd'].filter((role) => ability.can(role, ROLE_SUBJECT))
-        : [],
-    [ability],
-  );
-  const capabilities = getEmployeeListCapabilities(permissions, activeRoles);
+  const capabilities = getEmployeeListCapabilities(permissions);
   const {
     employees,
     total,
@@ -142,55 +129,45 @@ const EmployeeListTab: React.FC = () => {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {selectedRowKeys.length > 0 && (
-            <CanRole roles={['admin', 'hrd']}>
-              <CanDo {...COMMAND_PERMISSIONS.employeeBindingEdit}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => dialogs.openBatchBindDialog(selectedRowKeys)}
-                >
-                  <Link2 data-icon="inline-start" />
-                  批量绑定
-                </Button>
-              </CanDo>
-            </CanRole>
+            <CanDo {...COMMAND_PERMISSIONS.employeeBindingEdit}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => dialogs.openBatchBindDialog(selectedRowKeys)}
+              >
+                <Link2 data-icon="inline-start" />
+                批量绑定
+              </Button>
+            </CanDo>
           )}
-          <CanRole roles={['admin', 'hrd']}>
-            <CanDo {...COMMAND_PERMISSIONS.employeeSync}>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleSync('import')}
-                disabled={syncLoading !== ''}
-              >
-                <ArrowDownToLine data-icon="inline-start" />
-                {syncLoading === 'import' && (
-                  <Spinner className="mr-2 size-4" />
-                )}
-                从多维表格导入
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleSync('export')}
-                disabled={syncLoading !== ''}
-              >
-                <ArrowUpFromLine data-icon="inline-start" />
-                {syncLoading === 'export' && (
-                  <Spinner className="mr-2 size-4" />
-                )}
-                导出到多维表格
-              </Button>
-            </CanDo>
-          </CanRole>
-          <CanRole roles={['admin']}>
-            <CanDo resource="employees" action="edit">
-              <Button size="sm" onClick={dialogs.openCreateDialog}>
-                <Plus data-icon="inline-start" />
-                新建员工
-              </Button>
-            </CanDo>
-          </CanRole>
+          <CanDo {...COMMAND_PERMISSIONS.employeeSync}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleSync('import')}
+              disabled={syncLoading !== ''}
+            >
+              <ArrowDownToLine data-icon="inline-start" />
+              {syncLoading === 'import' && <Spinner className="mr-2 size-4" />}
+              从多维表格导入
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleSync('export')}
+              disabled={syncLoading !== ''}
+            >
+              <ArrowUpFromLine data-icon="inline-start" />
+              {syncLoading === 'export' && <Spinner className="mr-2 size-4" />}
+              导出到多维表格
+            </Button>
+          </CanDo>
+          <CanDo resource="employees" action="edit">
+            <Button size="sm" onClick={dialogs.openCreateDialog}>
+              <Plus data-icon="inline-start" />
+              新建员工
+            </Button>
+          </CanDo>
         </div>
       </div>
 

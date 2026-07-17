@@ -21,7 +21,6 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
-import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo } from '@/hooks/usePermissions';
 import { COMMAND_PERMISSIONS } from '@/components/permission-policy';
 import {
@@ -328,20 +327,18 @@ const BitableConnectionTab: React.FC = () => {
           </span>{' '}
           个连接
         </div>
-        <CanRole roles={['admin']}>
-          <CanDo {...COMMAND_PERMISSIONS.employeeSync}>
-            <Button
-              size="sm"
-              onClick={() => {
-                setEditing(null);
-                setDialogOpen(true);
-              }}
-            >
-              <Plus data-icon="inline-start" />
-              新建连接
-            </Button>
-          </CanDo>
-        </CanRole>
+        <CanDo {...COMMAND_PERMISSIONS.employeeSync}>
+          <Button
+            size="sm"
+            onClick={() => {
+              setEditing(null);
+              setDialogOpen(true);
+            }}
+          >
+            <Plus data-icon="inline-start" />
+            新建连接
+          </Button>
+        </CanDo>
       </div>
 
       {loading ? (
@@ -407,27 +404,27 @@ const BitableConnectionTab: React.FC = () => {
                     )}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <CanRole roles={['admin', 'hrd']}>
-                      <CanDo {...COMMAND_PERMISSIONS.employeeSync}>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleImport(conn)}
-                          disabled={importingId === conn.id}
-                        >
-                          <Download data-icon="inline-start" />
-                          {importingId === conn.id ? '导入中...' : '导入'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleExport(conn)}
-                          disabled={exportingId === conn.id}
-                        >
-                          <Upload data-icon="inline-start" />
-                          {exportingId === conn.id ? '导出中...' : '导出'}
-                        </Button>
-                      </CanDo>
+                    <CanDo {...COMMAND_PERMISSIONS.employeeSync}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleImport(conn)}
+                        disabled={importingId === conn.id}
+                      >
+                        <Download data-icon="inline-start" />
+                        {importingId === conn.id ? '导入中...' : '导入'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleExport(conn)}
+                        disabled={exportingId === conn.id}
+                      >
+                        <Upload data-icon="inline-start" />
+                        {exportingId === conn.id ? '导出中...' : '导出'}
+                      </Button>
+                    </CanDo>
+                    <CanDo {...COMMAND_PERMISSIONS.employeeSync}>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -441,28 +438,26 @@ const BitableConnectionTab: React.FC = () => {
                       >
                         <History className="size-4" />
                       </Button>
-                    </CanRole>
-                    <CanRole roles={['admin']}>
-                      <CanDo {...COMMAND_PERMISSIONS.employeeSync}>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setEditing(conn);
-                            setDialogOpen(true);
-                          }}
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteTarget(conn)}
-                        >
-                          <Trash2 className="size-4 text-destructive" />
-                        </Button>
-                      </CanDo>
-                    </CanRole>
+                    </CanDo>
+                    <CanDo {...COMMAND_PERMISSIONS.employeeSync}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setEditing(conn);
+                          setDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDeleteTarget(conn)}
+                      >
+                        <Trash2 className="size-4 text-destructive" />
+                      </Button>
+                    </CanDo>
                   </div>
                 </div>
                 {importResult && importingId === null && (
