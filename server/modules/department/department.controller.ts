@@ -23,21 +23,30 @@ export class DepartmentController {
   constructor(private readonly service: DepartmentService) {}
 
   @RequirePermission('organization', 'view')
+  @NeedLogin()
   @Get()
-  async list(): Promise<DepartmentListResponse> {
-    return this.service.list();
+  async list(@Req() req: Request): Promise<DepartmentListResponse> {
+    const { userId } = req.userContext as { userId: string };
+    return this.service.list(userId);
   }
 
   @RequirePermission('organization', 'view')
+  @NeedLogin()
   @Get('flat')
-  async listFlat() {
-    return this.service.listFlat();
+  async listFlat(@Req() req: Request) {
+    const { userId } = req.userContext as { userId: string };
+    return this.service.listFlat(userId);
   }
 
   @RequirePermission('organization', 'view')
+  @NeedLogin()
   @Get(':id')
-  async detail(@Param('id') id: string): Promise<DepartmentTreeNode> {
-    return this.service.detail(id);
+  async detail(
+    @Req() req: Request,
+    @Param('id') id: string,
+  ): Promise<DepartmentTreeNode> {
+    const { userId } = req.userContext as { userId: string };
+    return this.service.detail(id, userId);
   }
 
   @RequirePermission('organization', 'edit')

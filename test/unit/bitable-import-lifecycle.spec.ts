@@ -184,6 +184,7 @@ function createConnectionImportService(options: {
   return {
     service,
     db,
+    syncLogValues,
     bindingService,
     roleManagerService,
     accessScopeService,
@@ -442,6 +443,114 @@ describe('Bitable import employee lifecycle', () => {
       false,
       'operator-1',
     );
+  });
+
+  it('rejects an inactive row requesting a template before employee or binding side effects', async () => {
+    const {
+      service,
+      db,
+      syncLogValues,
+      bindingService,
+      roleManagerService,
+      accessScopeService,
+      employeeManagementService,
+    } = createConnectionImportService({
+      fields: {
+        飞书用户ID: 'employee-5',
+        姓名: '停用员工',
+        工号: 'E005',
+        岗位: '工程师',
+        状态: 'inactive',
+        考核模板: '季度模板',
+      },
+      templates: [{ name: '季度模板', id: 'template-1' }],
+    });
+
+    const result = await service.importEmployees(
+      'connection-1',
+      'operator-1',
+    );
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        createdCount: 0,
+        updatedCount: 0,
+        skippedCount: 1,
+        failedCount: 0,
+      }),
+    );
+    expect(syncLogValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        details: [
+          expect.objectContaining({
+            status: 'skipped',
+            reason: '停用员工不能绑定考核模板',
+          }),
+        ],
+      }),
+    );
+    expect(employeeManagementService.create).not.toHaveBeenCalled();
+    expect(employeeManagementService.syncImportedEmployee).not.toHaveBeenCalled();
+    expect(employeeManagementService.deactivate).not.toHaveBeenCalled();
+    expect(bindingService.bind).not.toHaveBeenCalled();
+    expect(roleManagerService.checkUserPermission).not.toHaveBeenCalled();
+    expect(accessScopeService.canAccessEmployee).not.toHaveBeenCalled();
+    expect(db.transaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects a template for an already inactive employee when the row omits status', async () => {
+    const {
+      service,
+      syncLogValues,
+      bindingService,
+      employeeManagementService,
+    } = createConnectionImportService({
+      fields: {
+        姓名: '已停用员工',
+        工号: 'E006',
+        岗位: '工程师',
+        考核模板: '季度模板',
+      },
+      existing: [
+        {
+          employeeId: 'employee-6',
+          employeeNo: 'E006',
+          name: '已停用员工',
+          position: '工程师',
+          department: '研发部',
+          role: 'employee',
+          status: false,
+        },
+      ],
+      templates: [{ name: '季度模板', id: 'template-1' }],
+    });
+
+    const result = await service.importEmployees(
+      'connection-1',
+      'operator-1',
+    );
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        updatedCount: 0,
+        skippedCount: 1,
+        failedCount: 0,
+      }),
+    );
+    expect(syncLogValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        details: [
+          expect.objectContaining({
+            status: 'skipped',
+            reason: '停用员工不能绑定考核模板',
+          }),
+        ],
+      }),
+    );
+    expect(
+      employeeManagementService.syncImportedEmployee,
+    ).not.toHaveBeenCalled();
+    expect(bindingService.bind).not.toHaveBeenCalled();
   });
 
   it('checks binding includeSelf false before any connection employee write or side effect', async () => {

@@ -15,15 +15,8 @@ import type { Request } from 'express';
 import type {
   CreateBindingRequest,
   BatchDeactivateRequest,
+  TeamUpdateEmployeeRequest,
 } from '@shared/api.interface';
-
-type PatchEmployeeRequest = {
-  name?: string;
-  position?: string;
-  department?: string;
-  supervisorId?: string;
-  status?: string;
-};
 
 @Controller('api/team-structure')
 export class TeamStructureController {
@@ -84,7 +77,7 @@ export class TeamStructureController {
   async updateEmployee(
     @Req() req: Request,
     @Param('id') id: string,
-    @Body() body: PatchEmployeeRequest,
+    @Body() body: TeamUpdateEmployeeRequest,
   ) {
     const { userId } = req.userContext as { userId: string };
     return this.service.updateEmployee(id, body, userId);

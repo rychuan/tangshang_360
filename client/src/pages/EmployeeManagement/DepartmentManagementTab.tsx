@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth, ROLE_SUBJECT } from '@lark-apaas/client-toolkit/auth';
 import { department as departmentApi } from '@/api';
 import { handleApiError } from '@client/src/utils/api-error';
 import type {
@@ -57,7 +58,11 @@ import { showConfirm } from '@lark-apaas/client-toolkit';
 import DepartmentMembersDialog from './DepartmentMembersDialog';
 import { CanDo, usePermission, usePermissions } from '@/hooks/usePermissions';
 import { COMMAND_PERMISSIONS } from '@/components/permission-policy';
-import { getDepartmentCommandCapabilities } from './employee-management-permissions';
+import { BUILTIN_ROLE_CODES } from '@shared/api.interface';
+import {
+  canManageDepartmentHead,
+  getDepartmentCommandCapabilities,
+} from './employee-management-permissions';
 
 interface DeptFormData {
   name: string;
@@ -93,7 +98,16 @@ function renderTreeOptions(
 const DepartmentManagementTab: React.FC = () => {
   const queryClient = useQueryClient();
   const { permissions } = usePermissions();
+  const { ability } = useAuth();
+  const identityRoles = useMemo(
+    () =>
+      ability
+        ? BUILTIN_ROLE_CODES.filter((role) => ability.can(role, ROLE_SUBJECT))
+        : [],
+    [ability],
+  );
   const { canEdit, canDelete } = getDepartmentCommandCapabilities(permissions);
+  const canManageHead = canManageDepartmentHead(permissions, identityRoles);
   const canViewEmployees = usePermission('employees', 'view');
 
   const { data: deptData, isLoading: loading } = useQuery({
@@ -345,16 +359,18 @@ const DepartmentManagementTab: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>部门负责人</Label>
-                <UserSelect
-                  value={formData.headId || null}
-                  onChange={(v: string | null) =>
-                    setFormData({ ...formData, headId: v || '' })
-                  }
-                  placeholder="请选择负责人"
-                />
-              </div>
+              {canManageHead && (
+                <div>
+                  <Label>部门负责人</Label>
+                  <UserSelect
+                    value={formData.headId || null}
+                    onChange={(v: string | null) =>
+                      setFormData({ ...formData, headId: v || '' })
+                    }
+                    placeholder="请选择负责人"
+                  />
+                </div>
+              )}
               <div>
                 <Label>排序</Label>
                 <Input

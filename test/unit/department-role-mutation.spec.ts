@@ -32,6 +32,14 @@ describe('department head role mutation', () => {
       db,
       {},
       roleManagerService,
+      {
+        getScope: jest.fn().mockResolvedValue({
+          kind: 'global',
+          roles: ['admin'],
+          departmentIds: [],
+          subordinateIds: [],
+        }),
+      },
     ) as DepartmentService;
 
     const request = service.create(
@@ -105,6 +113,14 @@ describe('department head role mutation', () => {
       db,
       {},
       roleManagerService,
+      {
+        getScope: jest.fn().mockResolvedValue({
+          kind: 'global',
+          roles: ['admin'],
+          departmentIds: [],
+          subordinateIds: [],
+        }),
+      },
     ) as DepartmentService;
 
     await expect(
@@ -183,6 +199,14 @@ describe('department head role mutation', () => {
       db,
       {},
       roleManagerService,
+      {
+        getScope: jest.fn().mockResolvedValue({
+          kind: 'global',
+          roles: ['admin'],
+          departmentIds: [],
+          subordinateIds: [],
+        }),
+      },
     ) as DepartmentService;
 
     await expect(
@@ -238,6 +262,14 @@ describe('department head role mutation', () => {
       db,
       {},
       roleManagerService,
+      {
+        getScope: jest.fn().mockResolvedValue({
+          kind: 'global',
+          roles: ['admin'],
+          departmentIds: [],
+          subordinateIds: [],
+        }),
+      },
     ) as DepartmentService;
 
     await expect(service.remove('dept-1', 'operator-1')).rejects.toThrow(
@@ -302,6 +334,14 @@ describe('department head role mutation', () => {
       db,
       {},
       roleManagerService,
+      {
+        getScope: jest.fn().mockResolvedValue({
+          kind: 'global',
+          roles: ['admin'],
+          departmentIds: [],
+          subordinateIds: [],
+        }),
+      },
     ) as DepartmentService;
 
     await expect(service.remove('dept-1', 'operator-1')).rejects.toThrow(

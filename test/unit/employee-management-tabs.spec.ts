@@ -1,4 +1,7 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import {
+  canManageDepartmentHead,
   getDepartmentCommandCapabilities,
   getEmployeeListCapabilities,
   getDefaultEmployeeManagementTab,
@@ -7,19 +10,37 @@ import {
 } from '../../client/src/pages/EmployeeManagement/employee-management-permissions';
 
 describe('employee management tab permissions', () => {
-  it('shows organization viewers only the department tab', () => {
+  it('hides the department tab from organization viewers without an allowed identity role', () => {
     expect(
       getVisibleEmployeeManagementTabs([
         { resource: 'organization', actions: ['view'] },
-      ]),
+      ], ['custom-role']),
+    ).toEqual([]);
+  });
+
+  it('shows the department tab to department heads with organization view permission', () => {
+    expect(
+      getVisibleEmployeeManagementTabs(
+        [{ resource: 'organization', actions: ['view'] }],
+        ['dept_head'],
+      ),
     ).toEqual(['departments']);
   });
 
-  it('shows employees and bitable tabs for employee viewers', () => {
+  it('keeps the employee tab permission-only while hiding Bitable from non-global identities', () => {
     expect(
       getVisibleEmployeeManagementTabs([
         { resource: 'employees', actions: ['view'] },
-      ]),
+      ], ['supervisor']),
+    ).toEqual(['employees']);
+  });
+
+  it('shows Bitable only to global identities with the employee view permission', () => {
+    expect(
+      getVisibleEmployeeManagementTabs(
+        [{ resource: 'employees', actions: ['view'] }],
+        ['hrd'],
+      ),
     ).toEqual(['employees', 'bitable']);
   });
 
@@ -91,5 +112,45 @@ describe('employee management tab permissions', () => {
       canEdit: false,
       canDelete: true,
     });
+  });
+
+  it('allows department head selection only for built-in admins with permission-management edit', () => {
+    const permissionEdit = [
+      {
+        resource: 'permission_management' as const,
+        actions: ['edit' as const],
+      },
+    ];
+
+    expect(canManageDepartmentHead(permissionEdit, ['admin'])).toBe(true);
+    expect(canManageDepartmentHead(permissionEdit, ['hrd'])).toBe(false);
+    expect(canManageDepartmentHead([], ['admin'])).toBe(false);
+  });
+
+  it('passes current identity roles into tab visibility and gates the head selector', () => {
+    const pageSource = fs.readFileSync(
+      path.resolve(
+        __dirname,
+        '../../client/src/pages/EmployeeManagement/EmployeeManagementPage.tsx',
+      ),
+      'utf8',
+    );
+    const departmentSource = fs.readFileSync(
+      path.resolve(
+        __dirname,
+        '../../client/src/pages/EmployeeManagement/DepartmentManagementTab.tsx',
+      ),
+      'utf8',
+    );
+
+    expect(pageSource).toMatch(
+      /getVisibleEmployeeManagementTabs\(\s*permissions,\s*identityRoles\s*\)/,
+    );
+    expect(departmentSource).toContain(
+      'canManageDepartmentHead(permissions, identityRoles)',
+    );
+    expect(departmentSource).toMatch(
+      /\{canManageHead && \(\s*<div>\s*<Label>部门负责人<\/Label>/,
+    );
   });
 });

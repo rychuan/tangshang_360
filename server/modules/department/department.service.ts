@@ -10,10 +10,14 @@ import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { eq, and, asc, count, sql, isNull } from 'drizzle-orm';
+import { eq, and, asc, count, sql, isNull, inArray } from 'drizzle-orm';
 import { department, employee, auditLog } from '@server/database/schema';
 import { EmployeeRepository } from '../employee-management/employee.repository';
 import { RoleManagerService } from '../role-manager/role-manager.service';
+import {
+  AccessScopeService,
+  type AccessScope,
+} from '@server/common/access/access-scope.service';
 import type {
   DepartmentItem,
   DepartmentTreeNode,
@@ -29,9 +33,15 @@ export class DepartmentService {
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
     private readonly employeeRepo: EmployeeRepository,
     private readonly roleManagerService: RoleManagerService,
+    private readonly accessScopeService: AccessScopeService,
   ) {}
 
-  async list(): Promise<DepartmentListResponse> {
+  async list(userId: string): Promise<DepartmentListResponse> {
+    const scope = await this.getReadableScope(userId);
+    const scopeCondition =
+      scope.kind === 'managed'
+        ? inArray(department.id, scope.departmentIds)
+        : undefined;
     const rows = await this.db
       .select({
         id: department.id,
@@ -45,6 +55,7 @@ export class DepartmentService {
         parentName: sql`COALESCE((SELECT d2.name FROM department d2 WHERE d2.id = ${department.parentId} LIMIT 1), '')`,
       })
       .from(department)
+      .where(scopeCondition)
       .orderBy(asc(department.sortOrder), asc(department.name));
 
     const memberCountMap = await this.employeeRepo.getDepartmentMemberCounts();
@@ -70,7 +81,10 @@ export class DepartmentService {
     return { items, tree };
   }
 
-  async detail(id: string): Promise<DepartmentTreeNode> {
+  async detail(id: string, userId: string): Promise<DepartmentTreeNode> {
+    const scope = await this.getReadableScope(userId);
+    this.assertDepartmentInScope(scope, id);
+
     const rows = await this.db
       .select({
         id: department.id,
@@ -110,6 +124,13 @@ export class DepartmentService {
           : String(r.createdAt),
     };
 
+    const childCondition =
+      scope.kind === 'managed'
+        ? and(
+            eq(department.parentId, id),
+            inArray(department.id, scope.departmentIds),
+          )
+        : eq(department.parentId, id);
     const children = await this.db
       .select({
         id: department.id,
@@ -123,7 +144,7 @@ export class DepartmentService {
         parentName: sql`''`,
       })
       .from(department)
-      .where(eq(department.parentId, id))
+      .where(childCondition)
       .orderBy(asc(department.sortOrder), asc(department.name));
 
     const childItems: DepartmentItem[] = children.map((c) => ({
@@ -152,6 +173,8 @@ export class DepartmentService {
     body: CreateDepartmentRequest,
     userId: string,
   ): Promise<{ id: string }> {
+    await this.assertGlobalScope(userId);
+
     if (body.headId) {
       await this.assertHeadMutationPermission(userId);
     }
@@ -200,6 +223,15 @@ export class DepartmentService {
     body: CreateDepartmentRequest,
     userId: string,
   ): Promise<{ success: boolean }> {
+    const scope = await this.getReadableScope(userId);
+    this.assertDepartmentInScope(scope, id);
+    if (body.parentId && body.parentId === id) {
+      throw new BadRequestException('部门不能将自己设为上级');
+    }
+    if (body.parentId) {
+      this.assertDepartmentInScope(scope, body.parentId);
+    }
+
     const rows = await this.db
       .select({
         id: department.id,
@@ -212,10 +244,6 @@ export class DepartmentService {
 
     if (rows.length === 0) {
       throw new NotFoundException('部门不存在');
-    }
-
-    if (body.parentId && body.parentId === id) {
-      throw new BadRequestException('部门不能将自己设为上级');
     }
 
     const oldDept = rows[0];
@@ -287,6 +315,9 @@ export class DepartmentService {
   }
 
   async remove(id: string, userId: string): Promise<{ success: boolean }> {
+    const scope = await this.getReadableScope(userId);
+    this.assertDepartmentInScope(scope, id);
+
     const rows = await this.db
       .select({
         id: department.id,
@@ -347,7 +378,12 @@ export class DepartmentService {
     return { success: true };
   }
 
-  async listFlat() {
+  async listFlat(userId: string) {
+    const scope = await this.getReadableScope(userId);
+    const scopeCondition =
+      scope.kind === 'managed'
+        ? inArray(department.id, scope.departmentIds)
+        : undefined;
     const rows = await this.db
       .select({
         id: department.id,
@@ -361,7 +397,11 @@ export class DepartmentService {
         headName: sql`COALESCE(${this.employeeRepo.nameSubquery(department.headId)}, '')`,
       })
       .from(department)
-      .where(eq(department.isActive, true))
+      .where(
+        scopeCondition
+          ? and(eq(department.isActive, true), scopeCondition)
+          : eq(department.isActive, true),
+      )
       .orderBy(asc(department.sortOrder), asc(department.name));
 
     const memberCountMap = await this.employeeRepo.getDepartmentMemberCounts();
@@ -381,6 +421,33 @@ export class DepartmentService {
           ? r.createdAt.toISOString()
           : String(r.createdAt),
     }));
+  }
+
+  private async getReadableScope(userId: string): Promise<AccessScope> {
+    const scope = await this.accessScopeService.getScope(userId);
+    if (scope.kind === 'global') {
+      return scope;
+    }
+    if (scope.kind === 'managed' && scope.departmentIds.length > 0) {
+      return scope;
+    }
+    throw new ForbiddenException('无权访问部门数据');
+  }
+
+  private async assertGlobalScope(userId: string): Promise<void> {
+    const scope = await this.accessScopeService.getScope(userId);
+    if (scope.kind !== 'global') {
+      throw new ForbiddenException('只有全局范围用户可创建部门');
+    }
+  }
+
+  private assertDepartmentInScope(scope: AccessScope, id: string): void {
+    if (scope.kind === 'global') {
+      return;
+    }
+    if (scope.kind !== 'managed' || !scope.departmentIds.includes(id)) {
+      throw new ForbiddenException('无权访问该部门');
+    }
   }
 
   private buildTree(items: DepartmentItem[]): DepartmentTreeNode[] {

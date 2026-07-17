@@ -158,7 +158,7 @@ describe('client permission component wiring', () => {
     expect(html).toContain('data-navigate="/403"');
   });
 
-  it('mounts employee and bitable tabs when employees view is present', () => {
+  it('mounts only the employee tab for a non-global employee viewer', () => {
     mockRoles = ['supervisor'];
     mockPermissions = DEFAULT_PERMISSIONS.supervisor;
 
@@ -168,6 +168,19 @@ describe('client permission component wiring', () => {
 
     expect(html).toContain('data-tab="employees"');
     expect(html).not.toContain('data-tab="departments"');
+    expect(html).not.toContain('data-tab="bitable"');
+  });
+
+  it('mounts employee, department, and Bitable tabs for a global viewer', () => {
+    mockRoles = ['hrd'];
+    mockPermissions = DEFAULT_PERMISSIONS.hrd;
+
+    const html = renderToStaticMarkup(
+      React.createElement(EmployeeManagementPage),
+    );
+
+    expect(html).toContain('data-tab="employees"');
+    expect(html).toContain('data-tab="departments"');
     expect(html).toContain('data-tab="bitable"');
   });
 

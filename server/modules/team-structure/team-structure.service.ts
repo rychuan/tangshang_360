@@ -21,6 +21,7 @@ import { EmployeeBindingService } from '../employee-management/employee-binding.
 import { RoleManagerService } from '../role-manager/role-manager.service';
 import { AccessScopeService } from '@server/common/access/access-scope.service';
 import { LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY } from '../employee-management/admin-safety';
+import type { TeamUpdateEmployeeRequest } from '@shared/api.interface';
 
 @Injectable()
 export class TeamStructureService {
@@ -365,7 +366,7 @@ export class TeamStructureService {
    */
   async updateEmployee(
     id: string,
-    body: Record<string, unknown>,
+    body: TeamUpdateEmployeeRequest,
     operatorId: string,
   ) {
     await this.assertEmployeeMutationScope(operatorId, id);
@@ -376,7 +377,6 @@ export class TeamStructureService {
       'position',
       'department',
       'supervisorId',
-      'status',
       'employeeNo',
       'title',
       'phone',

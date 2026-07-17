@@ -498,6 +498,9 @@ export class BitableConnectionService {
     if (row.templateName && !templateMap.has(row.templateName)) {
       return `考核模板「${row.templateName}」不存在`;
     }
+    if (row.templateName && row.status === 'inactive') {
+      return '停用员工不能绑定考核模板';
+    }
     return null;
   }
 
@@ -562,11 +565,6 @@ export class BitableConnectionService {
         try {
           const row = this.parseRow(record.fields);
 
-          // 解析上级工号
-          if (row.supervisorNo) {
-            row.supervisorId = await this.resolveSupervisorId(row.supervisorNo);
-          }
-
           const validationError = this.validateRow(
             row,
             validDepts,
@@ -584,6 +582,11 @@ export class BitableConnectionService {
             continue;
           }
 
+          // 解析上级工号
+          if (row.supervisorNo) {
+            row.supervisorId = await this.resolveSupervisorId(row.supervisorNo);
+          }
+
           // 按工号匹配已有员工
           const existing = await this.db
             .select()
@@ -598,6 +601,20 @@ export class BitableConnectionService {
 
           if (existing.length > 0) {
             const employeeId = String(existing[0].employeeId);
+            const desiredStatus = row.status
+              ? row.status !== 'inactive'
+              : existing[0].status;
+            if (row.templateName && !desiredStatus) {
+              skippedCount++;
+              details.push({
+                row: i + 1,
+                employeeNo: row.employeeNo || '',
+                name: row.name || '',
+                status: 'skipped',
+                reason: '停用员工不能绑定考核模板',
+              });
+              continue;
+            }
 
             let shouldBindTemplate = false;
             if (row.templateName && templateMap.has(row.templateName)) {
@@ -638,9 +655,6 @@ export class BitableConnectionService {
                 String(existing[0].supervisorId || '') ||
                 undefined,
             };
-            const desiredStatus = row.status
-              ? row.status !== 'inactive'
-              : existing[0].status;
             await this.employeeManagementService.syncImportedEmployee(
               employeeId,
               updateBody,

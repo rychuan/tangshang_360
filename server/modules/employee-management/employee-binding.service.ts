@@ -75,7 +75,10 @@ export class EmployeeBindingService {
     }
 
     const empRows = await this.db
-      .select({ id: employee.employeeId })
+      .select({
+        id: employee.employeeId,
+        status: employee.status,
+      })
       .from(employee)
       .where(
         and(eq(employee.employeeId, employeeId), isNull(employee.deletedAt)),
@@ -83,6 +86,11 @@ export class EmployeeBindingService {
       .limit(1);
     if (empRows.length === 0) {
       throw new NotFoundException(`员工 ${employeeId} 不存在`);
+    }
+    if (!empRows[0].status) {
+      throw new BadRequestException(
+        `员工 ${employeeId} 已停用，无法绑定考核模板`,
+      );
     }
 
     const existing = await this.db
@@ -197,7 +205,10 @@ export class EmployeeBindingService {
 
     // 2. 批量验证员工存在
     const empRows = await this.db
-      .select({ employeeId: employee.employeeId })
+      .select({
+        employeeId: employee.employeeId,
+        status: employee.status,
+      })
       .from(employee)
       .where(
         and(
@@ -209,6 +220,14 @@ export class EmployeeBindingService {
     const invalidIds = employeeIds.filter((id) => !validIds.has(id));
     if (invalidIds.length > 0)
       throw new NotFoundException(`员工不存在：${invalidIds.join(', ')}`);
+    const inactiveIds = empRows
+      .filter((item) => !item.status)
+      .map((item) => String(item.employeeId));
+    if (inactiveIds.length > 0) {
+      throw new BadRequestException(
+        `员工已停用，无法绑定考核模板：${inactiveIds.join(', ')}`,
+      );
+    }
 
     // 3. 批量查现有绑定
     const existingBindings = await this.db

@@ -11,15 +11,24 @@ const TAB_ORDER: EmployeeManagementTab[] = [
 
 export function getVisibleEmployeeManagementTabs(
   permissions: PermissionItem[],
+  identityRoles: string[],
 ): EmployeeManagementTab[] {
   const visible = new Set<EmployeeManagementTab>();
   if (hasPermission(permissions, 'employees', 'view')) {
     visible.add('employees');
   }
-  if (hasPermission(permissions, 'organization', 'view')) {
+  if (
+    hasPermission(permissions, 'organization', 'view') &&
+    identityRoles.some((role) =>
+      ['admin', 'hrd', 'dept_head'].includes(role),
+    )
+  ) {
     visible.add('departments');
   }
-  if (hasPermission(permissions, 'employees', 'view')) {
+  if (
+    hasPermission(permissions, 'employees', 'view') &&
+    identityRoles.some((role) => ['admin', 'hrd'].includes(role))
+  ) {
     visible.add('bitable');
   }
 
@@ -83,4 +92,14 @@ export function getDepartmentCommandCapabilities(
     canEdit: hasPermission(permissions, 'organization', 'edit'),
     canDelete: hasPermission(permissions, 'organization', 'delete'),
   };
+}
+
+export function canManageDepartmentHead(
+  permissions: PermissionItem[],
+  identityRoles: string[],
+): boolean {
+  return (
+    identityRoles.includes('admin') &&
+    hasPermission(permissions, 'permission_management', 'edit')
+  );
 }
