@@ -56,6 +56,7 @@ import { CanDo } from '@/hooks/usePermissions';
 import { useEmployeeFilters } from './hooks/useEmployeeFilters';
 import { useEmployeeList } from './hooks/useEmployeeList';
 import { useEmployeeDialogs } from './hooks/useEmployeeDialogs';
+import { COMMAND_PERMISSIONS } from '@/components/permission-policy';
 
 const PAGE_SIZE = 20;
 
@@ -125,37 +126,45 @@ const EmployeeListTab: React.FC = () => {
         <div className="flex items-center gap-2 flex-wrap">
           {selectedRowKeys.length > 0 && (
             <CanRole roles={['admin', 'hrd']}>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => dialogs.openBatchBindDialog(selectedRowKeys)}
-              >
-                <Link2 data-icon="inline-start" />
-                批量绑定
-              </Button>
+              <CanDo {...COMMAND_PERMISSIONS.employeeBindingEdit}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => dialogs.openBatchBindDialog(selectedRowKeys)}
+                >
+                  <Link2 data-icon="inline-start" />
+                  批量绑定
+                </Button>
+              </CanDo>
             </CanRole>
           )}
           <CanRole roles={['admin', 'hrd']}>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleSync('import')}
-              disabled={syncLoading !== ''}
-            >
-              <ArrowDownToLine data-icon="inline-start" />
-              {syncLoading === 'import' && <Spinner className="mr-2 size-4" />}
-              从多维表格导入
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleSync('export')}
-              disabled={syncLoading !== ''}
-            >
-              <ArrowUpFromLine data-icon="inline-start" />
-              {syncLoading === 'export' && <Spinner className="mr-2 size-4" />}
-              导出到多维表格
-            </Button>
+            <CanDo {...COMMAND_PERMISSIONS.employeeSync}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleSync('import')}
+                disabled={syncLoading !== ''}
+              >
+                <ArrowDownToLine data-icon="inline-start" />
+                {syncLoading === 'import' && (
+                  <Spinner className="mr-2 size-4" />
+                )}
+                从多维表格导入
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleSync('export')}
+                disabled={syncLoading !== ''}
+              >
+                <ArrowUpFromLine data-icon="inline-start" />
+                {syncLoading === 'export' && (
+                  <Spinner className="mr-2 size-4" />
+                )}
+                导出到多维表格
+              </Button>
+            </CanDo>
           </CanRole>
           <CanRole roles={['admin']}>
             <CanDo resource="employees" action="edit">

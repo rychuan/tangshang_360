@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo } from '@/hooks/usePermissions';
+import { COMMAND_PERMISSIONS } from '@/components/permission-policy';
 import { Checkbox } from '@/components/ui/checkbox';
 import { UserDisplay } from '@/components/business-ui/user-display';
 import { ActionBadge } from '@/components/business-ui/action-badge';
@@ -252,10 +253,12 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
                     </CanDo>
                   </CanRole>
                 )}
-                <DropdownMenuItem onClick={() => onHistory(row.original)}>
-                  <History className="size-4" />
-                  绑定历史
-                </DropdownMenuItem>
+                <CanDo {...COMMAND_PERMISSIONS.employeeBindingView}>
+                  <DropdownMenuItem onClick={() => onHistory(row.original)}>
+                    <History className="size-4" />
+                    绑定历史
+                  </DropdownMenuItem>
+                </CanDo>
                 <CanRole roles={['admin']}>
                   <CanDo resource="employees" action="edit">
                     <DropdownMenuItem

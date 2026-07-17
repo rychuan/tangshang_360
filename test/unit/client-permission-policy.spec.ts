@@ -1,5 +1,6 @@
 import type { PermissionItem } from '../../shared/api.interface';
 import {
+  COMMAND_PERMISSIONS,
   hasAnyViewPermission,
   hasPermission,
 } from '../../client/src/components/permission-policy';
@@ -25,5 +26,22 @@ describe('client permission policy', () => {
   it('fails closed when permissions or requirements are empty', () => {
     expect(hasAnyViewPermission([], ['employees'])).toBe(false);
     expect(hasAnyViewPermission(permissions, [])).toBe(false);
+  });
+
+  it('maps commands to the same resource actions used by backend endpoints', () => {
+    expect(COMMAND_PERMISSIONS).toMatchObject({
+      departmentEdit: { resource: 'organization', action: 'edit' },
+      departmentDelete: { resource: 'organization', action: 'delete' },
+      dictionaryEdit: { resource: 'dictionary_config', action: 'edit' },
+      employeeSync: { resource: 'employees', action: 'edit' },
+      employeeBindingEdit: {
+        resource: 'employee_binding',
+        action: 'edit',
+      },
+      employeeBindingView: {
+        resource: 'employee_binding',
+        action: 'view',
+      },
+    });
   });
 });
