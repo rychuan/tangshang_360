@@ -49,7 +49,7 @@
 
 ---
 
-### 任务 1：建立可测试的导航模型
+### Task 1：建立可测试的导航模型
 
 **文件：**
 
@@ -242,7 +242,7 @@ git commit -m "feat: add dashboard navigation model"
 
 ---
 
-### 任务 2：实现 Shadcn 兼容式全局框架
+### Task 2：实现 Shadcn 兼容式全局框架
 
 **文件：**
 
@@ -506,7 +506,7 @@ git commit -m "feat: redesign application shell"
 
 ---
 
-### 任务 3：建立首页视图数据纯函数
+### Task 3：建立首页视图数据纯函数
 
 **文件：**
 
@@ -735,7 +735,7 @@ git commit -m "feat: add dashboard view model utilities"
 
 ---
 
-### 任务 4：实现首页展示组件和局部错误处理
+### Task 4：实现首页展示组件和局部错误处理
 
 **文件：**
 
@@ -917,7 +917,7 @@ git commit -m "feat: redesign performance dashboard"
 
 ---
 
-### 任务 5：完整回归与响应式浏览器验证
+### Task 5：完整回归与响应式浏览器验证
 
 **文件：**
 
