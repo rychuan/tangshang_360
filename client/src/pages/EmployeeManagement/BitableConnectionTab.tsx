@@ -405,7 +405,7 @@ const BitableConnectionTab: React.FC = () => {
                     )}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <CanDo {...COMMAND_PERMISSIONS.employeeSyncLog}>
+                    <CanDo {...COMMAND_PERMISSIONS.employeeSync}>
                       <Button
                         variant="outline"
                         size="sm"
@@ -425,7 +425,7 @@ const BitableConnectionTab: React.FC = () => {
                         {exportingId === conn.id ? '导出中...' : '导出'}
                       </Button>
                     </CanDo>
-                    <CanDo {...COMMAND_PERMISSIONS.employeeSync}>
+                    <CanDo {...COMMAND_PERMISSIONS.employeeSyncLog}>
                       <Button
                         variant="ghost"
                         size="icon"

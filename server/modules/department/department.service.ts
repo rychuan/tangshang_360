@@ -3,6 +3,7 @@ import {
   Logger,
   Inject,
   BadRequestException,
+  ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
 import {
@@ -151,6 +152,10 @@ export class DepartmentService {
     body: CreateDepartmentRequest,
     userId: string,
   ): Promise<{ id: string }> {
+    if (body.headId) {
+      await this.assertHeadMutationPermission(userId);
+    }
+
     const existing = await this.db
       .select({ id: department.id })
       .from(department)
@@ -160,30 +165,34 @@ export class DepartmentService {
       throw new BadRequestException('部门名称已存在');
     }
 
-    const [inserted] = await this.db
-      .insert(department)
-      .values({
-        name: body.name,
-        parentId: body.parentId || null,
-        headId: body.headId || null,
-        sortOrder: body.sortOrder ?? 0,
-      })
-      .returning({ id: department.id });
+    return this.db.transaction(async (tx) => {
+      const [inserted] = await tx
+        .insert(department)
+        .values({
+          name: body.name,
+          parentId: body.parentId || null,
+          headId: body.headId || null,
+          sortOrder: body.sortOrder ?? 0,
+        })
+        .returning({ id: department.id });
 
-    await this.db.insert(auditLog).values({
-      operatorId: userId,
-      action: 'create_department',
-      targetType: 'department',
-      targetId: inserted.id,
-      changes: { after: body },
+      await tx.insert(auditLog).values({
+        operatorId: userId,
+        action: 'create_department',
+        targetType: 'department',
+        targetId: inserted.id,
+        changes: { after: body },
+      });
+
+      if (body.headId) {
+        await this.roleManagerService.ensureUserRoleStrict(
+          body.headId,
+          'dept_head',
+        );
+      }
+
+      return { id: inserted.id };
     });
-
-    // 新部门负责人自动获得 dept_head 角色
-    if (body.headId) {
-      await this.roleManagerService.ensureUserRole(body.headId, 'dept_head');
-    }
-
-    return { id: inserted.id };
   }
 
   async update(
@@ -212,6 +221,10 @@ export class DepartmentService {
     const oldDept = rows[0];
     const oldHeadId = oldDept.oldHeadId || null;
     const newHeadId = body.headId || null;
+    const headChanged = newHeadId !== oldHeadId;
+    if (headChanged) {
+      await this.assertHeadMutationPermission(userId);
+    }
 
     await this.db.transaction(async (tx) => {
       await tx
@@ -248,30 +261,38 @@ export class DepartmentService {
           `Department "${deptName}" head changed, synced employees supervisor to new head`,
         );
       }
-    });
 
-    // 部门负责人变更后同步角色
-    if (oldHeadId && oldHeadId !== newHeadId) {
-      // 旧负责人被移除：检查是否仍为其他部门负责人
-      const stillHead = await this.db
-        .select({ id: department.id })
-        .from(department)
-        .where(eq(department.headId, oldHeadId))
-        .limit(1);
-      if (stillHead.length === 0) {
-        await this.roleManagerService.removeUserRole(oldHeadId, 'dept_head');
+      if (oldHeadId && oldHeadId !== newHeadId) {
+        const stillHead = await tx
+          .select({ id: department.id })
+          .from(department)
+          .where(eq(department.headId, oldHeadId))
+          .limit(1);
+        if (stillHead.length === 0) {
+          await this.roleManagerService.removeUserRoleStrict(
+            oldHeadId,
+            'dept_head',
+          );
+        }
       }
-    }
-    if (newHeadId && newHeadId !== oldHeadId) {
-      await this.roleManagerService.ensureUserRole(newHeadId, 'dept_head');
-    }
+      if (newHeadId && newHeadId !== oldHeadId) {
+        await this.roleManagerService.ensureUserRoleStrict(
+          newHeadId,
+          'dept_head',
+        );
+      }
+    });
 
     return { success: true };
   }
 
   async remove(id: string, userId: string): Promise<{ success: boolean }> {
     const rows = await this.db
-      .select({ id: department.id, name: department.name })
+      .select({
+        id: department.id,
+        name: department.name,
+        headId: department.headId,
+      })
       .from(department)
       .where(eq(department.id, id))
       .limit(1);
@@ -288,14 +309,39 @@ export class DepartmentService {
       throw new BadRequestException('该部门下还有子部门，无法删除');
     }
 
-    await this.db.delete(department).where(eq(department.id, id));
+    const headId = rows[0].headId || null;
+    let removesFinalHeadRole = false;
+    if (headId) {
+      const otherHeadRows = await this.db
+        .select({ id: department.id })
+        .from(department)
+        .where(
+          and(
+            eq(department.headId, headId),
+            sql`${department.id} <> ${id}`,
+          ),
+        )
+        .limit(1);
+      removesFinalHeadRole = otherHeadRows.length === 0;
+      if (removesFinalHeadRole) {
+        await this.assertHeadMutationPermission(userId);
+      }
+    }
 
-    await this.db.insert(auditLog).values({
-      operatorId: userId,
-      action: 'delete_department',
-      targetType: 'department',
-      targetId: id,
-      changes: { before: { name: rows[0].name } },
+    await this.db.transaction(async (tx) => {
+      await tx.delete(department).where(eq(department.id, id));
+
+      await tx.insert(auditLog).values({
+        operatorId: userId,
+        action: 'delete_department',
+        targetType: 'department',
+        targetId: id,
+        changes: { before: { name: rows[0].name } },
+      });
+
+      if (headId && removesFinalHeadRole) {
+        await this.roleManagerService.removeUserRoleStrict(headId, 'dept_head');
+      }
     });
 
     return { success: true };
@@ -363,5 +409,20 @@ export class DepartmentService {
     sortNodes(roots);
 
     return roots;
+  }
+
+  private async assertHeadMutationPermission(userId: string): Promise<void> {
+    const roles = await this.roleManagerService.getUserRoles(userId);
+    if (!roles.includes('admin')) {
+      throw new ForbiddenException('只有系统管理员可修改部门负责人');
+    }
+    const canEditRoles = await this.roleManagerService.checkUserPermission(
+      userId,
+      'permission_management',
+      'edit',
+    );
+    if (!canEditRoles) {
+      throw new ForbiddenException('无权修改部门负责人');
+    }
   }
 }

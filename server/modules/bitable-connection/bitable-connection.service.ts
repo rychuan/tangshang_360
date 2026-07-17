@@ -137,10 +137,14 @@ export class BitableConnectionService {
     }
   }
 
-  async list(query: {
-    page: number;
-    pageSize: number;
-  }): Promise<BitableConnectionListResponse> {
+  async list(
+    query: {
+      page: number;
+      pageSize: number;
+    },
+    userId: string,
+  ): Promise<BitableConnectionListResponse> {
+    await this.assertGlobalConnectionScope(userId);
     const offset = (query.page - 1) * query.pageSize;
 
     const [items, totalResult] = await Promise.all([
@@ -194,6 +198,7 @@ export class BitableConnectionService {
     body: CreateBitableConnectionRequest,
     userId: string,
   ): Promise<{ id: string }> {
+    await this.assertGlobalConnectionScope(userId);
     const [inserted] = await this.db
       .insert(bitableConnection)
       .values({
@@ -227,6 +232,7 @@ export class BitableConnectionService {
     body: CreateBitableConnectionRequest,
     userId: string,
   ): Promise<{ success: boolean }> {
+    await this.assertGlobalConnectionScope(userId);
     const rows = await this.db
       .select({ id: bitableConnection.id, name: bitableConnection.name })
       .from(bitableConnection)
@@ -263,6 +269,7 @@ export class BitableConnectionService {
   }
 
   async remove(id: string, userId: string): Promise<{ success: boolean }> {
+    await this.assertGlobalConnectionScope(userId);
     const rows = await this.db
       .select({ id: bitableConnection.id, name: bitableConnection.name })
       .from(bitableConnection)
@@ -291,7 +298,8 @@ export class BitableConnectionService {
     return { success: true };
   }
 
-  async detail(id: string): Promise<BitableConnectionItem> {
+  async detail(id: string, userId: string): Promise<BitableConnectionItem> {
+    await this.assertGlobalConnectionScope(userId);
     const rows = await this.db
       .select({
         id: bitableConnection.id,
@@ -497,6 +505,7 @@ export class BitableConnectionService {
     connectionId: string,
     userId: string,
   ): Promise<BitableImportResponse> {
+    await this.assertGlobalConnectionScope(userId);
     const connRow = await this.db
       .select()
       .from(bitableConnection)
@@ -797,6 +806,7 @@ export class BitableConnectionService {
     connectionId: string,
     userId: string,
   ): Promise<BitableExportResponse> {
+    await this.assertGlobalConnectionScope(userId);
     const connRow = await this.db
       .select()
       .from(bitableConnection)
@@ -1024,7 +1034,9 @@ export class BitableConnectionService {
   async getLogs(
     connectionId: string,
     query: { page: number; pageSize: number },
+    userId: string,
   ): Promise<BitableSyncLogListResponse> {
+    await this.assertGlobalConnectionScope(userId);
     const offset = (query.page - 1) * query.pageSize;
 
     const [items, totalResult] = await Promise.all([
@@ -1083,7 +1095,9 @@ export class BitableConnectionService {
   async getLogDetail(
     connectionId: string,
     logId: string,
+    userId: string,
   ): Promise<BitableSyncLogDetail> {
+    await this.assertGlobalConnectionScope(userId);
     const rows = await this.db
       .select({
         id: bitableSyncLog.id,
@@ -1136,5 +1150,12 @@ export class BitableConnectionService {
           : String(item.completedAt),
       details: (item.details as BitableSyncLogDetail['details']) || [],
     };
+  }
+
+  private async assertGlobalConnectionScope(userId: string): Promise<void> {
+    const scope = await this.accessScopeService.getScope(userId);
+    if (scope.kind !== 'global') {
+      throw new ForbiddenException('只有全局范围用户可管理多维表格连接');
+    }
   }
 }

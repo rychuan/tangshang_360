@@ -20,6 +20,7 @@ import {
 import { EmployeeBindingService } from '../employee-management/employee-binding.service';
 import { RoleManagerService } from '../role-manager/role-manager.service';
 import { AccessScopeService } from '@server/common/access/access-scope.service';
+import { LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY } from '../employee-management/admin-safety';
 
 @Injectable()
 export class TeamStructureService {
@@ -208,12 +209,40 @@ export class TeamStructureService {
         );
       }
     }
+    const roleSnapshots = new Map(
+      await Promise.all(
+        deactivatedIds.map(async (employeeId) => [
+          employeeId,
+          await this.roleManagerService.getUserRolesStrict(employeeId),
+        ] as const),
+      ),
+    );
 
     const result = await this.db.transaction(async (tx) => {
       const idParams = sql.join(
         deactivatedIds.map((id) => sql`${id}`),
         sql`, `,
       );
+      if (deactivatedAdminCount > 0) {
+        await tx.execute(
+          sql`SELECT pg_advisory_xact_lock(${LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY})`,
+        );
+        const adminCountRows = await tx
+          .select({ cnt: sql<number>`count(*)` })
+          .from(employee)
+          .where(
+            and(
+              sql`'admin' = ANY(string_to_array(COALESCE(${employee.role}, ''), ','))`,
+              eq(employee.status, true),
+              isNull(employee.deletedAt),
+            ),
+          );
+        if (Number(adminCountRows[0]?.cnt || 0) <= deactivatedAdminCount) {
+          throw new BadRequestException(
+            '系统中至少保留一个系统管理员，无法批量停用',
+          );
+        }
+      }
 
       await tx.execute(sql`
         UPDATE ${employee}
@@ -231,15 +260,21 @@ export class TeamStructureService {
       for (const eId of deactivatedIds) {
         await tx.insert(auditLog).values({
           operatorId,
-          action: 'delete_employee',
+          action: 'deactivate_employee',
           targetType: 'employee',
           targetId: eId,
           changes: {
-            before: { status: true },
+            before: {
+              status: true,
+              roleSnapshot: roleSnapshots.get(eId) || [],
+            },
             after: { status: false },
           },
-          reason: '批量删除员工',
+          reason: '批量停用员工',
         });
+      }
+      for (const employeeId of deactivatedIds) {
+        await this.roleManagerService.syncUserRolesStrict(employeeId, []);
       }
 
       this.logger.log(
@@ -248,12 +283,6 @@ export class TeamStructureService {
 
       return { success: true, deactivatedCount: deactivatedIds.length };
     });
-
-    await Promise.all(
-      deactivatedIds.map((employeeId) =>
-        this.roleManagerService.syncUserRoles(employeeId, []),
-      ),
-    );
 
     return result;
   }

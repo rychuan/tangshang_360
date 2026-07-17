@@ -58,13 +58,31 @@ describe('frontend final permission boundaries', () => {
     );
   });
 
-  it('uses employees view for the Bitable sync-log command', () => {
+  it('uses employees edit for Bitable mutations and employees view for logs', () => {
     const source = readClient(
       'pages/EmployeeManagement/BitableConnectionTab.tsx',
     );
+    const permissionBefore = (needle: string) => {
+      const commandIndex = source.indexOf(needle);
+      expect(commandIndex).toBeGreaterThan(-1);
+      const wrapperIndex = source.lastIndexOf('<CanDo', commandIndex);
+      return source.slice(wrapperIndex, commandIndex);
+    };
 
-    expect(source).toMatch(
-      /<CanDo \{\.\.\.COMMAND_PERMISSIONS\.employeeSyncLog\}>[\s\S]*title="同步日志"/,
+    expect(permissionBefore('onClick={() => handleImport(conn)}')).toContain(
+      'COMMAND_PERMISSIONS.employeeSync',
+    );
+    expect(permissionBefore('onClick={() => handleExport(conn)}')).toContain(
+      'COMMAND_PERMISSIONS.employeeSync',
+    );
+    expect(permissionBefore('setEditing(conn)')).toContain(
+      'COMMAND_PERMISSIONS.employeeSync',
+    );
+    expect(permissionBefore('setDeleteTarget(conn)')).toContain(
+      'COMMAND_PERMISSIONS.employeeSync',
+    );
+    expect(permissionBefore('setLogDrawer({')).toContain(
+      'COMMAND_PERMISSIONS.employeeSyncLog',
     );
   });
 });

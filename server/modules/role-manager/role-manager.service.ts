@@ -30,56 +30,33 @@ export class RoleManagerService {
     private readonly authzSDK: AuthorizationSDK,
   ) {}
 
+  invalidateUserRoleCache(userId: string): void {
+    this.roleCache.delete(userId);
+  }
+
   async getUserRoles(userId: string): Promise<string[]> {
     const cached = this.roleCache.get(userId);
     if (cached && Date.now() < cached.expiresAt) return cached.roles;
 
-    const roles: string[] = [];
     try {
-      const allRoles = await this.authzSDK.roles.list();
-      const roleList = Array.isArray(allRoles)
-        ? allRoles
-        : (allRoles as any).items || [];
-      for (const role of roleList) {
-        const bizID = role.bizID;
-        if (!bizID) continue;
-        let isMember = false;
-        try {
-          const membersResult = await this.authzSDK.members.list(bizID, {
-            pageSize: 999,
-          });
-          const members = (membersResult as any).members || membersResult || {};
-          if (members.allEmployees) {
-            isMember = true;
-          }
-          if (!isMember && members.presetGroup?.isContainsAdmin) {
-            isMember = true;
-          }
-          if (!isMember && Array.isArray(members.userList)) {
-            isMember = members.userList.some(
-              (u: any) => u.userID === userId || u.user_id === userId,
-            );
-          }
-        } catch (err) {
-          this.logger.warn(
-            `Failed to list members for role ${bizID}: ${err instanceof Error ? err.message : String(err)}`,
-          );
-        }
-        if (isMember) {
-          roles.push(bizID);
-        }
-      }
+      const roles = await this.fetchUserRoles(userId, false);
+      this.cacheUserRoles(userId, roles);
+      return roles;
     } catch (err) {
       this.logger.error(
         `Failed to get user roles: ${err instanceof Error ? err.message : String(err)}`,
       );
+      this.cacheUserRoles(userId, []);
+      return [];
     }
-    this.roleCache.set(userId, {
-      roles,
-      expiresAt: Date.now() + this.ROLE_CACHE_TTL_MS,
-    });
+  }
+
+  async getUserRolesStrict(userId: string): Promise<string[]> {
+    const roles = await this.fetchUserRoles(userId, true);
+    this.cacheUserRoles(userId, roles);
     return roles;
   }
+
   /**
    * 将用户添加到 'employee' 角色（新建员工时自动调用）
    */
@@ -94,7 +71,7 @@ export class RoleManagerService {
         members: { userList: [{ userID: userId }] },
       });
       // 角色变更后清除缓存，确保后续查询获取最新角色列表
-      this.roleCache.delete(userId);
+      this.invalidateUserRoleCache(userId);
       this.logger.log(`Added user ${userId} to 'employee' role`);
     } catch (err) {
       this.logger.error(
@@ -116,7 +93,7 @@ export class RoleManagerService {
       await this.authzSDK.members.add(roleBizId, {
         members: { userList: [{ userID: userId }] },
       });
-      this.roleCache.delete(userId);
+      this.invalidateUserRoleCache(userId);
       this.logger.log(`Added user ${userId} to role '${roleBizId}'`);
     } catch (err) {
       this.logger.error(
@@ -137,12 +114,48 @@ export class RoleManagerService {
       await this.authzSDK.members.remove(roleBizId, {
         members: { userList: [{ userID: userId }] },
       });
-      this.roleCache.delete(userId);
+      this.invalidateUserRoleCache(userId);
       this.logger.log(`Removed user ${userId} from role '${roleBizId}'`);
     } catch (err) {
       this.logger.error(
         `Failed to remove user ${userId} from role '${roleBizId}': ${err instanceof Error ? err.message : String(err)}`,
       );
+    }
+  }
+
+  async ensureUserRoleStrict(
+    userId: string,
+    roleBizId: string,
+  ): Promise<void> {
+    try {
+      const roles = await this.getUserRolesStrict(userId);
+      if (roles.includes(roleBizId)) {
+        return;
+      }
+      await this.authzSDK.members.add(roleBizId, {
+        members: { userList: [{ userID: userId }] },
+      });
+      this.logger.log(`Added user ${userId} to role '${roleBizId}'`);
+    } finally {
+      this.invalidateUserRoleCache(userId);
+    }
+  }
+
+  async removeUserRoleStrict(
+    userId: string,
+    roleBizId: string,
+  ): Promise<void> {
+    try {
+      const roles = await this.getUserRolesStrict(userId);
+      if (!roles.includes(roleBizId)) {
+        return;
+      }
+      await this.authzSDK.members.remove(roleBizId, {
+        members: { userList: [{ userID: userId }] },
+      });
+      this.logger.log(`Removed user ${userId} from role '${roleBizId}'`);
+    } finally {
+      this.invalidateUserRoleCache(userId);
     }
   }
 
@@ -173,6 +186,30 @@ export class RoleManagerService {
       this.logger.error(
         `Failed to sync roles for user ${userId}: ${err instanceof Error ? err.message : String(err)}`,
       );
+    }
+  }
+
+  async syncUserRolesStrict(
+    userId: string,
+    newRoles: string[],
+  ): Promise<void> {
+    try {
+      const current = await this.getUserRolesStrict(userId);
+      const toAdd = newRoles.filter((role) => !current.includes(role));
+      const toRemove = current.filter((role) => !newRoles.includes(role));
+
+      for (const role of toAdd) {
+        await this.authzSDK.members.add(role, {
+          members: { userList: [{ userID: userId }] },
+        });
+      }
+      for (const role of toRemove) {
+        await this.authzSDK.members.remove(role, {
+          members: { userList: [{ userID: userId }] },
+        });
+      }
+    } finally {
+      this.invalidateUserRoleCache(userId);
     }
   }
 
@@ -335,5 +372,89 @@ export class RoleManagerService {
       resource,
       actions: Array.from(actions),
     }));
+  }
+
+  private cacheUserRoles(userId: string, roles: string[]): void {
+    this.roleCache.set(userId, {
+      roles,
+      expiresAt: Date.now() + this.ROLE_CACHE_TTL_MS,
+    });
+  }
+
+  private async fetchUserRoles(
+    userId: string,
+    strict: boolean,
+  ): Promise<string[]> {
+    const allRoles = await this.authzSDK.roles.list();
+    const rolePayload = this.unwrapSdkData(allRoles);
+    const roleList = Array.isArray(rolePayload)
+      ? rolePayload
+      : (rolePayload as any)?.items || (rolePayload as any)?.roles || [];
+    const roles: string[] = [];
+
+    for (const role of roleList) {
+      const bizID = role.bizID;
+      if (!bizID) continue;
+      if (await this.isUserInRole(userId, bizID, strict)) {
+        roles.push(bizID);
+      }
+    }
+
+    return roles;
+  }
+
+  private async isUserInRole(
+    userId: string,
+    roleBizId: string,
+    strict: boolean,
+  ): Promise<boolean> {
+    let page = 1;
+    while (true) {
+      let membersResult: unknown;
+      try {
+        membersResult = await this.authzSDK.members.list(roleBizId, {
+          page,
+          pageSize: 999,
+        });
+      } catch (err) {
+        if (strict) {
+          throw err;
+        }
+        this.logger.warn(
+          `Failed to list members for role ${roleBizId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+        return false;
+      }
+
+      const memberPayload = this.unwrapSdkData(membersResult);
+      const members =
+        (memberPayload as any)?.members || memberPayload || {};
+      const isMember =
+        Boolean((members as any).allEmployees) ||
+        Boolean((members as any).presetGroup?.isContainsAdmin) ||
+        (Array.isArray((members as any).userList) &&
+          (members as any).userList.some(
+            (user: any) =>
+              user.userID === userId || user.user_id === userId,
+          ));
+      if (isMember) {
+        return true;
+      }
+      if (!(memberPayload as any)?.hasMore) {
+        return false;
+      }
+      page += 1;
+    }
+  }
+
+  private unwrapSdkData(value: unknown): unknown {
+    if (
+      value &&
+      typeof value === 'object' &&
+      Object.prototype.hasOwnProperty.call(value, 'data')
+    ) {
+      return (value as { data: unknown }).data;
+    }
+    return value;
   }
 }

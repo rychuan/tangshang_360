@@ -30,6 +30,7 @@ jest.mock('@lark-apaas/fullstack-nestjs-core', () => {
 import { BitableSyncController } from '../../server/modules/bitable-sync/bitable-sync.controller';
 import { BitableSyncService } from '../../server/modules/bitable-sync/bitable-sync.service';
 import { PerformanceSyncService } from '../../server/modules/bitable-sync/performance-sync.service';
+import { BitableConnectionController } from '../../server/modules/bitable-connection/bitable-connection.controller';
 import { BitableConnectionService } from '../../server/modules/bitable-connection/bitable-connection.service';
 
 function limitedQuery<T>(rows: T[]) {
@@ -166,6 +167,155 @@ function createConnectionImportService(options: {
 }
 
 describe('Bitable permission enforcement', () => {
+  it('propagates caller identity through every Bitable connection read controller', async () => {
+    const service = {
+      list: jest.fn().mockResolvedValue({ items: [], total: 0 }),
+      detail: jest.fn().mockResolvedValue({}),
+      getLogs: jest.fn().mockResolvedValue({ items: [], total: 0 }),
+      getLogDetail: jest.fn().mockResolvedValue({}),
+    };
+    const controller = new BitableConnectionController(service as any);
+    const request = { userContext: { userId: 'operator-1' } };
+
+    await (controller.list as any)(request, '2', '50');
+    await (controller.detail as any)(request, 'connection-1');
+    await (controller.getLogs as any)(request, 'connection-1', '3', '25');
+    await (controller.getLogDetail as any)(
+      request,
+      'connection-1',
+      'log-1',
+    );
+
+    expect(service.list).toHaveBeenCalledWith(
+      { page: 2, pageSize: 50 },
+      'operator-1',
+    );
+    expect(service.detail).toHaveBeenCalledWith(
+      'connection-1',
+      'operator-1',
+    );
+    expect(service.getLogs).toHaveBeenCalledWith(
+      'connection-1',
+      { page: 3, pageSize: 25 },
+      'operator-1',
+    );
+    expect(service.getLogDetail).toHaveBeenCalledWith(
+      'connection-1',
+      'log-1',
+      'operator-1',
+    );
+  });
+
+  it.each([
+    [
+      'list',
+      (service: BitableConnectionService) =>
+        (service.list as any)({ page: 1, pageSize: 20 }, 'operator-1'),
+    ],
+    [
+      'detail',
+      (service: BitableConnectionService) =>
+        (service.detail as any)('connection-1', 'operator-1'),
+    ],
+    [
+      'create',
+      (service: BitableConnectionService) =>
+        service.create(
+          {
+            name: '员工主表',
+            appId: 'app-id',
+            appSecret: 'secret',
+            bitableAppToken: 'base-token',
+            tableId: 'table-id',
+          },
+          'operator-1',
+        ),
+    ],
+    [
+      'update',
+      (service: BitableConnectionService) =>
+        service.update(
+          'connection-1',
+          {
+            name: '员工主表',
+            appId: 'app-id',
+            appSecret: 'secret',
+            bitableAppToken: 'base-token',
+            tableId: 'table-id',
+          },
+          'operator-1',
+        ),
+    ],
+    [
+      'remove',
+      (service: BitableConnectionService) =>
+        service.remove('connection-1', 'operator-1'),
+    ],
+    [
+      'importEmployees',
+      (service: BitableConnectionService) =>
+        service.importEmployees('connection-1', 'operator-1'),
+    ],
+    [
+      'exportEmployees',
+      (service: BitableConnectionService) =>
+        service.exportEmployees('connection-1', 'operator-1'),
+    ],
+    [
+      'getLogs',
+      (service: BitableConnectionService) =>
+        (service.getLogs as any)(
+          'connection-1',
+          { page: 1, pageSize: 20 },
+          'operator-1',
+        ),
+    ],
+    [
+      'getLogDetail',
+      (service: BitableConnectionService) =>
+        (service.getLogDetail as any)(
+          'connection-1',
+          'log-1',
+          'operator-1',
+        ),
+    ],
+  ] as const)(
+    'requires global object scope before Bitable connection %s',
+    async (_operation, invoke) => {
+      const db = {
+        select: jest.fn(() => {
+          throw new Error('connection database accessed');
+        }),
+        insert: jest.fn(() => {
+          throw new Error('connection database accessed');
+        }),
+      };
+      const accessScopeService = {
+        getScope: jest.fn().mockResolvedValue({
+          kind: 'managed',
+          roles: ['dept_head'],
+          departmentIds: ['dept-1'],
+          subordinateIds: [],
+        }),
+      };
+      const service = new (BitableConnectionService as any)(
+        db,
+        {},
+        {},
+        accessScopeService,
+        {},
+      ) as BitableConnectionService;
+
+      await expect(invoke(service)).rejects.toThrow(
+        '只有全局范围用户可管理多维表格连接',
+      );
+
+      expect(accessScopeService.getScope).toHaveBeenCalledWith('operator-1');
+      expect(db.select).not.toHaveBeenCalled();
+      expect(db.insert).not.toHaveBeenCalled();
+    },
+  );
+
   it('propagates the caller id through every plugin sync controller entry point', async () => {
     const syncService = {
       importFromBitable: jest.fn().mockResolvedValue({}),
