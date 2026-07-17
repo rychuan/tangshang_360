@@ -439,7 +439,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
                 <TableHead className="text-center w-[12%] text-[11px]">
                   权重分
                 </TableHead>
-                <TableHead className="w-[0%] text-xs" />
+                <TableHead className="w-10 text-xs" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -530,14 +530,17 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
                         />
                       </TableCell>
                       <TableCell className="p-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive size-7"
-                          onClick={() => handleRemoveIndicator(flatIndex)}
-                        >
-                          <Trash2 className="size-3" />
-                        </Button>
+                        {group.indicators.length > 1 && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive size-7"
+                            aria-label="删除指标"
+                            onClick={() => handleRemoveIndicator(flatIndex)}
+                          >
+                            <Trash2 className="size-3" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   );
@@ -620,7 +623,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] max-w-5xl overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-7xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {employee

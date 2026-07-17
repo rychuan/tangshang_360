@@ -36,7 +36,7 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-7xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{template.name}</DialogTitle>
         </DialogHeader>
