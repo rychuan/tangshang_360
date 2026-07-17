@@ -23,6 +23,15 @@ describe('client permission policy', () => {
     expect(hasAnyViewPermission(permissions, ['statistics'])).toBe(false);
   });
 
+  it('requires view access for the requested resource', () => {
+    expect(
+      hasAnyViewPermission(
+        [{ resource: 'statistics', actions: ['edit'] }],
+        ['statistics'],
+      ),
+    ).toBe(false);
+  });
+
   it('fails closed when permissions or requirements are empty', () => {
     expect(hasAnyViewPermission([], ['employees'])).toBe(false);
     expect(hasAnyViewPermission(permissions, [])).toBe(false);

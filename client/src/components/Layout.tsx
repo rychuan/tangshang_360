@@ -7,7 +7,6 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { hasAnyViewPermission } from './permission-policy';
 import { navGroups } from './navigation';
 import type { NavItem } from './navigation';
-import { ALL_ROLES, MANAGER_ROLES } from './role-constants';
 import {
   Sidebar,
   SidebarContent,
@@ -72,15 +71,20 @@ const LayoutContent: React.FC = () => {
     return hasAnyViewPermission(permissions, item.permissionResources);
   };
 
+  const hasIdentityAccess = (item: NavItem): boolean => {
+    if (!item.identityRoles) return true;
+    if (!ability) return false;
+    return item.identityRoles.some((role) => ability.can(role, ROLE_SUBJECT));
+  };
+
   const visibleGroups = useMemo(() => {
-    if (isLoading) return [];
+    if (isLoading || !ability) return [];
     return navGroups
       .map((g) => ({
         ...g,
         items: g.items.filter(
           (item) =>
-            item.roles.some((r) => ability.can(r, ROLE_SUBJECT)) &&
-            hasPermAccess(item),
+            hasPermAccess(item) && hasIdentityAccess(item),
         ),
       }))
       .filter((g) => g.items.length > 0);
@@ -104,7 +108,7 @@ const LayoutContent: React.FC = () => {
     pathname.split('/').pop() ||
     '';
 
-  if (isLoading) {
+  if (isLoading || !ability) {
     return (
       <SidebarProvider>
         <Sidebar variant="inset" />

@@ -11,12 +11,6 @@ const queryClient = new QueryClient({
 
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
-import {
-  ALL_ROLES,
-  MANAGER_ROLES,
-  TEMPLATE_ROLES,
-  ADMIN_HRD_ROLES,
-} from './components/role-constants';
 import { PermissionsProvider } from './hooks/usePermissions';
 import NotFound from './pages/NotFound/NotFound';
 import TemplateManagementPage from './pages/TemplateManagement/TemplateManagementPage';
@@ -71,7 +65,7 @@ const RoutesComponent = () => {
               <Route
                 path="dashboard"
                 element={
-                  <ProtectedRoute roles={ALL_ROLES} resources={['dashboard']}>
+                  <ProtectedRoute resources={['dashboard']}>
                     <HomePage />
                   </ProtectedRoute>
                 }
@@ -80,7 +74,6 @@ const RoutesComponent = () => {
                 path="template-management"
                 element={
                   <ProtectedRoute
-                    roles={TEMPLATE_ROLES}
                     resources={['template_management']}
                   >
                     <TemplateManagementPage />
@@ -90,10 +83,7 @@ const RoutesComponent = () => {
               <Route
                 path="publish-management"
                 element={
-                  <ProtectedRoute
-                    roles={MANAGER_ROLES}
-                    resources={['publish_management']}
-                  >
+                  <ProtectedRoute resources={['publish_management']}>
                     <PublishManagementPage />
                   </ProtectedRoute>
                 }
@@ -101,10 +91,7 @@ const RoutesComponent = () => {
               <Route
                 path="assessment/:id"
                 element={
-                  <ProtectedRoute
-                    roles={ALL_ROLES}
-                    resources={['my_assessments']}
-                  >
+                  <ProtectedRoute resources={['my_assessments']}>
                     <AssessmentDetailPage />
                   </ProtectedRoute>
                 }
@@ -112,10 +99,7 @@ const RoutesComponent = () => {
               <Route
                 path="statistics"
                 element={
-                  <ProtectedRoute
-                    roles={MANAGER_ROLES}
-                    resources={['statistics']}
-                  >
+                  <ProtectedRoute resources={['statistics']}>
                     <StatisticsPage />
                   </ProtectedRoute>
                 }
@@ -123,10 +107,7 @@ const RoutesComponent = () => {
               <Route
                 path="my-assessments"
                 element={
-                  <ProtectedRoute
-                    roles={ALL_ROLES}
-                    resources={['my_assessments']}
-                  >
+                  <ProtectedRoute resources={['my_assessments']}>
                     <MyAssessmentsPage />
                   </ProtectedRoute>
                 }
@@ -134,10 +115,7 @@ const RoutesComponent = () => {
               <Route
                 path="team-performance"
                 element={
-                  <ProtectedRoute
-                    roles={MANAGER_ROLES}
-                    resources={['team_performance']}
-                  >
+                  <ProtectedRoute resources={['team_performance']}>
                     <TeamPerformancePage />
                   </ProtectedRoute>
                 }
@@ -145,10 +123,7 @@ const RoutesComponent = () => {
               <Route
                 path="employees"
                 element={
-                  <ProtectedRoute
-                    roles={MANAGER_ROLES}
-                    resources={['employees', 'organization']}
-                  >
+                  <ProtectedRoute resources={['employees', 'organization']}>
                     <EmployeeManagementPage />
                   </ProtectedRoute>
                 }
@@ -156,10 +131,7 @@ const RoutesComponent = () => {
               <Route
                 path="employees/:id"
                 element={
-                  <ProtectedRoute
-                    roles={MANAGER_ROLES}
-                    resources={['employees']}
-                  >
+                  <ProtectedRoute resources={['employees']}>
                     <EmployeeDetailPage />
                   </ProtectedRoute>
                 }
@@ -168,8 +140,8 @@ const RoutesComponent = () => {
                 path="permissions"
                 element={
                   <ProtectedRoute
-                    roles={ADMIN_HRD_ROLES}
                     resources={['permission_management']}
+                    identityRoles={['admin', 'hrd']}
                   >
                     <PermissionPage />
                   </ProtectedRoute>
@@ -178,10 +150,7 @@ const RoutesComponent = () => {
               <Route
                 path="grade-config"
                 element={
-                  <ProtectedRoute
-                    roles={ADMIN_HRD_ROLES}
-                    resources={['grade_config']}
-                  >
+                  <ProtectedRoute resources={['grade_config']}>
                     <GradeConfigPage />
                   </ProtectedRoute>
                 }
@@ -189,10 +158,7 @@ const RoutesComponent = () => {
               <Route
                 path="dictionary"
                 element={
-                  <ProtectedRoute
-                    roles={ADMIN_HRD_ROLES}
-                    resources={['dictionary_config']}
-                  >
+                  <ProtectedRoute resources={['dictionary_config']}>
                     <DictionaryConfigPage />
                   </ProtectedRoute>
                 }
@@ -200,10 +166,7 @@ const RoutesComponent = () => {
               <Route
                 path="dictionary/:type"
                 element={
-                  <ProtectedRoute
-                    roles={ADMIN_HRD_ROLES}
-                    resources={['dictionary_config']}
-                  >
+                  <ProtectedRoute resources={['dictionary_config']}>
                     <DictionaryConfigPage />
                   </ProtectedRoute>
                 }
