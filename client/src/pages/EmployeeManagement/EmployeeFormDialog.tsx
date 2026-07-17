@@ -94,6 +94,7 @@ export interface EmployeeFormDialogProps {
   setFormData: React.Dispatch<React.SetStateAction<EmployeeFormData>>;
   onSave: () => void;
   positions?: string[];
+  canManageRoles: boolean;
 }
 
 const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
@@ -104,6 +105,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
   setFormData,
   onSave,
   positions: positionNames = [],
+  canManageRoles,
 }) => {
   const isEditing = !!editingEmployee;
   const { data: usersResponse } = useUsersByIds(
@@ -209,57 +211,59 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs text-muted-foreground">角色</Label>
-              <div className="flex flex-col gap-1.5 rounded-md border border-input px-3 py-2">
-                {(
-                  [
-                    'employee',
-                    'supervisor',
-                    'dept_head',
-                    'hrd',
-                    'admin',
-                  ] as const
-                ).map((r) => (
-                  <label
-                    key={r}
-                    className="flex items-center gap-2 text-sm cursor-pointer"
-                  >
-                    <Checkbox
-                      checked={formData.role.includes(r)}
-                      disabled={r === 'employee'}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setFormData({
-                            ...formData,
-                            role: [...formData.role, r],
-                          });
-                        } else {
-                          setFormData({
-                            ...formData,
-                            role: formData.role.filter((x) => x !== r),
-                          });
-                        }
-                      }}
-                    />
-                    {r === 'admin'
-                      ? '管理员'
-                      : r === 'hrd'
-                        ? 'HRD'
-                        : r === 'dept_head'
-                          ? '部门负责人'
-                          : r === 'supervisor'
-                            ? '上级'
-                            : '员工'}
-                    {r === 'employee' && (
-                      <span className="text-xs text-muted-foreground">
-                        （必选）
-                      </span>
-                    )}
-                  </label>
-                ))}
+            {canManageRoles && (
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs text-muted-foreground">角色</Label>
+                <div className="flex flex-col gap-1.5 rounded-md border border-input px-3 py-2">
+                  {(
+                    [
+                      'employee',
+                      'supervisor',
+                      'dept_head',
+                      'hrd',
+                      'admin',
+                    ] as const
+                  ).map((r) => (
+                    <label
+                      key={r}
+                      className="flex items-center gap-2 text-sm cursor-pointer"
+                    >
+                      <Checkbox
+                        checked={formData.role.includes(r)}
+                        disabled={r === 'employee'}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setFormData({
+                              ...formData,
+                              role: [...formData.role, r],
+                            });
+                          } else {
+                            setFormData({
+                              ...formData,
+                              role: formData.role.filter((x) => x !== r),
+                            });
+                          }
+                        }}
+                      />
+                      {r === 'admin'
+                        ? '管理员'
+                        : r === 'hrd'
+                          ? 'HRD'
+                          : r === 'dept_head'
+                            ? '部门负责人'
+                            : r === 'supervisor'
+                              ? '上级'
+                              : '员工'}
+                      {r === 'employee' && (
+                        <span className="text-xs text-muted-foreground">
+                          （必选）
+                        </span>
+                      )}
+                    </label>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs text-muted-foreground">部门</Label>
               <DepartmentTreeSelect

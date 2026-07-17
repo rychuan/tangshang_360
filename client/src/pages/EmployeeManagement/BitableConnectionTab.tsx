@@ -204,6 +204,7 @@ const BitableConnectionTab: React.FC = () => {
                   </TableHeader>
                   <TableBody>
                     {[
+                      ['飞书用户ID', 'employeeId', '新增必填', '平台用户 ID'],
                       ['姓名', 'name', '是', ''],
                       [
                         '工号',
@@ -404,7 +405,7 @@ const BitableConnectionTab: React.FC = () => {
                     )}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <CanDo {...COMMAND_PERMISSIONS.employeeSync}>
+                    <CanDo {...COMMAND_PERMISSIONS.employeeSyncLog}>
                       <Button
                         variant="outline"
                         size="sm"

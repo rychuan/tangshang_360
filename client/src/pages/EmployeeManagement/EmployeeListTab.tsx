@@ -52,10 +52,17 @@ import {
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
 import { CanDo, usePermissions } from '@/hooks/usePermissions';
+import {
+  useAuth,
+  ROLE_SUBJECT,
+} from '@lark-apaas/client-toolkit/auth';
 import { useEmployeeFilters } from './hooks/useEmployeeFilters';
 import { useEmployeeList } from './hooks/useEmployeeList';
 import { useEmployeeDialogs } from './hooks/useEmployeeDialogs';
-import { COMMAND_PERMISSIONS } from '@/components/permission-policy';
+import {
+  COMMAND_PERMISSIONS,
+  hasPermission,
+} from '@/components/permission-policy';
 import { getEmployeeListCapabilities } from './employee-management-permissions';
 
 const PAGE_SIZE = 20;
@@ -66,7 +73,11 @@ const EmployeeListTab: React.FC = () => {
   >('');
   const [filters, setters] = useEmployeeFilters();
   const { permissions } = usePermissions();
+  const { ability } = useAuth();
   const capabilities = getEmployeeListCapabilities(permissions);
+  const canManageRoles =
+    ability.can('admin', ROLE_SUBJECT) &&
+    hasPermission(permissions, 'permission_management', 'edit');
   const {
     employees,
     total,
@@ -348,6 +359,7 @@ const EmployeeListTab: React.FC = () => {
         setFormData={dialogs.formDialog.setFormData}
         onSave={dialogs.formDialog.onSave}
         positions={positions}
+        canManageRoles={canManageRoles}
       />
 
       {/* 绑定对话框 */}

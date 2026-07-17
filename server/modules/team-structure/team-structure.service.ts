@@ -1,4 +1,10 @@
-import { Injectable, Inject, Logger, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  Logger,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
@@ -156,9 +162,56 @@ export class TeamStructureService {
     }
     await this.assertEmployeeMutationScopes(operatorId, employeeIds);
 
-    return this.db.transaction(async (tx) => {
+    const requestedIds = [...new Set(employeeIds)];
+    const requestedIdParams = sql.join(
+      requestedIds.map((id) => sql`${id}`),
+      sql`, `,
+    );
+    const targetRows = await this.db
+      .select({
+        employeeId: sql<string>`(${employee.employeeId}).user_id`,
+        role: employee.role,
+      })
+      .from(employee)
+      .where(
+        and(
+          sql`(${employee.employeeId}).user_id IN (${requestedIdParams})`,
+          eq(employee.status, true),
+          isNull(employee.deletedAt),
+        ),
+      );
+    const deactivatedIds = targetRows.map((row) => row.employeeId);
+    if (deactivatedIds.length === 0) {
+      return { success: true, deactivatedCount: 0 };
+    }
+
+    const deactivatedAdminCount = targetRows.filter((row) =>
+      String(row.role || '')
+        .split(',')
+        .map((role) => role.trim())
+        .includes('admin'),
+    ).length;
+    if (deactivatedAdminCount > 0) {
+      const adminCountRows = await this.db
+        .select({ cnt: sql<number>`count(*)` })
+        .from(employee)
+        .where(
+          and(
+            sql`'admin' = ANY(string_to_array(COALESCE(${employee.role}, ''), ','))`,
+            eq(employee.status, true),
+            isNull(employee.deletedAt),
+          ),
+        );
+      if (Number(adminCountRows[0]?.cnt || 0) <= deactivatedAdminCount) {
+        throw new BadRequestException(
+          '系统中至少保留一个系统管理员，无法批量停用',
+        );
+      }
+    }
+
+    const result = await this.db.transaction(async (tx) => {
       const idParams = sql.join(
-        employeeIds.map((id) => sql`${id}`),
+        deactivatedIds.map((id) => sql`${id}`),
         sql`, `,
       );
 
@@ -175,7 +228,7 @@ export class TeamStructureService {
           AND status = true
       `);
 
-      for (const eId of employeeIds) {
+      for (const eId of deactivatedIds) {
         await tx.insert(auditLog).values({
           operatorId,
           action: 'delete_employee',
@@ -190,11 +243,19 @@ export class TeamStructureService {
       }
 
       this.logger.log(
-        `Batch deactivated ${employeeIds.length} employees: ${employeeIds.join(', ')}`,
+        `Batch deactivated ${deactivatedIds.length} employees: ${deactivatedIds.join(', ')}`,
       );
 
-      return { success: true, deactivatedCount: employeeIds.length };
+      return { success: true, deactivatedCount: deactivatedIds.length };
     });
+
+    await Promise.all(
+      deactivatedIds.map((employeeId) =>
+        this.roleManagerService.syncUserRoles(employeeId, []),
+      ),
+    );
+
+    return result;
   }
 
   /**

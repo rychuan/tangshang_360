@@ -21,14 +21,16 @@ function getDecoratorName(decorator: ts.Decorator): string | null {
   return ts.isIdentifier(expression) ? expression.text : null;
 }
 
-function findUnprotectedHandlers(source: string): string[] {
+function findUnprotectedHandlers(
+  source: string,
+): Array<{ methodName: string; hasNeedLogin: boolean }> {
   const sourceFile = ts.createSourceFile(
     'controller.ts',
     source,
     ts.ScriptTarget.Latest,
     true,
   );
-  const handlers: string[] = [];
+  const handlers: Array<{ methodName: string; hasNeedLogin: boolean }> = [];
   const routeDecorators = new Set(['Get', 'Post', 'Put', 'Patch', 'Delete']);
 
   const visit = (node: ts.Node) => {
@@ -43,7 +45,10 @@ function findUnprotectedHandlers(source: string): string[] {
         names.some((name) => routeDecorators.has(name)) &&
         !names.includes('RequirePermission')
       ) {
-        handlers.push(node.name.text);
+        handlers.push({
+          methodName: node.name.text,
+          hasNeedLogin: names.includes('NeedLogin'),
+        });
       }
     }
     ts.forEachChild(node, visit);
@@ -94,8 +99,10 @@ describe('backend capability role consistency', () => {
       for (const fileName of fs.readdirSync(modulePath)) {
         if (!fileName.endsWith('.controller.ts')) continue;
         const source = fs.readFileSync(path.join(modulePath, fileName), 'utf8');
-        for (const methodName of findUnprotectedHandlers(source)) {
-          unprotectedHandlers.push(`${moduleName}/${fileName}#${methodName}`);
+        for (const handler of findUnprotectedHandlers(source)) {
+          unprotectedHandlers.push(
+            `${moduleName}/${fileName}#${handler.methodName}`,
+          );
         }
       }
     }
@@ -103,5 +110,27 @@ describe('backend capability role consistency', () => {
     expect(unprotectedHandlers.sort()).toEqual(
       intentionalBootstrapHandlers.slice().sort(),
     );
+  });
+
+  it('keeps login protection on intentional permission-free handlers except the public render route', () => {
+    const missingLogin: string[] = [];
+
+    for (const moduleName of fs.readdirSync(controllerRoot)) {
+      const modulePath = path.join(controllerRoot, moduleName);
+      if (!fs.statSync(modulePath).isDirectory()) continue;
+
+      for (const fileName of fs.readdirSync(modulePath)) {
+        if (!fileName.endsWith('.controller.ts')) continue;
+        const source = fs.readFileSync(path.join(modulePath, fileName), 'utf8');
+        for (const handler of findUnprotectedHandlers(source)) {
+          const key = `${moduleName}/${fileName}#${handler.methodName}`;
+          if (key !== 'view/view.controller.ts#render' && !handler.hasNeedLogin) {
+            missingLogin.push(key);
+          }
+        }
+      }
+    }
+
+    expect(missingLogin).toEqual([]);
   });
 });

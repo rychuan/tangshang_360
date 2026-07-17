@@ -5,6 +5,7 @@ import {
   Inject,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   DRIZZLE_DATABASE,
@@ -22,7 +23,9 @@ import {
   auditLog,
 } from '@server/database/schema';
 import { EmployeeBindingService } from '../employee-management/employee-binding.service';
+import { EmployeeManagementService } from '../employee-management/employee-management.service';
 import { RoleManagerService } from '../role-manager/role-manager.service';
+import { AccessScopeService } from '@server/common/access/access-scope.service';
 import type {
   BitableConnectionItem,
   BitableConnectionListResponse,
@@ -32,6 +35,8 @@ import type {
   BitableSyncLogListResponse,
   BitableImportResponse,
   BitableExportResponse,
+  CreateEmployeeRequest,
+  UpdateEmployeeRequest,
 } from '@shared/api.interface';
 
 const ENCRYPTION_KEY = process.env.BITABLE_ENCRYPTION_KEY;
@@ -80,6 +85,7 @@ function decryptSecret(encrypted: string): string {
 
 // 多维表格列名 → 系统字段名
 const FIELD_MAP: Record<string, string> = {
+  飞书用户ID: 'employeeId',
   姓名: 'name',
   工号: 'employeeNo',
   岗位: 'position',
@@ -97,6 +103,7 @@ const VALID_ROLES = ['admin', 'hrd', 'dept_head', 'supervisor', 'employee'];
 const VALID_STATUSES = ['active', 'inactive'];
 
 interface ParsedRow {
+  employeeId?: string;
   name?: string;
   employeeNo?: string;
   position?: string;
@@ -120,6 +127,8 @@ export class BitableConnectionService {
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
     private readonly bindingService: EmployeeBindingService,
     private readonly roleManagerService: RoleManagerService,
+    private readonly accessScopeService: AccessScopeService,
+    private readonly employeeManagementService: EmployeeManagementService,
   ) {
     if (!ENCRYPTION_KEY) {
       this.logger.warn(
@@ -579,26 +588,56 @@ export class BitableConnectionService {
             .limit(1);
 
           if (existing.length > 0) {
-            // 更新已有员工
-            await this.db.transaction(async (tx) => {
-              await tx
-                .update(employee)
-                .set({
-                  name: row.name!,
-                  position: row.position!,
-                  department: row.department || existing[0].department,
-                  title: row.title || existing[0].title,
-                  role: row.role || existing[0].role,
-                  phone: row.phone || existing[0].phone,
-                  hireDate: row.hireDate
-                    ? new Date(row.hireDate)
-                    : existing[0].hireDate,
-                  status:
-                    row.status === 'inactive' ? false : true,
-                  supervisorId: row.supervisorId || existing[0].supervisorId,
-                })
-                .where(eq(employee.employeeId, existing[0].id));
-            });
+            const employeeId = String(existing[0].employeeId);
+
+            let shouldBindTemplate = false;
+            if (row.templateName && templateMap.has(row.templateName)) {
+              const activeBinding = await this.db
+                .select({ id: employeeBinding.id })
+                .from(employeeBinding)
+                .where(
+                  and(
+                    eq(employeeBinding.employeeId, employeeId),
+                    eq(employeeBinding.status, true),
+                  ),
+                )
+                .limit(1);
+              shouldBindTemplate = activeBinding.length === 0;
+              if (shouldBindTemplate) {
+                await this.assertBindingEditPermission(userId);
+                await this.assertBindingEmployeeScope(userId, employeeId);
+              }
+            }
+
+            const updateBody: UpdateEmployeeRequest = {
+              name: row.name!,
+              position: row.position!,
+              positionCode: existing[0].positionCode || undefined,
+              department: row.department || existing[0].department,
+              departmentId: existing[0].departmentId || undefined,
+              title: row.title || existing[0].title || undefined,
+              role: (row.role ||
+                existing[0].role ||
+                'employee') as UpdateEmployeeRequest['role'],
+              phone: row.phone || existing[0].phone || undefined,
+              hireDate:
+                row.hireDate || this.toDateString(existing[0].hireDate),
+              probationMonths: existing[0].probationMonths || undefined,
+              employeeNo: row.employeeNo!,
+              supervisorId:
+                row.supervisorId ||
+                String(existing[0].supervisorId || '') ||
+                undefined,
+            };
+            const desiredStatus = row.status
+              ? row.status !== 'inactive'
+              : existing[0].status;
+            await this.employeeManagementService.syncImportedEmployee(
+              employeeId,
+              updateBody,
+              desiredStatus,
+              userId,
+            );
             updatedCount++;
             details.push({
               row: i + 1,
@@ -608,50 +647,47 @@ export class BitableConnectionService {
             });
 
             // 仅当员工无活跃绑定时绑定模板
-            if (row.templateName && templateMap.has(row.templateName)) {
-              const activeBinding = await this.db
-                .select({ id: employeeBinding.id })
-                .from(employeeBinding)
-                .where(
-                  and(
-                    eq(employeeBinding.employeeId, String(existing[0].id)),
-                    eq(employeeBinding.status, true),
-                  ),
-                )
-                .limit(1);
-              if (activeBinding.length === 0) {
-                await this.bindingService.bind(
-                  String(existing[0].id),
-                  templateMap.get(row.templateName)!,
-                  now,
-                  userId,
-                );
-              }
+            if (shouldBindTemplate && row.templateName) {
+              await this.bindingService.bind(
+                employeeId,
+                templateMap.get(row.templateName)!,
+                now,
+                userId,
+              );
             }
           } else {
             // 新增员工
-            // id is a userProfile composite type, not a simple string.
-            // Omit it — the employeeNo field records the identifier.
-            const values = {
+            if (!row.employeeId) {
+              throw new BadRequestException('缺少飞书用户ID，无法新增员工');
+            }
+            if (row.templateName && templateMap.has(row.templateName)) {
+              await this.assertBindingEditPermission(userId);
+              await this.assertBindingEmployeeScope(userId, row.employeeId);
+            }
+            const createBody: CreateEmployeeRequest = {
+              id: row.employeeId,
               name: row.name!,
               position: row.position!,
               employeeNo: row.employeeNo!,
               department: row.department || '',
-              title: row.title || null,
-              role: row.role || 'employee',
-              phone: row.phone || null,
-              hireDate: row.hireDate ? new Date(row.hireDate) : null,
-              status: row.status === 'inactive' ? false : true,
-              supervisorId: row.supervisorId || null,
-              bitableConnectionId: connectionId,
+              title: row.title || undefined,
+              role: (row.role ||
+                'employee') as CreateEmployeeRequest['role'],
+              phone: row.phone || undefined,
+              hireDate: row.hireDate || undefined,
+              supervisorId: row.supervisorId || undefined,
             };
-
-            const [inserted] = await this.db.transaction(async (tx) => {
-              return tx
-                .insert(employee)
-                .values(values as any)
-                .returning({ id: employee.employeeId });
-            });
+            const inserted = await this.employeeManagementService.create(
+              createBody,
+              userId,
+              { bitableConnectionId: connectionId },
+            );
+            if (row.status === 'inactive') {
+              await this.employeeManagementService.deactivate(
+                row.employeeId,
+                userId,
+              );
+            }
             createdCount++;
             details.push({
               row: i + 1,
@@ -659,22 +695,10 @@ export class BitableConnectionService {
               name: row.name!,
               status: 'created',
             });
-
-            // 加入 employee 角色
-            try {
-              await this.roleManagerService.addUserToEmployeeRole(
-                row.employeeNo!,
-              );
-            } catch (err) {
-              this.logger.warn(
-                `Failed to add ${row.employeeNo} to employee role: ${err}`,
-              );
-            }
-
             // 模板绑定
             if (row.templateName && templateMap.has(row.templateName)) {
               await this.bindingService.bind(
-                String(inserted.id),
+                inserted.id,
                 templateMap.get(row.templateName)!,
                 now,
                 userId,
@@ -800,15 +824,22 @@ export class BitableConnectionService {
         connRow[0].appSecret,
       );
 
+      const scopeCondition =
+        await this.accessScopeService.buildEmployeeScopeCondition(userId, {
+          includeSelf: true,
+        });
+      const employeeConditions = [
+        sql`bitable_connection_id = ${connectionId}::uuid`,
+        isNull(employee.deletedAt),
+      ];
+      if (scopeCondition) {
+        employeeConditions.push(scopeCondition);
+      }
+
       const employees = await this.db
         .select()
         .from(employee)
-        .where(
-          and(
-            sql`bitable_connection_id = ${connectionId}::uuid`,
-            isNull(employee.deletedAt),
-          ),
-        );
+        .where(and(...employeeConditions));
 
       const reverseMap: Record<string, string> = {};
       for (const [bitableCol, sysField] of Object.entries(FIELD_MAP)) {
@@ -958,6 +989,36 @@ export class BitableConnectionService {
       });
       throw err;
     }
+  }
+
+  private async assertBindingEmployeeScope(
+    userId: string,
+    employeeId: string,
+  ): Promise<void> {
+    const canAccess = await this.accessScopeService.canAccessEmployee(
+      userId,
+      employeeId,
+      { includeSelf: false },
+    );
+    if (!canAccess) {
+      throw new ForbiddenException('无权操作该员工');
+    }
+  }
+
+  private async assertBindingEditPermission(userId: string): Promise<void> {
+    const canEdit = await this.roleManagerService.checkUserPermission(
+      userId,
+      'employee_binding',
+      'edit',
+    );
+    if (!canEdit) {
+      throw new ForbiddenException('无权绑定员工考核模板');
+    }
+  }
+
+  private toDateString(value: Date | string | null): string | undefined {
+    if (!value) return undefined;
+    return value instanceof Date ? value.toISOString() : value;
   }
 
   async getLogs(

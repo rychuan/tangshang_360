@@ -55,6 +55,7 @@ import type {
   TeamOverviewResponse,
   SubordinateRecord,
 } from '@shared/api.interface';
+import { COMMAND_PERMISSIONS } from '@/components/permission-policy';
 
 const PAGE_SIZE = 10;
 
@@ -193,14 +194,16 @@ const TeamPerformancePage: React.FC = () => {
                 />
               </CanDo>
             )}
-            <ActionBadge
-              actionType="view"
-              icon={<Eye className="size-3" />}
-              label="查看/评分"
-              onClick={() =>
-                navigate(`../assessment/${item.id}?view=supervisor`)
-              }
-            />
+            <CanDo {...COMMAND_PERMISSIONS.assessmentView}>
+              <ActionBadge
+                actionType="view"
+                icon={<Eye className="size-3" />}
+                label="查看/评分"
+                onClick={() =>
+                  navigate(`../assessment/${item.id}?view=supervisor`)
+                }
+              />
+            </CanDo>
           </div>
         ),
       },
@@ -496,14 +499,16 @@ const TeamPerformancePage: React.FC = () => {
                           />
                         </CanDo>
                       )}
-                      <ActionBadge
-                        actionType="view"
-                        icon={<Eye className="size-3" />}
-                        label="查看/评分"
-                        onClick={() =>
-                          navigate(`../assessment/${item.id}?view=supervisor`)
-                        }
-                      />
+                      <CanDo {...COMMAND_PERMISSIONS.assessmentView}>
+                        <ActionBadge
+                          actionType="view"
+                          icon={<Eye className="size-3" />}
+                          label="查看/评分"
+                          onClick={() =>
+                            navigate(`../assessment/${item.id}?view=supervisor`)
+                          }
+                        />
+                      </CanDo>
                     </div>
                   </div>
                 ))}

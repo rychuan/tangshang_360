@@ -74,6 +74,7 @@ import type {
   StatisticsRecordItem,
   ChartsResponse,
 } from '@shared/api.interface';
+import { COMMAND_PERMISSIONS } from '@/components/permission-policy';
 
 const CHART_COLORS = [
   'hsl(var(--chart-1))',
@@ -719,12 +720,14 @@ const StatisticsPage: React.FC = () => {
                         </TableCell>
                         <TableCell className="py-3 px-4 sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
                           <div className="flex items-center gap-1">
-                            <ActionBadge
-                              actionType="view"
-                              icon={<Eye className="size-3" />}
-                              label="详情"
-                              onClick={() => navigate(`../assessment/${r.id}`)}
-                            />
+                            <CanDo {...COMMAND_PERMISSIONS.assessmentView}>
+                              <ActionBadge
+                                actionType="view"
+                                icon={<Eye className="size-3" />}
+                                label="详情"
+                                onClick={() => navigate(`../assessment/${r.id}`)}
+                              />
+                            </CanDo>
                             <CanDo resource="statistics" action="export">
                               <ActionBadge
                                 actionType="preview"
