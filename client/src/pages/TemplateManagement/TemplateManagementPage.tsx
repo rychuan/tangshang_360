@@ -4,7 +4,6 @@ import { queryKeys } from '@/api/queryKeys';
 import { toast } from 'sonner';
 import { Plus, Eye, Ban, Trash2, Search, RotateCcw } from 'lucide-react';
 import { logger } from '@lark-apaas/client-toolkit/logger';
-import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo } from '@/hooks/usePermissions';
 import { Button } from '@client/src/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -256,28 +255,24 @@ const TemplateManagementPage: React.FC = () => {
             onClick={() => handleEdit(item.id)}
           />
           {item.isActive && (
-            <CanRole roles={['admin', 'hrd']}>
-              <CanDo resource="template_management" action="delete">
-                <ActionBadge
-                  actionType="deactivate"
-                  icon={<Ban className="size-3" />}
-                  label="停用"
-                  onClick={() => setDeactivateId(item.id)}
-                />
-              </CanDo>
-            </CanRole>
+            <CanDo resource="template_management" action="delete">
+              <ActionBadge
+                actionType="deactivate"
+                icon={<Ban className="size-3" />}
+                label="停用"
+                onClick={() => setDeactivateId(item.id)}
+              />
+            </CanDo>
           )}
           {!item.isActive && (
-            <CanRole roles={['admin', 'hrd']}>
-              <CanDo resource="template_management" action="delete">
-                <ActionBadge
-                  actionType="delete"
-                  icon={<Trash2 className="size-3" />}
-                  label="删除"
-                  onClick={() => setDeleteId(item.id)}
-                />
-              </CanDo>
-            </CanRole>
+            <CanDo resource="template_management" action="delete">
+              <ActionBadge
+                actionType="delete"
+                icon={<Trash2 className="size-3" />}
+                label="删除"
+                onClick={() => setDeleteId(item.id)}
+              />
+            </CanDo>
           )}
         </div>
       ),
@@ -289,14 +284,12 @@ const TemplateManagementPage: React.FC = () => {
       <PageHeader
         title="绩效模板管理"
         actions={
-          <CanRole roles={['admin', 'hrd']}>
-            <CanDo resource="template_management" action="edit">
-              <Button onClick={handleOpenCreate}>
-                <Plus data-icon="inline-start" />
-                新建模板
-              </Button>
-            </CanDo>
-          </CanRole>
+          <CanDo resource="template_management" action="edit">
+            <Button onClick={handleOpenCreate}>
+              <Plus data-icon="inline-start" />
+              新建模板
+            </Button>
+          </CanDo>
         }
       />
 
