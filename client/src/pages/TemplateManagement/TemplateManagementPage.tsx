@@ -4,7 +4,7 @@ import { queryKeys } from '@/api/queryKeys';
 import { toast } from 'sonner';
 import { Plus, Eye, Ban, Trash2, Search, RotateCcw } from 'lucide-react';
 import { logger } from '@lark-apaas/client-toolkit/logger';
-import { CanDo } from '@/hooks/usePermissions';
+import { CanDo, usePermission } from '@/hooks/usePermissions';
 import { Button } from '@client/src/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -73,6 +73,7 @@ const TemplateManagementPage: React.FC = () => {
   >({});
 
   const queryClient = useQueryClient();
+  const canEdit = usePermission('template_management', 'edit');
 
   const listQuery = useQuery({
     queryKey: [
@@ -393,6 +394,7 @@ const TemplateManagementPage: React.FC = () => {
         template={editingTemplate}
         onSave={editingTemplate ? handleUpdate : handleCreate}
         positions={positions}
+        canEdit={canEdit}
       />
 
       <AlertDialog
