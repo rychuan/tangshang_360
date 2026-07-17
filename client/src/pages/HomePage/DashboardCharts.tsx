@@ -147,7 +147,11 @@ function ChartsContent({
               config={chartConfig}
               className="h-[280px] w-full min-w-0"
             >
-              <AreaChart data={trendData} margin={{ left: 0, right: 8 }}>
+              <AreaChart
+                accessibilityLayer
+                data={trendData}
+                margin={{ left: 0, right: 8 }}
+              >
                 <defs>
                   <linearGradient
                     id="dashboard-fill-score"
@@ -213,7 +217,11 @@ function ChartsContent({
               config={chartConfig}
               className="h-[280px] w-full min-w-0"
             >
-              <BarChart data={gradeData} margin={{ left: 0, right: 8 }}>
+              <BarChart
+                accessibilityLayer
+                data={gradeData}
+                margin={{ left: 0, right: 8 }}
+              >
                 <CartesianGrid vertical={false} strokeDasharray="3 3" />
                 <XAxis
                   dataKey="grade"

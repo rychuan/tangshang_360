@@ -15,7 +15,7 @@ import { buildQuickActions, buildVisiblePaths } from './dashboard-utils';
 
 const HomePage: React.FC = () => {
   const userInfo = useCurrentUserProfile();
-  const { permissions } = usePermissions();
+  const { permissions, loading: permissionsLoading } = usePermissions();
 
   const todosQuery = useQuery({
     queryKey: queryKeys.dashboard.todos(),
@@ -59,7 +59,7 @@ const HomePage: React.FC = () => {
         <AssessmentProgressPanel {...overviewState} />
         <DashboardQuickActions
           items={quickActions}
-          loading={overviewQuery.isLoading}
+          loading={overviewQuery.isLoading || permissionsLoading}
           error={overviewQuery.error}
           onRetry={() => overviewQuery.refetch()}
         />
