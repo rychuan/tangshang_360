@@ -39,6 +39,13 @@ export const navGroups: NavGroup[] = [
     icon: LayoutDashboard,
     items: [
       {
+        label: '绩效工作台',
+        path: '/dashboard',
+        icon: LayoutDashboard,
+        roles: ALL_ROLES,
+        permissionResources: ['dashboard'],
+      },
+      {
         label: '我的绩效',
         path: '/my-assessments',
         icon: ClipboardList,
