@@ -15,6 +15,7 @@ import {
   type PermissionResource,
   type PermissionAction,
 } from '@shared/api.interface';
+import { normalizeAuthorizationRoles } from './authorization-state';
 
 @Injectable()
 export class RoleManagerService {
@@ -123,10 +124,7 @@ export class RoleManagerService {
     }
   }
 
-  async ensureUserRoleStrict(
-    userId: string,
-    roleBizId: string,
-  ): Promise<void> {
+  async ensureUserRoleStrict(userId: string, roleBizId: string): Promise<void> {
     try {
       const roles = await this.getUserRolesStrict(userId);
       if (roles.includes(roleBizId)) {
@@ -141,10 +139,7 @@ export class RoleManagerService {
     }
   }
 
-  async removeUserRoleStrict(
-    userId: string,
-    roleBizId: string,
-  ): Promise<void> {
+  async removeUserRoleStrict(userId: string, roleBizId: string): Promise<void> {
     try {
       const roles = await this.getUserRolesStrict(userId);
       if (!roles.includes(roleBizId)) {
@@ -189,10 +184,7 @@ export class RoleManagerService {
     }
   }
 
-  async syncUserRolesStrict(
-    userId: string,
-    newRoles: string[],
-  ): Promise<void> {
+  async syncUserRolesStrict(userId: string, newRoles: string[]): Promise<void> {
     try {
       const current = await this.getUserRolesStrict(userId);
       const toAdd = newRoles.filter((role) => !current.includes(role));
@@ -207,6 +199,47 @@ export class RoleManagerService {
         await this.authzSDK.members.remove(role, {
           members: { userList: [{ userID: userId }] },
         });
+      }
+    } finally {
+      this.invalidateUserRoleCache(userId);
+    }
+  }
+
+  async reconcileUserRoles(
+    userId: string,
+    desiredRoles: string[],
+  ): Promise<void> {
+    const desired = normalizeAuthorizationRoles(desiredRoles);
+
+    try {
+      const current = normalizeAuthorizationRoles(
+        await this.getUserRolesStrict(userId),
+      );
+      const toRemove = current.filter((role) => !desired.includes(role));
+      const toAdd = desired.filter((role) => !current.includes(role));
+
+      for (const role of toRemove) {
+        await this.authzSDK.members.remove(role, {
+          members: { userList: [{ userID: userId }] },
+        });
+      }
+
+      for (const role of toAdd) {
+        await this.authzSDK.members.add(role, {
+          members: { userList: [{ userID: userId }] },
+        });
+      }
+
+      const verified = normalizeAuthorizationRoles(
+        await this.getUserRolesStrict(userId),
+      );
+      if (
+        verified.length !== desired.length ||
+        verified.some((role, index) => role !== desired[index])
+      ) {
+        throw new Error(
+          `Authorization role reconciliation mismatch for user ${userId}`,
+        );
       }
     } finally {
       this.invalidateUserRoleCache(userId);
@@ -446,15 +479,13 @@ export class RoleManagerService {
       }
 
       const memberPayload = this.unwrapSdkData(membersResult);
-      const members =
-        (memberPayload as any)?.members || memberPayload || {};
+      const members = (memberPayload as any)?.members || memberPayload || {};
       const isMember =
         Boolean((members as any).allEmployees) ||
         Boolean((members as any).presetGroup?.isContainsAdmin) ||
         (Array.isArray((members as any).userList) &&
           (members as any).userList.some(
-            (user: any) =>
-              user.userID === userId || user.user_id === userId,
+            (user: any) => user.userID === userId || user.user_id === userId,
           ));
       if (isMember) {
         return true;
