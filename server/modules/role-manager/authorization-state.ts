@@ -25,3 +25,10 @@ export function effectiveAuthorizationRoles(
 
   return normalizeAuthorizationRoles(employee.authorizationRoles ?? []);
 }
+
+export function isStringArray(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) &&
+    value.every((item): item is string => typeof item === 'string')
+  );
+}

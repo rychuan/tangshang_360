@@ -27,7 +27,10 @@ import {
   isBuiltinRole,
   normalizePermissionConfig,
 } from '@shared/types/permission.types';
-import { normalizeAuthorizationRoles } from './authorization-state';
+import {
+  isStringArray,
+  normalizeAuthorizationRoles,
+} from './authorization-state';
 
 type CustomRoleMemberMutation = 'add' | 'remove';
 type AuthorizationProcessStatus = Exclude<
@@ -375,13 +378,11 @@ export class RoleManagerService {
         if (!current || !current.status || current.deletedAt != null) {
           throw new BadRequestException(`员工 ${userId} 不存在或已停用`);
         }
-        if (
-          !Array.isArray(current.authorizationRoles) ||
-          current.authorizationRoles.some((role) => typeof role !== 'string')
-        ) {
+        const roles = current.authorizationRoles;
+        if (!isStringArray(roles)) {
           throw new BadRequestException(`员工 ${userId} 的授权角色数据无效`);
         }
-        return current;
+        return { ...current, authorizationRoles: roles };
       });
 
       const changes: Array<

@@ -117,6 +117,30 @@ export const fileAttachmentArray = customType<{
   },
 });
 
+export const authorizationSyncJob = pgTable("authorization_sync_job", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  employeeId: userProfile("employee_id").notNull(),
+  authorizationVersion: integer("authorization_version").notNull().unique(),
+  status: varchar("status", { length: 20 }).notNull().default('pending'),
+  attemptCount: integer("attempt_count").notNull().default(0),
+  errorMessage: text("error_message"),
+  startedAt: customTimestamptz("started_at", { precision: 6 }),
+  claimToken: uuid("claim_token"),
+  completedAt: customTimestamptz("completed_at", { precision: 6 }),
+  // System field: Creation time (auto-filled, do not modify)
+  createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Creator (auto-filled, do not modify)
+  createdBy: userProfile("_created_by").default(sql`CASE
+    WHEN (current_setting('app.user_id'::text, true) = ''::text) THEN NULL`),
+  // System field: Update time (auto-filled, do not modify)
+  updatedAt: customTimestamptz("_updated_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  // System field: Updater (auto-filled, do not modify)
+  updatedBy: userProfile("_updated_by").default(sql`CASE
+    WHEN (current_setting('app.user_id'::text, true) = ''::text) THEN NULL`),
+}, (table) => [
+  uniqueIndex("authorization_sync_job_employee_version_unique").on(table.authorizationVersion),
+]);
+
 export const assessmentSignSession = pgTable("assessment_sign_session", {
   id: uuid("id").primaryKey().defaultRandom(),
   tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
@@ -500,11 +524,6 @@ export const employee = pgTable("employee", {
   title: varchar("title", { length: 100 }),
   // Synced field: auto-synced, do not modify or delete
   role: varchar("role", { length: 50 }).default('employee'),
-  authorizationRoles: jsonb("authorization_roles").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-  authorizationStatus: varchar("authorization_status", { length: 20 }).notNull().default('pending'),
-  authorizationVersion: integer("authorization_version").notNull().default(1),
-  authorizationError: text("authorization_error"),
-  authorizationUpdatedAt: customTimestamptz("authorization_updated_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
   phone: varchar("phone", { length: 50 }),
   hireDate: customTimestamptz("hire_date", { precision: 6 }),
   probationMonths: integer("probation_months").default(3),
@@ -516,6 +535,14 @@ export const employee = pgTable("employee", {
   baseRecordId: varchar("base_record_id").unique(),
   positionCode: varchar("position_code", { length: 100 }),
   departmentId: uuid("department_id"),
+  /**
+   * @type {string[]}
+   */
+  authorizationRoles: jsonb("authorization_roles").notNull().default('[]'),
+  authorizationStatus: varchar("authorization_status", { length: 20 }).notNull().default('pending'),
+  authorizationVersion: integer("authorization_version").notNull().default(1),
+  authorizationError: text("authorization_error"),
+  authorizationUpdatedAt: customTimestamptz("authorization_updated_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
   // System field: Creation time (auto-filled, do not modify)
   createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
   // System field: Creator (auto-filled, do not modify)
@@ -530,31 +557,6 @@ export const employee = pgTable("employee", {
   uniqueIndex("unq_1869605213955370").on(table.baseRecordId),
 ]);
 
-export const authorizationSyncJob = pgTable("authorization_sync_job", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  employeeId: userProfile("employee_id").notNull(),
-  authorizationVersion: integer("authorization_version").notNull(),
-  status: varchar("status", { length: 20 }).notNull().default('pending'),
-  attemptCount: integer("attempt_count").notNull().default(0),
-  errorMessage: text("error_message"),
-  startedAt: customTimestamptz("started_at", { precision: 6 }),
-  claimToken: uuid("claim_token"),
-  completedAt: customTimestamptz("completed_at", { precision: 6 }),
-  // System field: Creation time (auto-filled, do not modify)
-  createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
-  // System field: Creator (auto-filled, do not modify)
-  createdBy: userProfile("_created_by"),
-  // System field: Update time (auto-filled, do not modify)
-  updatedAt: customTimestamptz("_updated_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
-  // System field: Updater (auto-filled, do not modify)
-  updatedBy: userProfile("_updated_by"),
-}, (table) => [
-  uniqueIndex("authorization_sync_job_employee_version_unique").on(
-    table.employeeId,
-    table.authorizationVersion,
-  ),
-]);
-
 // table aliases
 export const assessmentDimensionTable = assessmentDimension;
 export const assessmentIndicatorTable = assessmentIndicator;
@@ -563,9 +565,9 @@ export const assessmentInstanceTable = assessmentInstance;
 export const assessmentSignSessionTable = assessmentSignSession;
 export const assessmentTemplateTable = assessmentTemplate;
 export const auditLogTable = auditLog;
+export const authorizationSyncJobTable = authorizationSyncJob;
 export const bitableConnectionTable = bitableConnection;
 export const bitableSyncLogTable = bitableSyncLog;
-export const authorizationSyncJobTable = authorizationSyncJob;
 export const departmentTable = department;
 export const employeeTable = employee;
 export const employeeBindingTable = employeeBinding;

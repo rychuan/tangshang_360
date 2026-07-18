@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto';
 import { authorizationSyncJob, employee } from '@server/database/schema';
 import {
   effectiveAuthorizationRoles,
+  isStringArray,
   normalizeAuthorizationRoles,
 } from './authorization-state';
 import { RoleManagerService } from './role-manager.service';
@@ -179,7 +180,11 @@ export class AuthorizationSyncService {
       .from(employee)
       .where(eq(employee.employeeId, employeeId))
       .limit(1);
-    return rows[0];
+    const row = rows[0];
+    if (!row) return undefined;
+    const roles = row.authorizationRoles;
+    if (!isStringArray(roles)) return undefined;
+    return { ...row, authorizationRoles: roles };
   }
 
   private async loadJob(
