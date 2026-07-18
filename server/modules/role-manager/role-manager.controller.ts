@@ -244,4 +244,42 @@ export class RoleManagerController {
     }
     return result;
   }
+
+  @NeedLogin()
+  @CanRole('admin')
+  @RequirePermission('permission_management', 'edit')
+  @Post('authorization/:employeeId/retry')
+  async retryAuthorization(
+    @Param('employeeId') employeeId: string,
+    @Req() req: Request,
+  ) {
+    // Reject any supplied role arrays; only use DB durable authorizationRoles
+    const body = (req as { body?: unknown }).body;
+    if (body && typeof body === 'object' && 'roles' in (body as object)) {
+      throw new BadRequestException(
+        '重试授权不允许提供角色列表，将使用数据库中的期望角色',
+      );
+    }
+
+    try {
+      const result =
+        await this.authorizationSyncService.retryEmployeeAuthorization(
+          employeeId,
+        );
+      if (result.status === 'synced') {
+        return { data: { status: result.status } };
+      }
+      return {
+        data: {
+          status: result.status,
+          error: result.error || `授权同步状态: ${result.status}`,
+        },
+      };
+    } catch (error) {
+      throw new BadGatewayException({
+        message: '授权重试失败',
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
 }

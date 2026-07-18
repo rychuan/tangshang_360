@@ -137,3 +137,13 @@ export async function getMyPermissions(): Promise<
   });
   return data.data?.permissions || [];
 }
+
+export async function retryAuthorization(
+  employeeId: string,
+): Promise<{ status: string; error?: string }> {
+  const { data } = await axiosForBackend({
+    url: `/api/role_manager/authorization/${employeeId}/retry`,
+    method: 'POST',
+  });
+  return data.data;
+}
