@@ -18,18 +18,39 @@ function countQuery(value: number) {
   };
 }
 
-function createAdminMutationTransaction(adminCount = 2) {
-  const countWhere = jest.fn().mockResolvedValue([{ cnt: adminCount }]);
+function targetOrCountQuery(
+  target: Record<string, unknown>,
+  adminCount: number,
+) {
+  const countResult = Promise.resolve([{ cnt: adminCount }]) as Promise<
+    Array<{ cnt: number }>
+  > & {
+    limit?: jest.Mock;
+  };
+  countResult.limit = jest.fn().mockResolvedValue([target]);
+  return {
+    from: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnValue(countResult),
+  };
+}
+
+function createAdminMutationTransaction(
+  adminCount = 2,
+  target: Record<string, unknown> = {
+    employeeId: 'admin-2',
+    role: 'admin',
+    status: true,
+    authorizationRoles: ['admin'],
+    authorizationStatus: 'synced',
+    deletedAt: null,
+  },
+) {
   const updateWhere = jest.fn().mockResolvedValue(undefined);
   const updateSet = jest.fn().mockReturnValue({ where: updateWhere });
   const auditValues = jest.fn().mockResolvedValue(undefined);
   const tx = {
     execute: jest.fn().mockResolvedValue(undefined),
-    select: jest.fn().mockReturnValue({
-      from: jest.fn().mockReturnValue({
-        where: countWhere,
-      }),
-    }),
+    select: jest.fn().mockReturnValue(targetOrCountQuery(target, adminCount)),
     update: jest.fn().mockReturnValue({
       set: updateSet,
     }),
@@ -37,7 +58,7 @@ function createAdminMutationTransaction(adminCount = 2) {
       values: auditValues,
     }),
   };
-  return { tx, countWhere, updateWhere, auditValues };
+  return { tx, updateWhere, auditValues };
 }
 
 function createEmployeeService(
@@ -59,13 +80,21 @@ function createEmployeeService(
       subordinateIds: [],
     }),
   };
+  const authorizationSyncService = {
+    stageAuthorizationChange: jest.fn().mockResolvedValue(1),
+    processEmployeeAuthorization: jest.fn().mockResolvedValue({
+      status: 'synced',
+      version: 1,
+    }),
+  };
   const service = new (EmployeeManagementService as any)(
     db,
     roleManagerService,
     {},
     accessScopeService,
+    authorizationSyncService,
   ) as EmployeeManagementService;
-  return { service, roleManagerService };
+  return { service, roleManagerService, authorizationSyncService };
 }
 
 function expectLockBeforeCountAndMutation(
@@ -87,9 +116,7 @@ function expectLockBeforeCountAndMutation(
   expect(tx.execute.mock.invocationCallOrder[0]).toBeLessThan(
     tx.select.mock.invocationCallOrder[0],
   );
-  expect(tx.select.mock.invocationCallOrder[0]).toBeLessThan(
-    mutationCallOrder,
-  );
+  expect(tx.select.mock.invocationCallOrder[0]).toBeLessThan(mutationCallOrder);
 }
 
 describe('last active admin concurrency protection', () => {
@@ -100,7 +127,13 @@ describe('last active admin concurrency protection', () => {
         .fn()
         .mockReturnValueOnce(
           limitedQuery([
-            { employeeId: 'admin-2', role: 'admin', status: true },
+            {
+              employeeId: 'admin-2',
+              role: 'admin',
+              status: true,
+              authorizationRoles: ['admin'],
+              authorizationStatus: 'synced',
+            },
           ]),
         )
         .mockReturnValueOnce(countQuery(2)),
@@ -137,7 +170,13 @@ describe('last active admin concurrency protection', () => {
         .fn()
         .mockReturnValueOnce(
           limitedQuery([
-            { employeeId: 'admin-2', role: 'admin', status: true },
+            {
+              employeeId: 'admin-2',
+              role: 'admin',
+              status: true,
+              authorizationRoles: ['admin'],
+              authorizationStatus: 'synced',
+            },
           ]),
         )
         .mockReturnValueOnce(countQuery(2)),
@@ -166,6 +205,8 @@ describe('last active admin concurrency protection', () => {
               employeeId: 'admin-2',
               role: 'admin',
               status: true,
+              authorizationRoles: ['admin'],
+              authorizationStatus: 'synced',
               name: '管理员二',
               position: '负责人',
               department: '管理部',
@@ -198,6 +239,8 @@ describe('last active admin concurrency protection', () => {
               employeeId: 'admin-2',
               role: 'admin',
               status: true,
+              authorizationRoles: ['admin'],
+              authorizationStatus: 'synced',
             },
           ]),
         )
@@ -236,18 +279,49 @@ describe('last active admin concurrency protection', () => {
         .fn()
         .mockReturnValueOnce({
           from: jest.fn().mockReturnThis(),
-          where: jest
-            .fn()
-            .mockResolvedValue([{ employeeId: 'admin-2', role: 'admin' }]),
+          where: jest.fn().mockResolvedValue([
+            {
+              employeeId: 'admin-2',
+              role: 'admin',
+              status: true,
+              authorizationRoles: ['admin'],
+              authorizationStatus: 'synced',
+            },
+          ]),
         })
         .mockReturnValueOnce(countQuery(2)),
       transaction: jest.fn(async (callback: (value: unknown) => unknown) =>
         callback(tx),
       ),
     };
+    tx.select = jest
+      .fn()
+      .mockReturnValueOnce({
+        from: jest.fn().mockReturnThis(),
+        where: jest.fn().mockResolvedValue([
+          {
+            employeeId: 'admin-2',
+            role: 'admin',
+            status: true,
+            authorizationRoles: ['admin'],
+            authorizationStatus: 'synced',
+          },
+        ]),
+      })
+      .mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockResolvedValue([{ cnt: 2 }]),
+        }),
+      });
     const roleManagerService = {
       getUserRolesStrict: jest.fn().mockResolvedValue(['admin']),
-      syncUserRolesStrict: jest.fn().mockResolvedValue(undefined),
+    };
+    const authorizationSyncService = {
+      stageAuthorizationChange: jest.fn().mockResolvedValue(1),
+      processEmployeeAuthorization: jest.fn().mockResolvedValue({
+        status: 'synced',
+        version: 1,
+      }),
     };
     const accessScopeService = {
       canAccessEmployee: jest.fn().mockResolvedValue(true),
@@ -257,6 +331,7 @@ describe('last active admin concurrency protection', () => {
       {},
       roleManagerService,
       accessScopeService,
+      authorizationSyncService,
     ) as TeamStructureService;
 
     await service.batchDeactivate(['admin-2'], 'admin-1');
@@ -265,5 +340,55 @@ describe('last active admin concurrency protection', () => {
       tx as any,
       tx.execute.mock.invocationCallOrder[1],
     );
+  });
+
+  it('re-reads the target role after acquiring the administrator lock', async () => {
+    const { tx } = createAdminMutationTransaction(1, {
+      employeeId: 'admin-2',
+      role: 'employee',
+      status: true,
+      authorizationRoles: ['employee'],
+      authorizationStatus: 'synced',
+      deletedAt: null,
+    });
+    const db = {
+      select: jest.fn().mockReturnValue(
+        limitedQuery([
+          {
+            employeeId: 'admin-2',
+            role: 'admin',
+            status: true,
+            authorizationRoles: ['admin'],
+            authorizationStatus: 'synced',
+          },
+        ]),
+      ),
+      transaction: jest.fn(async (callback: (value: unknown) => unknown) =>
+        callback(tx),
+      ),
+    };
+    const { service, authorizationSyncService } = createEmployeeService(db);
+
+    await service.update(
+      'admin-2',
+      {
+        name: '管理员二',
+        position: '负责人',
+        positionCode: 'manager',
+        department: '管理部',
+        departmentId: 'dept-1',
+        supervisorId: 'admin-1',
+        role: 'employee',
+      },
+      'admin-1',
+    );
+
+    expect(tx.execute.mock.invocationCallOrder[0]).toBeLessThan(
+      tx.select.mock.invocationCallOrder[0],
+    );
+    expect(tx.select).toHaveBeenCalledTimes(1);
+    expect(
+      authorizationSyncService.stageAuthorizationChange,
+    ).toHaveBeenCalledWith(tx, 'admin-2', ['employee']);
   });
 });

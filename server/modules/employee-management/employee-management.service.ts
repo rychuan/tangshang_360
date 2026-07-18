@@ -45,6 +45,7 @@ import type {
   BindingHistoryItem,
 } from '@shared/api.interface';
 import { RoleManagerService } from '../role-manager/role-manager.service';
+import { AuthorizationSyncService } from '../role-manager/authorization-sync.service';
 import { DEFAULT_PERMISSIONS } from '@shared/api.interface';
 import { AccessScopeService } from '@server/common/access/access-scope.service';
 import { LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY } from './admin-safety';
@@ -58,6 +59,7 @@ export class EmployeeManagementService {
     private readonly roleManagerService: RoleManagerService,
     private readonly bindingService: EmployeeBindingService,
     private readonly accessScopeService: AccessScopeService,
+    private readonly authorizationSyncService: AuthorizationSyncService,
   ) {}
 
   async list(
@@ -294,33 +296,17 @@ export class EmployeeManagementService {
 
     const emp = rows[0];
 
-    // P0-2: 防止删除最后一个管理员
-    const adminCount = await this.validateAdminsExist();
-    if (emp.status && this.hasRole(emp.role, 'admin') && adminCount <= 1) {
-      throw new BadRequestException('系统中至少保留一个系统管理员，无法删除');
-    }
-
-    await this.db.transaction(async (tx) => {
-      // 事务内重新校验管理员数量
-      if (emp.status && this.hasRole(emp.role, 'admin')) {
-        await tx.execute(
-          sql`SELECT pg_advisory_xact_lock(${LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY})`,
+    const version = await this.db.transaction(async (tx) => {
+      await tx.execute(
+        sql`SELECT pg_advisory_xact_lock(${LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY})`,
+      );
+      const current = await this.loadEmployeeForLifecycle(tx, id);
+      const currentEmployee = current || emp;
+      if (this.isEffectiveAdmin(currentEmployee)) {
+        await this.assertAdminCountAfterReduction(
+          tx,
+          '系统中至少保留一个系统管理员，无法删除',
         );
-        const adminCountRows = await tx
-          .select({ cnt: count() })
-          .from(employee)
-          .where(
-            and(
-              this.adminRoleCondition(),
-              eq(employee.status, true),
-              isNull(employee.deletedAt),
-            ),
-          );
-        if (Number(adminCountRows[0]?.cnt || 0) <= 1) {
-          throw new BadRequestException(
-            '系统中至少保留一个系统管理员，无法删除',
-          );
-        }
       }
       await tx
         .update(employee)
@@ -339,9 +325,14 @@ export class EmployeeManagementService {
           },
         },
       });
+      return this.authorizationSyncService.stageAuthorizationChange(
+        tx,
+        id,
+        this.getDurableRoles(currentEmployee),
+      );
     });
 
-    await this.roleManagerService.syncUserRolesStrict(id, []);
+    await this.processAuthorization(id, version);
 
     this.logger.log(`Employee deleted: ${emp.name} (${id})`);
 
@@ -486,7 +477,10 @@ export class EmployeeManagementService {
   async create(
     body: CreateEmployeeRequest,
     userId: string,
-    options: { bitableConnectionId?: string } = {},
+    options: {
+      initialStatus?: boolean;
+      bitableConnectionId?: string;
+    } = {},
   ): Promise<{ id: string }> {
     await this.assertGlobalEmployeeScope(userId);
     if (
@@ -538,6 +532,7 @@ export class EmployeeManagementService {
       probationMonths: body.probationMonths ?? 3,
       employeeNo: body.employeeNo || null,
       bitableConnectionId: options.bitableConnectionId || null,
+      status: options.initialStatus ?? true,
     };
 
     const inserted = await this.db.transaction(async (tx) => {
@@ -547,7 +542,6 @@ export class EmployeeManagementService {
           .update(employee)
           .set({
             ...profileValues,
-            status: true,
             deletedAt: null,
           })
           .where(eq(employee.employeeId, body.id));
@@ -568,16 +562,20 @@ export class EmployeeManagementService {
         targetId: String(row.id),
         changes: { after: profileValues },
       });
-      return row;
+      const version =
+        await this.authorizationSyncService.stageAuthorizationChange(
+          tx,
+          body.id,
+          this.parseRoles(body.role),
+        );
+      return { row, version };
     });
 
-    this.logger.log(`Employee created: ${body.name} (${inserted.id})`);
+    this.logger.log(`Employee created: ${body.name} (${inserted.row.id})`);
 
-    // 同步角色到 AuthorizationSDK（事务提交后）
-    const roles = (body.role || 'employee').split(',').filter(Boolean);
-    await this.roleManagerService.syncUserRolesStrict(body.id, roles);
+    await this.processAuthorization(body.id, inserted.version);
 
-    return { id: String(inserted.id) };
+    return { id: String(inserted.row.id) };
   }
 
   async syncImportedEmployee(
@@ -593,6 +591,9 @@ export class EmployeeManagementService {
         id: employee.employeeId,
         role: employee.role,
         status: employee.status,
+        authorizationRoles: employee.authorizationRoles,
+        authorizationStatus: employee.authorizationStatus,
+        deletedAt: employee.deletedAt,
       })
       .from(employee)
       .where(and(eq(employee.employeeId, id), isNull(employee.deletedAt)))
@@ -610,36 +611,6 @@ export class EmployeeManagementService {
         '只有系统管理员可修改员工角色',
         '无权修改员工角色',
       );
-    }
-
-    const removesActiveAdmin =
-      rows[0].status &&
-      this.hasRole(currentRole, 'admin') &&
-      (!desiredStatus || !this.hasRole(nextRole, 'admin'));
-    if (removesActiveAdmin && (await this.validateAdminsExist()) <= 1) {
-      throw new BadRequestException(
-        '系统中至少保留一个系统管理员，无法导入该变更',
-      );
-    }
-    const deactivatesEmployee = rows[0].status && !desiredStatus;
-    const roleSnapshot = deactivatesEmployee
-      ? await this.roleManagerService.getUserRolesStrict(id)
-      : null;
-    const activatesEmployee = !rows[0].status && desiredStatus;
-    const activationRoleSnapshot =
-      activatesEmployee && !roleChanged
-        ? await this.getLatestDeactivationRoleSnapshot(id)
-        : null;
-    let rolesToSync: string[] | null = null;
-    if (!desiredStatus) {
-      if (rows[0].status || roleChanged) {
-        rolesToSync = [];
-      }
-    } else if (activatesEmployee) {
-      rolesToSync =
-        activationRoleSnapshot ?? this.parseRoles(nextRole);
-    } else if (roleChanged) {
-      rolesToSync = this.parseRoles(nextRole);
     }
 
     const { departmentId, positionCode } = await this.resolveReferences(
@@ -667,26 +638,30 @@ export class EmployeeManagementService {
       status: desiredStatus,
     };
 
-    await this.db.transaction(async (tx) => {
-      if (removesActiveAdmin) {
-        await tx.execute(
-          sql`SELECT pg_advisory_xact_lock(${LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY})`,
+    const version = await this.db.transaction(async (tx) => {
+      await tx.execute(
+        sql`SELECT pg_advisory_xact_lock(${LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY})`,
+      );
+      const current = await this.loadEmployeeForLifecycle(tx, id);
+      const currentEmployee = current || rows[0];
+      const desiredRoles = roleChanged
+        ? this.parseRoles(nextRole)
+        : this.getDurableRoles(currentEmployee);
+      const transactionValues = {
+        ...values,
+        role:
+          body.role !== undefined
+            ? nextRole
+            : String(currentEmployee.role || currentRole),
+      };
+      if (
+        this.isEffectiveAdmin(currentEmployee) &&
+        (!desiredStatus || !desiredRoles.includes('admin'))
+      ) {
+        await this.assertAdminCountAfterReduction(
+          tx,
+          '系统中至少保留一个系统管理员，无法导入该变更',
         );
-        const adminCountRows = await tx
-          .select({ cnt: count() })
-          .from(employee)
-          .where(
-            and(
-              this.adminRoleCondition(),
-              eq(employee.status, true),
-              isNull(employee.deletedAt),
-            ),
-          );
-        if (Number(adminCountRows[0]?.cnt || 0) <= 1) {
-          throw new BadRequestException(
-            '系统中至少保留一个系统管理员，无法导入该变更',
-          );
-        }
       }
 
       if (!desiredStatus) {
@@ -700,31 +675,34 @@ export class EmployeeManagementService {
             ),
           );
       }
-      await tx.update(employee).set(values).where(eq(employee.employeeId, id));
+      await tx
+        .update(employee)
+        .set(transactionValues)
+        .where(eq(employee.employeeId, id));
       await tx.insert(auditLog).values({
         operatorId: userId,
         action: 'import_update_employee',
         targetType: 'employee',
         targetId: id,
-        changes: { after: values },
+        changes: { after: transactionValues },
       });
-      if (roleSnapshot) {
-        await tx.insert(auditLog).values({
-          operatorId: userId,
-          action: 'deactivate_employee',
-          targetType: 'employee',
-          targetId: id,
-          changes: {
-            before: { status: true, roleSnapshot },
-            after: { status: false },
-          },
-          reason: '多维表格导入停用员工',
-        });
+
+      const currentRoles = this.getDurableRoles(currentEmployee);
+      const shouldStage =
+        Boolean(currentEmployee.status) !== desiredStatus ||
+        !this.sameRoles(currentRoles, desiredRoles);
+      if (!shouldStage) {
+        return null;
       }
+      return this.authorizationSyncService.stageAuthorizationChange(
+        tx,
+        id,
+        desiredRoles,
+      );
     });
 
-    if (rolesToSync) {
-      await this.roleManagerService.syncUserRolesStrict(id, rolesToSync);
+    if (version != null) {
+      await this.processAuthorization(id, version);
     }
 
     return { success: true };
@@ -742,6 +720,9 @@ export class EmployeeManagementService {
         id: employee.employeeId,
         role: employee.role,
         status: employee.status,
+        authorizationRoles: employee.authorizationRoles,
+        authorizationStatus: employee.authorizationStatus,
+        deletedAt: employee.deletedAt,
       })
       .from(employee)
       .where(and(eq(employee.employeeId, id), isNull(employee.deletedAt)))
@@ -754,24 +735,12 @@ export class EmployeeManagementService {
     const currentRole = String(rows[0].role || 'employee');
     const nextRole = body.role || currentRole;
     const roleChanged = nextRole !== currentRole;
-    const removesActiveAdmin =
-      Boolean(rows[0].status) &&
-      this.hasRole(currentRole, 'admin') &&
-      !this.hasRole(nextRole, 'admin');
     if (roleChanged) {
       await this.assertRoleMutationPermission(
         userId,
         '只有系统管理员可修改员工角色',
         '无权修改员工角色',
       );
-      if (removesActiveAdmin) {
-        const adminCount = await this.validateAdminsExist();
-        if (adminCount <= 1) {
-          throw new BadRequestException(
-            '系统中至少保留一个系统管理员，无法修改角色',
-          );
-        }
-      }
     }
 
     // 自动解析 departmentId / positionCode
@@ -800,23 +769,19 @@ export class EmployeeManagementService {
       employeeNo: body.employeeNo || null,
     };
 
-    await this.db.transaction(async (tx) => {
-      if (removesActiveAdmin) {
+    const version = await this.db.transaction(async (tx) => {
+      if (body.role !== undefined) {
         await tx.execute(
           sql`SELECT pg_advisory_xact_lock(${LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY})`,
         );
-        const adminCountRows = await tx
-          .select({ cnt: count() })
-          .from(employee)
-          .where(
-            and(
-              this.adminRoleCondition(),
-              eq(employee.status, true),
-              isNull(employee.deletedAt),
-            ),
-          );
-        if (Number(adminCountRows[0]?.cnt || 0) <= 1) {
-          throw new BadRequestException(
+        const current = await this.loadEmployeeForLifecycle(tx, id);
+        if (
+          current &&
+          this.isEffectiveAdmin(current) &&
+          !this.parseRoles(nextRole).includes('admin')
+        ) {
+          await this.assertAdminCountAfterReduction(
+            tx,
             '系统中至少保留一个系统管理员，无法修改角色',
           );
         }
@@ -829,13 +794,18 @@ export class EmployeeManagementService {
         targetId: id,
         changes: { after: values },
       });
-    });
-
-    if (roleChanged) {
-      await this.roleManagerService.syncUserRolesStrict(
+      if (!roleChanged) {
+        return null;
+      }
+      return this.authorizationSyncService.stageAuthorizationChange(
+        tx,
         id,
         this.parseRoles(nextRole),
       );
+    });
+
+    if (version != null) {
+      await this.processAuthorization(id, version);
     }
 
     this.logger.log(`Employee updated: ${id}`);
@@ -851,6 +821,7 @@ export class EmployeeManagementService {
         id: employee.employeeId,
         role: employee.role,
         status: employee.status,
+        authorizationRoles: employee.authorizationRoles,
       })
       .from(employee)
       .where(and(eq(employee.employeeId, id), isNull(employee.deletedAt)))
@@ -859,12 +830,11 @@ export class EmployeeManagementService {
     if (rows.length === 0) {
       throw new NotFoundException('员工不存在');
     }
-    const savedRoleSnapshot =
-      await this.getLatestDeactivationRoleSnapshot(id);
-    const rolesToRestore =
-      savedRoleSnapshot ?? this.parseRoles(rows[0].role);
+    if (rows[0].status) {
+      return { success: true };
+    }
 
-    await this.db.transaction(async (tx) => {
+    const version = await this.db.transaction(async (tx) => {
       await tx
         .update(employee)
         .set({ status: true })
@@ -875,9 +845,14 @@ export class EmployeeManagementService {
         targetType: 'employee',
         targetId: id,
       });
+      return this.authorizationSyncService.stageAuthorizationChange(
+        tx,
+        id,
+        this.getDurableRoles(rows[0]),
+      );
     });
 
-    await this.roleManagerService.syncUserRolesStrict(id, rolesToRestore);
+    await this.processAuthorization(id, version);
 
     return { success: true };
   }
@@ -890,6 +865,9 @@ export class EmployeeManagementService {
         id: employee.employeeId,
         role: employee.role,
         status: employee.status,
+        authorizationRoles: employee.authorizationRoles,
+        authorizationStatus: employee.authorizationStatus,
+        deletedAt: employee.deletedAt,
       })
       .from(employee)
       .where(and(eq(employee.employeeId, id), isNull(employee.deletedAt)))
@@ -899,38 +877,20 @@ export class EmployeeManagementService {
       throw new NotFoundException('员工不存在');
     }
     if (!rows[0].status) {
-      await this.roleManagerService.syncUserRolesStrict(id, []);
       return { success: true };
     }
 
-    const isAdmin =
-      this.hasRole(rows[0].role, 'admin');
-    if (isAdmin && (await this.validateAdminsExist()) <= 1) {
-      throw new BadRequestException('系统中至少保留一个系统管理员，无法停用');
-    }
-    const roleSnapshot =
-      await this.roleManagerService.getUserRolesStrict(id);
-
-    await this.db.transaction(async (tx) => {
-      if (isAdmin) {
-        await tx.execute(
-          sql`SELECT pg_advisory_xact_lock(${LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY})`,
+    const version = await this.db.transaction(async (tx) => {
+      await tx.execute(
+        sql`SELECT pg_advisory_xact_lock(${LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY})`,
+      );
+      const current = await this.loadEmployeeForLifecycle(tx, id);
+      const currentEmployee = current || rows[0];
+      if (this.isEffectiveAdmin(currentEmployee)) {
+        await this.assertAdminCountAfterReduction(
+          tx,
+          '系统中至少保留一个系统管理员，无法停用',
         );
-        const adminCountRows = await tx
-          .select({ cnt: count() })
-          .from(employee)
-          .where(
-            and(
-              this.adminRoleCondition(),
-              eq(employee.status, true),
-              isNull(employee.deletedAt),
-            ),
-          );
-        if (Number(adminCountRows[0]?.cnt || 0) <= 1) {
-          throw new BadRequestException(
-            '系统中至少保留一个系统管理员，无法停用',
-          );
-        }
       }
       // P1-1: 停用员工时联动停用其所有活跃绑定
       await tx
@@ -952,13 +912,18 @@ export class EmployeeManagementService {
         targetType: 'employee',
         targetId: id,
         changes: {
-          before: { status: true, roleSnapshot },
+          before: { status: true },
           after: { status: false },
         },
       });
+      return this.authorizationSyncService.stageAuthorizationChange(
+        tx,
+        id,
+        this.getDurableRoles(currentEmployee),
+      );
     });
 
-    await this.roleManagerService.syncUserRolesStrict(id, []);
+    await this.processAuthorization(id, version);
 
     return { success: true };
   }
@@ -1058,13 +1023,7 @@ export class EmployeeManagementService {
     const rows = await this.db
       .select({ cnt: count() })
       .from(employee)
-      .where(
-        and(
-          this.adminRoleCondition(),
-          eq(employee.status, true),
-          isNull(employee.deletedAt),
-        ),
-      );
+      .where(this.effectiveAdminCondition());
     return Number(rows[0]?.cnt || 0);
   }
 
@@ -1125,35 +1084,104 @@ export class EmployeeManagementService {
   }
 
   private adminRoleCondition(): SQL {
-    return sql`'admin' = ANY(string_to_array(COALESCE(${employee.role}, ''), ','))`;
+    return sql`COALESCE(${employee.authorizationRoles}, '[]'::jsonb) ? 'admin'`;
   }
 
-  private async getLatestDeactivationRoleSnapshot(
-    employeeId: string,
-  ): Promise<string[] | null> {
-    const rows = await this.db
-      .select({ changes: auditLog.changes })
-      .from(auditLog)
-      .where(
-        and(
-          eq(auditLog.action, 'deactivate_employee'),
-          eq(auditLog.targetType, 'employee'),
-          eq(auditLog.targetId, employeeId),
-        ),
-      )
-      .orderBy(desc(auditLog.createdAt))
-      .limit(1);
-    const changes = rows[0]?.changes as
-      | { before?: { roleSnapshot?: unknown } }
-      | null
-      | undefined;
-    const snapshot = changes?.before?.roleSnapshot;
-    if (!Array.isArray(snapshot)) {
-      return null;
-    }
-    return snapshot.filter(
-      (role): role is string => typeof role === 'string' && role.length > 0,
+  private effectiveAdminCondition(): SQL {
+    return and(
+      this.adminRoleCondition(),
+      eq(employee.status, true),
+      eq(employee.authorizationStatus, 'synced'),
+      isNull(employee.deletedAt),
     );
+  }
+
+  private async loadEmployeeForLifecycle(
+    tx: PostgresJsDatabase,
+    employeeId: string,
+  ) {
+    const rows = await tx
+      .select({
+        id: employee.employeeId,
+        role: employee.role,
+        status: employee.status,
+        authorizationRoles: employee.authorizationRoles,
+        authorizationStatus: employee.authorizationStatus,
+        deletedAt: employee.deletedAt,
+      })
+      .from(employee)
+      .where(eq(employee.employeeId, employeeId))
+      .limit(1);
+    return rows[0];
+  }
+
+  private async assertAdminCountAfterReduction(
+    tx: PostgresJsDatabase,
+    message: string,
+  ): Promise<void> {
+    const adminCountRows = await tx
+      .select({ cnt: count() })
+      .from(employee)
+      .where(this.effectiveAdminCondition());
+    if (Number(adminCountRows[0]?.cnt || 0) <= 1) {
+      throw new BadRequestException(message);
+    }
+  }
+
+  private getDurableRoles(row: {
+    authorizationRoles?: unknown;
+    role?: string | null;
+  }): string[] {
+    if (Array.isArray(row.authorizationRoles)) {
+      const durableRoles = row.authorizationRoles.filter(
+        (role): role is string => typeof role === 'string',
+      );
+      if (durableRoles.length > 0) {
+        return durableRoles;
+      }
+    }
+    return this.parseRoles(row.role);
+  }
+
+  private isEffectiveAdmin(row: {
+    status?: boolean;
+    deletedAt?: Date | string | null;
+    authorizationStatus?: string;
+    authorizationRoles?: unknown;
+  }): boolean {
+    return (
+      row.status === true &&
+      row.deletedAt == null &&
+      row.authorizationStatus === 'synced' &&
+      Array.isArray(row.authorizationRoles) &&
+      row.authorizationRoles.includes('admin')
+    );
+  }
+
+  private sameRoles(left: string[], right: string[]): boolean {
+    const normalizedLeft = [...new Set(left)].sort();
+    const normalizedRight = [...new Set(right)].sort();
+    return (
+      normalizedLeft.length === normalizedRight.length &&
+      normalizedLeft.every((role, index) => role === normalizedRight[index])
+    );
+  }
+
+  private async processAuthorization(
+    employeeId: string,
+    version: number,
+  ): Promise<void> {
+    const result =
+      await this.authorizationSyncService.processEmployeeAuthorization(
+        employeeId,
+        version,
+      );
+    if (result.status !== 'synced') {
+      throw new Error(
+        result.error ||
+          `Employee ${employeeId} authorization sync finished with ${result.status}`,
+      );
+    }
   }
 
   /**

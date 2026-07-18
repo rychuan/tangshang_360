@@ -9,7 +9,7 @@ import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { eq, and, isNull, like, type SQL } from 'drizzle-orm';
+import { eq, and, count, isNull, like, type SQL } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 import {
   employeeBinding,
@@ -19,9 +19,42 @@ import {
 } from '@server/database/schema';
 import { EmployeeBindingService } from '../employee-management/employee-binding.service';
 import { RoleManagerService } from '../role-manager/role-manager.service';
+import { AuthorizationSyncService } from '../role-manager/authorization-sync.service';
 import { AccessScopeService } from '@server/common/access/access-scope.service';
 import { LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY } from '../employee-management/admin-safety';
 import type { TeamUpdateEmployeeRequest } from '@shared/api.interface';
+
+function getDurableRoles(row: {
+  authorizationRoles?: unknown;
+  role?: string | null;
+}): string[] {
+  if (Array.isArray(row.authorizationRoles)) {
+    const roles = row.authorizationRoles.filter(
+      (role): role is string => typeof role === 'string',
+    );
+    if (roles.length > 0) return roles;
+  }
+  const roles = String(row.role || 'employee')
+    .split(',')
+    .map((role) => role.trim())
+    .filter(Boolean);
+  return roles.length > 0 ? roles : ['employee'];
+}
+
+function isEffectiveAdmin(row: {
+  status?: boolean;
+  deletedAt?: Date | string | null;
+  authorizationStatus?: string;
+  authorizationRoles?: unknown;
+}): boolean {
+  return (
+    row.status === true &&
+    row.deletedAt == null &&
+    row.authorizationStatus === 'synced' &&
+    Array.isArray(row.authorizationRoles) &&
+    row.authorizationRoles.includes('admin')
+  );
+}
 
 @Injectable()
 export class TeamStructureService {
@@ -32,6 +65,7 @@ export class TeamStructureService {
     private readonly bindingService: EmployeeBindingService,
     private readonly roleManagerService: RoleManagerService,
     private readonly accessScopeService: AccessScopeService,
+    private readonly authorizationSyncService: AuthorizationSyncService,
   ) {}
 
   /**
@@ -169,75 +203,43 @@ export class TeamStructureService {
       requestedIds.map((id) => sql`${id}`),
       sql`, `,
     );
-    const targetRows = await this.db
-      .select({
-        employeeId: sql<string>`(${employee.employeeId}).user_id`,
-        role: employee.role,
-      })
-      .from(employee)
-      .where(
-        and(
-          sql`(${employee.employeeId}).user_id IN (${requestedIdParams})`,
-          eq(employee.status, true),
-          isNull(employee.deletedAt),
-        ),
+    const result = await this.db.transaction(async (tx) => {
+      await tx.execute(
+        sql`SELECT pg_advisory_xact_lock(${LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY})`,
       );
-    const deactivatedIds = targetRows.map((row) => row.employeeId);
-    if (deactivatedIds.length === 0) {
-      return { success: true, deactivatedCount: 0 };
-    }
-
-    const deactivatedAdminCount = targetRows.filter((row) =>
-      String(row.role || '')
-        .split(',')
-        .map((role) => role.trim())
-        .includes('admin'),
-    ).length;
-    if (deactivatedAdminCount > 0) {
-      const adminCountRows = await this.db
-        .select({ cnt: sql<number>`count(*)` })
+      const targetRows = await tx
+        .select({
+          employeeId: sql<string>`(${employee.employeeId}).user_id`,
+          role: employee.role,
+          status: employee.status,
+          authorizationRoles: employee.authorizationRoles,
+          authorizationStatus: employee.authorizationStatus,
+          deletedAt: employee.deletedAt,
+        })
         .from(employee)
         .where(
           and(
-            sql`'admin' = ANY(string_to_array(COALESCE(${employee.role}, ''), ','))`,
-            eq(employee.status, true),
+            sql`(${employee.employeeId}).user_id IN (${requestedIdParams})`,
             isNull(employee.deletedAt),
           ),
         );
-      if (Number(adminCountRows[0]?.cnt || 0) <= deactivatedAdminCount) {
-        throw new BadRequestException(
-          '系统中至少保留一个系统管理员，无法批量停用',
-        );
+      const deactivatedRows = targetRows.filter((row) => row.status === true);
+      if (deactivatedRows.length === 0) {
+        return {
+          success: true,
+          deactivatedCount: 0,
+          employeeIds: [] as string[],
+          versions: [] as number[],
+        };
       }
-    }
-    const roleSnapshots = new Map(
-      await Promise.all(
-        deactivatedIds.map(async (employeeId) => [
-          employeeId,
-          await this.roleManagerService.getUserRolesStrict(employeeId),
-        ] as const),
-      ),
-    );
 
-    const result = await this.db.transaction(async (tx) => {
-      const idParams = sql.join(
-        deactivatedIds.map((id) => sql`${id}`),
-        sql`, `,
-      );
+      const deactivatedAdminCount =
+        deactivatedRows.filter(isEffectiveAdmin).length;
       if (deactivatedAdminCount > 0) {
-        await tx.execute(
-          sql`SELECT pg_advisory_xact_lock(${LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY})`,
-        );
         const adminCountRows = await tx
-          .select({ cnt: sql<number>`count(*)` })
+          .select({ cnt: count() })
           .from(employee)
-          .where(
-            and(
-              sql`'admin' = ANY(string_to_array(COALESCE(${employee.role}, ''), ','))`,
-              eq(employee.status, true),
-              isNull(employee.deletedAt),
-            ),
-          );
+          .where(this.effectiveAdminCondition());
         if (Number(adminCountRows[0]?.cnt || 0) <= deactivatedAdminCount) {
           throw new BadRequestException(
             '系统中至少保留一个系统管理员，无法批量停用',
@@ -245,20 +247,35 @@ export class TeamStructureService {
         }
       }
 
+      const idParams = sql.join(
+        deactivatedRows.map((row) => sql`${row.employeeId}`),
+        sql`, `,
+      );
+
       await tx.execute(sql`
         UPDATE ${employee}
         SET status = false
-        WHERE (id).user_id IN (${idParams}) AND deleted_at IS NULL
+        WHERE (${employee.employeeId}).user_id IN (${idParams})
+          AND deleted_at IS NULL
       `);
 
       await tx.execute(sql`
         UPDATE ${employeeBinding}
         SET status = false
-        WHERE (employee_id).user_id IN (${idParams})
+        WHERE (${employeeBinding.employeeId}).user_id IN (${idParams})
           AND status = true
       `);
 
-      for (const eId of deactivatedIds) {
+      const versions: number[] = [];
+      for (const row of deactivatedRows) {
+        const eId = row.employeeId;
+        const version =
+          await this.authorizationSyncService.stageAuthorizationChange(
+            tx,
+            eId,
+            getDurableRoles(row),
+          );
+        versions.push(version);
         await tx.insert(auditLog).values({
           operatorId,
           action: 'deactivate_employee',
@@ -267,7 +284,6 @@ export class TeamStructureService {
           changes: {
             before: {
               status: true,
-              roleSnapshot: roleSnapshots.get(eId) || [],
             },
             after: { status: false },
           },
@@ -275,17 +291,27 @@ export class TeamStructureService {
         });
       }
       this.logger.log(
-        `Batch deactivated ${deactivatedIds.length} employees: ${deactivatedIds.join(', ')}`,
+        `Batch deactivated ${deactivatedRows.length} employees: ${deactivatedRows
+          .map((row) => row.employeeId)
+          .join(', ')}`,
       );
 
-      return { success: true, deactivatedCount: deactivatedIds.length };
+      return {
+        success: true,
+        deactivatedCount: deactivatedRows.length,
+        employeeIds: deactivatedRows.map((row) => row.employeeId),
+        versions,
+      };
     });
 
-    for (const employeeId of deactivatedIds) {
-      await this.roleManagerService.syncUserRolesStrict(employeeId, []);
+    for (const [index, employeeId] of result.employeeIds.entries()) {
+      await this.processAuthorization(employeeId, result.versions[index]);
     }
 
-    return result;
+    return {
+      success: result.success,
+      deactivatedCount: result.deactivatedCount,
+    };
   }
 
   /**
@@ -439,6 +465,32 @@ export class TeamStructureService {
     );
     if (!allowed) {
       throw new ForbiddenException('无权查看员工绑定信息');
+    }
+  }
+
+  private effectiveAdminCondition(): SQL {
+    return and(
+      sql`COALESCE(${employee.authorizationRoles}, '[]'::jsonb) ? 'admin'`,
+      eq(employee.status, true),
+      eq(employee.authorizationStatus, 'synced'),
+      isNull(employee.deletedAt),
+    );
+  }
+
+  private async processAuthorization(
+    employeeId: string,
+    version: number,
+  ): Promise<void> {
+    const result =
+      await this.authorizationSyncService.processEmployeeAuthorization(
+        employeeId,
+        version,
+      );
+    if (result.status !== 'synced') {
+      throw new Error(
+        result.error ||
+          `Employee ${employeeId} authorization sync finished with ${result.status}`,
+      );
     }
   }
 
