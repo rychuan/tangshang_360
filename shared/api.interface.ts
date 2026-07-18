@@ -95,7 +95,11 @@ export {
   type SearchMembersRequest,
   type RolePermissionConfig,
   type UpdateRolePermissionsRequest,
+  type RoleMemberMutationOutcomeStatus,
+  type RoleMemberMutationOutcome,
+  type RoleMemberMutationResponse,
   BUILTIN_ROLE_CODES,
+  PERMISSION_MATRIX,
   ROLE_OPTIONS,
   ROLE_LABELS,
 } from './types/permission.types';

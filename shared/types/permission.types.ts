@@ -29,21 +29,6 @@ export interface PermissionItem {
   actions: PermissionAction[];
 }
 
-const PERMISSION_RESOURCES: readonly PermissionResource[] = [
-  'dashboard',
-  'my_assessments',
-  'employees',
-  'template_management',
-  'organization',
-  'employee_binding',
-  'publish_management',
-  'statistics',
-  'team_performance',
-  'permission_management',
-  'grade_config',
-  'dictionary_config',
-];
-
 const PERMISSION_ACTIONS: readonly PermissionAction[] = [
   'view',
   'edit',
@@ -51,6 +36,24 @@ const PERMISSION_ACTIONS: readonly PermissionAction[] = [
   'export',
   'publish',
 ];
+
+export const PERMISSION_MATRIX: Record<
+  PermissionResource,
+  readonly PermissionAction[]
+> = {
+  dashboard: ['view'],
+  my_assessments: ['view', 'edit'],
+  employees: ['view', 'edit', 'delete'],
+  template_management: ['view', 'edit', 'delete'],
+  organization: ['view', 'edit', 'delete'],
+  employee_binding: ['view', 'edit'],
+  publish_management: ['view', 'edit', 'export', 'publish'],
+  statistics: ['view', 'export'],
+  team_performance: ['view', 'edit'],
+  permission_management: ['view', 'edit'],
+  grade_config: ['view', 'edit'],
+  dictionary_config: ['view', 'edit'],
+};
 
 export const DEFAULT_PERMISSIONS: Record<string, PermissionItem[]> = {
   admin: [
@@ -160,6 +163,26 @@ export interface UpdateRolePermissionsRequest {
   permissions: PermissionItem[];
 }
 
+export type RoleMemberMutationOutcomeStatus =
+  | 'synced'
+  | 'unchanged'
+  | 'failed'
+  | 'superseded'
+  | 'not_processable'
+  | 'stale_owner';
+
+export interface RoleMemberMutationOutcome {
+  userId: string;
+  status: RoleMemberMutationOutcomeStatus;
+  version?: number;
+  error?: string;
+}
+
+export interface RoleMemberMutationResponse {
+  success: boolean;
+  outcomes: RoleMemberMutationOutcome[];
+}
+
 export const BUILTIN_ROLE_CODES = [
   'admin',
   'hrd',
@@ -180,8 +203,7 @@ export function normalizePermissionConfig(
     throw new Error('权限配置必须是数组');
   }
 
-  const knownResources = new Set<string>(PERMISSION_RESOURCES);
-  const knownActions = new Set<string>(PERMISSION_ACTIONS);
+  const knownResources = new Set<string>(Object.keys(PERMISSION_MATRIX));
   const merged = new Map<PermissionResource, Set<PermissionAction>>();
 
   for (const item of permissions) {
@@ -200,9 +222,13 @@ export function normalizePermissionConfig(
 
     const actionSet =
       merged.get(resource as PermissionResource) ?? new Set<PermissionAction>();
+    const allowedActions = PERMISSION_MATRIX[resource as PermissionResource];
     for (const action of actions) {
-      if (typeof action !== 'string' || !knownActions.has(action)) {
-        throw new Error(`未知权限操作: ${String(action)}`);
+      if (
+        typeof action !== 'string' ||
+        !allowedActions.includes(action as PermissionAction)
+      ) {
+        throw new Error(`权限资源 ${resource} 不支持操作: ${String(action)}`);
       }
       actionSet.add(action as PermissionAction);
     }

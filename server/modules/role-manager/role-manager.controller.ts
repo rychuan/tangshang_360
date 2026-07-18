@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  BadGatewayException,
   Controller,
   Get,
   Post,
@@ -26,6 +27,7 @@ import type {
   UpdateRolePermissionsRequest,
   RolePermissionConfig,
   PermissionItem,
+  RoleMemberMutationResponse,
 } from '@shared/api.interface';
 import { DEFAULT_PERMISSIONS } from '@shared/api.interface';
 import { isBuiltinRole } from '@shared/types/permission.types';
@@ -96,9 +98,9 @@ export class RoleManagerController {
     if (isBuiltinRole(bizID)) {
       throw new BadRequestException('内置角色不可删除');
     }
-    const result = await this.authzSDK.roles.delete(bizID);
-    await this.roleManagerService.deletePermissionConfig(bizID);
-    return result;
+    return this.roleManagerService.deleteCustomRole(bizID, () =>
+      this.authzSDK.roles.delete(bizID),
+    );
   }
 
   @CanRole(['admin', 'hrd'])
@@ -124,15 +126,15 @@ export class RoleManagerController {
   async addMembers(
     @Param('bizID') bizID: string,
     @Body() dto: AddMembersRequest,
-  ) {
+  ): Promise<RoleMemberMutationResponse> {
     const userIds = this.getExplicitUserIds(bizID, dto);
-    await this.roleManagerService.mutateCustomRoleMembers(
+    const result = await this.roleManagerService.mutateCustomRoleMembers(
       bizID,
       userIds,
       'add',
       this.authorizationSyncService,
     );
-    return { success: true };
+    return this.requireSuccessfulMutation(result);
   }
 
   @CanRole(['admin'])
@@ -142,15 +144,15 @@ export class RoleManagerController {
   async removeMembers(
     @Param('bizID') bizID: string,
     @Body() dto: RemoveMembersRequest,
-  ) {
+  ): Promise<RoleMemberMutationResponse> {
     const userIds = this.getExplicitUserIds(bizID, dto);
-    await this.roleManagerService.mutateCustomRoleMembers(
+    const result = await this.roleManagerService.mutateCustomRoleMembers(
       bizID,
       userIds,
       'remove',
       this.authorizationSyncService,
     );
-    return { success: true };
+    return this.requireSuccessfulMutation(result);
   }
 
   @CanRole(['admin', 'hrd'])
@@ -214,10 +216,32 @@ export class RoleManagerController {
       throw new BadRequestException('仅支持显式用户成员列表');
     }
 
-    const userIds = members.userList.map((user) => user.userID?.trim());
-    if (userIds.some((userId) => !userId)) {
-      throw new BadRequestException('用户成员标识无效');
+    const userIds: string[] = [];
+    for (const user of members.userList) {
+      if (
+        !user ||
+        typeof user !== 'object' ||
+        Array.isArray(user) ||
+        Object.getPrototypeOf(user) !== Object.prototype ||
+        typeof user.userID !== 'string' ||
+        user.userID.trim().length === 0
+      ) {
+        throw new BadRequestException('用户成员标识无效');
+      }
+      userIds.push(user.userID.trim());
     }
-    return Array.from(new Set(userIds as string[]));
+    return Array.from(new Set(userIds));
+  }
+
+  private requireSuccessfulMutation(
+    result: RoleMemberMutationResponse,
+  ): RoleMemberMutationResponse {
+    if (!result.success) {
+      throw new BadGatewayException({
+        message: '部分成员授权同步失败',
+        ...result,
+      });
+    }
+    return result;
   }
 }

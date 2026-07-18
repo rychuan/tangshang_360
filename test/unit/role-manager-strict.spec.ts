@@ -239,7 +239,10 @@ describe('strict role manager operations', () => {
         },
       };
       const roleManagerService = {
-        mutateCustomRoleMembers: jest.fn().mockResolvedValue(undefined),
+        mutateCustomRoleMembers: jest.fn().mockResolvedValue({
+          success: true,
+          outcomes: [],
+        }),
       };
       const authorizationSyncService = {};
       const controller = new (RoleManagerController as any)(
