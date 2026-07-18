@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import type { NavGroup } from '@/components/navigation';
+import type { SidebarBadges } from '@/components/app-shell/useSidebarBadges';
 import { formatCurrentCycle } from '@/components/app-shell/app-shell-utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,6 +24,7 @@ export interface AppSidebarProps {
   appName?: string | null;
   canManageEmployees: boolean;
   homePath: string;
+  badges: SidebarBadges;
 }
 
 function isActivePath(pathname: string, path: string): boolean {
@@ -35,6 +37,7 @@ export function AppSidebar({
   appName,
   canManageEmployees,
   homePath,
+  badges,
 }: AppSidebarProps) {
   return (
     <Sidebar variant="inset" collapsible="offcanvas" className="[font-size:14px]">
@@ -70,6 +73,23 @@ export function AppSidebar({
                       <Link to={item.path}>
                         <Icon icon={item.icon} className="size-4" />
                         <span>{item.label}</span>
+                        {badges[item.path] && (
+                          <span
+                            className={
+                              `ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold leading-none ${
+                                badges[item.path].tone === 'warning'
+                                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                  : badges[item.path].tone === 'destructive'
+                                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                    : badges[item.path].tone === 'success'
+                                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                      : 'bg-muted text-muted-foreground'
+                              }`
+                            }
+                          >
+                            {badges[item.path].text}
+                          </span>
+                        )}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
