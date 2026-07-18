@@ -3,7 +3,8 @@ import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt, or, sql } from 'drizzle-orm';
+import { randomUUID } from 'node:crypto';
 import { authorizationSyncJob, employee } from '@server/database/schema';
 import {
   effectiveAuthorizationRoles,
@@ -11,11 +12,14 @@ import {
 } from './authorization-state';
 import { RoleManagerService } from './role-manager.service';
 
+export const AUTHORIZATION_JOB_LEASE_MS = 5 * 60 * 1000;
+
 export type AuthorizationSyncStatus =
   | 'synced'
   | 'failed'
   | 'superseded'
-  | 'not_processable';
+  | 'not_processable'
+  | 'stale_owner';
 
 export interface AuthorizationSyncResult {
   status: AuthorizationSyncStatus;
@@ -29,6 +33,18 @@ type EmployeeAuthorizationRow = {
   status: boolean;
   deletedAt: Date | string | null;
 };
+
+type AuthorizationJobRow = {
+  id: string;
+  startedAt: Date | null;
+  claimToken: string | null;
+};
+
+class StaleAuthorizationOwnerError extends Error {
+  constructor() {
+    super('Authorization job owner is stale');
+  }
+}
 
 @Injectable()
 export class AuthorizationSyncService {
@@ -97,18 +113,22 @@ export class AuthorizationSyncService {
       };
     }
 
-    if (targetVersion !== currentVersion) {
-      await this.supersedeJob(employeeId, targetVersion);
-      return { status: 'superseded', version: targetVersion };
+    const claim = await this.claimJob(job.id);
+    if (!claim) {
+      return {
+        status: 'stale_owner',
+        version: targetVersion,
+        error: `Authorization sync job ${job.id} is owned by another live worker`,
+      };
     }
 
-    const claimed = await this.claimJob(job.id);
-    if (!claimed) {
-      return {
-        status: 'not_processable',
-        version: targetVersion,
-        error: `Authorization sync job ${job.id} is not pending or failed`,
-      };
+    if (targetVersion !== currentVersion) {
+      return this.finalizeJobOnly(
+        job.id,
+        claim.claimToken,
+        targetVersion,
+        'superseded',
+      );
     }
 
     try {
@@ -116,57 +136,28 @@ export class AuthorizationSyncService {
         employeeId,
         effectiveAuthorizationRoles(employeeRow),
       );
-
-      const updated = await this.updateEmployeeStatus(
-        employeeId,
-        targetVersion,
-        'synced',
-        null,
-      );
-      if (!updated) {
-        await this.transitionJobStatus(job.id, 'processing', 'superseded');
-        return { status: 'superseded', version: targetVersion };
-      }
-
-      await this.transitionJobStatus(job.id, 'processing', 'succeeded');
-      return { status: 'synced', version: targetVersion };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(
         `Failed to reconcile authorization for ${employeeId} v${targetVersion}: ${message}`,
       );
-
-      const failed = await this.transitionJobStatus(
-        job.id,
-        'processing',
-        'failed',
-        message,
-      );
-      if (!failed) {
-        return {
-          status: 'not_processable',
-          version: targetVersion,
-          error: `Authorization sync job ${job.id} is no longer processing`,
-        };
-      }
-
-      const updated = await this.updateEmployeeStatus(
+      return this.finalizeEmployeeAuthorization(
         employeeId,
         targetVersion,
+        job.id,
+        claim.claimToken,
         'failed',
         message,
       );
-      if (!updated) {
-        await this.transitionJobStatus(job.id, 'failed', 'superseded');
-        return { status: 'superseded', version: targetVersion };
-      }
-
-      return {
-        status: 'failed',
-        version: targetVersion,
-        error: message,
-      };
     }
+
+    return this.finalizeEmployeeAuthorization(
+      employeeId,
+      targetVersion,
+      job.id,
+      claim.claimToken,
+      'synced',
+    );
   }
 
   async retryEmployeeAuthorization(
@@ -191,11 +182,15 @@ export class AuthorizationSyncService {
     return rows[0];
   }
 
-  private async loadJob(employeeId: string, version: number) {
+  private async loadJob(
+    employeeId: string,
+    version: number,
+  ): Promise<AuthorizationJobRow | undefined> {
     const rows = await this.db
       .select({
         id: authorizationSyncJob.id,
-        attemptCount: authorizationSyncJob.attemptCount,
+        startedAt: authorizationSyncJob.startedAt,
+        claimToken: authorizationSyncJob.claimToken,
       })
       .from(authorizationSyncJob)
       .where(
@@ -209,34 +204,115 @@ export class AuthorizationSyncService {
     return rows[0];
   }
 
-  private async claimJob(jobId: string): Promise<boolean> {
+  private async claimJob(
+    jobId: string,
+  ): Promise<{ id: string; claimToken: string } | undefined> {
+    const claimToken = randomUUID();
+    const leaseCutoff = new Date(Date.now() - AUTHORIZATION_JOB_LEASE_MS);
     const rows = await this.db
       .update(authorizationSyncJob)
       .set({
         status: 'processing',
         attemptCount: sql`${authorizationSyncJob.attemptCount} + 1`,
         startedAt: new Date(),
+        claimToken,
         completedAt: null,
         errorMessage: null,
       })
       .where(
         and(
           eq(authorizationSyncJob.id, jobId),
-          inArray(authorizationSyncJob.status, ['pending', 'failed']),
+          or(
+            inArray(authorizationSyncJob.status, ['pending', 'failed']),
+            and(
+              eq(authorizationSyncJob.status, 'processing'),
+              lt(authorizationSyncJob.startedAt, leaseCutoff),
+            ),
+          ),
         ),
       )
-      .returning({ id: authorizationSyncJob.id });
+      .returning({
+        id: authorizationSyncJob.id,
+        claimToken: authorizationSyncJob.claimToken,
+      });
 
-    return rows.length > 0;
+    const row = rows[0];
+    return row?.claimToken
+      ? { id: row.id, claimToken: row.claimToken }
+      : undefined;
+  }
+
+  private async finalizeEmployeeAuthorization(
+    employeeId: string,
+    version: number,
+    jobId: string,
+    claimToken: string,
+    status: 'synced' | 'failed',
+    errorMessage: string | null = null,
+  ): Promise<AuthorizationSyncResult> {
+    try {
+      const finalized = await this.db.transaction(async (tx) => {
+        const terminal = await this.transitionJobStatus(
+          tx,
+          jobId,
+          claimToken,
+          status,
+          errorMessage,
+        );
+        if (!terminal) return false;
+
+        const updated = await this.updateEmployeeStatus(
+          tx,
+          employeeId,
+          version,
+          status,
+          errorMessage,
+        );
+        if (!updated) {
+          throw new StaleAuthorizationOwnerError();
+        }
+        return true;
+      });
+
+      if (!finalized) {
+        return this.staleOwnerResult(version, jobId);
+      }
+    } catch (error) {
+      if (error instanceof StaleAuthorizationOwnerError) {
+        return this.staleOwnerResult(version, jobId);
+      }
+      throw error;
+    }
+
+    return {
+      status,
+      version,
+      ...(errorMessage ? { error: errorMessage } : {}),
+    };
+  }
+
+  private async finalizeJobOnly(
+    jobId: string,
+    claimToken: string,
+    version: number,
+    status: 'superseded',
+  ): Promise<AuthorizationSyncResult> {
+    const finalized = await this.db.transaction(async (tx) =>
+      this.transitionJobStatus(tx, jobId, claimToken, status, null),
+    );
+    return finalized
+      ? { status, version }
+      : this.staleOwnerResult(version, jobId);
   }
 
   private async updateEmployeeStatus(
+    tx: PostgresJsDatabase,
     employeeId: string,
     version: number,
     status: 'synced' | 'failed',
-    errorMessage: string | null = null,
+    errorMessage: string | null,
   ): Promise<boolean> {
-    const rows = await this.db
+    const rows = await tx
       .update(employee)
       .set({
         authorizationStatus: status,
@@ -256,22 +332,24 @@ export class AuthorizationSyncService {
   }
 
   private async transitionJobStatus(
+    tx: PostgresJsDatabase,
     jobId: string,
-    fromStatus: 'processing' | 'failed',
-    status: 'succeeded' | 'failed' | 'superseded',
-    errorMessage: string | null = null,
+    claimToken: string,
+    status: 'synced' | 'failed' | 'superseded',
+    errorMessage: string | null,
   ): Promise<boolean> {
-    const rows = await this.db
+    const rows = await tx
       .update(authorizationSyncJob)
       .set({
-        status,
+        status: status === 'synced' ? 'succeeded' : status,
         errorMessage,
         completedAt: new Date(),
       })
       .where(
         and(
           eq(authorizationSyncJob.id, jobId),
-          eq(authorizationSyncJob.status, fromStatus),
+          eq(authorizationSyncJob.status, 'processing'),
+          eq(authorizationSyncJob.claimToken, claimToken),
         ),
       )
       .returning({ id: authorizationSyncJob.id });
@@ -279,26 +357,14 @@ export class AuthorizationSyncService {
     return rows.length > 0;
   }
 
-  private async supersedeJob(
-    employeeId: string,
+  private staleOwnerResult(
     version: number,
-  ): Promise<boolean> {
-    const rows = await this.db
-      .update(authorizationSyncJob)
-      .set({
-        status: 'superseded',
-        errorMessage: null,
-        completedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(authorizationSyncJob.employeeId, employeeId),
-          eq(authorizationSyncJob.authorizationVersion, version),
-          inArray(authorizationSyncJob.status, ['pending', 'failed']),
-        ),
-      )
-      .returning({ id: authorizationSyncJob.id });
-
-    return rows.length > 0;
+    jobId: string,
+  ): AuthorizationSyncResult {
+    return {
+      status: 'stale_owner',
+      version,
+      error: `Authorization sync job ${jobId} is no longer owned by this worker`,
+    };
   }
 }

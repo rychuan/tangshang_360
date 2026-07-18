@@ -538,6 +538,7 @@ export const authorizationSyncJob = pgTable("authorization_sync_job", {
   attemptCount: integer("attempt_count").notNull().default(0),
   errorMessage: text("error_message"),
   startedAt: customTimestamptz("started_at", { precision: 6 }),
+  claimToken: uuid("claim_token"),
   completedAt: customTimestamptz("completed_at", { precision: 6 }),
   // System field: Creation time (auto-filled, do not modify)
   createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),

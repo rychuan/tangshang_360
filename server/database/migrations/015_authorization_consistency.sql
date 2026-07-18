@@ -38,14 +38,12 @@ CREATE TABLE IF NOT EXISTS authorization_sync_job (
   attempt_count INTEGER NOT NULL DEFAULT 0,
   error_message TEXT,
   started_at TIMESTAMPTZ(6),
+  claim_token UUID,
   completed_at TIMESTAMPTZ(6),
   _created_at TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   _updated_at TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT authorization_sync_job_status_check
     CHECK (status IN ('pending', 'processing', 'succeeded', 'failed', 'superseded'))
 );
-
-CREATE UNIQUE INDEX IF NOT EXISTS authorization_sync_job_employee_version_unique
-  ON authorization_sync_job (employee_id, authorization_version);
 
 COMMIT;

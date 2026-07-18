@@ -94,11 +94,19 @@ describe('authorization state helpers', () => {
     expect(migration).toContain(
       "CHECK (status IN ('pending', 'processing', 'succeeded', 'failed', 'superseded'))",
     );
-    expect(migration).toContain(
+    expect(migration).toContain('claim_token UUID');
+    expect(migration).not.toContain(
       'CREATE UNIQUE INDEX IF NOT EXISTS authorization_sync_job_employee_version_unique',
     );
-    expect(migration).toContain(
-      'ON authorization_sync_job (employee_id, authorization_version)',
+
+    const migration016 = readFileSync(
+      'server/database/migrations/016_authorization_job_unique_index.sql',
+      'utf8',
     );
+    expect(migration016).toContain('ADD COLUMN IF NOT EXISTS claim_token UUID');
+    expect(migration016).toContain(
+      'CREATE UNIQUE INDEX authorization_sync_job_employee_version_unique',
+    );
+    expect(migration016).toContain('duplicate employee/version rows');
   });
 });

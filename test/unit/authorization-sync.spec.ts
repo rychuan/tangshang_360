@@ -3,6 +3,7 @@ import 'reflect-metadata';
 import { authorizationSyncJob, employee } from '../../server/database/schema';
 import { RoleManagerService } from '../../server/modules/role-manager/role-manager.service';
 import {
+  AUTHORIZATION_JOB_LEASE_MS,
   AuthorizationSyncService,
   type AuthorizationSyncResult,
 } from '../../server/modules/role-manager/authorization-sync.service';
@@ -23,6 +24,8 @@ type JobRow = {
   status: 'pending' | 'processing' | 'succeeded' | 'failed' | 'superseded';
   attemptCount: number;
   errorMessage: string | null;
+  startedAt: Date | null;
+  claimToken: string | null;
 };
 
 type Table = typeof employee | typeof authorizationSyncJob;
@@ -51,31 +54,76 @@ function isParam(value: unknown): value is { value: unknown } {
   );
 }
 
-function collectPredicates(condition: unknown, output: Predicate[] = []) {
+function isSql(value: unknown): value is { queryChunks: unknown[] } {
+  return Boolean(
+    value &&
+    typeof value === 'object' &&
+    'queryChunks' in value &&
+    Array.isArray((value as { queryChunks?: unknown[] }).queryChunks),
+  );
+}
+
+function evaluateCondition(
+  table: Table,
+  row: Record<string, unknown>,
+  condition: unknown,
+): boolean {
   const chunks = (condition as { queryChunks?: unknown[] } | undefined)
     ?.queryChunks;
-  if (!Array.isArray(chunks)) return output;
+  if (!Array.isArray(chunks)) return true;
+
+  const nested = chunks.filter(isSql);
+  const logicalOperator = chunks
+    .filter((chunk): chunk is { value: string[] } =>
+      Boolean(
+        chunk &&
+        typeof chunk === 'object' &&
+        'value' in chunk &&
+        Array.isArray((chunk as { value?: unknown }).value),
+      ),
+    )
+    .flatMap((chunk) => chunk.value)
+    .find((value) => value.includes(' and ') || value.includes(' or '));
+
+  if (logicalOperator && nested.length > 0) {
+    if (logicalOperator.includes(' or ')) {
+      return nested.some((child) => evaluateCondition(table, row, child));
+    }
+    return nested.every((child) => evaluateCondition(table, row, child));
+  }
+
+  if (nested.length === 1) {
+    return evaluateCondition(table, row, nested[0]);
+  }
 
   for (let index = 0; index < chunks.length; index += 1) {
     const chunk = chunks[index];
-    if (isColumn(chunk)) {
-      const operator = (chunks[index + 1] as { value?: string[] } | undefined)
-        ?.value?.[0];
-      const right = chunks[index + 2];
-      if (operator === ' = ' && isParam(right)) {
-        output.push({ column: chunk, values: [right.value] });
-      } else if (operator === ' in ' && Array.isArray(right)) {
-        output.push({
-          column: chunk,
-          values: right.filter(isParam).map((param) => param.value),
-        });
-      }
-    } else if (chunk && typeof chunk === 'object' && 'queryChunks' in chunk) {
-      collectPredicates(chunk, output);
+    if (!isColumn(chunk)) continue;
+    const operator = (chunks[index + 1] as { value?: string[] } | undefined)
+      ?.value?.[0];
+    const right = chunks[index + 2];
+    const actual = row[propertyName(chunk.name)];
+
+    if (operator === ' = ' && isParam(right)) {
+      return chunk.table !== table || actual === right.value;
+    }
+    if (operator === ' < ' && isParam(right)) {
+      return (
+        chunk.table !== table ||
+        (actual instanceof Date &&
+          right.value instanceof Date &&
+          actual.getTime() < right.value.getTime())
+      );
+    }
+    if (operator === ' in ' && Array.isArray(right)) {
+      return (
+        chunk.table !== table ||
+        right.filter(isParam).some((param) => actual === param.value)
+      );
     }
   }
 
-  return output;
+  return true;
 }
 
 function propertyName(columnName: string): string {
@@ -89,11 +137,7 @@ function matches(
   row: Record<string, unknown>,
   condition: unknown,
 ): boolean {
-  return collectPredicates(condition).every((predicate) => {
-    if (predicate.column.table !== table) return true;
-    const actual = row[propertyName(predicate.column.name)];
-    return predicate.values.includes(actual);
-  });
+  return evaluateCondition(table, row, condition);
 }
 
 function project(
@@ -205,9 +249,26 @@ class StatefulDb {
         status: String(values.status) as JobRow['status'],
         attemptCount: Number(values.attemptCount ?? 0),
         errorMessage: (values.errorMessage as string | null) ?? null,
+        startedAt: (values.startedAt as Date | null) ?? null,
+        claimToken: (values.claimToken as string | null) ?? null,
       });
     }),
   }));
+
+  transaction = jest.fn(
+    async <T>(callback: (tx: StatefulDb) => Promise<T>): Promise<T> => {
+      const transactionDb = new StatefulDb(
+        { ...this.employees[0] },
+        this.jobs.map((job) => ({ ...job })),
+      );
+      const result = await callback(transactionDb);
+      this.employees.splice(0, 1, transactionDb.employees[0]);
+      this.jobs.splice(0, this.jobs.length, ...transactionDb.jobs);
+      this.updates.push(...transactionDb.updates);
+      this.claims.push(...transactionDb.claims);
+      return result;
+    },
+  );
 
   private rows(table: Table | undefined): Record<string, unknown>[] {
     return table === authorizationSyncJob ? this.jobs : this.employees;
@@ -317,6 +378,8 @@ function jobRow(overrides: Partial<JobRow> = {}): JobRow {
     status: 'pending',
     attemptCount: 0,
     errorMessage: null,
+    startedAt: null,
+    claimToken: null,
     ...overrides,
   };
 }
@@ -365,6 +428,8 @@ describe('durable authorization reconciliation', () => {
     expect(events.filter((event) => event.startsWith('list:'))).toHaveLength(4);
     expect(db.employees[0].authorizationStatus).toBe('synced');
     expect(db.jobs[0].status).toBe('succeeded');
+    expect(db.jobs[0].claimToken).toMatch(/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i);
+    expect(db.transaction).toHaveBeenCalled();
   });
 
   it('marks matching version failed after a partial SDK failure', async () => {
@@ -422,19 +487,17 @@ describe('durable authorization reconciliation', () => {
   });
 
   it('does not retry a succeeded job or call the SDK', async () => {
-    const db = new StatefulDb(
-      employeeRow({ authorizationStatus: 'synced' }),
-      [jobRow({ status: 'succeeded' })],
-    );
+    const db = new StatefulDb(employeeRow({ authorizationStatus: 'synced' }), [
+      jobRow({ status: 'succeeded' }),
+    ]);
     const reconcile = jest.fn().mockResolvedValue(undefined);
-    const service = createSyncService(
-      db,
-      { reconcileUserRoles: reconcile } as any,
-    );
+    const service = createSyncService(db, {
+      reconcileUserRoles: reconcile,
+    } as any);
 
     const result = await service.retryEmployeeAuthorization('employee-1');
 
-    expect(result.status).toBe('not_processable');
+    expect(result.status).toBe('stale_owner');
     expect(reconcile).not.toHaveBeenCalled();
     expect(db.jobs[0].status).toBe('succeeded');
   });
@@ -452,7 +515,7 @@ describe('durable authorization reconciliation', () => {
     ]);
 
     expect(results.map((result) => result.status).sort()).toEqual([
-      'not_processable',
+      'stale_owner',
       'synced',
     ]);
     expect(reconcile).toHaveBeenCalledTimes(1);
@@ -511,9 +574,9 @@ describe('durable authorization reconciliation', () => {
 
     const result = await processing;
 
-    expect(result.status).toBe('superseded');
+    expect(result.status).toBe('stale_owner');
     expect(db.employees[0].authorizationStatus).toBe('pending');
-    expect(db.jobs[0].status).toBe('superseded');
+    expect(db.jobs[0].status).toBe('processing');
   });
 
   it('does not let a failed worker overwrite a succeeded job', async () => {
@@ -538,6 +601,143 @@ describe('durable authorization reconciliation', () => {
 
     expect(db.jobs[0].status).toBe('succeeded');
     expect(db.employees[0].authorizationStatus).not.toBe('failed');
+  });
+
+  it('does not let a failed worker overwrite a successful retry after exposure', async () => {
+    const db = new StatefulDb(employeeRow(), [jobRow()]);
+    let releaseFirst!: () => void;
+    const firstRoleManager = {
+      reconcileUserRoles: jest.fn(
+        () =>
+          new Promise<void>((_, reject) => {
+            releaseFirst = () => reject(new Error('first worker failed'));
+          }),
+      ),
+    };
+    const secondRoleManager = {
+      reconcileUserRoles: jest.fn().mockResolvedValue(undefined),
+    };
+    const first = createSyncService(db, firstRoleManager as any);
+    const second = createSyncService(db, secondRoleManager as any);
+
+    const firstProcessing = first.processEmployeeAuthorization('employee-1');
+    await new Promise((resolve) => setImmediate(resolve));
+    db.jobs[0].status = 'failed';
+
+    await expect(
+      second.processEmployeeAuthorization('employee-1'),
+    ).resolves.toMatchObject({ status: 'synced' });
+    releaseFirst();
+    const firstResult = await firstProcessing;
+
+    expect(db.jobs[0].status).toBe('succeeded');
+    expect(db.employees[0].authorizationStatus).toBe('synced');
+    expect(firstResult.status).toBe('stale_owner');
+  });
+
+  it('does not finalize with an incorrect claim token', async () => {
+    const db = new StatefulDb(employeeRow(), [jobRow()]);
+    let releaseReconcile!: () => void;
+    const reconcile = jest.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseReconcile = resolve;
+        }),
+    );
+    const service = createSyncService(db, {
+      reconcileUserRoles: reconcile,
+    } as any);
+
+    const processing = service.processEmployeeAuthorization('employee-1');
+    await new Promise((resolve) => setImmediate(resolve));
+    db.jobs[0].claimToken = '00000000-0000-0000-0000-000000000000';
+    releaseReconcile();
+
+    const result = await processing;
+
+    expect(result.status).toBe('stale_owner');
+    expect(db.employees[0].authorizationStatus).toBe('pending');
+    expect(db.jobs[0].status).toBe('processing');
+  });
+
+  it('reclaims an expired processing lease with a fresh claim token', async () => {
+    const oldToken = '11111111-1111-1111-1111-111111111111';
+    const db = new StatefulDb(employeeRow(), [
+      jobRow({
+        status: 'processing',
+        startedAt: new Date(Date.now() - AUTHORIZATION_JOB_LEASE_MS - 1),
+        claimToken: oldToken,
+      }),
+    ]);
+    const reconcile = jest.fn().mockResolvedValue(undefined);
+    const service = createSyncService(db, {
+      reconcileUserRoles: reconcile,
+    } as any);
+
+    const result = await service.retryEmployeeAuthorization('employee-1');
+
+    expect(result.status).toBe('synced');
+    expect(db.jobs[0].claimToken).not.toBe(oldToken);
+    expect(reconcile).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not reclaim an unexpired processing lease', async () => {
+    const token = '22222222-2222-2222-2222-222222222222';
+    const db = new StatefulDb(employeeRow(), [
+      jobRow({
+        status: 'processing',
+        startedAt: new Date(Date.now() - AUTHORIZATION_JOB_LEASE_MS + 1),
+        claimToken: token,
+      }),
+    ]);
+    const reconcile = jest.fn().mockResolvedValue(undefined);
+    const service = createSyncService(db, {
+      reconcileUserRoles: reconcile,
+    } as any);
+
+    const result = await service.retryEmployeeAuthorization('employee-1');
+
+    expect(result.status).toBe('stale_owner');
+    expect(db.jobs[0].claimToken).toBe(token);
+    expect(reconcile).not.toHaveBeenCalled();
+  });
+
+  it('does not finalize failed when the claim token is stale', async () => {
+    const db = new StatefulDb(employeeRow(), [jobRow()]);
+    const reconcile = jest.fn(async () => {
+      db.jobs[0].claimToken = '33333333-3333-3333-3333-333333333333';
+      throw new Error('sdk failed');
+    });
+    const service = createSyncService(db, {
+      reconcileUserRoles: reconcile,
+    } as any);
+
+    const result = await service.processEmployeeAuthorization('employee-1');
+
+    expect(result.status).toBe('stale_owner');
+    expect(db.jobs[0].status).toBe('processing');
+    expect(db.employees[0].authorizationStatus).toBe('pending');
+  });
+
+  it('does not finalize superseded when the claim token is stale', async () => {
+    const db = new StatefulDb(employeeRow({ authorizationVersion: 3 }), [
+      jobRow({ authorizationVersion: 2 }),
+    ]);
+    const service = createSyncService(db, {} as RoleManagerService);
+    jest.spyOn(service as any, 'claimJob').mockImplementation(async () => {
+      db.jobs[0].status = 'processing';
+      db.jobs[0].claimToken = '44444444-4444-4444-4444-444444444444';
+      return {
+        id: db.jobs[0].id,
+        claimToken: '55555555-5555-5555-5555-555555555555',
+      };
+    });
+
+    const result = await service.processEmployeeAuthorization('employee-1', 2);
+
+    expect(result.status).toBe('stale_owner');
+    expect(db.jobs[0].status).toBe('processing');
+    expect(db.employees[0].authorizationStatus).toBe('pending');
   });
 
   it.each([
