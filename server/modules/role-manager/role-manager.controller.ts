@@ -1,4 +1,6 @@
 import {
+  BadRequestException,
+  BadGatewayException,
   Controller,
   Get,
   Post,
@@ -14,6 +16,7 @@ import { CanRole } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { AuthorizationSDK } from '@lark-apaas/fullstack-nestjs-core';
 import { RoleManagerService } from './role-manager.service';
+import { AuthorizationSyncService } from './authorization-sync.service';
 import type { Request } from 'express';
 import type {
   CreateRoleRequest,
@@ -24,14 +27,17 @@ import type {
   UpdateRolePermissionsRequest,
   RolePermissionConfig,
   PermissionItem,
+  RoleMemberMutationResponse,
 } from '@shared/api.interface';
 import { DEFAULT_PERMISSIONS } from '@shared/api.interface';
+import { isBuiltinRole } from '@shared/types/permission.types';
 
 @Controller('api/role_manager')
 export class RoleManagerController {
   constructor(
     private readonly authzSDK: AuthorizationSDK,
     private readonly roleManagerService: RoleManagerService,
+    private readonly authorizationSyncService: AuthorizationSyncService,
   ) {}
 
   @NeedLogin()
@@ -89,8 +95,12 @@ export class RoleManagerController {
   @NeedLogin()
   @Delete('roles/:bizID')
   async deleteRole(@Param('bizID') bizID: string) {
-    await this.roleManagerService.deletePermissionConfig(bizID);
-    return this.authzSDK.roles.delete(bizID);
+    if (isBuiltinRole(bizID)) {
+      throw new BadRequestException('内置角色不可删除');
+    }
+    return this.roleManagerService.deleteCustomRole(bizID, () =>
+      this.authzSDK.roles.delete(bizID),
+    );
   }
 
   @CanRole(['admin', 'hrd'])
@@ -116,8 +126,15 @@ export class RoleManagerController {
   async addMembers(
     @Param('bizID') bizID: string,
     @Body() dto: AddMembersRequest,
-  ) {
-    return this.authzSDK.members.add(bizID, dto);
+  ): Promise<RoleMemberMutationResponse> {
+    const userIds = this.getExplicitUserIds(bizID, dto);
+    const result = await this.roleManagerService.mutateCustomRoleMembers(
+      bizID,
+      userIds,
+      'add',
+      this.authorizationSyncService,
+    );
+    return this.requireSuccessfulMutation(result);
   }
 
   @CanRole(['admin'])
@@ -127,8 +144,15 @@ export class RoleManagerController {
   async removeMembers(
     @Param('bizID') bizID: string,
     @Body() dto: RemoveMembersRequest,
-  ) {
-    return this.authzSDK.members.remove(bizID, dto);
+  ): Promise<RoleMemberMutationResponse> {
+    const userIds = this.getExplicitUserIds(bizID, dto);
+    const result = await this.roleManagerService.mutateCustomRoleMembers(
+      bizID,
+      userIds,
+      'remove',
+      this.authorizationSyncService,
+    );
+    return this.requireSuccessfulMutation(result);
   }
 
   @CanRole(['admin', 'hrd'])
@@ -170,5 +194,92 @@ export class RoleManagerController {
       dto.permissions,
     );
     return { success: true };
+  }
+
+  private getExplicitUserIds(
+    roleBizId: string,
+    dto: AddMembersRequest | RemoveMembersRequest,
+  ): string[] {
+    if (isBuiltinRole(roleBizId)) {
+      throw new BadRequestException('内置角色成员只能通过员工或部门管理修改');
+    }
+
+    const members = dto?.members;
+    if (
+      !members ||
+      typeof members !== 'object' ||
+      Array.isArray(members) ||
+      Object.keys(members).some((key) => key !== 'userList') ||
+      !Array.isArray(members.userList) ||
+      members.userList.length === 0
+    ) {
+      throw new BadRequestException('仅支持显式用户成员列表');
+    }
+
+    const userIds: string[] = [];
+    for (const user of members.userList) {
+      if (
+        !user ||
+        typeof user !== 'object' ||
+        Array.isArray(user) ||
+        Object.getPrototypeOf(user) !== Object.prototype ||
+        typeof user.userID !== 'string' ||
+        user.userID.trim().length === 0
+      ) {
+        throw new BadRequestException('用户成员标识无效');
+      }
+      userIds.push(user.userID.trim());
+    }
+    return Array.from(new Set(userIds));
+  }
+
+  private requireSuccessfulMutation(
+    result: RoleMemberMutationResponse,
+  ): RoleMemberMutationResponse {
+    if (!result.success) {
+      throw new BadGatewayException({
+        message: '部分成员授权同步失败',
+        ...result,
+      });
+    }
+    return result;
+  }
+
+  @NeedLogin()
+  @CanRole('admin')
+  @RequirePermission('permission_management', 'edit')
+  @Post('authorization/:employeeId/retry')
+  async retryAuthorization(
+    @Param('employeeId') employeeId: string,
+    @Req() req: Request,
+  ) {
+    // Reject any supplied role arrays; only use DB durable authorizationRoles
+    const body = (req as { body?: unknown }).body;
+    if (body && typeof body === 'object' && 'roles' in (body as object)) {
+      throw new BadRequestException(
+        '重试授权不允许提供角色列表，将使用数据库中的期望角色',
+      );
+    }
+
+    try {
+      const result =
+        await this.authorizationSyncService.retryEmployeeAuthorization(
+          employeeId,
+        );
+      if (result.status === 'synced') {
+        return { data: { status: result.status } };
+      }
+      return {
+        data: {
+          status: result.status,
+          error: result.error || `授权同步状态: ${result.status}`,
+        },
+      };
+    } catch (error) {
+      throw new BadGatewayException({
+        message: '授权重试失败',
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 }

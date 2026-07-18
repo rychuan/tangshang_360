@@ -9,7 +9,7 @@ import {
   Body,
   Req,
 } from '@nestjs/common';
-import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
+import { NeedLogin } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { AssessmentPublishService } from './assessment-publish.service';
 import type { Request } from 'express';
@@ -19,6 +19,7 @@ import type {
   UnlockRequest,
   BatchUnlockRequest,
   BatchReturnRequest,
+  PublishExportRequest,
   UnfinishedReminderRequest,
   EmployeeSnapshotResponse,
 } from '@shared/api.interface';
@@ -27,7 +28,6 @@ import type {
 export class AssessmentPublishController {
   constructor(private readonly service: AssessmentPublishService) {}
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('publish_management', 'view')
   @Get('publish/employees')
   async listEmployees(
@@ -46,7 +46,17 @@ export class AssessmentPublishController {
     );
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
+  @RequirePermission('publish_management', 'export')
+  @NeedLogin()
+  @Post('assessment-instances/export')
+  async exportInstances(
+    @Req() req: Request,
+    @Body() body: PublishExportRequest,
+  ) {
+    const { userId } = req.userContext;
+    return this.service.exportInstances(body.instanceIds, userId);
+  }
+
   @RequirePermission('publish_management', 'view')
   @Get('assessment-instances')
   async listInstances(
@@ -71,7 +81,6 @@ export class AssessmentPublishController {
     );
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('publish_management', 'view')
   @Get('publish/statistics')
   async getStatistics(@Req() req: Request, @Query('periods') periods: string) {
@@ -80,7 +89,6 @@ export class AssessmentPublishController {
     return this.service.getPeriodStatistics(periodList, userId);
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('publish_management', 'edit')
   @NeedLogin()
   @Patch('assessment-instances/batch-unlock')
@@ -89,7 +97,6 @@ export class AssessmentPublishController {
     return this.service.batchUnlock(body.instanceIds, body.reason, userId);
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('publish_management', 'edit')
   @NeedLogin()
   @Get('assessment-instances/reminder-preview')
@@ -111,7 +118,6 @@ export class AssessmentPublishController {
     );
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('publish_management', 'edit')
   @NeedLogin()
   @Post('assessment-instances/remind-unfinished')
@@ -123,7 +129,6 @@ export class AssessmentPublishController {
     return this.service.remindUnfinishedAssessments(body, userId);
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('publish_management', 'edit')
   @NeedLogin()
   @Post('assessment-instances/batch-return')
@@ -132,7 +137,6 @@ export class AssessmentPublishController {
     return this.service.batchReturn(body.instanceIds, userId);
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('publish_management', 'publish')
   @NeedLogin()
   @Post('publish')
@@ -141,7 +145,6 @@ export class AssessmentPublishController {
     return this.service.publish(body, userId);
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('publish_management', 'edit')
   @NeedLogin()
   @Patch('assessment-instances/:id/unlock')
@@ -154,17 +157,17 @@ export class AssessmentPublishController {
     return this.service.unlock(id, body, userId);
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('publish_management', 'view')
   @NeedLogin()
   @Get('publish/employees/:employeeId/indicators')
   async getEmployeeSnapshot(
+    @Req() req: Request,
     @Param('employeeId') employeeId: string,
   ): Promise<EmployeeSnapshotResponse> {
-    return this.service.getEmployeeSnapshot(employeeId);
+    const { userId } = req.userContext;
+    return this.service.getEmployeeSnapshot(employeeId, userId);
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('publish_management', 'edit')
   @NeedLogin()
   @Patch('publish/employees/:employeeId/indicators')
@@ -177,25 +180,28 @@ export class AssessmentPublishController {
     return this.service.adjustEmployeeSnapshot(employeeId, body, userId);
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('publish_management', 'edit')
   @NeedLogin()
   @Delete('publish/employees/:employeeId/indicators')
-  async deleteEmployeeSnapshot(@Param('employeeId') employeeId: string) {
-    return this.service.deleteEmployeeSnapshot(employeeId);
+  async deleteEmployeeSnapshot(
+    @Req() req: Request,
+    @Param('employeeId') employeeId: string,
+  ) {
+    const { userId } = req.userContext;
+    return this.service.deleteEmployeeSnapshot(employeeId, userId);
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('publish_management', 'view')
   @Get('assessment-instances/:id/unlock-history')
-  async getUnlockHistory(@Param('id') id: string) {
-    return this.service.getUnlockHistory(id);
+  async getUnlockHistory(@Req() req: Request, @Param('id') id: string) {
+    const { userId } = req.userContext;
+    return this.service.getUnlockHistory(id, userId);
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('publish_management', 'view')
   @Get('assessment-instances/:id/indicators')
-  async getInstanceIndicators(@Param('id') id: string) {
-    return this.service.getInstanceIndicators(id);
+  async getInstanceIndicators(@Req() req: Request, @Param('id') id: string) {
+    const { userId } = req.userContext;
+    return this.service.getInstanceIndicators(id, userId);
   }
 }

@@ -1,20 +1,20 @@
 import { Controller, Get, Req } from '@nestjs/common';
-import { CanRole } from '@lark-apaas/fullstack-nestjs-core';
 import type { Request } from 'express';
+import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { AssessmentDashboardService } from './assessment-dashboard.service';
 
 @Controller('api/dashboard')
 export class AssessmentDashboardController {
   constructor(private readonly service: AssessmentDashboardService) {}
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
+  @RequirePermission('dashboard', 'view')
   @Get('todos')
   async todos(@Req() req: Request) {
     const { userId } = req.userContext as { userId: string };
     return this.service.todos(userId);
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
+  @RequirePermission('dashboard', 'view')
   @Get('overview')
   async overview(@Req() req: Request) {
     const { userId } = req.userContext as { userId: string };

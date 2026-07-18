@@ -1,18 +1,20 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type {
+  CurrentUserAuthorizationContext,
   PermissionItem,
   PermissionResource,
   PermissionAction,
 } from '@shared/api.interface';
-import { roleManager } from '@/api';
+import { employeeManagement } from '@/api';
 
-interface PermissionsContextValue {
-  permissions: PermissionItem[];
+interface PermissionsContextValue extends CurrentUserAuthorizationContext {
   loading: boolean;
 }
 
 const PermissionsContext = createContext<PermissionsContextValue>({
   permissions: [],
+  accessScopeKind: 'self',
+  canManageGlobalConnections: false,
   loading: true,
 });
 
@@ -21,19 +23,30 @@ export function PermissionsProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [permissions, setPermissions] = useState<PermissionItem[]>([]);
+  const [authorization, setAuthorization] =
+    useState<CurrentUserAuthorizationContext>({
+      permissions: [],
+      accessScopeKind: 'self',
+      canManageGlobalConnections: false,
+    });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    roleManager
+    employeeManagement
       .getMyPermissions()
-      .then(setPermissions)
-      .catch(() => setPermissions([]))
+      .then(setAuthorization)
+      .catch(() =>
+        setAuthorization({
+          permissions: [],
+          accessScopeKind: 'self',
+          canManageGlobalConnections: false,
+        }),
+      )
       .finally(() => setLoading(false));
   }, []);
 
   return (
-    <PermissionsContext.Provider value={{ permissions, loading }}>
+    <PermissionsContext.Provider value={{ ...authorization, loading }}>
       {children}
     </PermissionsContext.Provider>
   );

@@ -40,6 +40,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { CanDo, usePermission } from '@/hooks/usePermissions';
+import { COMMAND_PERMISSIONS } from '@/components/permission-policy';
 
 /** 字典类型注册表 — 新增类型在此注册即自动出现在 Tab 中 */
 const DICT_TYPES: { type: string; label: string; desc: string }[] = [
@@ -54,6 +56,10 @@ const DICT_TYPES: { type: string; label: string; desc: string }[] = [
 const DictPanel: React.FC<{ dictType: string }> = ({ dictType }) => {
   const api = useMemo(() => dictApi(dictType), [dictType]);
   const queryClient = useQueryClient();
+  const canEdit = usePermission(
+    COMMAND_PERMISSIONS.dictionaryEdit.resource,
+    COMMAND_PERMISSIONS.dictionaryEdit.action,
+  );
 
   const { data, isLoading: loading } = useQuery({
     queryKey: ['dictionary', dictType],
@@ -134,10 +140,12 @@ const DictPanel: React.FC<{ dictType: string }> = ({ dictType }) => {
           <CardTitle className="text-base flex items-center gap-2">
             <Database className="size-4" />共 {items.length} 个条目
           </CardTitle>
-          <Button size="sm" onClick={openCreate}>
-            <Plus data-icon="inline-start" />
-            新建
-          </Button>
+          <CanDo {...COMMAND_PERMISSIONS.dictionaryEdit}>
+            <Button size="sm" onClick={openCreate}>
+              <Plus data-icon="inline-start" />
+              新建
+            </Button>
+          </CanDo>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
@@ -165,9 +173,11 @@ const DictPanel: React.FC<{ dictType: string }> = ({ dictType }) => {
                   <TableHead className="h-10 px-4 text-left text-xs font-medium text-muted-foreground hidden sm:table-cell">
                     状态
                   </TableHead>
-                  <TableHead className="h-10 px-4 sticky right-0 bg-background z-20 border-l text-xs font-medium text-muted-foreground">
-                    操作
-                  </TableHead>
+                  {canEdit && (
+                    <TableHead className="h-10 px-4 sticky right-0 bg-background z-20 border-l text-xs font-medium text-muted-foreground">
+                      操作
+                    </TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -193,25 +203,27 @@ const DictPanel: React.FC<{ dictType: string }> = ({ dictType }) => {
                         {item.isActive ? '启用' : '停用'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="px-4 py-3 sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
-                      <div className="flex items-center gap-1">
-                        <ActionBadge
-                          actionType="edit"
-                          icon={<Pencil className="size-3" />}
-                          label=""
-                          onClick={() => openEdit(item)}
-                        />
-                        <ActionBadge
-                          actionType="delete"
-                          icon={<Trash2 className="size-3" />}
-                          label=""
-                          onClick={() => {
-                            setDeleteTarget(item);
-                            setDeleteOpen(true);
-                          }}
-                        />
-                      </div>
-                    </TableCell>
+                    {canEdit && (
+                      <TableCell className="px-4 py-3 sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
+                        <div className="flex items-center gap-1">
+                          <ActionBadge
+                            actionType="edit"
+                            icon={<Pencil className="size-3" />}
+                            label=""
+                            onClick={() => openEdit(item)}
+                          />
+                          <ActionBadge
+                            actionType="delete"
+                            icon={<Trash2 className="size-3" />}
+                            label=""
+                            onClick={() => {
+                              setDeleteTarget(item);
+                              setDeleteOpen(true);
+                            }}
+                          />
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -276,10 +288,12 @@ const DictPanel: React.FC<{ dictType: string }> = ({ dictType }) => {
             >
               取消
             </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving && <Spinner className="mr-2 size-4" />}
-              {editingItem ? '保存' : '创建'}
-            </Button>
+            <CanDo {...COMMAND_PERMISSIONS.dictionaryEdit}>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving && <Spinner className="mr-2 size-4" />}
+                {editingItem ? '保存' : '创建'}
+              </Button>
+            </CanDo>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -294,13 +308,15 @@ const DictPanel: React.FC<{ dictType: string }> = ({ dictType }) => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              确认删除
-            </AlertDialogAction>
+            <CanDo {...COMMAND_PERMISSIONS.dictionaryEdit}>
+              <AlertDialogAction
+                onClick={handleDelete}
+                disabled={deleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                确认删除
+              </AlertDialogAction>
+            </CanDo>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

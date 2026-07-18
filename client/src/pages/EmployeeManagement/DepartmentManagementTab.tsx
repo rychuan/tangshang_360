@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth, ROLE_SUBJECT } from '@lark-apaas/client-toolkit/auth';
 import { department as departmentApi } from '@/api';
 import { handleApiError } from '@client/src/utils/api-error';
 import type {
@@ -55,6 +56,14 @@ import {
 } from 'lucide-react';
 import { showConfirm } from '@lark-apaas/client-toolkit';
 import DepartmentMembersDialog from './DepartmentMembersDialog';
+import { CanDo, usePermission, usePermissions } from '@/hooks/usePermissions';
+import { COMMAND_PERMISSIONS } from '@/components/permission-policy';
+import { BUILTIN_ROLE_CODES } from '@shared/api.interface';
+import {
+  canManageDepartmentHead,
+  canCreateDepartment,
+  getDepartmentCommandCapabilities,
+} from './employee-management-permissions';
 
 interface DeptFormData {
   name: string;
@@ -89,6 +98,19 @@ function renderTreeOptions(
 
 const DepartmentManagementTab: React.FC = () => {
   const queryClient = useQueryClient();
+  const { permissions } = usePermissions();
+  const { ability } = useAuth();
+  const identityRoles = useMemo(
+    () =>
+      ability
+        ? BUILTIN_ROLE_CODES.filter((role) => ability.can(role, ROLE_SUBJECT))
+        : [],
+    [ability],
+  );
+  const { canEdit, canDelete } = getDepartmentCommandCapabilities(permissions);
+  const canCreate = canCreateDepartment(permissions, identityRoles);
+  const canManageHead = canManageDepartmentHead(permissions, identityRoles);
+  const canViewEmployees = usePermission('employees', 'view');
 
   const { data: deptData, isLoading: loading } = useQuery({
     queryKey: ['departments'],
@@ -213,51 +235,63 @@ const DepartmentManagementTab: React.FC = () => {
             {node.headName || '-'}
           </TableCell>
           <TableCell>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-primary p-0 h-auto"
-              onClick={() => {
-                setMembersDeptName(node.name);
-                setMembersDialogOpen(true);
-              }}
-            >
-              <Users className="size-3.5" />
-              {node.memberCount}
-            </Button>
+            {canViewEmployees ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-primary p-0 h-auto"
+                onClick={() => {
+                  setMembersDeptName(node.name);
+                  setMembersDialogOpen(true);
+                }}
+              >
+                <Users className="size-3.5" />
+                {node.memberCount}
+              </Button>
+            ) : (
+              <span className="text-muted-foreground">{node.memberCount}</span>
+            )}
           </TableCell>
           <TableCell>{node.sortOrder}</TableCell>
-          <TableCell className="sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
-            <div className="flex items-center gap-1.5">
-              <ActionBadge
-                actionType="edit"
-                icon={<Pencil className="size-3" />}
-                label=""
-                onClick={() => handleEdit(node)}
-              />
-              <ActionBadge
-                actionType="bind"
-                icon={<Plus className="size-3" />}
-                label=""
-                onClick={() => {
-                  setEditingDept(null);
-                  setFormData({
-                    name: '',
-                    parentId: node.id,
-                    headId: '',
-                    sortOrder: 0,
-                  });
-                  setDialogOpen(true);
-                }}
-              />
-              <ActionBadge
-                actionType="delete"
-                icon={<Trash2 className="size-3" />}
-                label=""
-                onClick={() => handleDelete(node)}
-              />
-            </div>
-          </TableCell>
+          {(canEdit || canDelete) && (
+            <TableCell className="sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
+              <div className="flex items-center gap-1.5">
+                <CanDo {...COMMAND_PERMISSIONS.departmentEdit}>
+                  <ActionBadge
+                    actionType="edit"
+                    icon={<Pencil className="size-3" />}
+                    label=""
+                    onClick={() => handleEdit(node)}
+                  />
+                </CanDo>
+                {canCreate && (
+                  <ActionBadge
+                    actionType="bind"
+                    icon={<Plus className="size-3" />}
+                    label=""
+                    onClick={() => {
+                      setEditingDept(null);
+                      setFormData({
+                        name: '',
+                        parentId: node.id,
+                        headId: '',
+                        sortOrder: 0,
+                      });
+                      setDialogOpen(true);
+                    }}
+                  />
+                )}
+                <CanDo {...COMMAND_PERMISSIONS.departmentDelete}>
+                  <ActionBadge
+                    actionType="delete"
+                    icon={<Trash2 className="size-3" />}
+                    label=""
+                    onClick={() => handleDelete(node)}
+                  />
+                </CanDo>
+              </div>
+            </TableCell>
+          )}
         </TableRow>
         {isOpen &&
           hasChildren &&
@@ -277,22 +311,24 @@ const DepartmentManagementTab: React.FC = () => {
             if (!v) setEditingDept(null);
           }}
         >
-          <DialogTrigger asChild>
-            <Button
-              onClick={() => {
-                setEditingDept(null);
-                setFormData({
-                  name: '',
-                  parentId: '',
-                  headId: '',
-                  sortOrder: 0,
-                });
-              }}
-            >
-              <Plus data-icon="inline-start" />
-              新建部门
-            </Button>
-          </DialogTrigger>
+          {canCreate && (
+            <DialogTrigger asChild>
+              <Button
+                onClick={() => {
+                  setEditingDept(null);
+                  setFormData({
+                    name: '',
+                    parentId: '',
+                    headId: '',
+                    sortOrder: 0,
+                  });
+                }}
+              >
+                <Plus data-icon="inline-start" />
+                新建部门
+              </Button>
+            </DialogTrigger>
+          )}
           <DialogContent className="w-[95vw] sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>{editingDept ? '编辑部门' : '新建部门'}</DialogTitle>
@@ -327,16 +363,18 @@ const DepartmentManagementTab: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>部门负责人</Label>
-                <UserSelect
-                  value={formData.headId || null}
-                  onChange={(v: string | null) =>
-                    setFormData({ ...formData, headId: v || '' })
-                  }
-                  placeholder="请选择负责人"
-                />
-              </div>
+              {canManageHead && (
+                <div>
+                  <Label>部门负责人</Label>
+                  <UserSelect
+                    value={formData.headId || null}
+                    onChange={(v: string | null) =>
+                      setFormData({ ...formData, headId: v || '' })
+                    }
+                    placeholder="请选择负责人"
+                  />
+                </div>
+              )}
               <div>
                 <Label>排序</Label>
                 <Input
@@ -355,9 +393,11 @@ const DepartmentManagementTab: React.FC = () => {
               <Button variant="outline" onClick={() => setDialogOpen(false)}>
                 取消
               </Button>
-              <Button onClick={handleSave}>
-                {editingDept ? '保存' : '创建'}
-              </Button>
+              <CanDo {...COMMAND_PERMISSIONS.departmentEdit}>
+                <Button onClick={handleSave}>
+                  {editingDept ? '保存' : '创建'}
+                </Button>
+              </CanDo>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -396,9 +436,11 @@ const DepartmentManagementTab: React.FC = () => {
                     <TableHead>负责人</TableHead>
                     <TableHead>成员</TableHead>
                     <TableHead>排序</TableHead>
-                    <TableHead className="w-[100px] sticky right-0 bg-background z-20 border-l">
-                      操作
-                    </TableHead>
+                    {(canEdit || canDelete) && (
+                      <TableHead className="w-[100px] sticky right-0 bg-background z-20 border-l">
+                        操作
+                      </TableHead>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>

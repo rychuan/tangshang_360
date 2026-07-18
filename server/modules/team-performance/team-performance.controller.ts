@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Query, Body, Req } from '@nestjs/common';
 import type { Request } from 'express';
-import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
+import { NeedLogin } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { TeamPerformanceService } from './team-performance.service';
 import { parsePeriodsQuery } from './periods-query';
@@ -12,7 +12,6 @@ export class TeamPerformanceController {
     private readonly teamPerformanceService: TeamPerformanceService,
   ) {}
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('team_performance', 'view')
   @Get('overview')
   async getOverview(
@@ -26,7 +25,6 @@ export class TeamPerformanceController {
     );
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('team_performance', 'view')
   @Get('subordinates')
   async getSubordinates(
@@ -46,7 +44,6 @@ export class TeamPerformanceController {
     );
   }
 
-  @CanRole(['admin', 'dept_head', 'supervisor'])
   @RequirePermission('team_performance', 'edit')
   @NeedLogin()
   @Post('remind')

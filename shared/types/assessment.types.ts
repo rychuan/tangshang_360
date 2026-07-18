@@ -64,6 +64,13 @@ export interface CreateBindingRequest {
   effectiveFrom: string;
 }
 
+export interface BindingTemplateOption {
+  id: string;
+  name: string;
+  position: string;
+  type: 'monthly' | 'probation';
+}
+
 export interface BindingHistoryItem {
   templateName: string;
   effectiveFrom: string;
@@ -291,6 +298,10 @@ export interface BatchReturnRequest {
   instanceIds: string[];
 }
 
+export interface PublishExportRequest {
+  instanceIds: string[];
+}
+
 export interface BatchOperationResponse {
   success: boolean;
   successCount: number;
@@ -461,7 +472,6 @@ export interface TeamUpdateEmployeeRequest {
   position?: string;
   department?: string;
   supervisorId?: string;
-  status?: boolean;
   employeeNo?: string;
   title?: string;
   role?: string;

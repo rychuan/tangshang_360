@@ -1,9 +1,15 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  Logger,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { eq, and, isNull, like } from 'drizzle-orm';
+import { eq, and, count, isNull, like, type SQL } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 import {
   employeeBinding,
@@ -12,6 +18,35 @@ import {
   auditLog,
 } from '@server/database/schema';
 import { EmployeeBindingService } from '../employee-management/employee-binding.service';
+import { RoleManagerService } from '../role-manager/role-manager.service';
+import { AuthorizationSyncService } from '../role-manager/authorization-sync.service';
+import { AccessScopeService } from '@server/common/access/access-scope.service';
+import { LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY } from '../employee-management/admin-safety';
+import type { TeamUpdateEmployeeRequest } from '@shared/api.interface';
+
+function getDurableRoles(row: { authorizationRoles?: unknown }): string[] {
+  if (!Array.isArray(row.authorizationRoles)) {
+    throw new BadRequestException('员工授权角色数据缺失，拒绝恢复 legacy 角色');
+  }
+  return row.authorizationRoles.filter(
+    (role): role is string => typeof role === 'string',
+  );
+}
+
+function isEffectiveAdmin(row: {
+  status?: boolean;
+  deletedAt?: Date | string | null;
+  authorizationStatus?: string;
+  authorizationRoles?: unknown;
+}): boolean {
+  return (
+    row.status === true &&
+    row.deletedAt == null &&
+    row.authorizationStatus === 'synced' &&
+    Array.isArray(row.authorizationRoles) &&
+    row.authorizationRoles.includes('admin')
+  );
+}
 
 @Injectable()
 export class TeamStructureService {
@@ -20,24 +55,41 @@ export class TeamStructureService {
   constructor(
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
     private readonly bindingService: EmployeeBindingService,
+    private readonly roleManagerService: RoleManagerService,
+    private readonly accessScopeService: AccessScopeService,
+    private readonly authorizationSyncService: AuthorizationSyncService,
   ) {}
 
   /**
    * 团队结构列表 — Drizzle ORM 版本，替代原原始 SQL 实现。
    */
-  async list(query: {
-    employeeName?: string;
-    department?: string;
-    position?: string;
-    templateId?: string;
-    page?: string;
-    pageSize?: string;
-  }) {
+  async list(
+    query: {
+      employeeName?: string;
+      department?: string;
+      position?: string;
+      templateId?: string;
+      page?: string;
+      pageSize?: string;
+    },
+    userId: string,
+  ) {
+    await this.assertBindingView(userId);
     const pageNum = parseInt(query.page || '1', 10);
     const pageSizeNum = parseInt(query.pageSize || '10', 10);
     const offset = (pageNum - 1) * pageSizeNum;
 
-    const conditions = [eq(employee.status, true), isNull(employee.deletedAt)];
+    const conditions: SQL[] = [
+      eq(employee.status, true),
+      isNull(employee.deletedAt),
+    ];
+    const scopeCondition =
+      await this.accessScopeService.buildEmployeeScopeCondition(userId, {
+        includeSelf: true,
+      });
+    if (scopeCondition) {
+      conditions.push(scopeCondition);
+    }
 
     if (query.employeeName) {
       conditions.push(like(employee.name, `%${query.employeeName}%`));
@@ -136,46 +188,121 @@ export class TeamStructureService {
     if (employeeIds.length === 0) {
       return { success: true, deactivatedCount: 0 };
     }
+    await this.assertEmployeeMutationScopes(operatorId, employeeIds);
 
-    return this.db.transaction(async (tx) => {
+    const requestedIds = [...new Set(employeeIds)];
+    const requestedIdParams = sql.join(
+      requestedIds.map((id) => sql`${id}`),
+      sql`, `,
+    );
+    const result = await this.db.transaction(async (tx) => {
+      await tx.execute(
+        sql`SELECT pg_advisory_xact_lock(${LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY})`,
+      );
+      const targetRows = await tx
+        .select({
+          employeeId: sql<string>`(${employee.employeeId}).user_id`,
+          status: employee.status,
+          authorizationRoles: employee.authorizationRoles,
+          authorizationStatus: employee.authorizationStatus,
+          deletedAt: employee.deletedAt,
+        })
+        .from(employee)
+        .where(
+          and(
+            sql`(${employee.employeeId}).user_id IN (${requestedIdParams})`,
+            isNull(employee.deletedAt),
+          ),
+        );
+      const deactivatedRows = targetRows.filter((row) => row.status === true);
+      if (deactivatedRows.length === 0) {
+        return {
+          success: true,
+          deactivatedCount: 0,
+          employeeIds: [] as string[],
+          versions: [] as number[],
+        };
+      }
+
+      const deactivatedAdminCount =
+        deactivatedRows.filter(isEffectiveAdmin).length;
+      if (deactivatedAdminCount > 0) {
+        const adminCountRows = await tx
+          .select({ cnt: count() })
+          .from(employee)
+          .where(this.effectiveAdminCondition());
+        if (Number(adminCountRows[0]?.cnt || 0) <= deactivatedAdminCount) {
+          throw new BadRequestException(
+            '系统中至少保留一个系统管理员，无法批量停用',
+          );
+        }
+      }
+
       const idParams = sql.join(
-        employeeIds.map((id) => sql`${id}`),
+        deactivatedRows.map((row) => sql`${row.employeeId}`),
         sql`, `,
       );
 
       await tx.execute(sql`
         UPDATE ${employee}
         SET status = false
-        WHERE (id).user_id IN (${idParams}) AND deleted_at IS NULL
+        WHERE (${employee.employeeId}).user_id IN (${idParams})
+          AND deleted_at IS NULL
       `);
 
       await tx.execute(sql`
         UPDATE ${employeeBinding}
         SET status = false
-        WHERE (employee_id).user_id IN (${idParams})
+        WHERE (${employeeBinding.employeeId}).user_id IN (${idParams})
           AND status = true
       `);
 
-      for (const eId of employeeIds) {
+      const versions: number[] = [];
+      for (const row of deactivatedRows) {
+        const eId = row.employeeId;
+        const version =
+          await this.authorizationSyncService.stageAuthorizationChange(
+            tx,
+            eId,
+            getDurableRoles(row),
+          );
+        versions.push(version);
         await tx.insert(auditLog).values({
           operatorId,
-          action: 'delete_employee',
+          action: 'deactivate_employee',
           targetType: 'employee',
           targetId: eId,
           changes: {
-            before: { status: true },
+            before: {
+              status: true,
+            },
             after: { status: false },
           },
-          reason: '批量删除员工',
+          reason: '批量停用员工',
         });
       }
-
       this.logger.log(
-        `Batch deactivated ${employeeIds.length} employees: ${employeeIds.join(', ')}`,
+        `Batch deactivated ${deactivatedRows.length} employees: ${deactivatedRows
+          .map((row) => row.employeeId)
+          .join(', ')}`,
       );
 
-      return { success: true, deactivatedCount: employeeIds.length };
+      return {
+        success: true,
+        deactivatedCount: deactivatedRows.length,
+        employeeIds: deactivatedRows.map((row) => row.employeeId),
+        versions,
+      };
     });
+
+    for (const [index, employeeId] of result.employeeIds.entries()) {
+      await this.processAuthorization(employeeId, result.versions[index]);
+    }
+
+    return {
+      success: result.success,
+      deactivatedCount: result.deactivatedCount,
+    };
   }
 
   /**
@@ -188,7 +315,17 @@ export class TeamStructureService {
   /**
    * 获取员工详情 — Drizzle ORM 版本。
    */
-  async getEmployee(id: string) {
+  async getEmployee(id: string, userId: string) {
+    await this.assertBindingView(userId);
+    const canAccess = await this.accessScopeService.canAccessEmployee(
+      userId,
+      id,
+      { includeSelf: true },
+    );
+    if (!canAccess) {
+      throw new ForbiddenException('无权查看该员工');
+    }
+
     const result = await this.db
       .select({
         employeeId: sql<string>`(${employee.employeeId}).user_id`,
@@ -246,19 +383,19 @@ export class TeamStructureService {
    */
   async updateEmployee(
     id: string,
-    body: Record<string, unknown>,
+    body: TeamUpdateEmployeeRequest,
     operatorId: string,
   ) {
+    await this.assertEmployeeMutationScope(operatorId, id);
+
     const updateData: Record<string, unknown> = {};
     const fields = [
       'name',
       'position',
       'department',
       'supervisorId',
-      'status',
       'employeeNo',
       'title',
-      'role',
       'phone',
       'hireDate',
       'probationMonths',
@@ -298,7 +435,76 @@ export class TeamStructureService {
   /**
    * 绑定历史 — 委托给 EmployeeBindingService。
    */
-  async history(employeeId: string) {
+  async history(employeeId: string, userId: string) {
+    await this.assertBindingView(userId);
+    const canAccess = await this.accessScopeService.canAccessEmployee(
+      userId,
+      employeeId,
+      { includeSelf: true },
+    );
+    if (!canAccess) {
+      throw new ForbiddenException('无权查看该员工');
+    }
     return this.bindingService.history(employeeId);
+  }
+
+  private async assertBindingView(userId: string): Promise<void> {
+    const allowed = await this.roleManagerService.checkUserPermission(
+      userId,
+      'employee_binding',
+      'view',
+    );
+    if (!allowed) {
+      throw new ForbiddenException('无权查看员工绑定信息');
+    }
+  }
+
+  private effectiveAdminCondition(): SQL {
+    return and(
+      sql`COALESCE(${employee.authorizationRoles}, '[]'::jsonb) ? 'admin'`,
+      eq(employee.status, true),
+      eq(employee.authorizationStatus, 'synced'),
+      isNull(employee.deletedAt),
+    );
+  }
+
+  private async processAuthorization(
+    employeeId: string,
+    version: number,
+  ): Promise<void> {
+    const result =
+      await this.authorizationSyncService.processEmployeeAuthorization(
+        employeeId,
+        version,
+      );
+    if (result.status !== 'synced') {
+      throw new Error(
+        result.error ||
+          `Employee ${employeeId} authorization sync finished with ${result.status}`,
+      );
+    }
+  }
+
+  private async assertEmployeeMutationScopes(
+    userId: string,
+    employeeIds: string[],
+  ): Promise<void> {
+    for (const employeeId of new Set(employeeIds)) {
+      await this.assertEmployeeMutationScope(userId, employeeId);
+    }
+  }
+
+  private async assertEmployeeMutationScope(
+    userId: string,
+    employeeId: string,
+  ): Promise<void> {
+    const canAccess = await this.accessScopeService.canAccessEmployee(
+      userId,
+      employeeId,
+      { includeSelf: true },
+    );
+    if (!canAccess) {
+      throw new ForbiddenException('无权操作该员工');
+    }
   }
 }

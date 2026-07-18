@@ -48,6 +48,7 @@ interface TemplateFormDialogProps {
   template: AssessmentTemplateDetail | null;
   onSave: (data: CreateTemplateRequest) => Promise<void>;
   positions?: string[];
+  canEdit: boolean;
 }
 
 const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
@@ -56,9 +57,12 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
   template,
   onSave,
   positions = [],
+  canEdit,
 }) => {
   const [submitting, setSubmitting] = useState(false);
-  const [previewMode, setPreviewMode] = useState(false);
+  const [previewMode, setPreviewMode] = useState<boolean>(
+    !canEdit || !!template,
+  );
 
   const buildDefault = useCallback((): FormData => {
     if (template) {
@@ -115,11 +119,12 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
   useEffect(() => {
     if (open) {
       form.reset(buildDefault());
-      setPreviewMode(!!template);
+      setPreviewMode(!canEdit || !!template);
     }
-  }, [open, form, buildDefault]);
+  }, [open, form, buildDefault, canEdit]);
 
   const handleSubmit = async (data: FormData) => {
+    if (!canEdit) return;
     const totalWeightResult = validateTotalWeight(data.dimensions);
     if (!totalWeightResult.isValid) {
       toast.error(
@@ -252,24 +257,26 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button
-              variant={previewMode ? 'outline' : 'default'}
-              size="sm"
-              onClick={() => setPreviewMode(false)}
-            >
-              <Pencil className="size-3.5" />
-              编辑模式
-            </Button>
-            <Button
-              variant={!previewMode ? 'outline' : 'default'}
-              size="sm"
-              onClick={() => setPreviewMode(true)}
-            >
-              <Eye className="size-3.5" />
-              预览模式
-            </Button>
-          </div>
+          {canEdit && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant={previewMode ? 'outline' : 'default'}
+                size="sm"
+                onClick={() => setPreviewMode(false)}
+              >
+                <Pencil className="size-3.5" />
+                编辑模式
+              </Button>
+              <Button
+                variant={!previewMode ? 'outline' : 'default'}
+                size="sm"
+                onClick={() => setPreviewMode(true)}
+              >
+                <Eye className="size-3.5" />
+                预览模式
+              </Button>
+            </div>
+          )}
 
           {dimFields.map((dimField, dimIdx: number) => {
             const dimData = watchedDims?.[dimIdx];
@@ -361,7 +368,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
 
           <div className="flex items-center justify-between pt-2 border-t">
             <div className="flex items-center gap-3">
-              {!previewMode && (
+              {canEdit && !previewMode && (
                 <Button
                   type="button"
                   size="sm"
@@ -402,7 +409,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
               >
                 取消
               </Button>
-              {!previewMode && (
+              {canEdit && !previewMode && (
                 <Button
                   onClick={form.handleSubmit(handleSubmit)}
                   disabled={submitting || !canSubmit}

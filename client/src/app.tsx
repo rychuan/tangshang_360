@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import { AuthProvider } from '@lark-apaas/client-toolkit/auth';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -11,12 +11,7 @@ const queryClient = new QueryClient({
 
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
-import {
-  ALL_ROLES,
-  MANAGER_ROLES,
-  TEMPLATE_ROLES,
-  ADMIN_HRD_ROLES,
-} from './components/role-constants';
+import { DefaultLandingRoute } from './components/app-shell/DefaultLandingRoute';
 import { PermissionsProvider } from './hooks/usePermissions';
 import NotFound from './pages/NotFound/NotFound';
 import TemplateManagementPage from './pages/TemplateManagement/TemplateManagementPage';
@@ -64,14 +59,11 @@ const RoutesComponent = () => {
         <PermissionsProvider>
           <Routes>
             <Route element={<Layout />}>
-              <Route
-                index
-                element={<Navigate to="/my-assessments" replace />}
-              />
+              <Route index element={<DefaultLandingRoute />} />
               <Route
                 path="dashboard"
                 element={
-                  <ProtectedRoute roles={ALL_ROLES}>
+                  <ProtectedRoute resources={['dashboard']}>
                     <HomePage />
                   </ProtectedRoute>
                 }
@@ -79,7 +71,9 @@ const RoutesComponent = () => {
               <Route
                 path="template-management"
                 element={
-                  <ProtectedRoute roles={TEMPLATE_ROLES}>
+                  <ProtectedRoute
+                    resources={['template_management']}
+                  >
                     <TemplateManagementPage />
                   </ProtectedRoute>
                 }
@@ -87,7 +81,7 @@ const RoutesComponent = () => {
               <Route
                 path="publish-management"
                 element={
-                  <ProtectedRoute roles={MANAGER_ROLES}>
+                  <ProtectedRoute resources={['publish_management']}>
                     <PublishManagementPage />
                   </ProtectedRoute>
                 }
@@ -95,7 +89,7 @@ const RoutesComponent = () => {
               <Route
                 path="assessment/:id"
                 element={
-                  <ProtectedRoute roles={ALL_ROLES}>
+                  <ProtectedRoute resources={['my_assessments']}>
                     <AssessmentDetailPage />
                   </ProtectedRoute>
                 }
@@ -103,7 +97,7 @@ const RoutesComponent = () => {
               <Route
                 path="statistics"
                 element={
-                  <ProtectedRoute roles={MANAGER_ROLES}>
+                  <ProtectedRoute resources={['statistics']}>
                     <StatisticsPage />
                   </ProtectedRoute>
                 }
@@ -111,7 +105,7 @@ const RoutesComponent = () => {
               <Route
                 path="my-assessments"
                 element={
-                  <ProtectedRoute roles={ALL_ROLES}>
+                  <ProtectedRoute resources={['my_assessments']}>
                     <MyAssessmentsPage />
                   </ProtectedRoute>
                 }
@@ -119,7 +113,7 @@ const RoutesComponent = () => {
               <Route
                 path="team-performance"
                 element={
-                  <ProtectedRoute roles={MANAGER_ROLES}>
+                  <ProtectedRoute resources={['team_performance']}>
                     <TeamPerformancePage />
                   </ProtectedRoute>
                 }
@@ -127,7 +121,7 @@ const RoutesComponent = () => {
               <Route
                 path="employees"
                 element={
-                  <ProtectedRoute roles={MANAGER_ROLES}>
+                  <ProtectedRoute resources={['employees', 'organization']}>
                     <EmployeeManagementPage />
                   </ProtectedRoute>
                 }
@@ -135,7 +129,7 @@ const RoutesComponent = () => {
               <Route
                 path="employees/:id"
                 element={
-                  <ProtectedRoute roles={MANAGER_ROLES}>
+                  <ProtectedRoute resources={['employees']}>
                     <EmployeeDetailPage />
                   </ProtectedRoute>
                 }
@@ -143,7 +137,10 @@ const RoutesComponent = () => {
               <Route
                 path="permissions"
                 element={
-                  <ProtectedRoute roles={ADMIN_HRD_ROLES}>
+                  <ProtectedRoute
+                    resources={['permission_management']}
+                    identityRoles={['admin', 'hrd']}
+                  >
                     <PermissionPage />
                   </ProtectedRoute>
                 }
@@ -151,7 +148,7 @@ const RoutesComponent = () => {
               <Route
                 path="grade-config"
                 element={
-                  <ProtectedRoute roles={ADMIN_HRD_ROLES}>
+                  <ProtectedRoute resources={['grade_config']}>
                     <GradeConfigPage />
                   </ProtectedRoute>
                 }
@@ -159,7 +156,7 @@ const RoutesComponent = () => {
               <Route
                 path="dictionary"
                 element={
-                  <ProtectedRoute roles={ADMIN_HRD_ROLES}>
+                  <ProtectedRoute resources={['dictionary_config']}>
                     <DictionaryConfigPage />
                   </ProtectedRoute>
                 }
@@ -167,7 +164,7 @@ const RoutesComponent = () => {
               <Route
                 path="dictionary/:type"
                 element={
-                  <ProtectedRoute roles={ADMIN_HRD_ROLES}>
+                  <ProtectedRoute resources={['dictionary_config']}>
                     <DictionaryConfigPage />
                   </ProtectedRoute>
                 }

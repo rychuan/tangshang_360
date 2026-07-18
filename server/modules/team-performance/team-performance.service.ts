@@ -228,17 +228,6 @@ export class TeamPerformanceService {
       }
 
       const row = rows[0];
-
-      // P0: 状态校验 — 仅 self_review 状态允许催办
-      if (row.status !== 'self_review') {
-        results.push({
-          instanceId,
-          status: 'failed',
-          reason: '当前考核状态不允许催办',
-        });
-        continue;
-      }
-
       const employeeUserId: string = row.employeeUserId;
 
       const canAccess = await this.accessScopeService.canAccessEmployee(
@@ -254,6 +243,16 @@ export class TeamPerformanceService {
           instanceId,
           status: 'failed',
           reason: '考核实例不存在或无权操作',
+        });
+        continue;
+      }
+
+      // P0: 状态校验 — 仅 self_review 状态允许催办
+      if (row.status !== 'self_review') {
+        results.push({
+          instanceId,
+          status: 'failed',
+          reason: '当前考核状态不允许催办',
         });
         continue;
       }

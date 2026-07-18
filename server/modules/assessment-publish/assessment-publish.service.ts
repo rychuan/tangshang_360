@@ -4,6 +4,7 @@ import {
   Logger,
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   DRIZZLE_DATABASE,
@@ -73,6 +74,14 @@ const PUBLISHED_ASSESSMENT_STATUS_GROUPS: Record<string, string[]> = {
 
 export function getPublishedAssessmentStatuses(status: string): string[] {
   return PUBLISHED_ASSESSMENT_STATUS_GROUPS[status] ?? [status];
+}
+
+export function normalizePublishExportIds(instanceIds: string[]): string[] {
+  const uniqueIds = Array.from(new Set(instanceIds || []));
+  if (uniqueIds.length > 1000) {
+    throw new BadRequestException('单次最多导出 1000 条绩效记录');
+  }
+  return uniqueIds;
 }
 
 async function runWithConcurrency<T, R>(
@@ -184,10 +193,13 @@ export class AssessmentPublishService {
       `publish period=${period} employeeIds=${JSON.stringify(employeeIds)}`,
     );
 
-    const targetEmployeeIds: string[] =
-      employeeIds && employeeIds.length > 0
-        ? employeeIds
-        : await this.getEmployeeIdsForPeriod(period);
+    const hasExplicitTargets = Boolean(employeeIds && employeeIds.length > 0);
+    const targetEmployeeIds: string[] = hasExplicitTargets
+      ? employeeIds!
+      : await this.getEmployeeIdsForPeriod(period, userId);
+    if (hasExplicitTargets) {
+      await this.assertEmployeeScopes(userId, targetEmployeeIds);
+    }
 
     if (targetEmployeeIds.length === 0) {
       throw new BadRequestException('没有符合条件的员工可发布');
@@ -492,24 +504,63 @@ export class AssessmentPublishService {
 
     const total: number = parseInt(String(totalResult[0]?.count ?? '0'), 10);
 
-        const rows = await this.db
-          .select({
-            id: assessmentInstance.id,
-            period: assessmentInstance.period,
-            employeeId: assessmentInstance.employeeId,
-            employeeName: employee.name,
-            department: employee.department,
-            position: assessmentInstance.position,
-            supervisorId: assessmentInstance.supervisorId,
-            status: assessmentInstance.status,
-            totalScore: assessmentInstance.totalScore,
-            grade: assessmentInstance.grade,
-            publishedAt: assessmentInstance.publishedAt,
-            publishedById: assessmentInstance.publishedBy,
+    const items = await this.selectInstanceItems(conditions, ps, offset);
+
+    return { items, total };
+  }
+
+  async exportInstances(
+    requestedIds: string[],
+    userId: string,
+  ): Promise<{ items: AssessmentInstanceItem[] }> {
+    const instanceIds = normalizePublishExportIds(requestedIds);
+    if (instanceIds.length === 0) {
+      return { items: [] };
+    }
+    for (const id of instanceIds) {
+      validateUUID(id);
+    }
+    await this.assertInstanceScopes(userId, instanceIds);
+
+    const conditions: SQL[] = [
+      inArray(assessmentInstance.id, instanceIds),
+      isNull(employee.deletedAt),
+    ];
+    const scopeCondition = await this.buildPublishEmployeeScope(userId);
+    if (scopeCondition) {
+      conditions.push(scopeCondition);
+    }
+
+    const items = await this.selectInstanceItems(
+      conditions,
+      instanceIds.length,
+      0,
+    );
+    return { items };
+  }
+
+  private async selectInstanceItems(
+    conditions: SQL[],
+    limit: number,
+    offset: number,
+  ): Promise<AssessmentInstanceItem[]> {
+    const rows = await this.db
+      .select({
+        id: assessmentInstance.id,
+        period: assessmentInstance.period,
+        employeeId: assessmentInstance.employeeId,
+        employeeName: employee.name,
+        department: employee.department,
+        position: assessmentInstance.position,
+        supervisorId: assessmentInstance.supervisorId,
+        status: assessmentInstance.status,
+        totalScore: assessmentInstance.totalScore,
+        grade: assessmentInstance.grade,
+        publishedAt: assessmentInstance.publishedAt,
+        publishedById: assessmentInstance.publishedBy,
         publishedByName: sql<string>`COALESCE((SELECT pub.name FROM employee pub WHERE (pub.employee_id).user_id = (${assessmentInstance.publishedBy}).user_id AND pub.deleted_at IS NULL LIMIT 1), '')`,
         selfReviewSubmitted: sql<boolean>`EXISTS(SELECT 1 FROM ${ratingRecord} WHERE ${ratingRecord.instanceId} = ${assessmentInstance.id} AND ${ratingRecord.ratingType} = 'self' AND ${ratingRecord.isDraft} = false)`,
         supervisorReviewSubmitted: sql<boolean>`EXISTS(SELECT 1 FROM ${ratingRecord} WHERE ${ratingRecord.instanceId} = ${assessmentInstance.id} AND ${ratingRecord.ratingType} = 'supervisor' AND ${ratingRecord.isDraft} = false)`,
-        // 2.5: JOIN 上级姓名
         supervisorName: sql<string>`COALESCE((SELECT sup.name FROM employee sup WHERE (sup.employee_id).user_id = (${assessmentInstance.supervisorId}).user_id AND sup.deleted_at IS NULL LIMIT 1), '')`,
       })
       .from(assessmentInstance)
@@ -519,36 +570,34 @@ export class AssessmentPublishService {
       )
       .where(and(...conditions))
       .orderBy(desc(assessmentInstance.createdAt))
-      .limit(ps)
+      .limit(limit)
       .offset(offset);
 
-    const items: AssessmentInstanceItem[] = rows.map(
-      (row: (typeof rows)[number]) => ({
-        id: row.id,
-        period: row.period,
-        employeeId: row.employeeId,
-        employeeName: row.employeeName,
-        department: row.department,
-        position: row.position,
-        supervisorId: row.supervisorId ?? undefined,
-        supervisorName: row.supervisorName,
-        status: row.status,
-        totalScore: row.totalScore ? Number(row.totalScore) : undefined,
-        grade: row.grade ?? undefined,
-        publishedAt: row.publishedAt ? String(row.publishedAt) : '',
-        publishedById: row.publishedById ?? undefined,
-        publishedByName: row.publishedByName,
-        selfReviewCompleted: row.selfReviewSubmitted,
-        supervisorReviewCompleted: row.supervisorReviewSubmitted,
-      }),
-    );
-
-    return { items, total };
+    return rows.map((row: (typeof rows)[number]) => ({
+      id: row.id,
+      period: row.period,
+      employeeId: row.employeeId,
+      employeeName: row.employeeName,
+      department: row.department,
+      position: row.position,
+      supervisorId: row.supervisorId ?? undefined,
+      supervisorName: row.supervisorName,
+      status: row.status,
+      totalScore: row.totalScore ? Number(row.totalScore) : undefined,
+      grade: row.grade ?? undefined,
+      publishedAt: row.publishedAt ? String(row.publishedAt) : '',
+      publishedById: row.publishedById ?? undefined,
+      publishedByName: row.publishedByName,
+      selfReviewCompleted: row.selfReviewSubmitted,
+      supervisorReviewCompleted: row.supervisorReviewSubmitted,
+    }));
   }
 
   async getEmployeeSnapshot(
     employeeId: string,
+    userId: string,
   ): Promise<EmployeeSnapshotResponse> {
+    await this.assertEmployeeScope(userId, employeeId);
     return this.employeeSnapshotService.getSnapshot(employeeId);
   }
 
@@ -558,6 +607,7 @@ export class AssessmentPublishService {
     userId: string,
   ): Promise<{ success: boolean }> {
     this.logger.log(`adjustEmployeeSnapshot employeeId=${employeeId}`);
+    await this.assertEmployeeScope(userId, employeeId);
 
     const bindingRows = await this.db
       .select({ templateId: employeeBinding.templateId })
@@ -584,7 +634,9 @@ export class AssessmentPublishService {
 
   async deleteEmployeeSnapshot(
     employeeId: string,
+    userId: string,
   ): Promise<{ success: boolean }> {
+    await this.assertEmployeeScope(userId, employeeId);
     return this.employeeSnapshotService.deleteSnapshot(employeeId);
   }
 
@@ -596,8 +648,11 @@ export class AssessmentPublishService {
     return this.unlockService.unlock(instanceId, body, userId);
   }
 
-  async getUnlockHistory(instanceId: string): Promise<UnlockHistoryItem[]> {
-    return this.unlockService.getUnlockHistory(instanceId);
+  async getUnlockHistory(
+    instanceId: string,
+    userId: string,
+  ): Promise<UnlockHistoryItem[]> {
+    return this.unlockService.getUnlockHistory(instanceId, userId);
   }
 
   async getPeriodStatistics(
@@ -711,8 +766,10 @@ export class AssessmentPublishService {
 
   async getInstanceIndicators(
     instanceId: string,
+    userId: string,
   ): Promise<InstanceIndicatorsResponse> {
     validateUUID(instanceId);
+    await this.assertInstanceScope(userId, instanceId);
     this.logger.log(`getInstanceIndicators instanceId=${instanceId}`);
     const rows = await this.db
       .select({
@@ -757,6 +814,10 @@ export class AssessmentPublishService {
     userId: string,
   ): Promise<BatchOperationResponse> {
     assertBatchSize(instanceIds, '实例');
+    for (const instanceId of instanceIds) {
+      validateUUID(instanceId, '实例ID');
+    }
+    await this.assertInstanceScopes(userId, instanceIds);
     this.logger.log(
       `batchReturn instanceIds=${JSON.stringify(instanceIds)} userId=${userId}`,
     );
@@ -766,8 +827,6 @@ export class AssessmentPublishService {
 
     for (const instanceId of instanceIds) {
       try {
-        validateUUID(instanceId, '实例ID');
-
         await this.db.transaction(async (tx) => {
           const instanceRows = await tx
             .select()
@@ -1024,20 +1083,81 @@ export class AssessmentPublishService {
     };
   }
 
-  private async getEmployeeIdsForPeriod(period: string): Promise<string[]> {
+  private async getEmployeeIdsForPeriod(
+    period: string,
+    userId: string,
+  ): Promise<string[]> {
+    const conditions: SQL[] = [
+      eq(employeeBinding.status, true),
+      lte(employeeBinding.effectiveFrom, period),
+      isNull(employee.deletedAt),
+      eq(employee.status, true),
+    ];
+    const scopeCondition = await this.buildPublishEmployeeScope(userId);
+    if (scopeCondition) {
+      conditions.push(scopeCondition);
+    }
+
     const rows = await this.db
       .select({ employeeId: employeeBinding.employeeId })
       .from(employeeBinding)
       .innerJoin(employee, eq(employeeBinding.employeeId, employee.employeeId))
-      .where(
-        and(
-          eq(employeeBinding.status, true),
-          lte(employeeBinding.effectiveFrom, period),
-          isNull(employee.deletedAt),
-          eq(employee.status, true),
-        ),
-      );
+      .where(and(...conditions));
 
     return rows.map((r: (typeof rows)[number]) => r.employeeId);
+  }
+
+  private async assertEmployeeScopes(
+    userId: string,
+    employeeIds: string[],
+  ): Promise<void> {
+    for (const employeeId of new Set(employeeIds)) {
+      await this.assertEmployeeScope(userId, employeeId);
+    }
+  }
+
+  private async assertEmployeeScope(
+    userId: string,
+    employeeId: string,
+  ): Promise<void> {
+    const canAccess = await this.accessScopeService.canAccessEmployee(
+      userId,
+      employeeId,
+      { includeSelf: false },
+    );
+    if (!canAccess) {
+      throw new ForbiddenException('无权操作该员工');
+    }
+  }
+
+  private async assertInstanceScopes(
+    userId: string,
+    instanceIds: string[],
+  ): Promise<void> {
+    for (const instanceId of new Set(instanceIds)) {
+      await this.assertInstanceScope(userId, instanceId);
+    }
+  }
+
+  private async assertInstanceScope(
+    userId: string,
+    instanceId: string,
+  ): Promise<void> {
+    const rows = await this.db
+      .select({ employeeId: assessmentInstance.employeeId })
+      .from(assessmentInstance)
+      .where(eq(assessmentInstance.id, instanceId))
+      .limit(1);
+    if (rows.length === 0) {
+      throw new NotFoundException(`实例 ${instanceId} 不存在`);
+    }
+    const canAccess = await this.accessScopeService.canAccessEmployee(
+      userId,
+      rows[0].employeeId,
+      { includeSelf: false },
+    );
+    if (!canAccess) {
+      throw new ForbiddenException('无权操作该考核实例');
+    }
   }
 }

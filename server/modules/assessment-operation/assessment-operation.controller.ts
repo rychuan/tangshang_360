@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Param, Body, Req, Query } from '@nestjs/common';
-import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
+import { NeedLogin } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import type { Request } from 'express';
 import { AssessmentOperationService } from './assessment-operation.service';
@@ -35,7 +35,6 @@ export class AssessmentOperationController {
   }
 
   @NeedLogin()
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
   @RequirePermission('my_assessments', 'edit')
   @Post('sign-session')
   async signByToken(
@@ -64,7 +63,14 @@ export class AssessmentOperationController {
     return this.service.getSignStatus(token, userId);
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
+  @RequirePermission('statistics', 'export')
+  @NeedLogin()
+  @Get(':id/export-detail')
+  async exportDetail(@Req() req: Request, @Param('id') id: string) {
+    const { userId } = req.userContext as { userId: string };
+    return this.service.detail(id, userId);
+  }
+
   @RequirePermission('my_assessments', 'view')
   @Get(':id')
   async detail(@Req() req: Request, @Param('id') id: string) {
@@ -72,7 +78,6 @@ export class AssessmentOperationController {
     return this.service.detail(id, userId);
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
   @RequirePermission('my_assessments', 'edit')
   @NeedLogin()
   @Post(':id/self-rating')
@@ -87,7 +92,6 @@ export class AssessmentOperationController {
     return this.service.submitSelfRating(id, body, userId);
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
   @RequirePermission('my_assessments', 'edit')
   @NeedLogin()
   @Post(':id/self-rating-with-sign')
@@ -103,7 +107,6 @@ export class AssessmentOperationController {
     return this.service.submitSelfRatingWithSign(id, body, userId, userName);
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('my_assessments', 'edit')
   @NeedLogin()
   @Post(':id/supervisor-rating')
@@ -118,7 +121,6 @@ export class AssessmentOperationController {
     return this.service.submitSupervisorRating(id, body, userId);
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('my_assessments', 'edit')
   @NeedLogin()
   @Post(':id/supervisor-rating-with-sign')
@@ -139,7 +141,6 @@ export class AssessmentOperationController {
     );
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
   @RequirePermission('my_assessments', 'edit')
   @NeedLogin()
   @Post(':id/sign')
@@ -155,7 +156,6 @@ export class AssessmentOperationController {
     return this.service.sign(id, body, userId, userName);
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
   @RequirePermission('my_assessments', 'edit')
   @NeedLogin()
   @Post(':id/sign-token')
@@ -204,5 +204,4 @@ export class AssessmentOperationController {
       period: session.period,
     };
   }
-
 }

@@ -51,11 +51,19 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
-import { CanRole } from '@lark-apaas/client-toolkit/auth';
-import { CanDo } from '@/hooks/usePermissions';
+import { CanDo, usePermissions } from '@/hooks/usePermissions';
+import {
+  useAuth,
+  ROLE_SUBJECT,
+} from '@lark-apaas/client-toolkit/auth';
 import { useEmployeeFilters } from './hooks/useEmployeeFilters';
 import { useEmployeeList } from './hooks/useEmployeeList';
 import { useEmployeeDialogs } from './hooks/useEmployeeDialogs';
+import {
+  COMMAND_PERMISSIONS,
+  hasPermission,
+} from '@/components/permission-policy';
+import { getEmployeeListCapabilities } from './employee-management-permissions';
 
 const PAGE_SIZE = 20;
 
@@ -64,6 +72,12 @@ const EmployeeListTab: React.FC = () => {
     '' | 'import' | 'export'
   >('');
   const [filters, setters] = useEmployeeFilters();
+  const { permissions } = usePermissions();
+  const { ability } = useAuth();
+  const capabilities = getEmployeeListCapabilities(permissions);
+  const canManageRoles =
+    ability.can('admin', ROLE_SUBJECT) &&
+    hasPermission(permissions, 'permission_management', 'edit');
   const {
     employees,
     total,
@@ -73,7 +87,9 @@ const EmployeeListTab: React.FC = () => {
     selectedRowKeys,
     setSelectedRowKeys,
     refetch,
-  } = useEmployeeList(filters);
+  } = useEmployeeList(filters, {
+    loadTemplates: capabilities.loadTemplates,
+  });
   const dialogs = useEmployeeDialogs(refetch);
 
   const toggleAll = (): void => {
@@ -124,7 +140,7 @@ const EmployeeListTab: React.FC = () => {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {selectedRowKeys.length > 0 && (
-            <CanRole roles={['admin', 'hrd']}>
+            <CanDo {...COMMAND_PERMISSIONS.employeeBindingEdit}>
               <Button
                 variant="outline"
                 size="sm"
@@ -133,9 +149,9 @@ const EmployeeListTab: React.FC = () => {
                 <Link2 data-icon="inline-start" />
                 批量绑定
               </Button>
-            </CanRole>
+            </CanDo>
           )}
-          <CanRole roles={['admin', 'hrd']}>
+          <CanDo {...COMMAND_PERMISSIONS.employeeSync}>
             <Button
               variant="outline"
               size="sm"
@@ -156,15 +172,13 @@ const EmployeeListTab: React.FC = () => {
               {syncLoading === 'export' && <Spinner className="mr-2 size-4" />}
               导出到多维表格
             </Button>
-          </CanRole>
-          <CanRole roles={['admin']}>
-            <CanDo resource="employees" action="edit">
-              <Button size="sm" onClick={dialogs.openCreateDialog}>
-                <Plus data-icon="inline-start" />
-                新建员工
-              </Button>
-            </CanDo>
-          </CanRole>
+          </CanDo>
+          <CanDo resource="employees" action="edit">
+            <Button size="sm" onClick={dialogs.openCreateDialog}>
+              <Plus data-icon="inline-start" />
+              新建员工
+            </Button>
+          </CanDo>
         </div>
       </div>
 
@@ -243,24 +257,30 @@ const EmployeeListTab: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs text-muted-foreground">参与绩效</Label>
-              <Select
-                value={filters.binding || 'all'}
-                onValueChange={(v) => setters.setBinding(v === 'all' ? '' : v)}
-              >
-                <SelectTrigger className="w-30 h-9 text-sm">
-                  <SelectValue placeholder="全部" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value="all">全部</SelectItem>
-                    <SelectItem value="bound">已参与</SelectItem>
-                    <SelectItem value="unbound">未参与</SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
+            {capabilities.showBindings && (
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs text-muted-foreground">
+                  参与绩效
+                </Label>
+                <Select
+                  value={filters.binding || 'all'}
+                  onValueChange={(v) =>
+                    setters.setBinding(v === 'all' ? '' : v)
+                  }
+                >
+                  <SelectTrigger className="w-30 h-9 text-sm">
+                    <SelectValue placeholder="全部" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="all">全部</SelectItem>
+                      <SelectItem value="bound">已参与</SelectItem>
+                      <SelectItem value="unbound">未参与</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -280,6 +300,9 @@ const EmployeeListTab: React.FC = () => {
             onHistory={dialogs.openHistoryDialog}
             onToggleStatus={dialogs.handleToggleStatus}
             onDelete={dialogs.openDeleteDialog}
+            showBindings={capabilities.showBindings}
+            showSelection={capabilities.showSelection}
+            showActions={capabilities.showActions}
           />
         </CardContent>
       </Card>
@@ -336,6 +359,7 @@ const EmployeeListTab: React.FC = () => {
         setFormData={dialogs.formDialog.setFormData}
         onSave={dialogs.formDialog.onSave}
         positions={positions}
+        canManageRoles={canManageRoles}
       />
 
       {/* 绑定对话框 */}

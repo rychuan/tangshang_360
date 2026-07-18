@@ -11,7 +11,7 @@ import {
   Req,
   BadRequestException,
 } from '@nestjs/common';
-import { NeedLogin, CanRole } from '@lark-apaas/fullstack-nestjs-core';
+import { NeedLogin } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { EmployeeManagementService } from './employee-management.service';
 import type { Request } from 'express';
@@ -21,6 +21,7 @@ import type {
   CreateEmployeeRequest,
   UpdateEmployeeRequest,
   CreateBindingRequest,
+  BindingTemplateOption,
   EmployeeBindingHistoryResponse,
 } from '@shared/api.interface';
 
@@ -28,10 +29,10 @@ import type {
 export class EmployeeManagementController {
   constructor(private readonly service: EmployeeManagementService) {}
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('employees', 'view')
   @Get()
   async list(
+    @Req() req: Request,
     @Query('page') page: string,
     @Query('pageSize') pageSize: string,
     @Query('keyword') keyword?: string,
@@ -42,34 +43,41 @@ export class EmployeeManagementController {
     @Query('status') status?: string,
     @Query('binding') binding?: string,
   ): Promise<EmployeeListResponse> {
-    return this.service.list({
-      page: parseInt(page, 10) || 1,
-      pageSize: Math.min(parseInt(pageSize, 10) || 20, 100),
-      keyword,
-      department,
-      positions: positions ? positions.split(',').filter(Boolean) : undefined,
-      title,
-      role,
-      status,
-      binding,
-    });
+    return this.service.list(
+      {
+        page: parseInt(page, 10) || 1,
+        pageSize: Math.min(parseInt(pageSize, 10) || 20, 100),
+        keyword,
+        department,
+        positions: positions ? positions.split(',').filter(Boolean) : undefined,
+        title,
+        role,
+        status,
+        binding,
+      },
+      req.userContext?.userId || '',
+    );
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('employees', 'view')
   @Get('positions')
-  async getPositions(): Promise<{ positions: string[] }> {
-    return this.service.getPositions();
+  async getPositions(@Req() req: Request): Promise<{ positions: string[] }> {
+    return this.service.getPositions(req.userContext?.userId || '');
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])
+  @RequirePermission('employee_binding', 'edit')
+  @Get('binding-templates')
+  async bindingTemplates(): Promise<{ items: BindingTemplateOption[] }> {
+    return this.service.bindingTemplates();
+  }
+
+  @NeedLogin()
   @Get('my/permissions')
   async getMyPermissions(@Req() req: Request) {
     const { userId } = req.userContext as { userId: string };
     return this.service.getMyPermissions(userId);
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('employee_binding', 'edit')
   @NeedLogin()
   @Post('bind')
@@ -81,23 +89,24 @@ export class EmployeeManagementController {
     return this.service.bind(body, userId);
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('employee_binding', 'view')
   @Get(':id/binding-history')
   async bindingHistory(
+    @Req() req: Request,
     @Param('id') id: string,
   ): Promise<EmployeeBindingHistoryResponse> {
-    return this.service.bindingHistory(id);
+    return this.service.bindingHistory(id, req.userContext?.userId || '');
   }
 
-  @CanRole(['admin', 'hrd', 'dept_head', 'supervisor'])
   @RequirePermission('employees', 'view')
   @Get(':id')
-  async detail(@Param('id') id: string): Promise<EmployeeDetail> {
-    return this.service.detail(id);
+  async detail(
+    @Req() req: Request,
+    @Param('id') id: string,
+  ): Promise<EmployeeDetail> {
+    return this.service.detail(id, req.userContext?.userId || '');
   }
 
-  @CanRole(['admin'])
   @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Post()
@@ -109,7 +118,6 @@ export class EmployeeManagementController {
     return this.service.create(body, userId);
   }
 
-  @CanRole(['admin'])
   @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Put(':id')
@@ -122,7 +130,6 @@ export class EmployeeManagementController {
     return this.service.update(id, body, userId);
   }
 
-  @CanRole(['admin'])
   @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Patch(':id/activate')
@@ -134,7 +141,6 @@ export class EmployeeManagementController {
     return this.service.activate(id, userId);
   }
 
-  @CanRole(['admin'])
   @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Patch(':id/deactivate')
@@ -146,7 +152,6 @@ export class EmployeeManagementController {
     return this.service.deactivate(id, userId);
   }
 
-  @CanRole(['admin', 'hrd'])
   @RequirePermission('employee_binding', 'edit')
   @NeedLogin()
   @Patch(':id/unbind')
@@ -158,7 +163,6 @@ export class EmployeeManagementController {
     return this.service.unbind(id, userId);
   }
 
-  @CanRole(['admin'])
   @RequirePermission('employees', 'delete')
   @NeedLogin()
   @Delete(':id')
@@ -170,7 +174,6 @@ export class EmployeeManagementController {
     return this.service.delete(id, userId);
   }
 
-  @CanRole(['admin'])
   @RequirePermission('employees', 'edit')
   @NeedLogin()
   @Put(':id/permissions')

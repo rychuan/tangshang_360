@@ -62,5 +62,6 @@ pnpm-lock.yaml
 
 # Agent files
 .agent/
+.worktrees/
 .npm_cache
 tmux-*.log

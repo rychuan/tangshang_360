@@ -21,7 +21,8 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
-import { CanRole } from '@lark-apaas/client-toolkit/auth';
+import { CanDo } from '@/hooks/usePermissions';
+import { COMMAND_PERMISSIONS } from '@/components/permission-policy';
 import {
   Plus,
   Download,
@@ -203,6 +204,7 @@ const BitableConnectionTab: React.FC = () => {
                   </TableHeader>
                   <TableBody>
                     {[
+                      ['飞书用户ID', 'employeeId', '新增必填', '平台用户 ID'],
                       ['姓名', 'name', '是', ''],
                       [
                         '工号',
@@ -241,8 +243,14 @@ const BitableConnectionTab: React.FC = () => {
                           {field}
                         </TableCell>
                         <TableCell className="text-center">
-                          {required === '是' ? (
-                            <span className="text-destructive">●</span>
+                          {required !== '否' ? (
+                            <span
+                              className="text-destructive"
+                              title={required}
+                              aria-label={required}
+                            >
+                              ●
+                            </span>
                           ) : (
                             <span className="text-muted-foreground">○</span>
                           )}
@@ -326,7 +334,7 @@ const BitableConnectionTab: React.FC = () => {
           </span>{' '}
           个连接
         </div>
-        <CanRole roles={['admin']}>
+        <CanDo {...COMMAND_PERMISSIONS.employeeSync}>
           <Button
             size="sm"
             onClick={() => {
@@ -337,7 +345,7 @@ const BitableConnectionTab: React.FC = () => {
             <Plus data-icon="inline-start" />
             新建连接
           </Button>
-        </CanRole>
+        </CanDo>
       </div>
 
       {loading ? (
@@ -403,7 +411,7 @@ const BitableConnectionTab: React.FC = () => {
                     )}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <CanRole roles={['admin', 'hrd']}>
+                    <CanDo {...COMMAND_PERMISSIONS.employeeSync}>
                       <Button
                         variant="outline"
                         size="sm"
@@ -422,6 +430,8 @@ const BitableConnectionTab: React.FC = () => {
                         <Upload data-icon="inline-start" />
                         {exportingId === conn.id ? '导出中...' : '导出'}
                       </Button>
+                    </CanDo>
+                    <CanDo {...COMMAND_PERMISSIONS.employeeSyncLog}>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -435,8 +445,8 @@ const BitableConnectionTab: React.FC = () => {
                       >
                         <History className="size-4" />
                       </Button>
-                    </CanRole>
-                    <CanRole roles={['admin']}>
+                    </CanDo>
+                    <CanDo {...COMMAND_PERMISSIONS.employeeSync}>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -454,7 +464,7 @@ const BitableConnectionTab: React.FC = () => {
                       >
                         <Trash2 className="size-4 text-destructive" />
                       </Button>
-                    </CanRole>
+                    </CanDo>
                   </div>
                 </div>
                 {importResult && importingId === null && (
@@ -510,13 +520,15 @@ const BitableConnectionTab: React.FC = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              data-variant="destructive"
-            >
-              确认删除
-            </AlertDialogAction>
+            <CanDo {...COMMAND_PERMISSIONS.employeeSync}>
+              <AlertDialogAction
+                onClick={handleDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                data-variant="destructive"
+              >
+                确认删除
+              </AlertDialogAction>
+            </CanDo>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

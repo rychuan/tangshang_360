@@ -10,6 +10,7 @@ import type {
   ForceRoleDTO,
   ListMembersResponse,
   SearchResponse,
+  RoleMemberMutationResponse,
 } from '@shared/api.interface';
 
 export async function listRoles(): Promise<ForceRoleDTO[]> {
@@ -73,23 +74,25 @@ export async function listMembers(
 export async function addMembers(
   bizID: string,
   dto: AddMembersRequest,
-): Promise<void> {
-  await axiosForBackend({
+): Promise<RoleMemberMutationResponse> {
+  const { data } = await axiosForBackend({
     url: `/api/role_manager/roles/${bizID}/members`,
     method: 'POST',
     data: dto,
   });
+  return data;
 }
 
 export async function removeMembers(
   bizID: string,
   dto: RemoveMembersRequest,
-): Promise<void> {
-  await axiosForBackend({
+): Promise<RoleMemberMutationResponse> {
+  const { data } = await axiosForBackend({
     url: `/api/role_manager/roles/${bizID}/members/batch_remove`,
     method: 'POST',
     data: dto,
   });
+  return data;
 }
 
 export async function searchMembers(
@@ -133,4 +136,14 @@ export async function getMyPermissions(): Promise<
     method: 'GET',
   });
   return data.data?.permissions || [];
+}
+
+export async function retryAuthorization(
+  employeeId: string,
+): Promise<{ status: string; error?: string }> {
+  const { data } = await axiosForBackend({
+    url: `/api/role_manager/authorization/${employeeId}/retry`,
+    method: 'POST',
+  });
+  return data.data;
 }

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
 import { handleApiError } from '@/utils/api-error';
+import { usePermission } from '@/hooks/usePermissions';
 import {
   ArrowLeft,
   User,
@@ -31,6 +32,7 @@ const roleLabels: Record<string, string> = {
 const EmployeeDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const canViewBindings = usePermission('employee_binding', 'view');
   const { data: emp, isLoading } = useQuery({
     queryKey: queryKeys.employees.detail(id!),
     queryFn: () => employeeManagement.detail(id!),
@@ -131,11 +133,15 @@ const EmployeeDetailPage: React.FC = () => {
                 value: String(emp.stats.completedAssessments),
                 icon: Star,
               },
-              {
-                label: '活跃绑定',
-                value: String(emp.stats.activeBindings),
-                icon: Building2,
-              },
+              ...(canViewBindings && emp.stats.activeBindings != null
+                ? [
+                    {
+                      label: '活跃绑定',
+                      value: String(emp.stats.activeBindings),
+                      icon: Building2,
+                    },
+                  ]
+                : []),
               {
                 label: '平均分',
                 value:

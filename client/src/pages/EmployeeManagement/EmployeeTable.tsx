@@ -2,10 +2,11 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { EmployeeItem } from '@shared/api.interface';
 import { ROLE_LABELS as roleLabels } from './role-utils';
+import { hasEmployeeRowMenuAction } from './employee-management-permissions';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CanRole } from '@lark-apaas/client-toolkit/auth';
-import { CanDo } from '@/hooks/usePermissions';
+import { CanDo, usePermissions } from '@/hooks/usePermissions';
+import { COMMAND_PERMISSIONS } from '@/components/permission-policy';
 import { Checkbox } from '@/components/ui/checkbox';
 import { UserDisplay } from '@/components/business-ui/user-display';
 import { ActionBadge } from '@/components/business-ui/action-badge';
@@ -41,6 +42,9 @@ export interface EmployeeTableProps {
   onHistory: (emp: EmployeeItem) => void;
   onToggleStatus: (emp: EmployeeItem) => void;
   onDelete: (emp: EmployeeItem) => void;
+  showBindings: boolean;
+  showSelection: boolean;
+  showActions: boolean;
 }
 
 const EmployeeTable: React.FC<EmployeeTableProps> = ({
@@ -55,8 +59,13 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
   onHistory,
   onToggleStatus,
   onDelete,
+  showBindings,
+  showSelection,
+  showActions,
 }) => {
   const navigate = useNavigate();
+  const { permissions } = usePermissions();
+  const showRowMenu = hasEmployeeRowMenuAction(permissions);
 
   const allChecked =
     employees.length > 0 &&
@@ -69,24 +78,30 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
     'sticky right-0 z-10 bg-background group-hover:bg-muted/30 border-l';
   const cols: ColumnDef<EmployeeItem>[] = React.useMemo(
     () => [
-      {
-        id: 'select',
-        header: () => (
-          <Checkbox
-            checked={allChecked ? true : someChecked ? 'indeterminate' : false}
-            onCheckedChange={() => onToggleAll()}
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            checked={selectedRowKeys.includes(row.original.id)}
-            onCheckedChange={() => onToggleRow(row.original.id)}
-            onClick={(e) => e.stopPropagation()}
-          />
-        ),
-        size: 40,
-        enableSorting: false,
-      },
+      ...(showSelection
+        ? [
+            {
+              id: 'select',
+              header: () => (
+                <Checkbox
+                  checked={
+                    allChecked ? true : someChecked ? 'indeterminate' : false
+                  }
+                  onCheckedChange={() => onToggleAll()}
+                />
+              ),
+              cell: ({ row }) => (
+                <Checkbox
+                  checked={selectedRowKeys.includes(row.original.id)}
+                  onCheckedChange={() => onToggleRow(row.original.id)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ),
+              size: 40,
+              enableSorting: false,
+            } satisfies ColumnDef<EmployeeItem>,
+          ]
+        : []),
       {
         id: 'name',
         header: '姓名',
@@ -180,22 +195,26 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
           </div>
         ),
       },
-      {
-        id: 'binding',
-        header: '模板',
-        meta: {
-          headerClass: 'hidden lg:table-cell',
-          cellClass: 'hidden lg:table-cell',
-        },
-        cell: ({ row }) =>
-          row.original.currentBinding ? (
-            <span className="text-xs">
-              {row.original.currentBinding.templateName}
-            </span>
-          ) : (
-            <span className="text-xs text-muted-foreground">-</span>
-          ),
-      },
+      ...(showBindings
+        ? [
+            {
+              id: 'binding',
+              header: '模板',
+              meta: {
+                headerClass: 'hidden lg:table-cell',
+                cellClass: 'hidden lg:table-cell',
+              },
+              cell: ({ row }) =>
+                row.original.currentBinding ? (
+                  <span className="text-xs">
+                    {row.original.currentBinding.templateName}
+                  </span>
+                ) : (
+                  <span className="text-xs text-muted-foreground">-</span>
+                ),
+            } satisfies ColumnDef<EmployeeItem>,
+          ]
+        : []),
       {
         id: 'status',
         header: '状态',
@@ -208,85 +227,95 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
           </Badge>
         ),
       },
-      {
-        id: 'actions',
-        meta: { headerClass: stickyHeaderCol, cellClass: stickyCellCol },
-        header: () => <span>操作</span>,
-        cell: ({ row }) => (
-          <div
-            className="flex items-center gap-1"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <CanRole roles={['admin']}>
-              <CanDo resource="employees" action="edit">
-                <ActionBadge
-                  actionType="edit"
-                  icon={<Pencil className="size-3" />}
-                  label="编辑"
-                  onClick={() => onEdit(row.original)}
-                />
-              </CanDo>
-            </CanRole>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="size-7">
-                  <MoreHorizontal className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-[130px]">
-                <CanRole roles={['admin', 'hrd']}>
-                  <CanDo resource="employee_binding" action="edit">
-                    <DropdownMenuItem onClick={() => onBind(row.original)}>
-                      <Link2 className="size-4" />
-                      绑定模板
-                    </DropdownMenuItem>
-                  </CanDo>
-                </CanRole>
-                {row.original.currentBinding && (
-                  <CanRole roles={['admin', 'hrd']}>
-                    <CanDo resource="employee_binding" action="edit">
-                      <DropdownMenuItem onClick={() => onUnbind(row.original)}>
-                        <Unlink className="size-4" />
-                        解绑
-                      </DropdownMenuItem>
-                    </CanDo>
-                  </CanRole>
-                )}
-                <DropdownMenuItem onClick={() => onHistory(row.original)}>
-                  <History className="size-4" />
-                  绑定历史
-                </DropdownMenuItem>
-                <CanRole roles={['admin']}>
+      ...(showActions
+        ? [
+            {
+              id: 'actions',
+              meta: {
+                headerClass: stickyHeaderCol,
+                cellClass: stickyCellCol,
+              },
+              header: () => <span>操作</span>,
+              cell: ({ row }) => (
+                <div
+                  className="flex items-center gap-1"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <CanDo resource="employees" action="edit">
-                    <DropdownMenuItem
-                      onClick={() => onToggleStatus(row.original)}
-                    >
-                      {row.original.status ? (
-                        <Ban className="size-4" />
-                      ) : (
-                        <CheckCircle className="size-4" />
-                      )}
-                      {row.original.status ? '禁用' : '启用'}
-                    </DropdownMenuItem>
+                    <ActionBadge
+                      actionType="edit"
+                      icon={<Pencil className="size-3" />}
+                      label="编辑"
+                      onClick={() => onEdit(row.original)}
+                    />
                   </CanDo>
-                </CanRole>
-                <CanRole roles={['admin']}>
-                  <CanDo resource="employees" action="delete">
-                    <DropdownMenuItem
-                      onClick={() => onDelete(row.original)}
-                      variant="destructive"
-                    >
-                      <Trash2 className="size-4" />
-                      删除
-                    </DropdownMenuItem>
-                  </CanDo>
-                </CanRole>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        ),
-        enableSorting: false,
-      },
+                  {showRowMenu && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-7">
+                          <MoreHorizontal className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="end"
+                        className="min-w-[130px]"
+                      >
+                        <CanDo resource="employee_binding" action="edit">
+                          <DropdownMenuItem
+                            onClick={() => onBind(row.original)}
+                          >
+                            <Link2 className="size-4" />
+                            绑定模板
+                          </DropdownMenuItem>
+                        </CanDo>
+                        {row.original.currentBinding && (
+                          <CanDo resource="employee_binding" action="edit">
+                            <DropdownMenuItem
+                              onClick={() => onUnbind(row.original)}
+                            >
+                              <Unlink className="size-4" />
+                              解绑
+                            </DropdownMenuItem>
+                          </CanDo>
+                        )}
+                        <CanDo {...COMMAND_PERMISSIONS.employeeBindingView}>
+                          <DropdownMenuItem
+                            onClick={() => onHistory(row.original)}
+                          >
+                            <History className="size-4" />
+                            绑定历史
+                          </DropdownMenuItem>
+                        </CanDo>
+                        <CanDo resource="employees" action="edit">
+                          <DropdownMenuItem
+                            onClick={() => onToggleStatus(row.original)}
+                          >
+                            {row.original.status ? (
+                              <Ban className="size-4" />
+                            ) : (
+                              <CheckCircle className="size-4" />
+                            )}
+                            {row.original.status ? '禁用' : '启用'}
+                          </DropdownMenuItem>
+                        </CanDo>
+                        <CanDo resource="employees" action="delete">
+                          <DropdownMenuItem
+                            onClick={() => onDelete(row.original)}
+                            variant="destructive"
+                          >
+                            <Trash2 className="size-4" />
+                            删除
+                          </DropdownMenuItem>
+                        </CanDo>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+              ),
+              enableSorting: false,
+            } satisfies ColumnDef<EmployeeItem>,
+          ]
+        : []),
     ],
     [
       allChecked,
@@ -300,6 +329,10 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
       selectedRowKeys,
       onToggleAll,
       onToggleRow,
+      showRowMenu,
+      showBindings,
+      showSelection,
+      showActions,
     ],
   );
 

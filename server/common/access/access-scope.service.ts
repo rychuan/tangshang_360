@@ -43,6 +43,15 @@ export class AccessScopeService {
   ) {}
 
   async getScope(userId: string): Promise<AccessScope> {
+    if (!(await this.roleManagerService.hasSynchronizedActiveEmployee(userId))) {
+      return {
+        kind: 'self',
+        roles: [],
+        departmentIds: [],
+        subordinateIds: [],
+      };
+    }
+
     const roles = await this.roleManagerService.getUserRoles(userId);
     const isDeptHead = roles.includes('dept_head');
     const isSupervisor = roles.includes('supervisor');
@@ -70,6 +79,7 @@ export class AccessScopeService {
               sql`(${employee.supervisorId}).user_id = ${userId}`,
               isNull(employee.deletedAt),
               eq(employee.status, true),
+              eq(employee.authorizationStatus, 'synced'),
             ),
           )
       : Promise.resolve([] as { userId: string }[]);
@@ -129,7 +139,11 @@ export class AccessScopeService {
   ): Promise<string[]> {
     const condition = await this.buildEmployeeScopeCondition(userId, options);
     if (condition === null) {
-      const conditions = [isNull(employee.deletedAt), eq(employee.status, true)];
+      const conditions = [
+        isNull(employee.deletedAt),
+        eq(employee.status, true),
+        eq(employee.authorizationStatus, 'synced'),
+      ];
       if (!options.includeSelf) {
         conditions.push(sql`(${employee.employeeId}).user_id != ${userId}`);
       }
@@ -140,10 +154,20 @@ export class AccessScopeService {
       return rows.map((row) => row.userId);
     }
 
+    const conditions = [
+      condition,
+      isNull(employee.deletedAt),
+      eq(employee.status, true),
+      eq(employee.authorizationStatus, 'synced'),
+    ];
+    if (!options.includeSelf) {
+      conditions.push(sql`(${employee.employeeId}).user_id != ${userId}`);
+    }
+
     const rows = await this.db
       .select({ userId: sql<string>`(${employee.employeeId}).user_id` })
       .from(employee)
-      .where(and(condition, isNull(employee.deletedAt), eq(employee.status, true)));
+      .where(and(...conditions));
     return rows.map((row) => row.userId);
   }
 
@@ -154,21 +178,27 @@ export class AccessScopeService {
   ): Promise<boolean> {
     const scope = await this.getScope(userId);
     if (scope.kind === 'global') return true;
-    if (options.includeSelf && employeeId === userId) return true;
-    if (scope.subordinateIds.includes(employeeId)) return true;
-    if (scope.departmentIds.length === 0) return false;
-
     const rows = await this.db
-      .select({ departmentId: employee.departmentId })
+      .select({
+        departmentId: employee.departmentId,
+        userId: sql<string>`(${employee.employeeId}).user_id`,
+      })
       .from(employee)
       .where(
         and(
           sql`(${employee.employeeId}).user_id = ${employeeId}`,
           isNull(employee.deletedAt),
           eq(employee.status, true),
+          eq(employee.authorizationStatus, 'synced'),
         ),
       )
       .limit(1);
-    return rows.length > 0 && scope.departmentIds.includes(rows[0].departmentId);
+    if (rows.length === 0) return false;
+    if (employeeId === userId) {
+      return Boolean(options.includeSelf);
+    }
+    if (scope.subordinateIds.includes(employeeId)) return true;
+    if (scope.departmentIds.length === 0) return false;
+    return scope.departmentIds.includes(rows[0].departmentId);
   }
 }

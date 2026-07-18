@@ -43,7 +43,6 @@ import { Users, TrendingUp, AlertCircle, Bell, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { logger } from '@lark-apaas/client-toolkit/logger';
-import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo } from '@/hooks/usePermissions';
 import { handleApiError } from '@/utils/api-error';
 import { PageHeader } from '@/components/business-ui/page-header';
@@ -56,6 +55,7 @@ import type {
   TeamOverviewResponse,
   SubordinateRecord,
 } from '@shared/api.interface';
+import { COMMAND_PERMISSIONS } from '@/components/permission-policy';
 
 const PAGE_SIZE = 10;
 
@@ -184,26 +184,26 @@ const TeamPerformancePage: React.FC = () => {
         render: (item) => (
           <div className="flex items-center gap-1">
             {item.status === 'self_review' && (
-              <CanRole roles={['admin', 'dept_head', 'supervisor']}>
-                <CanDo resource="team_performance" action="edit">
-                  <ActionBadge
-                    actionType="toggle"
-                    icon={<Bell className="size-3" />}
-                    label="催办"
-                    disabled={remindingIds.has(item.id)}
-                    onClick={() => handleRemind(item)}
-                  />
-                </CanDo>
-              </CanRole>
+              <CanDo resource="team_performance" action="edit">
+                <ActionBadge
+                  actionType="toggle"
+                  icon={<Bell className="size-3" />}
+                  label="催办"
+                  disabled={remindingIds.has(item.id)}
+                  onClick={() => handleRemind(item)}
+                />
+              </CanDo>
             )}
-            <ActionBadge
-              actionType="view"
-              icon={<Eye className="size-3" />}
-              label="查看/评分"
-              onClick={() =>
-                navigate(`../assessment/${item.id}?view=supervisor`)
-              }
-            />
+            <CanDo {...COMMAND_PERMISSIONS.assessmentView}>
+              <ActionBadge
+                actionType="view"
+                icon={<Eye className="size-3" />}
+                label="查看/评分"
+                onClick={() =>
+                  navigate(`../assessment/${item.id}?view=supervisor`)
+                }
+              />
+            </CanDo>
           </div>
         ),
       },
@@ -489,26 +489,26 @@ const TeamPerformancePage: React.FC = () => {
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       {item.status === 'self_review' && (
-                        <CanRole roles={['admin', 'dept_head', 'supervisor']}>
-                          <CanDo resource="team_performance" action="edit">
-                            <ActionBadge
-                              actionType="toggle"
-                              icon={<Bell className="size-3" />}
-                              label="催办"
-                              disabled={remindingIds.has(item.id)}
-                              onClick={() => handleRemind(item)}
-                            />
-                          </CanDo>
-                        </CanRole>
+                        <CanDo resource="team_performance" action="edit">
+                          <ActionBadge
+                            actionType="toggle"
+                            icon={<Bell className="size-3" />}
+                            label="催办"
+                            disabled={remindingIds.has(item.id)}
+                            onClick={() => handleRemind(item)}
+                          />
+                        </CanDo>
                       )}
-                      <ActionBadge
-                        actionType="view"
-                        icon={<Eye className="size-3" />}
-                        label="查看/评分"
-                        onClick={() =>
-                          navigate(`../assessment/${item.id}?view=supervisor`)
-                        }
-                      />
+                      <CanDo {...COMMAND_PERMISSIONS.assessmentView}>
+                        <ActionBadge
+                          actionType="view"
+                          icon={<Eye className="size-3" />}
+                          label="查看/评分"
+                          onClick={() =>
+                            navigate(`../assessment/${item.id}?view=supervisor`)
+                          }
+                        />
+                      </CanDo>
                     </div>
                   </div>
                 ))}

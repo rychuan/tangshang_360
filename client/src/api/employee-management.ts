@@ -6,6 +6,8 @@ import type {
   UpdateEmployeeRequest,
   CreateBindingRequest,
   BindingHistoryItem,
+  BindingTemplateOption,
+  CurrentUserAuthorizationContext,
 } from '@shared/api.interface';
 
 export async function list(params: {
@@ -30,6 +32,24 @@ export async function list(params: {
 export async function getPositions(): Promise<{ positions: string[] }> {
   const { data } = await axiosForBackend({
     url: '/api/employees/positions',
+    method: 'GET',
+  });
+  return data;
+}
+
+export async function getMyPermissions(): Promise<CurrentUserAuthorizationContext> {
+  const { data } = await axiosForBackend<CurrentUserAuthorizationContext>({
+    url: '/api/employees/my/permissions',
+    method: 'GET',
+  });
+  return data;
+}
+
+export async function bindingTemplates(): Promise<{
+  items: BindingTemplateOption[];
+}> {
+  const { data } = await axiosForBackend<{ items: BindingTemplateOption[] }>({
+    url: '/api/employees/binding-templates',
     method: 'GET',
   });
   return data;
