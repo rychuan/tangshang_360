@@ -87,7 +87,7 @@ const LayoutContent: React.FC = () => {
         homePath={homePath}
         badges={badges}
       />
-      <SidebarInset className="min-w-0 overflow-hidden bg-background md:rounded-lg">
+        <SidebarInset className="min-w-0 overflow-hidden bg-background md:rounded-lg">
         <AppTopbar
           currentLabel={currentLabel}
           items={allItems}
