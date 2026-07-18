@@ -605,10 +605,14 @@ export class EmployeeManagementService {
     const currentRoles = this.getDurableRolesForComparison(rows[0]);
     const desiredRoles =
       body.role !== undefined ? this.parseRoles(body.role) : currentRoles;
+    const roleMutationEntitlement =
+      body.role !== undefined
+        ? await this.getRoleMutationEntitlement(userId)
+        : { isAdmin: true, canEdit: true };
     const roleChanged = !this.sameRoles(currentRoles, desiredRoles);
     if (roleChanged) {
-      await this.assertRoleMutationPermission(
-        userId,
+      this.requireRoleMutationEntitlement(
+        roleMutationEntitlement,
         '只有系统管理员可修改员工角色',
         '无权修改员工角色',
       );
@@ -651,6 +655,13 @@ export class EmployeeManagementService {
       const currentRoles = this.getDurableRoles(currentEmployee);
       const transactionDesiredRoles =
         body.role !== undefined ? this.parseRoles(body.role) : currentRoles;
+      if (!this.sameRoles(currentRoles, transactionDesiredRoles)) {
+        this.requireRoleMutationEntitlement(
+          roleMutationEntitlement,
+          '只有系统管理员可修改员工角色',
+          '无权修改员工角色',
+        );
+      }
       const transactionValues = {
         ...values,
         role:
@@ -738,10 +749,14 @@ export class EmployeeManagementService {
     const currentRoles = this.getDurableRolesForComparison(rows[0]);
     const desiredRoles =
       body.role !== undefined ? this.parseRoles(body.role) : currentRoles;
+    const roleMutationEntitlement =
+      body.role !== undefined
+        ? await this.getRoleMutationEntitlement(userId)
+        : { isAdmin: true, canEdit: true };
     const roleChanged = !this.sameRoles(currentRoles, desiredRoles);
     if (roleChanged) {
-      await this.assertRoleMutationPermission(
-        userId,
+      this.requireRoleMutationEntitlement(
+        roleMutationEntitlement,
         '只有系统管理员可修改员工角色',
         '无权修改员工角色',
       );
@@ -783,10 +798,22 @@ export class EmployeeManagementService {
         );
       }
       const current = await this.loadEmployeeForLifecycle(tx, id);
+      const currentEmployee = current || rows[0];
+      const transactionCurrentRoles = this.getDurableRoles(currentEmployee);
+      const transactionDesiredRoles =
+        body.role !== undefined
+          ? this.parseRoles(body.role)
+          : transactionCurrentRoles;
+      if (!this.sameRoles(transactionCurrentRoles, transactionDesiredRoles)) {
+        this.requireRoleMutationEntitlement(
+          roleMutationEntitlement,
+          '只有系统管理员可修改员工角色',
+          '无权修改员工角色',
+        );
+      }
       if (body.role !== undefined) {
         if (
-          current &&
-          this.isEffectiveAdmin(current) &&
+          this.isEffectiveAdmin(currentEmployee) &&
           !this.parseRoles(body.role).includes('admin')
         ) {
           await this.assertAdminCountAfterReduction(
@@ -795,7 +822,6 @@ export class EmployeeManagementService {
           );
         }
       }
-      const currentEmployee = current || rows[0];
       const transactionValues = {
         ...values,
         role:
@@ -814,11 +840,6 @@ export class EmployeeManagementService {
         targetId: id,
         changes: { after: transactionValues },
       });
-      const transactionCurrentRoles = this.getDurableRoles(currentEmployee);
-      const transactionDesiredRoles =
-        body.role !== undefined
-          ? this.parseRoles(body.role)
-          : transactionCurrentRoles;
       if (this.sameRoles(transactionCurrentRoles, transactionDesiredRoles)) {
         return null;
       }
@@ -1069,9 +1090,20 @@ export class EmployeeManagementService {
     identityMessage: string,
     permissionMessage: string,
   ): Promise<void> {
+    const entitlement = await this.getRoleMutationEntitlement(userId);
+    this.requireRoleMutationEntitlement(
+      entitlement,
+      identityMessage,
+      permissionMessage,
+    );
+  }
+
+  private async getRoleMutationEntitlement(
+    userId: string,
+  ): Promise<{ isAdmin: boolean; canEdit: boolean }> {
     const roles = await this.roleManagerService.getUserRoles(userId);
     if (!roles.includes('admin')) {
-      throw new ForbiddenException(identityMessage);
+      return { isAdmin: false, canEdit: false };
     }
     const canEditPermissions =
       await this.roleManagerService.checkUserPermission(
@@ -1079,7 +1111,18 @@ export class EmployeeManagementService {
         'permission_management',
         'edit',
       );
-    if (!canEditPermissions) {
+    return { isAdmin: true, canEdit: canEditPermissions };
+  }
+
+  private requireRoleMutationEntitlement(
+    entitlement: { isAdmin: boolean; canEdit: boolean },
+    identityMessage: string,
+    permissionMessage: string,
+  ): void {
+    if (!entitlement.isAdmin) {
+      throw new ForbiddenException(identityMessage);
+    }
+    if (!entitlement.canEdit) {
       throw new ForbiddenException(permissionMessage);
     }
   }

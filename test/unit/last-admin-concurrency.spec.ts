@@ -441,4 +441,115 @@ describe('last active admin concurrency protection', () => {
       authorizationSyncService.stageAuthorizationChange,
     ).toHaveBeenCalledWith(tx, 'admin-2', ['employee']);
   });
+
+  it('rechecks role-mutation permission when direct update sees a transaction-local role change', async () => {
+    const { tx } = createAdminMutationTransaction(2, {
+      employeeId: 'employee-2',
+      role: 'admin',
+      status: true,
+      authorizationRoles: ['admin'],
+      authorizationStatus: 'synced',
+      deletedAt: null,
+    });
+    const db = {
+      select: jest.fn().mockReturnValue(
+        limitedQuery([
+          {
+            employeeId: 'employee-2',
+            role: 'employee',
+            status: true,
+            authorizationRoles: ['employee'],
+            authorizationStatus: 'synced',
+          },
+        ]),
+      ),
+      transaction: jest.fn(async (callback: (value: unknown) => unknown) =>
+        callback(tx),
+      ),
+    };
+    const { service, roleManagerService, authorizationSyncService } =
+      createEmployeeService(db);
+    roleManagerService.checkUserPermission.mockResolvedValue(false);
+
+    await expect(
+      service.update(
+        'employee-2',
+        {
+          name: '员工二',
+          position: '工程师',
+          positionCode: 'engineer',
+          department: '研发部',
+          departmentId: 'dept-1',
+          supervisorId: 'admin-1',
+          role: 'employee',
+        },
+        'admin-1',
+      ),
+    ).rejects.toThrow('无权修改员工角色');
+
+    expect(roleManagerService.checkUserPermission).toHaveBeenCalledWith(
+      'admin-1',
+      'permission_management',
+      'edit',
+    );
+    expect(
+      authorizationSyncService.stageAuthorizationChange,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('rechecks role-mutation permission when imported update sees a transaction-local role change', async () => {
+    const { tx } = createAdminMutationTransaction(2, {
+      employeeId: 'employee-2',
+      role: 'admin',
+      status: true,
+      authorizationRoles: ['admin'],
+      authorizationStatus: 'synced',
+      deletedAt: null,
+    });
+    const db = {
+      select: jest.fn().mockReturnValue(
+        limitedQuery([
+          {
+            employeeId: 'employee-2',
+            role: 'employee',
+            status: true,
+            authorizationRoles: ['employee'],
+            authorizationStatus: 'synced',
+          },
+        ]),
+      ),
+      transaction: jest.fn(async (callback: (value: unknown) => unknown) =>
+        callback(tx),
+      ),
+    };
+    const { service, roleManagerService, authorizationSyncService } =
+      createEmployeeService(db);
+    roleManagerService.checkUserPermission.mockResolvedValue(false);
+
+    await expect(
+      service.syncImportedEmployee(
+        'employee-2',
+        {
+          name: '员工二',
+          position: '工程师',
+          positionCode: 'engineer',
+          department: '研发部',
+          departmentId: 'dept-1',
+          supervisorId: 'admin-1',
+          role: 'employee',
+        },
+        true,
+        'admin-1',
+      ),
+    ).rejects.toThrow('无权修改员工角色');
+
+    expect(roleManagerService.checkUserPermission).toHaveBeenCalledWith(
+      'admin-1',
+      'permission_management',
+      'edit',
+    );
+    expect(
+      authorizationSyncService.stageAuthorizationChange,
+    ).not.toHaveBeenCalled();
+  });
 });
