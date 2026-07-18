@@ -2,8 +2,27 @@ import {
   effectiveAuthorizationRoles,
   normalizeAuthorizationRoles,
 } from '../../server/modules/role-manager/authorization-state';
+import { readFileSync } from 'node:fs';
+import { authorizationSyncJob, employee } from '../../server/database/schema';
+
+type IsAny<T> = 0 extends (1 & T) ? true : false;
+type ExpectExactlyStringArray<T> = IsAny<T> extends true
+  ? never
+  : T extends string[]
+    ? (string[] extends T ? true : never)
+    : never;
+
+const employeeAuthorizationRolesCheck:
+  ExpectExactlyStringArray<typeof employee.$inferSelect.authorizationRoles> = true;
+const authorizationJobDesiredRolesCheck:
+  ExpectExactlyStringArray<typeof authorizationSyncJob.$inferSelect.desiredRoles> = true;
 
 describe('authorization state helpers', () => {
+  it('keeps authorization role fields typed as string arrays', () => {
+    expect(employeeAuthorizationRolesCheck).toBe(true);
+    expect(authorizationJobDesiredRolesCheck).toBe(true);
+  });
+
   it('normalizes authorization roles', () => {
     expect(normalizeAuthorizationRoles([' admin ', 'employee', 'admin', ''])).toEqual([
       'admin',
@@ -39,5 +58,34 @@ describe('authorization state helpers', () => {
         authorizationRoles: ['admin'],
       }),
     ).toEqual([]);
+  });
+
+  it('documents authorization status and JSONB array constraints in the migration', () => {
+    const migration = readFileSync(
+      'server/database/migrations/015_authorization_consistency.sql',
+      'utf8',
+    );
+
+    expect(migration).toContain(
+      "authorization_status VARCHAR(20) NOT NULL DEFAULT 'pending'",
+    );
+    expect(migration).toContain(
+      "status VARCHAR(20) NOT NULL DEFAULT 'pending'",
+    );
+    expect(migration).toContain(
+      "authorization_roles JSONB NOT NULL DEFAULT '[]'::jsonb",
+    );
+    expect(migration).toContain(
+      "CHECK (jsonb_typeof(authorization_roles) = 'array')",
+    );
+    expect(migration).toContain(
+      "CHECK (jsonb_typeof(desired_roles) = 'array')",
+    );
+    expect(migration).toContain(
+      "CHECK (authorization_status IN ('pending', 'synced', 'failed'))",
+    );
+    expect(migration).toContain(
+      "CHECK (status IN ('pending', 'processing', 'succeeded', 'failed', 'superseded'))",
+    );
   });
 });

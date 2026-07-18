@@ -500,7 +500,7 @@ export const employee = pgTable("employee", {
   title: varchar("title", { length: 100 }),
   // Synced field: auto-synced, do not modify or delete
   role: varchar("role", { length: 50 }).default('employee'),
-  authorizationRoles: jsonb("authorization_roles").notNull().default('[]'),
+  authorizationRoles: jsonb("authorization_roles").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   authorizationStatus: varchar("authorization_status", { length: 20 }).notNull().default('pending'),
   authorizationVersion: integer("authorization_version").notNull().default(1),
   authorizationError: text("authorization_error"),
@@ -534,6 +534,7 @@ export const authorizationSyncJob = pgTable("authorization_sync_job", {
   id: uuid("id").primaryKey().defaultRandom(),
   employeeId: userProfile("employee_id").notNull(),
   authorizationVersion: integer("authorization_version").notNull(),
+  desiredRoles: jsonb("desired_roles").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   status: varchar("status", { length: 20 }).notNull().default('pending'),
   attemptCount: integer("attempt_count").notNull().default(0),
   errorMessage: text("error_message"),
