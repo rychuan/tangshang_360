@@ -73,6 +73,7 @@ export {
   type PermissionAction,
   type PermissionResource,
   type PermissionItem,
+  type CurrentUserAuthorizationContext,
   DEFAULT_PERMISSIONS,
   type ForceRoleDTO,
   type RoleMemberDTO,

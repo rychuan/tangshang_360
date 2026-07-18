@@ -11,11 +11,14 @@ const TAB_ORDER: EmployeeManagementTab[] = [
 
 export function getVisibleEmployeeManagementTabs(
   permissions: PermissionItem[],
+  canManageGlobalConnections: boolean,
 ): EmployeeManagementTab[] {
   const visible = new Set<EmployeeManagementTab>();
   if (hasPermission(permissions, 'employees', 'view')) {
     visible.add('employees');
-    visible.add('bitable');
+    if (canManageGlobalConnections) {
+      visible.add('bitable');
+    }
   }
   if (hasPermission(permissions, 'organization', 'view')) {
     visible.add('departments');

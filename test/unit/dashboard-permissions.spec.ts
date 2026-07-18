@@ -1,4 +1,6 @@
 import 'reflect-metadata';
+import { and, eq } from 'drizzle-orm';
+import { PgDialect } from 'drizzle-orm/pg-core';
 
 const noopDecorator = () => () => undefined;
 
@@ -26,6 +28,8 @@ import {
   AssessmentDashboardService,
   dashboardEmployeeIds,
 } from '../../server/modules/assessment-dashboard/assessment-dashboard.service';
+import { assessmentInstance } from '../../server/database/schema';
+import { buildEmployeeIdInCondition } from '../../server/modules/team-performance/employee-scope-condition';
 import { DEFAULT_PERMISSIONS } from '../../shared/types/permission.types';
 
 describe('dashboard permission enforcement', () => {
@@ -133,5 +137,100 @@ describe('dashboard permission enforcement', () => {
       'manager-1',
     );
     expect(employeeRepo.findSubordinateIds).not.toHaveBeenCalled();
+  });
+
+  it('compiles multi-employee dashboard scope as a grouped IN predicate', () => {
+    const condition = and(
+      buildEmployeeIdInCondition(assessmentInstance.employeeId, [
+        'managed-1',
+        'managed-2',
+      ]),
+      eq(assessmentInstance.status, 'completed'),
+    );
+    const compiled = new PgDialect().sqlToQuery(condition!);
+    const normalizedSql = compiled.sql.replace(/\s+/g, ' ').toLowerCase();
+
+    expect(normalizedSql).toContain('user_id in ($1, $2)');
+    expect(normalizedSql).toContain('and "assessment_instance"."status" = $3');
+    expect(normalizedSql).not.toContain('user_id = $1 or');
+    expect(compiled.params).toEqual(['managed-1', 'managed-2', 'completed']);
+  });
+
+  it('uses the grouped managed predicate for mixed todo statuses', async () => {
+    let whereCondition: unknown;
+    const sampleRows = [
+      {
+        id: 'self-review',
+        employeeId: 'manager-1',
+        period: '2026-07',
+        status: 'self_review',
+      },
+      {
+        id: 'managed-review',
+        employeeId: 'managed-1',
+        period: '2026-07',
+        status: 'supervisor_review',
+      },
+      {
+        id: 'managed-sign',
+        employeeId: 'managed-2',
+        period: '2026-07',
+        status: 'supervisor_sign',
+      },
+      {
+        id: 'managed-wrong-status',
+        employeeId: 'managed-1',
+        period: '2026-07',
+        status: 'self_review',
+      },
+      {
+        id: 'outsider-review',
+        employeeId: 'outsider-1',
+        period: '2026-07',
+        status: 'supervisor_review',
+      },
+    ];
+    const query = {
+      from: jest.fn().mockReturnThis(),
+      where: jest.fn((condition: unknown) => {
+        whereCondition = condition;
+        return query;
+      }),
+      orderBy: jest
+        .fn()
+        .mockImplementation(async () =>
+          sampleRows
+            .filter(
+              (row) =>
+                (row.employeeId === 'manager-1' &&
+                  ['self_review', 'pending_sign'].includes(row.status)) ||
+                (['managed-1', 'managed-2'].includes(row.employeeId) &&
+                  ['supervisor_review', 'supervisor_sign'].includes(
+                    row.status,
+                  )),
+            )
+            .map(({ employeeId: _employeeId, ...row }) => row),
+        ),
+    };
+    const service = new (AssessmentDashboardService as any)(
+      { select: jest.fn().mockReturnValue(query) },
+      {},
+      {
+        getManagedEmployeeIds: jest
+          .fn()
+          .mockResolvedValue(['managed-1', 'managed-2']),
+      },
+    ) as AssessmentDashboardService;
+
+    const result = await service.todos('manager-1');
+    const compiled = new PgDialect().sqlToQuery(whereCondition as any);
+    const normalizedSql = compiled.sql.replace(/\s+/g, ' ').toLowerCase();
+
+    expect(normalizedSql).toContain('user_id in (');
+    expect(result.items.map((item) => item.id)).toEqual([
+      'self-review',
+      'managed-review',
+      'managed-sign',
+    ]);
   });
 });

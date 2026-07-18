@@ -1,4 +1,8 @@
-import { department, employee, rolePermissionConfig } from '../../server/database/schema';
+import {
+  department,
+  employee,
+  rolePermissionConfig,
+} from '../../server/database/schema';
 
 type Table = typeof employee | typeof department | typeof rolePermissionConfig;
 
@@ -6,6 +10,7 @@ type Selection = Record<string, unknown>;
 
 export type FakeEmployeeRow = {
   employeeId: string;
+  position?: string;
   status: boolean;
   deletedAt: Date | string | null;
   authorizationStatus: 'pending' | 'synced' | 'failed';
@@ -29,28 +34,30 @@ export type FakePermissionConfigRow = {
 function isColumn(value: unknown): value is { name: string; table: Table } {
   return Boolean(
     value &&
-      typeof value === 'object' &&
-      'name' in value &&
-      'table' in value &&
-      !('queryChunks' in value),
+    typeof value === 'object' &&
+    'name' in value &&
+    'table' in value &&
+    !('queryChunks' in value),
   );
 }
 
-function isParam(value: unknown): value is { value: unknown; encoder: unknown } {
+function isParam(
+  value: unknown,
+): value is { value: unknown; encoder: unknown } {
   return Boolean(
     value &&
-      typeof value === 'object' &&
-      'value' in value &&
-      'encoder' in value,
+    typeof value === 'object' &&
+    'value' in value &&
+    'encoder' in value,
   );
 }
 
 function isSql(value: unknown): value is { queryChunks: unknown[] } {
   return Boolean(
     value &&
-      typeof value === 'object' &&
-      'queryChunks' in value &&
-      Array.isArray((value as { queryChunks?: unknown[] }).queryChunks),
+    typeof value === 'object' &&
+    'queryChunks' in value &&
+    Array.isArray((value as { queryChunks?: unknown[] }).queryChunks),
   );
 }
 
@@ -68,15 +75,21 @@ function matches(
   const chunks = (condition as { queryChunks?: unknown[] } | undefined)
     ?.queryChunks;
   if (!Array.isArray(chunks)) return true;
+  const conditionText = chunks
+    .map(extractChunkText)
+    .join('')
+    .trim()
+    .toLowerCase();
+  if (conditionText === 'false') return false;
 
   const nested = chunks.filter(isSql);
   const logicalOperator = chunks
     .filter((chunk): chunk is { value: string[] } =>
       Boolean(
         chunk &&
-          typeof chunk === 'object' &&
-          'value' in chunk &&
-          Array.isArray((chunk as { value?: unknown }).value),
+        typeof chunk === 'object' &&
+        'value' in chunk &&
+        Array.isArray((chunk as { value?: unknown }).value),
       ),
     )
     .flatMap((chunk) => chunk.value)
@@ -160,7 +173,11 @@ function extractRightValue(right: unknown): unknown {
   return undefined;
 }
 
-function project(selection: Selection, table: Table, row: Record<string, unknown>) {
+function project(
+  selection: Selection,
+  table: Table,
+  row: Record<string, unknown>,
+) {
   return Object.fromEntries(
     Object.entries(selection).map(([key, column]) => {
       if (isColumn(column)) {
@@ -199,6 +216,7 @@ export class QueryBackedDb {
     const query = {
       table: undefined as Table | undefined,
       condition: undefined as unknown,
+      orderColumn: undefined as { name: string } | undefined,
       from: jest.fn((table: Table) => {
         query.table = table;
         return query;
@@ -207,19 +225,21 @@ export class QueryBackedDb {
         query.condition = condition;
         return query;
       }),
+      orderBy: jest.fn((column: { name: string }) => {
+        query.orderColumn = column;
+        return query;
+      }),
       limit: jest.fn(async (limit: number) => {
-        const rows = this.rows(query.table).filter((row) =>
-          matches(query.table!, row, query.condition),
-        );
-        return rows.slice(0, limit).map((row) => project(selection, query.table!, row));
+        const rows = this.queryRows(query);
+        return rows
+          .slice(0, limit)
+          .map((row) => project(selection, query.table!, row));
       }),
       then: (
         resolve: (value: Record<string, unknown>[]) => unknown,
         reject?: (reason: unknown) => unknown,
       ) => {
-        const rows = this.rows(query.table).filter((row) =>
-          matches(query.table!, row, query.condition),
-        );
+        const rows = this.queryRows(query);
         return Promise.resolve(
           rows.map((row) => project(selection, query.table!, row)),
         ).then(resolve, reject);
@@ -230,7 +250,23 @@ export class QueryBackedDb {
 
   private rows(table: Table | undefined): Record<string, unknown>[] {
     if (table === department) return this.data.departments ?? [];
-    if (table === rolePermissionConfig) return this.data.rolePermissionConfigs ?? [];
+    if (table === rolePermissionConfig)
+      return this.data.rolePermissionConfigs ?? [];
     return this.data.employees ?? [];
+  }
+
+  private queryRows(query: {
+    table: Table | undefined;
+    condition: unknown;
+    orderColumn: { name: string } | undefined;
+  }): Record<string, unknown>[] {
+    const rows = this.rows(query.table).filter((row) =>
+      matches(query.table!, row, query.condition),
+    );
+    if (!query.orderColumn) return rows;
+    const key = propertyName(query.orderColumn.name);
+    return [...rows].sort((left, right) =>
+      String(left[key] ?? '').localeCompare(String(right[key] ?? '')),
+    );
   }
 }

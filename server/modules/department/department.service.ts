@@ -5,6 +5,7 @@ import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import {
   DRIZZLE_DATABASE,
@@ -27,14 +28,28 @@ import type {
   CreateDepartmentRequest,
 } from '@shared/api.interface';
 
-type DepartmentHeadRoleChange = {
+type LockedEmployeeAuthorization = {
   employeeId: string;
-  mutation: 'add' | 'remove';
+  authorizationRoles: string[];
+  authorizationStatus: string;
+  authorizationVersion: number;
 };
 
 type StagedAuthorization = {
   employeeId: string;
   version: number;
+};
+
+type HeadMutationEntitlement = {
+  isAdmin: boolean;
+  canEdit: boolean;
+};
+
+type AuthorizationProcessingFailure = {
+  employeeId: string;
+  version: number;
+  status: string;
+  error: string;
 };
 
 @Injectable()
@@ -207,10 +222,22 @@ export class DepartmentService {
         .values({
           name: body.name,
           parentId: body.parentId || null,
-          headId: body.headId || null,
+          headId: null,
           sortOrder: body.sortOrder ?? 0,
         })
         .returning({ id: department.id });
+
+      await this.lockDepartment(tx, inserted.id);
+      const lockedEmployees = body.headId
+        ? await this.lockEmployeeAuthorizations(tx, [body.headId])
+        : [];
+
+      if (body.headId) {
+        await tx
+          .update(department)
+          .set({ headId: body.headId })
+          .where(eq(department.id, inserted.id));
+      }
 
       await tx.insert(auditLog).values({
         operatorId: userId,
@@ -220,11 +247,10 @@ export class DepartmentService {
         changes: { after: body },
       });
 
-      const authorizations = body.headId
-        ? await this.stageDepartmentHeadRoleChanges(tx, [
-            { employeeId: body.headId, mutation: 'add' },
-          ])
-        : [];
+      const authorizations = await this.stageCurrentDepartmentHeadRoles(
+        tx,
+        lockedEmployees,
+      );
 
       return { id: inserted.id, authorizations };
     });
@@ -246,30 +272,23 @@ export class DepartmentService {
     if (body.parentId) {
       this.assertDepartmentInScope(scope, body.parentId);
     }
-
-    const rows = await this.db
-      .select({
-        id: department.id,
-        oldHeadId: department.headId,
-        oldName: department.name,
-      })
-      .from(department)
-      .where(eq(department.id, id))
-      .limit(1);
-
-    if (rows.length === 0) {
-      throw new NotFoundException('部门不存在');
-    }
-
-    const oldDept = rows[0];
-    const oldHeadId = oldDept.oldHeadId || null;
     const newHeadId = body.headId || null;
-    const headChanged = newHeadId !== oldHeadId;
-    if (headChanged) {
-      await this.assertHeadMutationPermission(userId);
-    }
+    const headEntitlement = await this.getHeadMutationEntitlement(userId);
 
     const authorizations = await this.db.transaction(async (tx) => {
+      const oldDept = await this.lockDepartment(tx, id);
+      const oldHeadId = oldDept.headId || null;
+      const headChanged = newHeadId !== oldHeadId;
+      if (headChanged) {
+        this.assertHeadMutationEntitlement(headEntitlement);
+      }
+      const affectedEmployeeIds = [oldHeadId, newHeadId].filter(
+        (employeeId): employeeId is string => Boolean(employeeId),
+      );
+      const lockedEmployees = headChanged
+        ? await this.lockEmployeeAuthorizations(tx, affectedEmployeeIds)
+        : [];
+
       await tx
         .update(department)
         .set({
@@ -288,8 +307,8 @@ export class DepartmentService {
         changes: { after: body },
       });
 
-      if (newHeadId !== oldHeadId && newHeadId) {
-        const deptName = oldDept.oldName;
+      if (headChanged && newHeadId) {
+        const deptName = oldDept.name;
         await tx
           .update(employee)
           .set({ supervisorId: newHeadId })
@@ -305,28 +324,7 @@ export class DepartmentService {
         );
       }
 
-      const roleChanges: DepartmentHeadRoleChange[] = [];
-      if (oldHeadId && oldHeadId !== newHeadId) {
-        const stillHead = await tx
-          .select({ id: department.id })
-          .from(department)
-          .where(eq(department.headId, oldHeadId))
-          .limit(1);
-        if (stillHead.length === 0) {
-          roleChanges.push({
-            employeeId: oldHeadId,
-            mutation: 'remove',
-          });
-        }
-      }
-      if (newHeadId && newHeadId !== oldHeadId) {
-        roleChanges.push({
-          employeeId: newHeadId,
-          mutation: 'add',
-        });
-      }
-
-      return this.stageDepartmentHeadRoleChanges(tx, roleChanges);
+      return this.stageCurrentDepartmentHeadRoles(tx, lockedEmployees);
     });
 
     await this.processAuthorizations(authorizations);
@@ -336,46 +334,22 @@ export class DepartmentService {
   async remove(id: string, userId: string): Promise<{ success: boolean }> {
     const scope = await this.getReadableScope(userId);
     this.assertDepartmentInScope(scope, id);
-
-    const rows = await this.db
-      .select({
-        id: department.id,
-        name: department.name,
-        headId: department.headId,
-      })
-      .from(department)
-      .where(eq(department.id, id))
-      .limit(1);
-
-    if (rows.length === 0) {
-      throw new NotFoundException('部门不存在');
-    }
-
-    const children = await this.db
-      .select({ cnt: count() })
-      .from(department)
-      .where(eq(department.parentId, id));
-    if (Number(children[0].cnt) > 0) {
-      throw new BadRequestException('该部门下还有子部门，无法删除');
-    }
-
-    const headId = rows[0].headId || null;
-    let removesFinalHeadRole = false;
-    if (headId) {
-      const otherHeadRows = await this.db
-        .select({ id: department.id })
-        .from(department)
-        .where(
-          and(eq(department.headId, headId), sql`${department.id} <> ${id}`),
-        )
-        .limit(1);
-      removesFinalHeadRole = otherHeadRows.length === 0;
-      if (removesFinalHeadRole) {
-        await this.assertHeadMutationPermission(userId);
-      }
-    }
+    const headEntitlement = await this.getHeadMutationEntitlement(userId);
 
     const authorizations = await this.db.transaction(async (tx) => {
+      const lockedDepartment = await this.lockDepartment(tx, id);
+      const children = await tx
+        .select({ cnt: count() })
+        .from(department)
+        .where(eq(department.parentId, id));
+      if (Number(children[0].cnt) > 0) {
+        throw new BadRequestException('该部门下还有子部门，无法删除');
+      }
+      const headId = lockedDepartment.headId || null;
+      const lockedEmployees = headId
+        ? await this.lockEmployeeAuthorizations(tx, [headId])
+        : [];
+
       await tx.delete(department).where(eq(department.id, id));
 
       await tx.insert(auditLog).values({
@@ -383,15 +357,16 @@ export class DepartmentService {
         action: 'delete_department',
         targetType: 'department',
         targetId: id,
-        changes: { before: { name: rows[0].name } },
+        changes: { before: { name: lockedDepartment.name } },
       });
 
-      if (headId && removesFinalHeadRole) {
-        return this.stageDepartmentHeadRoleChanges(tx, [
-          { employeeId: headId, mutation: 'remove' },
-        ]);
+      if (headId) {
+        const stillHead = await this.hasDepartmentHeadAssignment(tx, headId);
+        if (!stillHead) {
+          this.assertHeadMutationEntitlement(headEntitlement);
+        }
       }
-      return [];
+      return this.stageCurrentDepartmentHeadRoles(tx, lockedEmployees);
     });
 
     await this.processAuthorizations(authorizations);
@@ -499,34 +474,66 @@ export class DepartmentService {
   }
 
   private async assertHeadMutationPermission(userId: string): Promise<void> {
+    const entitlement = await this.getHeadMutationEntitlement(userId);
+    this.assertHeadMutationEntitlement(entitlement);
+  }
+
+  private async getHeadMutationEntitlement(
+    userId: string,
+  ): Promise<HeadMutationEntitlement> {
     const roles = await this.roleManagerService.getUserRoles(userId);
-    if (!roles.includes('admin')) {
+    const isAdmin = roles.includes('admin');
+    const canEdit = isAdmin
+      ? await this.roleManagerService.checkUserPermission(
+          userId,
+          'permission_management',
+          'edit',
+        )
+      : false;
+    return { isAdmin, canEdit };
+  }
+
+  private assertHeadMutationEntitlement(
+    entitlement: HeadMutationEntitlement,
+  ): void {
+    if (!entitlement.isAdmin) {
       throw new ForbiddenException('只有系统管理员可修改部门负责人');
     }
-    const canEditRoles = await this.roleManagerService.checkUserPermission(
-      userId,
-      'permission_management',
-      'edit',
-    );
-    if (!canEditRoles) {
+    if (!entitlement.canEdit) {
       throw new ForbiddenException('无权修改部门负责人');
     }
   }
 
-  private async stageDepartmentHeadRoleChanges(
+  private async lockDepartment(
     tx: PostgresJsDatabase,
-    changes: DepartmentHeadRoleChange[],
-  ): Promise<StagedAuthorization[]> {
-    if (changes.length === 0) {
+    departmentId: string,
+  ): Promise<{ id: string; name: string; headId: string | null }> {
+    const rows = await tx
+      .select({
+        id: department.id,
+        name: department.name,
+        headId: department.headId,
+      })
+      .from(department)
+      .where(eq(department.id, departmentId))
+      .for('update');
+    if (rows.length === 0) {
+      throw new NotFoundException('部门不存在');
+    }
+    return rows[0];
+  }
+
+  private async lockEmployeeAuthorizations(
+    tx: PostgresJsDatabase,
+    employeeIds: string[],
+  ): Promise<LockedEmployeeAuthorization[]> {
+    const sortedEmployeeIds = Array.from(new Set(employeeIds)).sort((a, b) =>
+      a.localeCompare(b),
+    );
+    if (sortedEmployeeIds.length === 0) {
       return [];
     }
 
-    const mutationByEmployeeId = new Map(
-      changes.map((change) => [change.employeeId, change.mutation]),
-    );
-    const employeeIds = Array.from(mutationByEmployeeId.keys()).sort((a, b) =>
-      a.localeCompare(b),
-    );
     const employeeIdColumn = sql<string>`(${employee.employeeId}).user_id`;
     const rows = await tx
       .select({
@@ -536,20 +543,41 @@ export class DepartmentService {
         authorizationVersion: employee.authorizationVersion,
       })
       .from(employee)
-      .where(inArray(employeeIdColumn, employeeIds))
+      .where(inArray(employeeIdColumn, sortedEmployeeIds))
       .orderBy(employeeIdColumn)
       .for('update');
-    const rowByEmployeeId = new Map(rows.map((row) => [row.employeeId, row]));
-    const staged: StagedAuthorization[] = [];
-
-    for (const employeeId of employeeIds) {
+    const rowByEmployeeId = new Map(
+      rows.map((row) => [
+        row.employeeId,
+        {
+          ...row,
+          authorizationRoles: this.getDurableRoles(row.authorizationRoles),
+        },
+      ]),
+    );
+    return sortedEmployeeIds.map((employeeId) => {
       const row = rowByEmployeeId.get(employeeId);
       if (!row) {
         throw new BadRequestException(`部门负责人 ${employeeId} 不存在`);
       }
-      const currentRoles = this.getDurableRoles(row.authorizationRoles);
+      return row;
+    });
+  }
+
+  private async stageCurrentDepartmentHeadRoles(
+    tx: PostgresJsDatabase,
+    lockedEmployees: LockedEmployeeAuthorization[],
+  ): Promise<StagedAuthorization[]> {
+    const staged: StagedAuthorization[] = [];
+
+    for (const row of lockedEmployees) {
+      const currentRoles = row.authorizationRoles;
+      const isDepartmentHead = await this.hasDepartmentHeadAssignment(
+        tx,
+        row.employeeId,
+      );
       const desiredRoles = normalizeAuthorizationRoles(
-        mutationByEmployeeId.get(employeeId) === 'add'
+        isDepartmentHead
           ? [...currentRoles, 'dept_head']
           : currentRoles.filter((role) => role !== 'dept_head'),
       );
@@ -560,7 +588,7 @@ export class DepartmentService {
           row.authorizationStatus === 'failed'
         ) {
           staged.push({
-            employeeId,
+            employeeId: row.employeeId,
             version: row.authorizationVersion,
           });
         }
@@ -570,13 +598,25 @@ export class DepartmentService {
       const version =
         await this.authorizationSyncService.stageAuthorizationChange(
           tx,
-          employeeId,
+          row.employeeId,
           desiredRoles,
         );
-      staged.push({ employeeId, version });
+      staged.push({ employeeId: row.employeeId, version });
     }
 
     return staged;
+  }
+
+  private async hasDepartmentHeadAssignment(
+    tx: PostgresJsDatabase,
+    employeeId: string,
+  ): Promise<boolean> {
+    const rows = await tx
+      .select({ id: department.id })
+      .from(department)
+      .where(sql`(${department.headId}).user_id = ${employeeId}`)
+      .limit(1);
+    return rows.length > 0;
   }
 
   private getDurableRoles(value: unknown): string[] {
@@ -599,18 +639,44 @@ export class DepartmentService {
   private async processAuthorizations(
     authorizations: StagedAuthorization[],
   ): Promise<void> {
-    for (const authorization of authorizations) {
-      const result =
-        await this.authorizationSyncService.processEmployeeAuthorization(
-          authorization.employeeId,
-          authorization.version,
-        );
-      if (result.status !== 'synced') {
-        throw new Error(
-          result.error ||
-            `Employee ${authorization.employeeId} authorization sync finished with ${result.status}`,
-        );
-      }
+    const outcomes = await Promise.all(
+      authorizations.map(async (authorization) => {
+        try {
+          const result =
+            await this.authorizationSyncService.processEmployeeAuthorization(
+              authorization.employeeId,
+              authorization.version,
+            );
+          return {
+            employeeId: authorization.employeeId,
+            version: authorization.version,
+            status: result.status,
+            error: result.error,
+          };
+        } catch (error) {
+          return {
+            employeeId: authorization.employeeId,
+            version: authorization.version,
+            status: 'rejected',
+            error: error instanceof Error ? error.message : String(error),
+          };
+        }
+      }),
+    );
+    const failures: AuthorizationProcessingFailure[] = outcomes
+      .filter((outcome) => outcome.status !== 'synced')
+      .map((outcome) => ({
+        employeeId: outcome.employeeId,
+        version: outcome.version,
+        status: outcome.status,
+        error:
+          outcome.error || `Authorization sync finished with ${outcome.status}`,
+      }));
+    if (failures.length > 0) {
+      throw new ServiceUnavailableException({
+        message: '部门负责人授权同步失败',
+        failures,
+      });
     }
   }
 }

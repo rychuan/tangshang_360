@@ -5,6 +5,7 @@ import {
 } from '@lark-apaas/fullstack-nestjs-core';
 import { assessmentInstance } from '@server/database/schema';
 import { EmployeeRepository } from '../employee-management/employee.repository';
+import { buildEmployeeIdInCondition } from '../team-performance/employee-scope-condition';
 import { eq, and, or, desc, count, avg, sql } from 'drizzle-orm';
 import {
   AccessScopeService,
@@ -246,13 +247,4 @@ function getTodoTitle(
     case 'supervisor_review':
       return `${period} 上级评分待完成`;
   }
-}
-
-function buildEmployeeIdInCondition(
-  col: typeof assessmentInstance.employeeId,
-  ids: string[],
-) {
-  if (ids.length === 0) return sql`FALSE`;
-  const chunks = ids.map((id) => sql`(${col}).user_id = ${id}`);
-  return sql.join(chunks, sql` OR `);
 }

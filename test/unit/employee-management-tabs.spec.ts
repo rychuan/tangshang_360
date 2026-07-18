@@ -10,32 +10,47 @@ import {
 } from '../../client/src/pages/EmployeeManagement/employee-management-permissions';
 
 describe('employee management tab permissions', () => {
+  const visibleTabs = (
+    permissions: Parameters<typeof getVisibleEmployeeManagementTabs>[0],
+    canManageGlobalConnections: boolean,
+  ) =>
+    (getVisibleEmployeeManagementTabs as any)(
+      permissions,
+      canManageGlobalConnections,
+    );
+
   it('shows the department tab to matching custom-role permissions', () => {
     expect(
-      getVisibleEmployeeManagementTabs([
-        { resource: 'organization', actions: ['view'] },
-      ]),
+      visibleTabs([{ resource: 'organization', actions: ['view'] }], false),
     ).toEqual(['departments']);
   });
 
-  it('shows employee and Bitable tabs to matching custom-role permissions', () => {
+  it('keeps self-scoped custom employee viewers on the employee tab only', () => {
     expect(
-      getVisibleEmployeeManagementTabs([
-        { resource: 'employees', actions: ['view'] },
-      ]),
+      visibleTabs([{ resource: 'employees', actions: ['view'] }], false),
+    ).toEqual(['employees']);
+  });
+
+  it('shows Bitable only with employees view and global connection capability', () => {
+    expect(
+      visibleTabs([{ resource: 'employees', actions: ['view'] }], true),
     ).toEqual(['employees', 'bitable']);
+    expect(visibleTabs([], true)).toEqual([]);
   });
 
   it('hides every tab when no matching dynamic view permission exists', () => {
-    expect(getVisibleEmployeeManagementTabs([])).toEqual([]);
+    expect(visibleTabs([], false)).toEqual([]);
   });
 
   it('keeps the existing admin permission-matrix behavior', () => {
     expect(
-      getVisibleEmployeeManagementTabs([
-        { resource: 'employees', actions: ['view'] },
-        { resource: 'organization', actions: ['view'] },
-      ]),
+      visibleTabs(
+        [
+          { resource: 'employees', actions: ['view'] },
+          { resource: 'organization', actions: ['view'] },
+        ],
+        true,
+      ),
     ).toEqual(['employees', 'departments', 'bitable']);
   });
 
@@ -137,14 +152,28 @@ describe('employee management tab permissions', () => {
       ),
       'utf8',
     );
+    const permissionsHookSource = fs.readFileSync(
+      path.resolve(__dirname, '../../client/src/hooks/usePermissions.tsx'),
+      'utf8',
+    );
+    const employeeApiSource = fs.readFileSync(
+      path.resolve(__dirname, '../../client/src/api/employee-management.ts'),
+      'utf8',
+    );
 
     expect(pageSource).toMatch(
-      /getVisibleEmployeeManagementTabs\(\s*permissions\s*\)/,
+      /getVisibleEmployeeManagementTabs\([\s\S]*permissions,[\s\S]*canManageGlobalConnections[\s\S]*\)/,
     );
+    expect(pageSource).toContain('canManageGlobalConnections');
     expect(pageSource).not.toContain('identityRoles');
     expect(pageSource).not.toContain('BUILTIN_ROLE_CODES');
     expect(pageSource).not.toContain('ROLE_SUBJECT');
     expect(pageSource).not.toContain('useAuth');
+    expect(permissionsHookSource).toContain('canManageGlobalConnections');
+    expect(permissionsHookSource).toMatch(
+      /employeeManagement\s*\.getMyPermissions\(\)/,
+    );
+    expect(employeeApiSource).toContain("url: '/api/employees/my/permissions'");
     expect(departmentSource).toContain(
       'canManageDepartmentHead(permissions, identityRoles)',
     );

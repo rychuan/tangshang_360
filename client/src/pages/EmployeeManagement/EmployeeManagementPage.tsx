@@ -13,10 +13,11 @@ import {
 } from './employee-management-permissions';
 
 const EmployeeManagementPage: React.FC = () => {
-  const { permissions } = usePermissions();
+  const { permissions, canManageGlobalConnections } = usePermissions();
   const visibleTabs = useMemo(
-    () => getVisibleEmployeeManagementTabs(permissions),
-    [permissions],
+    () =>
+      getVisibleEmployeeManagementTabs(permissions, canManageGlobalConnections),
+    [canManageGlobalConnections, permissions],
   );
   const defaultTab = getDefaultEmployeeManagementTab(visibleTabs);
   const [activeTab, setActiveTab] =

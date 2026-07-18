@@ -43,10 +43,10 @@ import type {
   EmployeeCurrentBinding,
   BindingTemplateOption,
   BindingHistoryItem,
+  CurrentUserAuthorizationContext,
 } from '@shared/api.interface';
 import { RoleManagerService } from '../role-manager/role-manager.service';
 import { AuthorizationSyncService } from '../role-manager/authorization-sync.service';
-import { DEFAULT_PERMISSIONS } from '@shared/api.interface';
 import { AccessScopeService } from '@server/common/access/access-scope.service';
 import { LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY } from './admin-safety';
 
@@ -984,36 +984,17 @@ export class EmployeeManagementService {
     return { success: true };
   }
 
-  async getMyPermissions(userId: string) {
-    const rows = await this.db
-      .select({ role: employee.role, permissions: employee.permissions })
-      .from(employee)
-      .where(
-        and(
-          sql`(${employee.employeeId}).user_id = ${userId}`,
-          isNull(employee.deletedAt),
-        ),
-      )
-      .limit(1);
-
-    if (rows.length === 0) {
-      return { role: 'employee', permissions: [] };
-    }
-
-    const emp = rows[0];
-    const role = (emp.role as string) || 'employee';
-
-    if (!emp.permissions) {
-      return {
-        role,
-        permissions:
-          (DEFAULT_PERMISSIONS as Record<string, unknown[]>)[role] || [],
-      };
-    }
-
+  async getMyPermissions(
+    userId: string,
+  ): Promise<CurrentUserAuthorizationContext> {
+    const [permissions, scope] = await Promise.all([
+      this.roleManagerService.getUserEffectivePermissions(userId),
+      this.accessScopeService.getScope(userId),
+    ]);
     return {
-      role,
-      permissions: emp.permissions,
+      permissions,
+      accessScopeKind: scope.kind,
+      canManageGlobalConnections: scope.kind === 'global',
     };
   }
 

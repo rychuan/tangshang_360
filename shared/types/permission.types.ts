@@ -29,6 +29,12 @@ export interface PermissionItem {
   actions: PermissionAction[];
 }
 
+export interface CurrentUserAuthorizationContext {
+  permissions: PermissionItem[];
+  accessScopeKind: 'global' | 'managed' | 'self';
+  canManageGlobalConnections: boolean;
+}
+
 const PERMISSION_ACTIONS: readonly PermissionAction[] = [
   'view',
   'edit',
