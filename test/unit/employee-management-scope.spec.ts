@@ -1,5 +1,9 @@
-import { sql } from 'drizzle-orm';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { eq, or, sql } from 'drizzle-orm';
+import { employee } from '../../server/database/schema';
 import { EmployeeManagementService } from '../../server/modules/employee-management/employee-management.service';
+import { QueryBackedDb, type FakeEmployeeRow } from './query-fakes';
 
 describe('employee management access scope', () => {
   const createService = (items: Record<string, unknown>[] = []) => {
@@ -26,6 +30,13 @@ describe('employee management access scope', () => {
       syncUserRoles: jest.fn().mockResolvedValue(undefined),
       syncUserRolesStrict: jest.fn().mockResolvedValue(undefined),
     };
+    const authorizationSyncService = {
+      stageAuthorizationChange: jest.fn().mockResolvedValue(1),
+      processEmployeeAuthorization: jest.fn().mockResolvedValue({
+        status: 'synced',
+        version: 1,
+      }),
+    };
     const bindingService = {
       history: jest.fn().mockResolvedValue({ items: [] }),
     };
@@ -44,6 +55,7 @@ describe('employee management access scope', () => {
       roleManagerService,
       bindingService,
       accessScopeService,
+      authorizationSyncService,
     ) as EmployeeManagementService;
 
     return {
@@ -52,6 +64,7 @@ describe('employee management access scope', () => {
       roleManagerService,
       bindingService,
       accessScopeService,
+      authorizationSyncService,
     };
   };
 
@@ -65,6 +78,199 @@ describe('employee management access scope', () => {
       { includeSelf: true },
     );
   });
+
+  it.each([
+    {
+      label: 'global',
+      userId: 'global-1',
+      condition: null,
+      expected: ['产品经理', '工程师', '销售'],
+    },
+    {
+      label: 'self',
+      userId: 'self-1',
+      condition: eq(employee.employeeId, 'self-1'),
+      expected: ['工程师'],
+    },
+    {
+      label: 'managed',
+      userId: 'manager-1',
+      condition: or(
+        eq(employee.employeeId, 'manager-1'),
+        eq(employee.supervisorId, 'manager-1'),
+        eq(employee.departmentId, 'dept-managed'),
+      ),
+      expected: ['产品经理', '工程师'],
+    },
+    {
+      label: 'empty',
+      userId: '',
+      condition: sql`FALSE`,
+      expected: [],
+    },
+  ])(
+    'filters and sorts $label position options from the caller employee scope',
+    async ({ userId, condition, expected }) => {
+      const rows: FakeEmployeeRow[] = [
+        {
+          employeeId: 'self-1',
+          position: '工程师',
+          status: true,
+          deletedAt: null,
+          authorizationStatus: 'synced',
+          authorizationRoles: ['employee'],
+          authorizationVersion: 1,
+          supervisorId: null,
+          departmentId: 'dept-self',
+        },
+        {
+          employeeId: 'manager-1',
+          position: '产品经理',
+          status: true,
+          deletedAt: null,
+          authorizationStatus: 'synced',
+          authorizationRoles: ['supervisor'],
+          authorizationVersion: 1,
+          supervisorId: null,
+          departmentId: 'dept-managed',
+        },
+        {
+          employeeId: 'managed-1',
+          position: '工程师',
+          status: true,
+          deletedAt: null,
+          authorizationStatus: 'synced',
+          authorizationRoles: ['employee'],
+          authorizationVersion: 1,
+          supervisorId: 'manager-1',
+          departmentId: 'dept-other',
+        },
+        {
+          employeeId: 'managed-2',
+          position: '产品经理',
+          status: true,
+          deletedAt: null,
+          authorizationStatus: 'synced',
+          authorizationRoles: ['employee'],
+          authorizationVersion: 1,
+          supervisorId: null,
+          departmentId: 'dept-managed',
+        },
+        {
+          employeeId: 'global-only',
+          position: '销售',
+          status: true,
+          deletedAt: null,
+          authorizationStatus: 'synced',
+          authorizationRoles: ['employee'],
+          authorizationVersion: 1,
+          supervisorId: null,
+          departmentId: 'dept-global',
+        },
+        {
+          employeeId: 'deleted-1',
+          position: '已删除岗位',
+          status: true,
+          deletedAt: new Date('2026-07-01'),
+          authorizationStatus: 'synced',
+          authorizationRoles: ['employee'],
+          authorizationVersion: 1,
+          supervisorId: null,
+          departmentId: 'dept-managed',
+        },
+      ];
+      const db = new QueryBackedDb({ employees: rows });
+      const accessScopeService = {
+        buildEmployeeScopeCondition: jest.fn().mockResolvedValue(condition),
+      };
+      const service = new (EmployeeManagementService as any)(
+        db,
+        {},
+        {},
+        accessScopeService,
+        {},
+      ) as EmployeeManagementService;
+
+      await expect(service.getPositions(userId)).resolves.toEqual({
+        positions: expected,
+      });
+
+      expect(
+        accessScopeService.buildEmployeeScopeCondition,
+      ).toHaveBeenCalledWith(userId, { includeSelf: true });
+    },
+  );
+
+  it('passes the caller user ID from the positions endpoint to the service', () => {
+    const controllerSource = fs.readFileSync(
+      path.resolve(
+        __dirname,
+        '../../server/modules/employee-management/employee-management.controller.ts',
+      ),
+      'utf8',
+    );
+
+    expect(controllerSource).toMatch(
+      /async getPositions\(\s*@Req\(\) req: Request\s*\)/,
+    );
+    expect(controllerSource).toContain(
+      "return this.service.getPositions(req.userContext?.userId || '');",
+    );
+  });
+
+  it.each([
+    {
+      scopeKind: 'self',
+      canManageGlobalConnections: false,
+    },
+    {
+      scopeKind: 'managed',
+      canManageGlobalConnections: false,
+    },
+    {
+      scopeKind: 'global',
+      canManageGlobalConnections: true,
+    },
+  ] as const)(
+    'derives the current-user global connection capability from $scopeKind DB scope',
+    async ({ scopeKind, canManageGlobalConnections }) => {
+      const permissions = [
+        { resource: 'employees' as const, actions: ['view' as const] },
+      ];
+      const roleManagerService = {
+        getUserEffectivePermissions: jest.fn().mockResolvedValue(permissions),
+      };
+      const accessScopeService = {
+        getScope: jest.fn().mockResolvedValue({
+          kind: scopeKind,
+          roles: [],
+          departmentIds: [],
+          subordinateIds: [],
+        }),
+      };
+      const service = new (EmployeeManagementService as any)(
+        {
+          select: jest.fn(() => {
+            throw new Error('legacy employee permission row queried');
+          }),
+        },
+        roleManagerService,
+        {},
+        accessScopeService,
+        {},
+      ) as EmployeeManagementService;
+
+      await expect(service.getMyPermissions('user-1')).resolves.toEqual({
+        permissions,
+        accessScopeKind: scopeKind,
+        canManageGlobalConnections,
+      });
+      expect(
+        roleManagerService.getUserEffectivePermissions,
+      ).toHaveBeenCalledWith('user-1');
+      expect(accessScopeService.getScope).toHaveBeenCalledWith('user-1');
+    },
+  );
 
   it('rejects employee detail outside the current user scope before querying', async () => {
     const { service, db, accessScopeService } = createService();
@@ -202,25 +408,37 @@ describe('employee management access scope', () => {
   });
 
   it.each([
-    ['update', (service: EmployeeManagementService) =>
-      (service.update as any)(
-        'employee-2',
-        {
-          name: '员工二',
-          position: '工程师',
-          positionCode: 'engineer',
-          department: '研发部',
-          departmentId: 'dept-1',
-          supervisorId: 'supervisor-1',
-        },
-        'manager-1',
-      )],
-    ['delete', (service: EmployeeManagementService) =>
-      (service.delete as any)('employee-2', 'manager-1')],
-    ['activate', (service: EmployeeManagementService) =>
-      (service.activate as any)('employee-2', 'manager-1')],
-    ['deactivate', (service: EmployeeManagementService) =>
-      (service.deactivate as any)('employee-2', 'manager-1')],
+    [
+      'update',
+      (service: EmployeeManagementService) =>
+        (service.update as any)(
+          'employee-2',
+          {
+            name: '员工二',
+            position: '工程师',
+            positionCode: 'engineer',
+            department: '研发部',
+            departmentId: 'dept-1',
+            supervisorId: 'supervisor-1',
+          },
+          'manager-1',
+        ),
+    ],
+    [
+      'delete',
+      (service: EmployeeManagementService) =>
+        (service.delete as any)('employee-2', 'manager-1'),
+    ],
+    [
+      'activate',
+      (service: EmployeeManagementService) =>
+        (service.activate as any)('employee-2', 'manager-1'),
+    ],
+    [
+      'deactivate',
+      (service: EmployeeManagementService) =>
+        (service.deactivate as any)('employee-2', 'manager-1'),
+    ],
   ])(
     'rejects an out-of-scope employee %s before loading or mutating the target',
     async (_operation, invoke) => {
@@ -245,9 +463,9 @@ describe('employee management access scope', () => {
     const targetQuery = {
       from: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockResolvedValue([
-        { id: 'employee-1', role: 'employee' },
-      ]),
+      limit: jest
+        .fn()
+        .mockResolvedValue([{ id: 'employee-1', role: 'employee' }]),
     };
     db.select.mockReset().mockReturnValue(targetQuery);
     db.transaction = jest.fn();
@@ -274,8 +492,14 @@ describe('employee management access scope', () => {
   });
 
   it('requires the built-in admin identity before legacy employee permissions change', async () => {
-    const { service, db, accessScopeService, roleManagerService } =
-      createService();
+    const {
+      service,
+      db,
+      accessScopeService,
+      roleManagerService,
+      authorizationSyncService,
+    } = createService();
+    createService();
     accessScopeService.canAccessEmployee.mockResolvedValue(true);
     db.select.mockImplementation(() => {
       throw new Error('permissions target loaded before identity check');
@@ -337,11 +561,16 @@ describe('employee management access scope', () => {
         .mockReturnValueOnce(employeeInsert)
         .mockReturnValueOnce(auditInsert),
     };
-    const { service, db, accessScopeService, roleManagerService } =
-      createService();
+    const {
+      service,
+      db,
+      accessScopeService,
+      roleManagerService,
+      authorizationSyncService,
+    } = createService();
     db.select.mockReturnValue(existingQuery);
-    db.transaction = jest.fn(async (callback: (transaction: unknown) => unknown) =>
-      callback(tx),
+    db.transaction = jest.fn(
+      async (callback: (transaction: unknown) => unknown) => callback(tx),
     );
     accessScopeService.getScope.mockResolvedValue({
       kind: 'global',
@@ -366,9 +595,12 @@ describe('employee management access scope', () => {
     ).resolves.toEqual({ id: 'employee-new' });
 
     expect(accessScopeService.getScope).toHaveBeenCalledWith('hrd-1');
-    expect(roleManagerService.syncUserRolesStrict).toHaveBeenCalledWith(
-      'employee-new',
-      ['employee'],
-    );
+    expect(
+      authorizationSyncService.stageAuthorizationChange,
+    ).toHaveBeenCalledWith(tx, 'employee-new', ['employee']);
+    expect(
+      authorizationSyncService.processEmployeeAuthorization,
+    ).toHaveBeenCalledWith('employee-new', 1);
+    expect(roleManagerService.syncUserRolesStrict).not.toHaveBeenCalled();
   });
 });

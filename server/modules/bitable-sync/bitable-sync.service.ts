@@ -204,10 +204,7 @@ export class BitableSyncService {
             continue;
           }
           try {
-            const refs = await this.resolveReferences(
-              p.department,
-              p.position,
-            );
+            const refs = await this.resolveReferences(p.department, p.position);
             const createBody: CreateEmployeeRequest = {
               id: p.sudaUserId,
               name: '',
@@ -219,12 +216,12 @@ export class BitableSyncService {
               employeeNo: p.employeeNo || undefined,
               supervisorId: p.supervisorUserId || undefined,
             };
-            await this.employeeManagementService.create(createBody, userId);
             if (p.status === 'inactive') {
-              await this.employeeManagementService.deactivate(
-                p.sudaUserId,
-                userId,
-              );
+              await this.employeeManagementService.create(createBody, userId, {
+                initialStatus: false,
+              });
+            } else {
+              await this.employeeManagementService.create(createBody, userId);
             }
             created++;
           } catch (err) {
@@ -252,16 +249,13 @@ export class BitableSyncService {
           name: existing.name || '',
           position: p.position || existing.position,
           positionCode: p.position
-            ? refs.positionCode ?? undefined
+            ? (refs.positionCode ?? undefined)
             : existing.positionCode || undefined,
           department: p.department || existing.department,
           departmentId: p.department
-            ? refs.departmentId ?? undefined
+            ? (refs.departmentId ?? undefined)
             : existing.departmentId || undefined,
           title: existing.title || undefined,
-          role: (p.role ||
-            existing.role ||
-            'employee') as UpdateEmployeeRequest['role'],
           supervisorId:
             p.supervisorUserId ||
             String(existing.supervisorId || '') ||
@@ -271,6 +265,9 @@ export class BitableSyncService {
           probationMonths: existing.probationMonths || undefined,
           employeeNo: p.employeeNo || existing.employeeNo || undefined,
         };
+        if (p.role) {
+          updateBody.role = p.role as UpdateEmployeeRequest['role'];
+        }
         const desiredStatus = p.status
           ? p.status !== 'inactive'
           : existing.status;

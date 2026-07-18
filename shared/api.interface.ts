@@ -73,6 +73,7 @@ export {
   type PermissionAction,
   type PermissionResource,
   type PermissionItem,
+  type CurrentUserAuthorizationContext,
   DEFAULT_PERMISSIONS,
   type ForceRoleDTO,
   type RoleMemberDTO,
@@ -95,10 +96,20 @@ export {
   type SearchMembersRequest,
   type RolePermissionConfig,
   type UpdateRolePermissionsRequest,
+  type RoleMemberMutationOutcomeStatus,
+  type RoleMemberMutationOutcome,
+  type RoleMemberMutationResponse,
+  type RoleMemberMutationErrorDetails,
   BUILTIN_ROLE_CODES,
+  PERMISSION_MATRIX,
   ROLE_OPTIONS,
   ROLE_LABELS,
 } from './types/permission.types';
+
+export {
+  type ApiErrorDetails,
+  type ApiErrorResponseData,
+} from './types/error.types';
 
 // === Employee Management ===
 

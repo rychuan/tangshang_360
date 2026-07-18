@@ -1,4 +1,9 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  Inject,
+} from '@nestjs/common';
 import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
@@ -9,12 +14,42 @@ import { employee, rolePermissionConfig } from '@server/database/schema';
 import type {
   RolePermissionConfig,
   PermissionItem,
+  RoleMemberMutationOutcome,
+  RoleMemberMutationOutcomeStatus,
+  RoleMemberMutationResponse,
 } from '@shared/api.interface';
 import {
   DEFAULT_PERMISSIONS,
   type PermissionResource,
   type PermissionAction,
 } from '@shared/api.interface';
+import {
+  isBuiltinRole,
+  normalizePermissionConfig,
+} from '@shared/types/permission.types';
+import { normalizeAuthorizationRoles } from './authorization-state';
+
+type CustomRoleMemberMutation = 'add' | 'remove';
+type AuthorizationProcessStatus = Exclude<
+  RoleMemberMutationOutcomeStatus,
+  'unchanged'
+>;
+
+type AuthorizationSyncGateway = {
+  stageAuthorizationChange(
+    tx: PostgresJsDatabase,
+    employeeId: string,
+    desiredRoles: string[],
+  ): Promise<number>;
+  processEmployeeAuthorization(
+    employeeId: string,
+    version?: number,
+  ): Promise<{
+    status: AuthorizationProcessStatus;
+    version: number;
+    error?: string;
+  }>;
+};
 
 @Injectable()
 export class RoleManagerService {
@@ -123,10 +158,7 @@ export class RoleManagerService {
     }
   }
 
-  async ensureUserRoleStrict(
-    userId: string,
-    roleBizId: string,
-  ): Promise<void> {
+  async ensureUserRoleStrict(userId: string, roleBizId: string): Promise<void> {
     try {
       const roles = await this.getUserRolesStrict(userId);
       if (roles.includes(roleBizId)) {
@@ -141,10 +173,7 @@ export class RoleManagerService {
     }
   }
 
-  async removeUserRoleStrict(
-    userId: string,
-    roleBizId: string,
-  ): Promise<void> {
+  async removeUserRoleStrict(userId: string, roleBizId: string): Promise<void> {
     try {
       const roles = await this.getUserRolesStrict(userId);
       if (!roles.includes(roleBizId)) {
@@ -189,10 +218,7 @@ export class RoleManagerService {
     }
   }
 
-  async syncUserRolesStrict(
-    userId: string,
-    newRoles: string[],
-  ): Promise<void> {
+  async syncUserRolesStrict(userId: string, newRoles: string[]): Promise<void> {
     try {
       const current = await this.getUserRolesStrict(userId);
       const toAdd = newRoles.filter((role) => !current.includes(role));
@@ -207,6 +233,47 @@ export class RoleManagerService {
         await this.authzSDK.members.remove(role, {
           members: { userList: [{ userID: userId }] },
         });
+      }
+    } finally {
+      this.invalidateUserRoleCache(userId);
+    }
+  }
+
+  async reconcileUserRoles(
+    userId: string,
+    desiredRoles: string[],
+  ): Promise<void> {
+    const desired = normalizeAuthorizationRoles(desiredRoles);
+
+    try {
+      const current = normalizeAuthorizationRoles(
+        await this.getUserRolesStrict(userId),
+      );
+      const toRemove = current.filter((role) => !desired.includes(role));
+      const toAdd = desired.filter((role) => !current.includes(role));
+
+      for (const role of toRemove) {
+        await this.authzSDK.members.remove(role, {
+          members: { userList: [{ userID: userId }] },
+        });
+      }
+
+      for (const role of toAdd) {
+        await this.authzSDK.members.add(role, {
+          members: { userList: [{ userID: userId }] },
+        });
+      }
+
+      const verified = normalizeAuthorizationRoles(
+        await this.getUserRolesStrict(userId),
+      );
+      if (
+        verified.length !== desired.length ||
+        verified.some((role, index) => role !== desired[index])
+      ) {
+        throw new Error(
+          `Authorization role reconciliation mismatch for user ${userId}`,
+        );
       }
     } finally {
       this.invalidateUserRoleCache(userId);
@@ -239,6 +306,15 @@ export class RoleManagerService {
     roleBizId: string,
     permissions: PermissionItem[],
   ): Promise<void> {
+    let normalizedPermissions: PermissionItem[];
+    try {
+      normalizedPermissions = normalizePermissionConfig(roleBizId, permissions);
+    } catch (error) {
+      throw new BadRequestException(
+        error instanceof Error ? error.message : '权限配置无效',
+      );
+    }
+
     const existing = await this.db
       .select({ id: rolePermissionConfig.id })
       .from(rolePermissionConfig)
@@ -248,21 +324,170 @@ export class RoleManagerService {
     if (existing.length > 0) {
       await this.db
         .update(rolePermissionConfig)
-        .set({ permissions })
+        .set({ permissions: normalizedPermissions })
         .where(eq(rolePermissionConfig.roleBizId, roleBizId));
     } else {
       await this.db
         .insert(rolePermissionConfig)
-        .values({ roleBizId, permissions });
+        .values({ roleBizId, permissions: normalizedPermissions });
     }
 
     this.logger.log(`Permission config updated for role: ${roleBizId}`);
   }
 
-  async deletePermissionConfig(roleBizId: string): Promise<void> {
-    await this.db
-      .delete(rolePermissionConfig)
-      .where(eq(rolePermissionConfig.roleBizId, roleBizId));
+  async mutateCustomRoleMembers(
+    roleBizId: string,
+    userIds: string[],
+    mutation: CustomRoleMemberMutation,
+    authorizationSyncService: AuthorizationSyncGateway,
+  ): Promise<RoleMemberMutationResponse> {
+    if (isBuiltinRole(roleBizId)) {
+      throw new BadRequestException('内置角色成员只能通过员工或部门管理修改');
+    }
+
+    const normalizedUserIds = Array.from(
+      new Set(userIds.map((userId) => userId.trim()).filter(Boolean)),
+    );
+    if (normalizedUserIds.length === 0) {
+      throw new BadRequestException('成员列表不能为空');
+    }
+    normalizedUserIds.sort((left, right) => left.localeCompare(right));
+
+    const staged = await this.db.transaction(async (tx) => {
+      await this.lockCustomRole(tx, roleBizId);
+      const userIdColumn = sql<string>`(${employee.employeeId}).user_id`;
+      const rows = await tx
+        .select({
+          employeeId: userIdColumn,
+          status: employee.status,
+          deletedAt: employee.deletedAt,
+          authorizationRoles: employee.authorizationRoles,
+          authorizationStatus: employee.authorizationStatus,
+          authorizationVersion: employee.authorizationVersion,
+        })
+        .from(employee)
+        .where(inArray(userIdColumn, normalizedUserIds))
+        .orderBy(userIdColumn)
+        .for('update');
+      const rowByUserId = new Map(rows.map((row) => [row.employeeId, row]));
+      const validated = normalizedUserIds.map((userId) => {
+        const current = rowByUserId.get(userId);
+        if (!current || !current.status || current.deletedAt != null) {
+          throw new BadRequestException(`员工 ${userId} 不存在或已停用`);
+        }
+        if (
+          !Array.isArray(current.authorizationRoles) ||
+          current.authorizationRoles.some((role) => typeof role !== 'string')
+        ) {
+          throw new BadRequestException(`员工 ${userId} 的授权角色数据无效`);
+        }
+        return current;
+      });
+
+      const changes: Array<
+        | { userId: string; version: number }
+        | { userId: string; unchanged: true }
+      > = [];
+      for (const current of validated) {
+        const currentRoles = normalizeAuthorizationRoles(
+          current.authorizationRoles,
+        );
+        const desiredRoles = normalizeAuthorizationRoles(
+          mutation === 'add'
+            ? [...currentRoles, roleBizId]
+            : currentRoles.filter((role) => role !== roleBizId),
+        );
+        if (this.sameRoles(currentRoles, desiredRoles)) {
+          if (
+            current.authorizationStatus === 'pending' ||
+            current.authorizationStatus === 'failed'
+          ) {
+            changes.push({
+              userId: current.employeeId,
+              version: current.authorizationVersion,
+            });
+          } else {
+            changes.push({ userId: current.employeeId, unchanged: true });
+          }
+          continue;
+        }
+        const version = await authorizationSyncService.stageAuthorizationChange(
+          tx,
+          current.employeeId,
+          desiredRoles,
+        );
+        changes.push({ userId: current.employeeId, version });
+      }
+      return changes;
+    });
+
+    const processed = await Promise.all(
+      staged.map(async (change): Promise<RoleMemberMutationOutcome> => {
+        if ('unchanged' in change) {
+          return { userId: change.userId, status: 'unchanged' };
+        }
+        try {
+          const result =
+            await authorizationSyncService.processEmployeeAuthorization(
+              change.userId,
+              change.version,
+            );
+          return {
+            userId: change.userId,
+            status: result.status,
+            version: result.version,
+            ...(result.error ? { error: result.error } : {}),
+          };
+        } catch (error) {
+          return {
+            userId: change.userId,
+            status: 'failed',
+            version: change.version,
+            error: error instanceof Error ? error.message : String(error),
+          };
+        }
+      }),
+    );
+
+    return {
+      success: processed.every(
+        (outcome) =>
+          outcome.status === 'synced' || outcome.status === 'unchanged',
+      ),
+      outcomes: processed,
+    };
+  }
+
+  async deleteCustomRole(
+    roleBizId: string,
+    deleteFromSdk: () => Promise<unknown>,
+  ): Promise<unknown> {
+    if (isBuiltinRole(roleBizId)) {
+      throw new BadRequestException('内置角色不可删除');
+    }
+
+    return this.db.transaction(async (tx) => {
+      await this.lockCustomRole(tx, roleBizId);
+      const durableMembers = await tx
+        .select({
+          employeeId: sql<string>`(${employee.employeeId}).user_id`,
+        })
+        .from(employee)
+        .where(
+          sql`COALESCE(${employee.authorizationRoles}, '[]'::jsonb) ? ${roleBizId}`,
+        )
+        .limit(1);
+      if (durableMembers.length > 0) {
+        throw new BadRequestException('角色仍有成员，请先移除全部成员后再删除');
+      }
+
+      const sdkResult = await deleteFromSdk();
+
+      await tx
+        .delete(rolePermissionConfig)
+        .where(eq(rolePermissionConfig.roleBizId, roleBizId));
+      return sdkResult;
+    });
   }
 
   async getAllPermissionConfigs(): Promise<RolePermissionConfig[]> {
@@ -288,7 +513,7 @@ export class RoleManagerService {
     resource: PermissionResource,
     action: PermissionAction,
   ): Promise<boolean> {
-    if (!(await this.hasActiveEmployee(userId))) return false;
+    if (!(await this.hasSynchronizedActiveEmployee(userId))) return false;
 
     const userRoles = await this.getUserRoles(userId);
     if (userRoles.length === 0) return false;
@@ -331,7 +556,7 @@ export class RoleManagerService {
    * 获取当前用户所有角色的有效权限（取并集）
    */
   async getUserEffectivePermissions(userId: string): Promise<PermissionItem[]> {
-    if (!(await this.hasActiveEmployee(userId))) return [];
+    if (!(await this.hasSynchronizedActiveEmployee(userId))) return [];
 
     const userRoles = await this.getUserRoles(userId);
     if (userRoles.length === 0) return [];
@@ -378,7 +603,7 @@ export class RoleManagerService {
     }));
   }
 
-  private async hasActiveEmployee(userId: string): Promise<boolean> {
+  async hasSynchronizedActiveEmployee(userId: string): Promise<boolean> {
     const rows = await this.db
       .select({ id: employee.employeeId })
       .from(employee)
@@ -387,6 +612,7 @@ export class RoleManagerService {
           sql`(${employee.employeeId}).user_id = ${userId}`,
           isNull(employee.deletedAt),
           eq(employee.status, true),
+          eq(employee.authorizationStatus, 'synced'),
         ),
       )
       .limit(1);
@@ -398,6 +624,22 @@ export class RoleManagerService {
       roles,
       expiresAt: Date.now() + this.ROLE_CACHE_TTL_MS,
     });
+  }
+
+  private async lockCustomRole(
+    tx: PostgresJsDatabase,
+    roleBizId: string,
+  ): Promise<void> {
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtextextended(${`custom-role:${roleBizId}`}, 0))`,
+    );
+  }
+
+  private sameRoles(left: string[], right: string[]): boolean {
+    return (
+      left.length === right.length &&
+      left.every((role, index) => role === right[index])
+    );
   }
 
   private async fetchUserRoles(
@@ -446,15 +688,13 @@ export class RoleManagerService {
       }
 
       const memberPayload = this.unwrapSdkData(membersResult);
-      const members =
-        (memberPayload as any)?.members || memberPayload || {};
+      const members = (memberPayload as any)?.members || memberPayload || {};
       const isMember =
         Boolean((members as any).allEmployees) ||
         Boolean((members as any).presetGroup?.isContainsAdmin) ||
         (Array.isArray((members as any).userList) &&
           (members as any).userList.some(
-            (user: any) =>
-              user.userID === userId || user.user_id === userId,
+            (user: any) => user.userID === userId || user.user_id === userId,
           ));
       if (isMember) {
         return true;

@@ -470,11 +470,11 @@ export class BitableConnectionService {
   ): Promise<string | null> {
     const rows = await this.db
       .select({ id: employee.employeeId })
-        .from(employee)
-        .where(
-          and(eq(employee.employeeNo, supervisorNo), isNull(employee.deletedAt)),
-        )
-        .limit(1);
+      .from(employee)
+      .where(
+        and(eq(employee.employeeNo, supervisorNo), isNull(employee.deletedAt)),
+      )
+      .limit(1);
     return rows.length > 0 ? String(rows[0].id) : null;
   }
 
@@ -643,12 +643,8 @@ export class BitableConnectionService {
               department: row.department || existing[0].department,
               departmentId: existing[0].departmentId || undefined,
               title: row.title || existing[0].title || undefined,
-              role: (row.role ||
-                existing[0].role ||
-                'employee') as UpdateEmployeeRequest['role'],
               phone: row.phone || existing[0].phone || undefined,
-              hireDate:
-                row.hireDate || this.toDateString(existing[0].hireDate),
+              hireDate: row.hireDate || this.toDateString(existing[0].hireDate),
               probationMonths: existing[0].probationMonths || undefined,
               employeeNo: row.employeeNo!,
               supervisorId:
@@ -656,6 +652,9 @@ export class BitableConnectionService {
                 String(existing[0].supervisorId || '') ||
                 undefined,
             };
+            if (row.role) {
+              updateBody.role = row.role as UpdateEmployeeRequest['role'];
+            }
             await this.employeeManagementService.syncImportedEmployee(
               employeeId,
               updateBody,
@@ -695,23 +694,26 @@ export class BitableConnectionService {
               employeeNo: row.employeeNo!,
               department: row.department || '',
               title: row.title || undefined,
-              role: (row.role ||
-                'employee') as CreateEmployeeRequest['role'],
+              role: (row.role || 'employee') as CreateEmployeeRequest['role'],
               phone: row.phone || undefined,
               hireDate: row.hireDate || undefined,
               supervisorId: row.supervisorId || undefined,
             };
-            const inserted = await this.employeeManagementService.create(
-              createBody,
-              userId,
-              { bitableConnectionId: connectionId },
-            );
-            if (row.status === 'inactive') {
-              await this.employeeManagementService.deactivate(
-                row.employeeId,
-                userId,
-              );
-            }
+            const inserted =
+              row.status === 'inactive'
+                ? await this.employeeManagementService.create(
+                    createBody,
+                    userId,
+                    {
+                      bitableConnectionId: connectionId,
+                      initialStatus: false,
+                    },
+                  )
+                : await this.employeeManagementService.create(
+                    createBody,
+                    userId,
+                    { bitableConnectionId: connectionId },
+                  );
             createdCount++;
             details.push({
               row: i + 1,

@@ -29,63 +29,62 @@ jest.mock('@lark-apaas/fullstack-nestjs-core', () => {
 
 import { RoleManagerController } from '../../server/modules/role-manager/role-manager.controller';
 import { RoleManagerService } from '../../server/modules/role-manager/role-manager.service';
-import { AccessScopeService } from '../../server/common/access/access-scope.service';
+import {
+  QueryBackedDb,
+  type FakeEmployeeRow,
+} from './query-fakes';
 
-function createRoleManagerService(authzSDK: Record<string, any>) {
-  return new (RoleManagerService as any)(
-    {
-      select: jest.fn().mockReturnValue(
-        employeeQuery([
-          {
-            status: true,
-            deletedAt: null,
-          },
-        ]),
-      ),
-    },
-    authzSDK,
-  ) as RoleManagerService;
-}
-
-function employeeQuery(rows: unknown[]) {
-  const query = {
-    from: jest.fn().mockReturnThis(),
-    where: jest.fn().mockReturnThis(),
-    limit: jest.fn().mockResolvedValue(rows),
-    then: (
-      resolve: (value: unknown[]) => unknown,
-      reject?: (reason: unknown) => unknown,
-    ) => Promise.resolve(rows).then(resolve, reject),
-  };
-  return query;
-}
-
-function authorizationQuery(
-  limitRows: unknown[],
-  awaitedRows: unknown[],
-) {
+function createAuthzSdk(userId = 'employee-1') {
   return {
-    from: jest.fn().mockReturnThis(),
-    where: jest.fn().mockReturnThis(),
-    limit: jest.fn().mockResolvedValue(limitRows),
-    then: (
-      resolve: (value: unknown[]) => unknown,
-      reject?: (reason: unknown) => unknown,
-    ) => Promise.resolve(awaitedRows).then(resolve, reject),
+    roles: {
+      list: jest.fn().mockResolvedValue([{ bizID: 'admin' }]),
+    },
+    members: {
+      list: jest.fn().mockResolvedValue({
+        members: { userList: [{ userID: userId }] },
+        hasMore: false,
+      }),
+    },
+  };
+}
+
+function createRoleManagerService(
+  db: QueryBackedDb,
+  authzSDK: Record<string, any>,
+) {
+  return new (RoleManagerService as any)(db, authzSDK) as RoleManagerService;
+}
+
+function createEmployeeRow(
+  overrides: Partial<FakeEmployeeRow> = {},
+): FakeEmployeeRow {
+  return {
+    employeeId: 'employee-1',
+    status: true,
+    deletedAt: null,
+    authorizationStatus: 'synced',
+    authorizationRoles: ['admin'],
+    authorizationVersion: 1,
+    supervisorId: null,
+    departmentId: null,
+    ...overrides,
   };
 }
 
 describe('strict role manager operations', () => {
   it('propagates fresh SDK role-list failures', async () => {
     const sdkFailure = new Error('sdk role list failed');
-    const service = createRoleManagerService({
-      roles: {
-        list: jest.fn().mockRejectedValue(sdkFailure),
+    const service = createRoleManagerService(
+      new QueryBackedDb(),
+      {
+        roles: {
+          list: jest.fn().mockRejectedValue(sdkFailure),
+        },
+        members: {
+          list: jest.fn(),
+        },
       },
-      members: {
-        list: jest.fn(),
-      },
-    });
+    );
 
     await expect(
       (service as any).getUserRolesStrict('employee-1'),
@@ -107,7 +106,7 @@ describe('strict role manager operations', () => {
           hasMore: false,
         },
       });
-    const service = createRoleManagerService({
+    const service = createRoleManagerService(new QueryBackedDb(), {
       roles: {
         list: jest.fn().mockResolvedValue({
           data: [{ bizID: 'custom-reviewer' }],
@@ -134,7 +133,7 @@ describe('strict role manager operations', () => {
 
   it('propagates strict revoke failures and invalidates the affected cache', async () => {
     const revokeFailure = new Error('sdk revoke failed');
-    const service = createRoleManagerService({
+    const service = createRoleManagerService(new QueryBackedDb(), {
       roles: {
         list: jest.fn().mockResolvedValue([{ bizID: 'custom-reviewer' }]),
       },
@@ -158,57 +157,81 @@ describe('strict role manager operations', () => {
     expect((service as any).roleCache.has('employee-1')).toBe(false);
   });
 
-  it('denies stale SDK admin capability and global scope to an inactive employee', async () => {
-    const db = {
-      select: jest
-        .fn()
-        .mockReturnValueOnce(authorizationQuery([], []))
-        .mockReturnValueOnce(authorizationQuery([], []))
-        .mockReturnValueOnce(employeeQuery([])),
-    };
-    const authzSDK = {
-      roles: {
-        list: jest.fn().mockResolvedValue([{ bizID: 'admin' }]),
-      },
-      members: {
-        list: jest.fn().mockResolvedValue({
-          userList: [{ userID: 'employee-1' }],
-        }),
-      },
-    };
-    const roleManagerService = new (RoleManagerService as any)(
-      db,
-      authzSDK,
-    ) as RoleManagerService;
-    const accessScopeService = new (AccessScopeService as any)(
-      db,
-      roleManagerService,
-    ) as AccessScopeService;
+  it.each([
+    {
+      label: 'pending',
+      employee: createEmployeeRow({ authorizationStatus: 'pending' }),
+    },
+    {
+      label: 'failed',
+      employee: createEmployeeRow({ authorizationStatus: 'failed' }),
+    },
+    {
+      label: 'inactive',
+      employee: createEmployeeRow({ status: false }),
+    },
+    {
+      label: 'deleted',
+      employee: createEmployeeRow({
+        deletedAt: new Date('2026-07-18T00:00:00Z'),
+      }),
+    },
+  ] as const)(
+    'fails closed for %s employees',
+    async ({ employee }) => {
+      const db = new QueryBackedDb({
+        employees: [employee],
+        rolePermissionConfigs: [
+          {
+            roleBizId: 'admin',
+            permissions: [
+              { resource: 'employees', actions: ['view'] },
+            ],
+          },
+        ],
+      });
+      const authzSDK = createAuthzSdk(employee.employeeId);
+      const service = createRoleManagerService(db, authzSDK);
 
-    await expect(
-      roleManagerService.checkUserPermission(
-        'employee-1',
-        'employees',
-        'view',
-      ),
-    ).resolves.toBe(false);
-    await expect(
-      roleManagerService.getUserEffectivePermissions('employee-1'),
-    ).resolves.toEqual([]);
-    await expect(accessScopeService.getScope('employee-1')).resolves.toEqual({
-      kind: 'self',
-      roles: [],
-      departmentIds: [],
-      subordinateIds: [],
+      await expect(
+        service.checkUserPermission(employee.employeeId, 'employees', 'view'),
+      ).resolves.toBe(false);
+      await expect(
+        service.getUserEffectivePermissions(employee.employeeId),
+      ).resolves.toEqual([]);
+      expect(authzSDK.roles.list).not.toHaveBeenCalled();
+      expect(authzSDK.members.list).not.toHaveBeenCalled();
+    },
+  );
+
+  it('grants permissions only to synced active employees', async () => {
+    const employee = createEmployeeRow();
+    const db = new QueryBackedDb({
+      employees: [employee],
+      rolePermissionConfigs: [
+        {
+          roleBizId: 'admin',
+          permissions: [{ resource: 'employees', actions: ['view'] }],
+        },
+      ],
     });
+    const authzSDK = createAuthzSdk(employee.employeeId);
+    const service = createRoleManagerService(db, authzSDK);
 
-    expect(authzSDK.roles.list).not.toHaveBeenCalled();
-    expect(authzSDK.members.list).not.toHaveBeenCalled();
+    await expect(
+      service.checkUserPermission(employee.employeeId, 'employees', 'view'),
+    ).resolves.toBe(true);
+    await expect(
+      service.getUserEffectivePermissions(employee.employeeId),
+    ).resolves.toEqual([{ resource: 'employees', actions: ['view'] }]);
   });
 
-  it.each(['addMembers', 'removeMembers'] as const)(
-    'invalidates every affected user cache after %s succeeds',
-    async (operation) => {
+  it.each([
+    ['addMembers', 'add'],
+    ['removeMembers', 'remove'],
+  ] as const)(
+    'routes explicit custom-role users through durable authorization for %s',
+    async (operation, mutation) => {
       const authzSDK = {
         members: {
           add: jest.fn().mockResolvedValue({ success: true }),
@@ -216,12 +239,17 @@ describe('strict role manager operations', () => {
         },
       };
       const roleManagerService = {
-        invalidateUserRoleCache: jest.fn(),
+        mutateCustomRoleMembers: jest.fn().mockResolvedValue({
+          success: true,
+          outcomes: [],
+        }),
       };
-      const controller = new RoleManagerController(
+      const authorizationSyncService = {};
+      const controller = new (RoleManagerController as any)(
         authzSDK as any,
         roleManagerService as any,
-      );
+        authorizationSyncService,
+      ) as RoleManagerController;
       const dto = {
         members: {
           userList: [{ userID: 'employee-1' }, { userID: 'employee-2' }],
@@ -230,12 +258,14 @@ describe('strict role manager operations', () => {
 
       await (controller[operation] as any)('custom-reviewer', dto);
 
-      expect(roleManagerService.invalidateUserRoleCache).toHaveBeenCalledWith(
-        'employee-1',
+      expect(roleManagerService.mutateCustomRoleMembers).toHaveBeenCalledWith(
+        'custom-reviewer',
+        ['employee-1', 'employee-2'],
+        mutation,
+        authorizationSyncService,
       );
-      expect(roleManagerService.invalidateUserRoleCache).toHaveBeenCalledWith(
-        'employee-2',
-      );
+      expect(authzSDK.members.add).not.toHaveBeenCalled();
+      expect(authzSDK.members.remove).not.toHaveBeenCalled();
     },
   );
 });

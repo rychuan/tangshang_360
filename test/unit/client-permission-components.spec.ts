@@ -6,6 +6,7 @@ let mockRoles: string[] = [];
 let mockAuthLoading = false;
 let mockPermissions = DEFAULT_PERMISSIONS.employee;
 let mockPermissionsLoading = false;
+let mockCanManageGlobalConnections = false;
 
 jest.mock('@lark-apaas/client-toolkit/auth', () => ({
   ROLE_SUBJECT: 'role',
@@ -22,6 +23,7 @@ jest.mock('@/hooks/usePermissions', () => ({
   usePermissions: () => ({
     permissions: mockPermissions,
     loading: mockPermissionsLoading,
+    canManageGlobalConnections: mockCanManageGlobalConnections,
   }),
 }));
 
@@ -73,6 +75,7 @@ describe('client permission component wiring', () => {
     mockAuthLoading = false;
     mockPermissions = DEFAULT_PERMISSIONS.employee;
     mockPermissionsLoading = false;
+    mockCanManageGlobalConnections = false;
   });
 
   it('does not mount a protected page while permissions are loading', () => {
@@ -174,6 +177,7 @@ describe('client permission component wiring', () => {
   it('mounts employee, department, and Bitable tabs for a global viewer', () => {
     mockRoles = ['hrd'];
     mockPermissions = DEFAULT_PERMISSIONS.hrd;
+    mockCanManageGlobalConnections = true;
 
     const html = renderToStaticMarkup(
       React.createElement(EmployeeManagementPage),
@@ -194,6 +198,19 @@ describe('client permission component wiring', () => {
 
     expect(html).not.toContain('data-tab="employees"');
     expect(html).toContain('data-tab="departments"');
+    expect(html).not.toContain('data-tab="bitable"');
+  });
+
+  it('does not mount Bitable for a self-scoped custom employee viewer', () => {
+    mockRoles = [];
+    mockPermissions = [{ resource: 'employees', actions: ['view'] }];
+    mockCanManageGlobalConnections = false;
+
+    const html = renderToStaticMarkup(
+      React.createElement(EmployeeManagementPage),
+    );
+
+    expect(html).toContain('data-tab="employees"');
     expect(html).not.toContain('data-tab="bitable"');
   });
 });

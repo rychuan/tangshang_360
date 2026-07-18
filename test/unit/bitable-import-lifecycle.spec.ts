@@ -19,15 +19,17 @@ function whereQuery<T>(rows: T[]) {
 function fromQuery<T>(rows: T[]) {
   return {
     from: jest.fn().mockReturnThis(),
-    where: jest.fn().mockResolvedValue(
-      rows.filter(
-        (row) =>
-          typeof row !== 'object' ||
-          row === null ||
-          !('isActive' in row) ||
-          (row as { isActive?: boolean }).isActive !== false,
+    where: jest
+      .fn()
+      .mockResolvedValue(
+        rows.filter(
+          (row) =>
+            typeof row !== 'object' ||
+            row === null ||
+            !('isActive' in row) ||
+            (row as { isActive?: boolean }).isActive !== false,
+        ),
       ),
-    ),
   };
 }
 
@@ -186,9 +188,9 @@ function createConnectionImportService(options: {
     employeeManagementService,
   ) as BitableConnectionService;
   (service as any).getAccessToken = jest.fn().mockResolvedValue('token');
-  (service as any).fetchBitableRecords = jest.fn().mockResolvedValue([
-    { record_id: 'record-1', fields: options.fields },
-  ]);
+  (service as any).fetchBitableRecords = jest
+    .fn()
+    .mockResolvedValue([{ record_id: 'record-1', fields: options.fields }]);
 
   return {
     service,
@@ -293,7 +295,33 @@ describe('Bitable import employee lifecycle', () => {
     );
   });
 
-  it('creates then deactivates a new inactive plugin employee', async () => {
+  it('omits role when a plugin row does not provide it so durable custom roles are preserved', async () => {
+    const { service, employeeManagementService } = createPluginImportService({
+      record: {
+        姓名: [2004],
+        状态: 'active',
+      },
+      existing: [
+        {
+          employeeId: '2004',
+          name: '自定义角色员工',
+          position: '工程师',
+          department: '研发部',
+          role: 'admin',
+          authorizationRoles: ['custom-reviewer'],
+          status: false,
+        },
+      ],
+    });
+
+    await service.importFromBitable('operator-1');
+
+    const updateBody =
+      employeeManagementService.syncImportedEmployee.mock.calls[0][1];
+    expect(updateBody).not.toHaveProperty('role');
+  });
+
+  it('creates a new inactive plugin employee directly as inactive', async () => {
     const { service, db, roleManagerService, employeeManagementService } =
       createPluginImportService({
         record: {
@@ -307,17 +335,15 @@ describe('Bitable import employee lifecycle', () => {
     expect(employeeManagementService.create).toHaveBeenCalledWith(
       expect.objectContaining({ id: '3003', role: 'employee' }),
       'operator-1',
+      { initialStatus: false },
     );
-    expect(employeeManagementService.deactivate).toHaveBeenCalledWith(
-      '3003',
-      'operator-1',
-    );
+    expect(employeeManagementService.deactivate).not.toHaveBeenCalled();
     expect(db.insert).toHaveBeenCalledTimes(1);
     expect(roleManagerService.syncUserRoles).not.toHaveBeenCalled();
     expect(result.created).toBe(1);
   });
 
-  it('restores then deactivates a soft-deleted inactive plugin employee without direct role sync', async () => {
+  it('restores a soft-deleted inactive plugin employee directly as inactive', async () => {
     const { service, db, roleManagerService, employeeManagementService } =
       createPluginImportService({
         record: {
@@ -339,11 +365,9 @@ describe('Bitable import employee lifecycle', () => {
     expect(employeeManagementService.create).toHaveBeenCalledWith(
       expect.objectContaining({ id: '4004', role: 'supervisor' }),
       'operator-1',
+      { initialStatus: false },
     );
-    expect(employeeManagementService.deactivate).toHaveBeenCalledWith(
-      '4004',
-      'operator-1',
-    );
+    expect(employeeManagementService.deactivate).not.toHaveBeenCalled();
     expect(db.update).not.toHaveBeenCalled();
     expect(roleManagerService.syncUserRoles).not.toHaveBeenCalled();
     expect(result.created).toBe(1);
@@ -372,10 +396,7 @@ describe('Bitable import employee lifecycle', () => {
         ],
       });
 
-    const result = await service.importEmployees(
-      'connection-1',
-      'operator-1',
-    );
+    const result = await service.importEmployees('connection-1', 'operator-1');
 
     expect(employeeManagementService.syncImportedEmployee).toHaveBeenCalledWith(
       'employee-2',
@@ -388,7 +409,7 @@ describe('Bitable import employee lifecycle', () => {
     expect(result.updatedCount).toBe(1);
   });
 
-  it('creates then deactivates a new inactive connection employee', async () => {
+  it('creates a new inactive connection employee directly as inactive', async () => {
     const { service, db, roleManagerService, employeeManagementService } =
       createConnectionImportService({
         fields: {
@@ -400,10 +421,7 @@ describe('Bitable import employee lifecycle', () => {
         },
       });
 
-    const result = await service.importEmployees(
-      'connection-1',
-      'operator-1',
-    );
+    const result = await service.importEmployees('connection-1', 'operator-1');
 
     expect(employeeManagementService.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -411,12 +429,9 @@ describe('Bitable import employee lifecycle', () => {
         role: 'employee',
       }),
       'operator-1',
-      { bitableConnectionId: 'connection-1' },
+      { bitableConnectionId: 'connection-1', initialStatus: false },
     );
-    expect(employeeManagementService.deactivate).toHaveBeenCalledWith(
-      'employee-3',
-      'operator-1',
-    );
+    expect(employeeManagementService.deactivate).not.toHaveBeenCalled();
     expect(db.transaction).not.toHaveBeenCalled();
     expect(roleManagerService.syncUserRoles).not.toHaveBeenCalled();
     expect(result.createdCount).toBe(1);
@@ -454,6 +469,36 @@ describe('Bitable import employee lifecycle', () => {
     );
   });
 
+  it('omits role when a connection row does not provide it so durable custom roles are preserved', async () => {
+    const { service, employeeManagementService } =
+      createConnectionImportService({
+        fields: {
+          姓名: '自定义角色员工',
+          工号: 'E008',
+          岗位: '工程师',
+          状态: 'active',
+        },
+        existing: [
+          {
+            employeeId: 'employee-8',
+            employeeNo: 'E008',
+            name: '自定义角色员工',
+            position: '工程师',
+            department: '研发部',
+            role: 'admin',
+            authorizationRoles: ['custom-reviewer'],
+            status: false,
+          },
+        ],
+      });
+
+    await service.importEmployees('connection-1', 'operator-1');
+
+    const updateBody =
+      employeeManagementService.syncImportedEmployee.mock.calls[0][1];
+    expect(updateBody).not.toHaveProperty('role');
+  });
+
   it('rejects an inactive row requesting a template before employee or binding side effects', async () => {
     const {
       service,
@@ -475,10 +520,7 @@ describe('Bitable import employee lifecycle', () => {
       templates: [{ name: '季度模板', id: 'template-1' }],
     });
 
-    const result = await service.importEmployees(
-      'connection-1',
-      'operator-1',
-    );
+    const result = await service.importEmployees('connection-1', 'operator-1');
 
     expect(result).toEqual(
       expect.objectContaining({
@@ -499,7 +541,9 @@ describe('Bitable import employee lifecycle', () => {
       }),
     );
     expect(employeeManagementService.create).not.toHaveBeenCalled();
-    expect(employeeManagementService.syncImportedEmployee).not.toHaveBeenCalled();
+    expect(
+      employeeManagementService.syncImportedEmployee,
+    ).not.toHaveBeenCalled();
     expect(employeeManagementService.deactivate).not.toHaveBeenCalled();
     expect(bindingService.bind).not.toHaveBeenCalled();
     expect(roleManagerService.checkUserPermission).not.toHaveBeenCalled();
@@ -534,10 +578,7 @@ describe('Bitable import employee lifecycle', () => {
       templates: [{ name: '季度模板', id: 'template-1' }],
     });
 
-    const result = await service.importEmployees(
-      'connection-1',
-      'operator-1',
-    );
+    const result = await service.importEmployees('connection-1', 'operator-1');
 
     expect(result).toEqual(
       expect.objectContaining({
@@ -576,15 +617,10 @@ describe('Bitable import employee lifecycle', () => {
         岗位: '工程师',
         考核模板: '已停用模板',
       },
-      templates: [
-        { name: '已停用模板', id: 'template-7', isActive: false },
-      ],
+      templates: [{ name: '已停用模板', id: 'template-7', isActive: false }],
     });
 
-    const result = await service.importEmployees(
-      'connection-1',
-      'operator-1',
-    );
+    const result = await service.importEmployees('connection-1', 'operator-1');
 
     expect(result).toEqual(
       expect.objectContaining({
@@ -605,7 +641,9 @@ describe('Bitable import employee lifecycle', () => {
       }),
     );
     expect(employeeManagementService.create).not.toHaveBeenCalled();
-    expect(employeeManagementService.syncImportedEmployee).not.toHaveBeenCalled();
+    expect(
+      employeeManagementService.syncImportedEmployee,
+    ).not.toHaveBeenCalled();
     expect(bindingService.bind).not.toHaveBeenCalled();
   });
 
@@ -640,17 +678,16 @@ describe('Bitable import employee lifecycle', () => {
       access: (includeSelf) => includeSelf === true,
     });
 
-    const result = await service.importEmployees(
-      'connection-1',
-      'operator-1',
-    );
+    const result = await service.importEmployees('connection-1', 'operator-1');
 
     expect(accessScopeService.canAccessEmployee).toHaveBeenCalledWith(
       'operator-1',
       'operator-1',
       { includeSelf: false },
     );
-    expect(employeeManagementService.syncImportedEmployee).not.toHaveBeenCalled();
+    expect(
+      employeeManagementService.syncImportedEmployee,
+    ).not.toHaveBeenCalled();
     expect(db.transaction).not.toHaveBeenCalled();
     expect(roleManagerService.syncUserRoles).not.toHaveBeenCalled();
     expect(bindingService.bind).not.toHaveBeenCalled();
@@ -686,10 +723,7 @@ describe('Bitable import employee lifecycle', () => {
       syncError: new Error('系统中至少保留一个系统管理员'),
     });
 
-    const result = await service.importEmployees(
-      'connection-1',
-      'operator-1',
-    );
+    const result = await service.importEmployees('connection-1', 'operator-1');
 
     expect(employeeManagementService.syncImportedEmployee).toHaveBeenCalled();
     expect(db.transaction).not.toHaveBeenCalled();

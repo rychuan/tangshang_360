@@ -7,7 +7,7 @@ import type {
   PermissionAction,
   ForceRoleDTO,
 } from '@shared/api.interface';
-import { DEFAULT_PERMISSIONS } from '@shared/api.interface';
+import { DEFAULT_PERMISSIONS, PERMISSION_MATRIX } from '@shared/api.interface';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
@@ -59,21 +59,6 @@ const ALL_ACTIONS: PermissionAction[] = [
   'export',
   'publish',
 ];
-
-const PERMISSION_MATRIX: Record<PermissionResource, PermissionAction[]> = {
-  dashboard: ['view'],
-  my_assessments: ['view', 'edit'],
-  employees: ['view', 'edit', 'delete'],
-  template_management: ['view', 'edit', 'delete'],
-  employee_binding: ['view', 'edit'],
-  publish_management: ['view', 'edit', 'export', 'publish'],
-  statistics: ['view', 'export'],
-  team_performance: ['view', 'edit'],
-  organization: ['view', 'edit', 'delete'],
-  permission_management: ['view', 'edit'],
-  grade_config: ['view', 'edit'],
-  dictionary_config: ['view', 'edit'],
-};
 
 const RESOURCE_ORDER = Object.keys(RESOURCE_LABELS) as PermissionResource[];
 

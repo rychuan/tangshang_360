@@ -1,5 +1,9 @@
 import { toast } from 'sonner';
-import { getApiErrorMessage, handleApiError } from '../../client/src/utils/api-error';
+import {
+  getApiErrorMessage,
+  getRoleMutationFailureSummary,
+  handleApiError,
+} from '../../client/src/utils/api-error';
 
 jest.mock('sonner', () => ({
   toast: {
@@ -54,5 +58,49 @@ describe('handleApiError', () => {
     });
 
     expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it('extracts structured role mutation failure outcomes', () => {
+    const error = {
+      response: {
+        status: 502,
+        data: {
+          error: {
+            message: '部分成员授权同步失败',
+            details: {
+              message: '部分成员授权同步失败',
+              success: false,
+              outcomes: [
+                { userId: 'employee-1', status: 'synced', version: 1 },
+                {
+                  userId: 'employee-2',
+                  status: 'failed',
+                  version: 2,
+                  error: 'sdk add failed',
+                },
+                {
+                  userId: 'employee-3',
+                  status: 'stale_owner',
+                  version: 3,
+                },
+              ],
+            },
+          },
+        },
+      },
+    };
+
+    expect(getRoleMutationFailureSummary(error)).toBe(
+      'employee-2（sdk add failed）；employee-3（同步任务冲突）',
+    );
+    expect(getApiErrorMessage(error)).toBe(
+      '部分成员授权同步失败：employee-2（sdk add failed）；employee-3（同步任务冲突）',
+    );
+
+    handleApiError(error);
+
+    expect(toast.error).toHaveBeenCalledWith(
+      '部分成员授权同步失败：employee-2（sdk add failed）；employee-3（同步任务冲突）',
+    );
   });
 });
