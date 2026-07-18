@@ -167,8 +167,7 @@ const AssessmentDetailPage: React.FC = () => {
     detail.totalScore ?? sumScores(detail.indicators, 'supervisor');
 
   return (
-    <div className="-mx-4 -my-5 flex min-h-0 flex-1 flex-col lg:-mx-6">
-      <div className="flex-1 space-y-4 overflow-y-auto px-4 py-5 md:space-y-6 lg:px-6">
+    <div className="flex flex-col gap-4 md:gap-6">
       {/* Top bar: back + period + status + score */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -413,11 +412,9 @@ const AssessmentDetailPage: React.FC = () => {
         updateRating={updateRating}
       />
 
-      </div>
-
       {/* Actions — always visible at bottom */}
       {(canEditSelf || canSignSelf || canEditSupervisor || canSignSupervisor || isCompleted) && (
-        <div className="shrink-0 border-t bg-background/95 px-4 py-3 backdrop-blur">
+        <div className="sticky bottom-0 z-20 -mx-4 -mb-5 border-t bg-background/95 px-4 py-3 backdrop-blur lg:-mx-6">
           <div className="flex flex-wrap items-center justify-center gap-3">
             {canEditSelf && (
               <>

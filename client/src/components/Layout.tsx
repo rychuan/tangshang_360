@@ -95,7 +95,7 @@ const LayoutContent: React.FC = () => {
         />
         <div
           key={pathname}
-          className="@container/main flex min-w-0 flex-1 flex-col overflow-x-clip px-4 py-5 lg:px-6"
+          className="@container/main flex min-w-0 flex-1 flex-col px-4 py-5 lg:px-6"
         >
           <Outlet />
         </div>
