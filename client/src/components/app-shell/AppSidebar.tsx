@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { CalendarDays, Gauge, UserPlus } from 'lucide-react';
+import { Icon } from '@iconify/react';
 import type { NavGroup } from '@/components/navigation';
 import { formatCurrentCycle } from '@/components/app-shell/app-shell-utils';
 import { Button } from '@/components/ui/button';
@@ -41,14 +41,14 @@ export function AppSidebar({
       <SidebarHeader className="gap-3 p-3">
         <Link to={homePath} className="flex h-10 items-center gap-3 px-2">
           <span className="grid size-8 place-items-center rounded-lg bg-[#171720] text-white">
-            <Gauge className="size-4" />
+            <Icon icon="hugeicons:dashboard-square-02" className="size-4" />
           </span>
           <span className="truncate text-[16px] font-semibold">
             {appName || '绩效考核'}
           </span>
         </Link>
         <div className="flex h-10 items-center gap-2 rounded-lg border bg-background px-3 text-[12px]">
-          <CalendarDays className="size-4 text-warning" />
+          <Icon icon="hugeicons:calendar-03" className="size-4 text-warning" />
           <span>{formatCurrentCycle(new Date())}</span>
         </div>
       </SidebarHeader>
@@ -68,7 +68,7 @@ export function AppSidebar({
                       className="h-10 rounded-lg px-3 text-[14px] data-[active=true]:border data-[active=true]:bg-background data-[active=true]:shadow-xs"
                     >
                       <Link to={item.path}>
-                        <item.icon className="size-4" />
+                        <Icon icon={item.icon} className="size-4" />
                         <span>{item.label}</span>
                       </Link>
                     </SidebarMenuButton>
@@ -83,7 +83,7 @@ export function AppSidebar({
         {canManageEmployees && (
           <Button asChild variant="outline" className="h-auto justify-start p-3">
             <Link to="/employees">
-              <UserPlus className="size-4" />
+              <Icon icon="hugeicons:user-add-01" className="size-4" />
               <span>邀请团队成员</span>
             </Link>
           </Button>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router-dom';
 import type { NavItem } from '@/components/navigation';
 import { filterNavItems } from '@/components/app-shell/app-shell-utils';
@@ -56,7 +57,7 @@ export function NavigationCommand({
                 handleOpenChange(false);
               }}
             >
-              <item.icon className="size-4" />
+              <Icon icon={item.icon} className="size-4" />
               <span>{item.label}</span>
             </CommandItem>
           ))}
