@@ -3,7 +3,7 @@ import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { and, desc, eq, inArray, lt, or, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { authorizationSyncJob, employee } from '@server/database/schema';
 import {
@@ -226,7 +226,10 @@ export class AuthorizationSyncService {
             inArray(authorizationSyncJob.status, ['pending', 'failed']),
             and(
               eq(authorizationSyncJob.status, 'processing'),
-              lt(authorizationSyncJob.startedAt, leaseCutoff),
+              or(
+                isNull(authorizationSyncJob.startedAt),
+                lt(authorizationSyncJob.startedAt, leaseCutoff),
+              ),
             ),
           ),
         ),
@@ -279,6 +282,12 @@ export class AuthorizationSyncService {
       }
     } catch (error) {
       if (error instanceof StaleAuthorizationOwnerError) {
+        const superseded = await this.supersedeOwnedJob(jobId, claimToken);
+        if (!superseded) {
+          this.logger.warn(
+            `Could not supersede stale authorization job ${jobId}`,
+          );
+        }
         return this.staleOwnerResult(version, jobId);
       }
       throw error;
@@ -343,6 +352,30 @@ export class AuthorizationSyncService {
       .set({
         status: status === 'synced' ? 'succeeded' : status,
         errorMessage,
+        completedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(authorizationSyncJob.id, jobId),
+          eq(authorizationSyncJob.status, 'processing'),
+          eq(authorizationSyncJob.claimToken, claimToken),
+        ),
+      )
+      .returning({ id: authorizationSyncJob.id });
+
+    return rows.length > 0;
+  }
+
+  private async supersedeOwnedJob(
+    jobId: string,
+    claimToken: string,
+  ): Promise<boolean> {
+    const rows = await this.db
+      .update(authorizationSyncJob)
+      .set({
+        status: 'superseded',
+        errorMessage:
+          'Employee authorization version changed during SDK reconciliation',
         completedAt: new Date(),
       })
       .where(

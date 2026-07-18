@@ -115,6 +115,9 @@ function evaluateCondition(
           actual.getTime() < right.value.getTime())
       );
     }
+    if (operator === ' is null') {
+      return chunk.table !== table || actual == null;
+    }
     if (operator === ' in ' && Array.isArray(right)) {
       return (
         chunk.table !== table ||
@@ -576,7 +579,7 @@ describe('durable authorization reconciliation', () => {
 
     expect(result.status).toBe('stale_owner');
     expect(db.employees[0].authorizationStatus).toBe('pending');
-    expect(db.jobs[0].status).toBe('processing');
+    expect(db.jobs[0].status).toBe('superseded');
   });
 
   it('does not let a failed worker overwrite a succeeded job', async () => {
@@ -700,6 +703,27 @@ describe('durable authorization reconciliation', () => {
     expect(result.status).toBe('stale_owner');
     expect(db.jobs[0].claimToken).toBe(token);
     expect(reconcile).not.toHaveBeenCalled();
+  });
+
+  it('reclaims a processing lease with a null startedAt', async () => {
+    const oldToken = '66666666-6666-6666-6666-666666666666';
+    const db = new StatefulDb(employeeRow(), [
+      jobRow({
+        status: 'processing',
+        startedAt: null,
+        claimToken: oldToken,
+      }),
+    ]);
+    const reconcile = jest.fn().mockResolvedValue(undefined);
+    const service = createSyncService(db, {
+      reconcileUserRoles: reconcile,
+    } as any);
+
+    const result = await service.retryEmployeeAuthorization('employee-1');
+
+    expect(result.status).toBe('synced');
+    expect(db.jobs[0].claimToken).not.toBe(oldToken);
+    expect(reconcile).toHaveBeenCalledTimes(1);
   });
 
   it('does not finalize failed when the claim token is stale', async () => {

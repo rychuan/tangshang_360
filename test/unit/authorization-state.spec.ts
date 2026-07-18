@@ -105,8 +105,11 @@ describe('authorization state helpers', () => {
     );
     expect(migration016).toContain('ADD COLUMN IF NOT EXISTS claim_token UUID');
     expect(migration016).toContain(
-      'CREATE UNIQUE INDEX authorization_sync_job_employee_version_unique',
+      'CREATE UNIQUE INDEX IF NOT EXISTS authorization_sync_job_employee_version_unique',
     );
     expect(migration016).toContain('duplicate employee/version rows');
+    expect(migration016).toContain('UPDATE authorization_sync_job');
+    expect(migration016).toContain("status = 'failed'");
+    expect(migration016).toContain('started_at IS NULL');
   });
 });
