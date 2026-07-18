@@ -17,6 +17,7 @@ import {
   getCurrentNavLabel,
   getDefaultLandingPath,
 } from '@/components/app-shell/app-shell-utils';
+import { useSidebarBadges } from '@/components/app-shell/useSidebarBadges';
 import { hasPermission } from './permission-policy';
 import {
   useBreadcrumb,
@@ -52,6 +53,7 @@ const LayoutContent: React.FC = () => {
     breadcrumbLabel,
   );
   const canManageEmployees = hasPermission(permissions, 'employees', 'edit');
+  const badges = useSidebarBadges(navGroups.flatMap((g) => g.items));
 
   if (loading) {
     return (
@@ -64,6 +66,7 @@ const LayoutContent: React.FC = () => {
           appName={appName}
           canManageEmployees={false}
           homePath={homePath}
+          badges={{}}
         />
         <SidebarInset className="min-w-0 overflow-hidden bg-background md:rounded-lg">
           <div className="flex flex-1 flex-col" />
@@ -82,6 +85,7 @@ const LayoutContent: React.FC = () => {
         appName={appName}
         canManageEmployees={canManageEmployees}
         homePath={homePath}
+        badges={badges}
       />
       <SidebarInset className="min-w-0 overflow-hidden bg-background md:rounded-lg">
         <AppTopbar
@@ -91,7 +95,7 @@ const LayoutContent: React.FC = () => {
         />
         <div
           key={pathname}
-          className="@container/main min-w-0 flex-1 overflow-x-hidden px-4 py-5 lg:px-6"
+          className="@container/main min-w-0 flex-1 overflow-x-clip px-4 py-5 lg:px-6"
         >
           <Outlet />
         </div>

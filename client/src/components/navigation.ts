@@ -6,6 +6,8 @@ export interface NavItem {
   icon: string;
   permissionResources?: PermissionResource[];
   identityRoles?: string[];
+  badge?: 'count' | 'status';
+  badgeResource?: string;
 }
 
 export interface NavGroup {
@@ -30,12 +32,16 @@ export const navGroups: NavGroup[] = [
         path: '/my-assessments',
         icon: 'hugeicons:task-01',
         permissionResources: ['my_assessments'],
+        badge: 'count',
+        badgeResource: 'my_assessments',
       },
       {
         label: '团队绩效',
         path: '/team-performance',
-        icon: 'hugeicons:team',
+        icon: 'hugeicons:user-group',
         permissionResources: ['team_performance'],
+        badge: 'status',
+        badgeResource: 'team_performance',
       },
     ],
   },
@@ -54,6 +60,8 @@ export const navGroups: NavGroup[] = [
         path: '/publish-management',
         icon: 'hugeicons:rocket-01',
         permissionResources: ['publish_management'],
+        badge: 'count',
+        badgeResource: 'publish_management',
       },
       {
         label: '统计查询',
