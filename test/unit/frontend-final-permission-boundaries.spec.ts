@@ -106,4 +106,38 @@ describe('frontend final permission boundaries', () => {
     );
     expect(source).toContain('getDepartmentCommandCapabilities(permissions)');
   });
+
+  it('requires employees edit before showing the invite team member entry', () => {
+    const layoutSource = readClient('components/Layout.tsx');
+    const sidebarSource = readClient('components/app-shell/AppSidebar.tsx');
+
+    expect(layoutSource).toContain(
+      "hasPermission(permissions, 'employees', 'edit')",
+    );
+    expect(sidebarSource).toContain('canManageEmployees');
+    expect(sidebarSource).not.toContain('canViewEmployees');
+  });
+
+  it('marks both required and create-only required Bitable fields', () => {
+    const source = readClient(
+      'pages/EmployeeManagement/BitableConnectionTab.tsx',
+    );
+
+    expect(source).toContain("required !== '否'");
+  });
+
+  it('hides the statistics action column when no row action is available', () => {
+    const source = readClient('pages/Statistics/StatisticsPage.tsx');
+
+    expect(source).toContain(
+      "usePermission('my_assessments', 'view')",
+    );
+    expect(source).toContain("usePermission('statistics', 'export')");
+    expect(source).toMatch(
+      /canShowRecordActions\s*&&\s*\([\s\S]*<TableHead[\s\S]*操作/,
+    );
+    expect(source).toMatch(
+      /canShowRecordActions\s*&&\s*\([\s\S]*<TableCell[\s\S]*COMMAND_PERMISSIONS\.assessmentView/,
+    );
+  });
 });

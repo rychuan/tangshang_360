@@ -21,7 +21,7 @@ export interface AppSidebarProps {
   visibleGroups: NavGroup[];
   pathname: string;
   appName?: string | null;
-  canViewEmployees: boolean;
+  canManageEmployees: boolean;
   homePath: string;
 }
 
@@ -33,7 +33,7 @@ export function AppSidebar({
   visibleGroups,
   pathname,
   appName,
-  canViewEmployees,
+  canManageEmployees,
   homePath,
 }: AppSidebarProps) {
   return (
@@ -80,7 +80,7 @@ export function AppSidebar({
         ))}
       </SidebarContent>
       <SidebarFooter>
-        {canViewEmployees && (
+        {canManageEmployees && (
           <Button asChild variant="outline" className="h-auto justify-start p-3">
             <Link to="/employees">
               <UserPlus className="size-4" />

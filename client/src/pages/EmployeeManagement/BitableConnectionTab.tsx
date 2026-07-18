@@ -243,8 +243,14 @@ const BitableConnectionTab: React.FC = () => {
                           {field}
                         </TableCell>
                         <TableCell className="text-center">
-                          {required === '是' ? (
-                            <span className="text-destructive">●</span>
+                          {required !== '否' ? (
+                            <span
+                              className="text-destructive"
+                              title={required}
+                              aria-label={required}
+                            >
+                              ●
+                            </span>
                           ) : (
                             <span className="text-muted-foreground">○</span>
                           )}

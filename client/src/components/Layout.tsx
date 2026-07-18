@@ -51,7 +51,7 @@ const LayoutContent: React.FC = () => {
     visibleGroups,
     breadcrumbLabel,
   );
-  const canViewEmployees = hasPermission(permissions, 'employees', 'view');
+  const canManageEmployees = hasPermission(permissions, 'employees', 'edit');
 
   if (loading) {
     return (
@@ -62,7 +62,7 @@ const LayoutContent: React.FC = () => {
           visibleGroups={[]}
           pathname={pathname}
           appName={appName}
-          canViewEmployees={false}
+          canManageEmployees={false}
           homePath={homePath}
         />
         <SidebarInset className="min-w-0 overflow-hidden bg-background md:rounded-lg">
@@ -80,7 +80,7 @@ const LayoutContent: React.FC = () => {
         visibleGroups={visibleGroups}
         pathname={pathname}
         appName={appName}
-        canViewEmployees={canViewEmployees}
+        canManageEmployees={canManageEmployees}
         homePath={homePath}
       />
       <SidebarInset className="min-w-0 overflow-hidden bg-background md:rounded-lg">
