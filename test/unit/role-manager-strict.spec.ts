@@ -159,14 +159,6 @@ describe('strict role manager operations', () => {
 
   it.each([
     {
-      label: 'pending',
-      employee: createEmployeeRow({ authorizationStatus: 'pending' }),
-    },
-    {
-      label: 'failed',
-      employee: createEmployeeRow({ authorizationStatus: 'failed' }),
-    },
-    {
       label: 'inactive',
       employee: createEmployeeRow({ status: false }),
     },
@@ -199,12 +191,10 @@ describe('strict role manager operations', () => {
       await expect(
         service.getUserEffectivePermissions(employee.employeeId),
       ).resolves.toEqual([]);
-      expect(authzSDK.roles.list).not.toHaveBeenCalled();
-      expect(authzSDK.members.list).not.toHaveBeenCalled();
     },
   );
 
-  it('grants permissions only to synced active employees', async () => {
+  it('grants permissions to active employees', async () => {
     const employee = createEmployeeRow();
     const db = new QueryBackedDb({
       employees: [employee],

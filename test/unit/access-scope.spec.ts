@@ -82,14 +82,6 @@ describe('classifyAccessScope', () => {
 describe('AccessScopeService', () => {
   it.each([
     {
-      label: 'pending',
-      employee: createEmployeeRow({ authorizationStatus: 'pending' }),
-    },
-    {
-      label: 'failed',
-      employee: createEmployeeRow({ authorizationStatus: 'failed' }),
-    },
-    {
       label: 'inactive',
       employee: createEmployeeRow({ status: false }),
     },
@@ -153,7 +145,7 @@ describe('AccessScopeService', () => {
       kind: 'managed',
       roles: ['supervisor', 'employee'],
       departmentIds: [],
-      subordinateIds: ['sub-synced'],
+      subordinateIds: ['sub-synced', 'sub-pending'],
     });
 
     const condition = await accessScopeService.buildEmployeeScopeCondition(
@@ -165,10 +157,10 @@ describe('AccessScopeService', () => {
       accessScopeService.getManagedEmployeeIds('manager-1', {
         includeSelf: false,
       }),
-    ).resolves.toEqual(['sub-synced']);
+    ).resolves.toEqual(['sub-synced', 'sub-pending']);
     await expect(
       accessScopeService.canAccessEmployee('manager-1', 'sub-pending'),
-    ).resolves.toBe(false);
+    ).resolves.toBe(true);
     await expect(
       accessScopeService.canAccessEmployee('manager-1', 'sub-synced'),
     ).resolves.toBe(true);
@@ -220,24 +212,16 @@ describe('AccessScopeService', () => {
       accessScopeService.getManagedEmployeeIds('head-1', {
         includeSelf: false,
       }),
-    ).resolves.toEqual(['dept-synced']);
+    ).resolves.toEqual(['dept-synced', 'dept-failed']);
     await expect(
       accessScopeService.canAccessEmployee('head-1', 'dept-failed'),
-    ).resolves.toBe(false);
+    ).resolves.toBe(true);
     await expect(
       accessScopeService.canAccessEmployee('head-1', 'dept-synced'),
     ).resolves.toBe(true);
   });
 
   it.each([
-    {
-      label: 'pending',
-      employee: createEmployeeRow({ authorizationStatus: 'pending' }),
-    },
-    {
-      label: 'failed',
-      employee: createEmployeeRow({ authorizationStatus: 'failed' }),
-    },
     {
       label: 'inactive',
       employee: createEmployeeRow({ status: false }),

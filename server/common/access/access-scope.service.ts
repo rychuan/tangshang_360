@@ -43,7 +43,19 @@ export class AccessScopeService {
   ) {}
 
   async getScope(userId: string): Promise<AccessScope> {
-    if (!(await this.roleManagerService.hasSynchronizedActiveEmployee(userId))) {
+    // Verify employee exists and is active (no longer requires synced authorization)
+    const callerRows = await this.db
+      .select({ id: employee.employeeId })
+      .from(employee)
+      .where(
+        and(
+          sql`(${employee.employeeId}).user_id = ${userId}`,
+          eq(employee.status, true),
+          isNull(employee.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (callerRows.length === 0) {
       return {
         kind: 'self',
         roles: [],
@@ -79,7 +91,6 @@ export class AccessScopeService {
               sql`(${employee.supervisorId}).user_id = ${userId}`,
               isNull(employee.deletedAt),
               eq(employee.status, true),
-              eq(employee.authorizationStatus, 'synced'),
             ),
           )
       : Promise.resolve([] as { userId: string }[]);
@@ -142,7 +153,6 @@ export class AccessScopeService {
       const conditions = [
         isNull(employee.deletedAt),
         eq(employee.status, true),
-        eq(employee.authorizationStatus, 'synced'),
       ];
       if (!options.includeSelf) {
         conditions.push(sql`(${employee.employeeId}).user_id != ${userId}`);
@@ -158,7 +168,6 @@ export class AccessScopeService {
       condition,
       isNull(employee.deletedAt),
       eq(employee.status, true),
-      eq(employee.authorizationStatus, 'synced'),
     ];
     if (!options.includeSelf) {
       conditions.push(sql`(${employee.employeeId}).user_id != ${userId}`);
@@ -189,7 +198,6 @@ export class AccessScopeService {
           sql`(${employee.employeeId}).user_id = ${employeeId}`,
           isNull(employee.deletedAt),
           eq(employee.status, true),
-          eq(employee.authorizationStatus, 'synced'),
         ),
       )
       .limit(1);
