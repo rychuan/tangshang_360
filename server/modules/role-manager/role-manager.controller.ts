@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Post,
@@ -14,6 +15,7 @@ import { CanRole } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { AuthorizationSDK } from '@lark-apaas/fullstack-nestjs-core';
 import { RoleManagerService } from './role-manager.service';
+import { AuthorizationSyncService } from './authorization-sync.service';
 import type { Request } from 'express';
 import type {
   CreateRoleRequest,
@@ -26,12 +28,14 @@ import type {
   PermissionItem,
 } from '@shared/api.interface';
 import { DEFAULT_PERMISSIONS } from '@shared/api.interface';
+import { isBuiltinRole } from '@shared/types/permission.types';
 
 @Controller('api/role_manager')
 export class RoleManagerController {
   constructor(
     private readonly authzSDK: AuthorizationSDK,
     private readonly roleManagerService: RoleManagerService,
+    private readonly authorizationSyncService: AuthorizationSyncService,
   ) {}
 
   @NeedLogin()
@@ -89,8 +93,12 @@ export class RoleManagerController {
   @NeedLogin()
   @Delete('roles/:bizID')
   async deleteRole(@Param('bizID') bizID: string) {
+    if (isBuiltinRole(bizID)) {
+      throw new BadRequestException('内置角色不可删除');
+    }
+    const result = await this.authzSDK.roles.delete(bizID);
     await this.roleManagerService.deletePermissionConfig(bizID);
-    return this.authzSDK.roles.delete(bizID);
+    return result;
   }
 
   @CanRole(['admin', 'hrd'])
@@ -117,9 +125,14 @@ export class RoleManagerController {
     @Param('bizID') bizID: string,
     @Body() dto: AddMembersRequest,
   ) {
-    const result = await this.authzSDK.members.add(bizID, dto);
-    this.invalidateMemberCaches(dto);
-    return result;
+    const userIds = this.getExplicitUserIds(bizID, dto);
+    await this.roleManagerService.mutateCustomRoleMembers(
+      bizID,
+      userIds,
+      'add',
+      this.authorizationSyncService,
+    );
+    return { success: true };
   }
 
   @CanRole(['admin'])
@@ -130,9 +143,14 @@ export class RoleManagerController {
     @Param('bizID') bizID: string,
     @Body() dto: RemoveMembersRequest,
   ) {
-    const result = await this.authzSDK.members.remove(bizID, dto);
-    this.invalidateMemberCaches(dto);
-    return result;
+    const userIds = this.getExplicitUserIds(bizID, dto);
+    await this.roleManagerService.mutateCustomRoleMembers(
+      bizID,
+      userIds,
+      'remove',
+      this.authorizationSyncService,
+    );
+    return { success: true };
   }
 
   @CanRole(['admin', 'hrd'])
@@ -176,17 +194,30 @@ export class RoleManagerController {
     return { success: true };
   }
 
-  private invalidateMemberCaches(
+  private getExplicitUserIds(
+    roleBizId: string,
     dto: AddMembersRequest | RemoveMembersRequest,
-  ): void {
-    const members = dto.members as {
-      userList?: Array<{ userID?: string; user_id?: string }>;
-    };
-    for (const user of members.userList || []) {
-      const userId = user.userID || user.user_id;
-      if (userId) {
-        this.roleManagerService.invalidateUserRoleCache(userId);
-      }
+  ): string[] {
+    if (isBuiltinRole(roleBizId)) {
+      throw new BadRequestException('内置角色成员只能通过员工或部门管理修改');
     }
+
+    const members = dto?.members;
+    if (
+      !members ||
+      typeof members !== 'object' ||
+      Array.isArray(members) ||
+      Object.keys(members).some((key) => key !== 'userList') ||
+      !Array.isArray(members.userList) ||
+      members.userList.length === 0
+    ) {
+      throw new BadRequestException('仅支持显式用户成员列表');
+    }
+
+    const userIds = members.userList.map((user) => user.userID?.trim());
+    if (userIds.some((userId) => !userId)) {
+      throw new BadRequestException('用户成员标识无效');
+    }
+    return Array.from(new Set(userIds as string[]));
   }
 }

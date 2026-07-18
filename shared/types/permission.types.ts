@@ -29,6 +29,29 @@ export interface PermissionItem {
   actions: PermissionAction[];
 }
 
+const PERMISSION_RESOURCES: readonly PermissionResource[] = [
+  'dashboard',
+  'my_assessments',
+  'employees',
+  'template_management',
+  'organization',
+  'employee_binding',
+  'publish_management',
+  'statistics',
+  'team_performance',
+  'permission_management',
+  'grade_config',
+  'dictionary_config',
+];
+
+const PERMISSION_ACTIONS: readonly PermissionAction[] = [
+  'view',
+  'edit',
+  'delete',
+  'export',
+  'publish',
+];
+
 export const DEFAULT_PERMISSIONS: Record<string, PermissionItem[]> = {
   admin: [
     { resource: 'dashboard', actions: ['view'] },
@@ -144,6 +167,73 @@ export const BUILTIN_ROLE_CODES = [
   'supervisor',
   'employee',
 ] as const;
+
+export function isBuiltinRole(roleBizId: string): boolean {
+  return (BUILTIN_ROLE_CODES as readonly string[]).includes(roleBizId);
+}
+
+export function normalizePermissionConfig(
+  roleBizId: string,
+  permissions: unknown,
+): PermissionItem[] {
+  if (!Array.isArray(permissions)) {
+    throw new Error('权限配置必须是数组');
+  }
+
+  const knownResources = new Set<string>(PERMISSION_RESOURCES);
+  const knownActions = new Set<string>(PERMISSION_ACTIONS);
+  const merged = new Map<PermissionResource, Set<PermissionAction>>();
+
+  for (const item of permissions) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      throw new Error('权限配置项格式无效');
+    }
+
+    const resource = (item as { resource?: unknown }).resource;
+    const actions = (item as { actions?: unknown }).actions;
+    if (typeof resource !== 'string' || !knownResources.has(resource)) {
+      throw new Error(`未知权限资源: ${String(resource)}`);
+    }
+    if (!Array.isArray(actions)) {
+      throw new Error(`权限资源 ${resource} 的操作必须是数组`);
+    }
+
+    const actionSet =
+      merged.get(resource as PermissionResource) ?? new Set<PermissionAction>();
+    for (const action of actions) {
+      if (typeof action !== 'string' || !knownActions.has(action)) {
+        throw new Error(`未知权限操作: ${String(action)}`);
+      }
+      actionSet.add(action as PermissionAction);
+    }
+    merged.set(resource as PermissionResource, actionSet);
+  }
+
+  if (roleBizId === 'admin') {
+    const permissionManagement = merged.get('permission_management');
+    if (
+      !permissionManagement?.has('view') ||
+      !permissionManagement.has('edit')
+    ) {
+      throw new Error('系统管理员必须保留权限管理的查看和编辑权限');
+    }
+  }
+
+  return Array.from(merged.entries())
+    .filter(([, actions]) => actions.size > 0)
+    .map(([resource, actions]) => {
+      if (
+        Array.from(actions).some((action) => action !== 'view') &&
+        !actions.has('view')
+      ) {
+        actions.add('view');
+      }
+      return {
+        resource,
+        actions: PERMISSION_ACTIONS.filter((action) => actions.has(action)),
+      };
+    });
+}
 
 export const ROLE_OPTIONS = [
   'admin',

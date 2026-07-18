@@ -226,9 +226,12 @@ describe('strict role manager operations', () => {
     ).resolves.toEqual([{ resource: 'employees', actions: ['view'] }]);
   });
 
-  it.each(['addMembers', 'removeMembers'] as const)(
-    'invalidates every affected user cache after %s succeeds',
-    async (operation) => {
+  it.each([
+    ['addMembers', 'add'],
+    ['removeMembers', 'remove'],
+  ] as const)(
+    'routes explicit custom-role users through durable authorization for %s',
+    async (operation, mutation) => {
       const authzSDK = {
         members: {
           add: jest.fn().mockResolvedValue({ success: true }),
@@ -236,12 +239,14 @@ describe('strict role manager operations', () => {
         },
       };
       const roleManagerService = {
-        invalidateUserRoleCache: jest.fn(),
+        mutateCustomRoleMembers: jest.fn().mockResolvedValue(undefined),
       };
-      const controller = new RoleManagerController(
+      const authorizationSyncService = {};
+      const controller = new (RoleManagerController as any)(
         authzSDK as any,
         roleManagerService as any,
-      );
+        authorizationSyncService,
+      ) as RoleManagerController;
       const dto = {
         members: {
           userList: [{ userID: 'employee-1' }, { userID: 'employee-2' }],
@@ -250,12 +255,14 @@ describe('strict role manager operations', () => {
 
       await (controller[operation] as any)('custom-reviewer', dto);
 
-      expect(roleManagerService.invalidateUserRoleCache).toHaveBeenCalledWith(
-        'employee-1',
+      expect(roleManagerService.mutateCustomRoleMembers).toHaveBeenCalledWith(
+        'custom-reviewer',
+        ['employee-1', 'employee-2'],
+        mutation,
+        authorizationSyncService,
       );
-      expect(roleManagerService.invalidateUserRoleCache).toHaveBeenCalledWith(
-        'employee-2',
-      );
+      expect(authzSDK.members.add).not.toHaveBeenCalled();
+      expect(authzSDK.members.remove).not.toHaveBeenCalled();
     },
   );
 });

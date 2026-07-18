@@ -1,4 +1,9 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  Inject,
+} from '@nestjs/common';
 import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
@@ -15,7 +20,25 @@ import {
   type PermissionResource,
   type PermissionAction,
 } from '@shared/api.interface';
+import {
+  isBuiltinRole,
+  normalizePermissionConfig,
+} from '@shared/types/permission.types';
 import { normalizeAuthorizationRoles } from './authorization-state';
+
+type CustomRoleMemberMutation = 'add' | 'remove';
+
+type AuthorizationSyncGateway = {
+  stageAuthorizationChange(
+    tx: PostgresJsDatabase,
+    employeeId: string,
+    desiredRoles: string[],
+  ): Promise<number>;
+  processEmployeeAuthorization(
+    employeeId: string,
+    version?: number,
+  ): Promise<{ status: string; version: number; error?: string }>;
+};
 
 @Injectable()
 export class RoleManagerService {
@@ -272,6 +295,15 @@ export class RoleManagerService {
     roleBizId: string,
     permissions: PermissionItem[],
   ): Promise<void> {
+    let normalizedPermissions: PermissionItem[];
+    try {
+      normalizedPermissions = normalizePermissionConfig(roleBizId, permissions);
+    } catch (error) {
+      throw new BadRequestException(
+        error instanceof Error ? error.message : '权限配置无效',
+      );
+    }
+
     const existing = await this.db
       .select({ id: rolePermissionConfig.id })
       .from(rolePermissionConfig)
@@ -281,15 +313,85 @@ export class RoleManagerService {
     if (existing.length > 0) {
       await this.db
         .update(rolePermissionConfig)
-        .set({ permissions })
+        .set({ permissions: normalizedPermissions })
         .where(eq(rolePermissionConfig.roleBizId, roleBizId));
     } else {
       await this.db
         .insert(rolePermissionConfig)
-        .values({ roleBizId, permissions });
+        .values({ roleBizId, permissions: normalizedPermissions });
     }
 
     this.logger.log(`Permission config updated for role: ${roleBizId}`);
+  }
+
+  async mutateCustomRoleMembers(
+    roleBizId: string,
+    userIds: string[],
+    mutation: CustomRoleMemberMutation,
+    authorizationSyncService: AuthorizationSyncGateway,
+  ): Promise<void> {
+    if (isBuiltinRole(roleBizId)) {
+      throw new BadRequestException('内置角色成员只能通过员工或部门管理修改');
+    }
+
+    const normalizedUserIds = Array.from(
+      new Set(userIds.map((userId) => userId.trim()).filter(Boolean)),
+    );
+    if (normalizedUserIds.length === 0) {
+      throw new BadRequestException('成员列表不能为空');
+    }
+
+    const failures: string[] = [];
+    for (const userId of normalizedUserIds) {
+      const version = await this.db.transaction(async (tx) => {
+        const rows = await tx
+          .select({
+            employeeId: sql<string>`(${employee.employeeId}).user_id`,
+            authorizationRoles: employee.authorizationRoles,
+          })
+          .from(employee)
+          .where(
+            and(
+              sql`(${employee.employeeId}).user_id = ${userId}`,
+              isNull(employee.deletedAt),
+              eq(employee.status, true),
+            ),
+          )
+          .limit(1);
+        const current = rows[0];
+        if (!current) {
+          throw new BadRequestException(`员工 ${userId} 不存在或已停用`);
+        }
+        if (!Array.isArray(current.authorizationRoles)) {
+          throw new BadRequestException(`员工 ${userId} 的授权角色数据无效`);
+        }
+
+        const desiredRoles =
+          mutation === 'add'
+            ? [...current.authorizationRoles, roleBizId]
+            : current.authorizationRoles.filter((role) => role !== roleBizId);
+        return authorizationSyncService.stageAuthorizationChange(
+          tx,
+          current.employeeId,
+          normalizeAuthorizationRoles(desiredRoles),
+        );
+      });
+
+      const result =
+        await authorizationSyncService.processEmployeeAuthorization(
+          userId,
+          version,
+        );
+      if (result.status !== 'synced') {
+        failures.push(
+          result.error || `员工 ${userId} 授权同步结束状态为 ${result.status}`,
+        );
+      }
+    }
+
+    if (failures.length > 0) {
+      throw new Error(failures.join('; '));
+    }
   }
 
   async deletePermissionConfig(roleBizId: string): Promise<void> {
