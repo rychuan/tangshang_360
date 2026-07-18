@@ -68,7 +68,7 @@ const LayoutContent: React.FC = () => {
           homePath={homePath}
           badges={{}}
         />
-        <SidebarInset className="min-w-0 overflow-hidden bg-background md:rounded-lg">
+        <SidebarInset className="min-w-0 bg-background md:rounded-lg">
           <div className="flex flex-1 flex-col" />
         </SidebarInset>
       </SidebarProvider>
@@ -87,7 +87,7 @@ const LayoutContent: React.FC = () => {
         homePath={homePath}
         badges={badges}
       />
-        <SidebarInset className="min-w-0 overflow-hidden bg-background md:rounded-lg">
+        <SidebarInset className="min-w-0 bg-background md:rounded-lg">
         <AppTopbar
           currentLabel={currentLabel}
           items={allItems}
@@ -95,7 +95,7 @@ const LayoutContent: React.FC = () => {
         />
         <div
           key={pathname}
-          className="@container/main min-w-0 flex-1 overflow-x-clip px-4 py-5 lg:px-6"
+          className="@container/main flex min-w-0 flex-1 flex-col overflow-x-clip px-4 py-5 lg:px-6"
         >
           <Outlet />
         </div>
