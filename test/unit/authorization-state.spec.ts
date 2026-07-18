@@ -14,8 +14,10 @@ type ExpectExactlyStringArray<T> = IsAny<T> extends true
 
 const employeeAuthorizationRolesCheck:
   ExpectExactlyStringArray<typeof employee.$inferSelect.authorizationRoles> = true;
-const authorizationJobDesiredRolesCheck:
-  ExpectExactlyStringArray<typeof authorizationSyncJob.$inferSelect.desiredRoles> = true;
+type DesiredRolesFieldMustBeAbsent = 'desiredRoles' extends keyof typeof authorizationSyncJob.$inferSelect
+  ? never
+  : true;
+const authorizationJobDesiredRolesCheck: DesiredRolesFieldMustBeAbsent = true;
 
 describe('authorization state helpers', () => {
   it('keeps authorization role fields typed as string arrays', () => {
@@ -76,14 +78,15 @@ describe('authorization state helpers', () => {
       "authorization_roles JSONB NOT NULL DEFAULT '[]'::jsonb",
     );
     expect(migration).toContain(
-      "CHECK (jsonb_typeof(authorization_roles) = 'array')",
-    );
-    expect(migration).toContain(
-      "CHECK (jsonb_typeof(desired_roles) = 'array')",
+      `CHECK (
+      jsonb_typeof(authorization_roles) = 'array'
+      AND NOT jsonb_path_exists(authorization_roles, '$[*] ? (@.type() != "string")')
+    )`,
     );
     expect(migration).toContain(
       "CHECK (authorization_status IN ('pending', 'synced', 'failed'))",
     );
+    expect(migration).not.toContain('desired_roles');
     expect(migration).toContain(
       "CHECK (status IN ('pending', 'processing', 'succeeded', 'failed', 'superseded'))",
     );

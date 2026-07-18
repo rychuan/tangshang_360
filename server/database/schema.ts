@@ -534,7 +534,6 @@ export const authorizationSyncJob = pgTable("authorization_sync_job", {
   id: uuid("id").primaryKey().defaultRandom(),
   employeeId: userProfile("employee_id").notNull(),
   authorizationVersion: integer("authorization_version").notNull(),
-  desiredRoles: jsonb("desired_roles").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   status: varchar("status", { length: 20 }).notNull().default('pending'),
   attemptCount: integer("attempt_count").notNull().default(0),
   errorMessage: text("error_message"),

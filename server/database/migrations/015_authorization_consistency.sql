@@ -23,7 +23,10 @@ SET authorization_roles = COALESCE(
 
 ALTER TABLE employee
   ADD CONSTRAINT employee_authorization_roles_check
-    CHECK (jsonb_typeof(authorization_roles) = 'array'),
+    CHECK (
+      jsonb_typeof(authorization_roles) = 'array'
+      AND NOT jsonb_path_exists(authorization_roles, '$[*] ? (@.type() != "string")')
+    ),
   ADD CONSTRAINT employee_authorization_status_check
     CHECK (authorization_status IN ('pending', 'synced', 'failed'));
 
@@ -31,7 +34,6 @@ CREATE TABLE IF NOT EXISTS authorization_sync_job (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   employee_id user_profile NOT NULL,
   authorization_version INTEGER NOT NULL,
-  desired_roles JSONB NOT NULL DEFAULT '[]'::jsonb,
   status VARCHAR(20) NOT NULL DEFAULT 'pending',
   attempt_count INTEGER NOT NULL DEFAULT 0,
   error_message TEXT,
@@ -39,8 +41,6 @@ CREATE TABLE IF NOT EXISTS authorization_sync_job (
   completed_at TIMESTAMPTZ(6),
   _created_at TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   _updated_at TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT authorization_sync_job_desired_roles_check
-    CHECK (jsonb_typeof(desired_roles) = 'array'),
   CONSTRAINT authorization_sync_job_status_check
     CHECK (status IN ('pending', 'processing', 'succeeded', 'failed', 'superseded'))
 );
