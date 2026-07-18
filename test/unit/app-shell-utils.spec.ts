@@ -13,24 +13,24 @@ import type { NavGroup } from '../../client/src/components/navigation';
 const groups: NavGroup[] = [
   {
     label: '工作台',
-    icon: (() => null) as never,
+    icon: 'hugeicons:dashboard-square-02',
     items: [
       {
         label: '绩效工作台',
         path: '/dashboard',
-        icon: (() => null) as never,
+        icon: 'hugeicons:dashboard-square-02',
         permissionResources: ['dashboard'],
       },
       {
         label: '员工管理',
         path: '/employees',
-        icon: (() => null) as never,
+        icon: 'hugeicons:user-id-verification',
         permissionResources: ['employees', 'organization'],
       },
       {
         label: '我的绩效',
         path: '/my-assessments',
-        icon: (() => null) as never,
+        icon: 'hugeicons:task-01',
         permissionResources: ['my_assessments'],
       },
     ],
