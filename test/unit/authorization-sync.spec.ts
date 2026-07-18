@@ -12,6 +12,8 @@ type EmployeeRow = {
   authorizationRoles: string[];
   authorizationStatus: 'pending' | 'synced' | 'failed';
   authorizationVersion: number;
+  status: boolean;
+  deletedAt: Date | string | null;
 };
 
 type JobRow = {
@@ -20,27 +22,235 @@ type JobRow = {
   authorizationVersion: number;
   status: 'pending' | 'processing' | 'succeeded' | 'failed' | 'superseded';
   attemptCount: number;
+  errorMessage: string | null;
 };
 
-function queryFor<T>(rows: T[]) {
-  const query = {
-    from: jest.fn().mockReturnThis(),
-    where: jest.fn().mockReturnThis(),
-    orderBy: jest.fn().mockReturnThis(),
-    limit: jest.fn().mockResolvedValue(rows),
-    returning: jest.fn().mockResolvedValue(rows),
-    then: (
-      resolve: (value: T[]) => unknown,
-      reject?: (reason: unknown) => unknown,
-    ) => Promise.resolve(rows).then(resolve, reject),
-  };
-  return query;
+type Table = typeof employee | typeof authorizationSyncJob;
+
+type Predicate = {
+  column: { table: Table; name: string };
+  values: unknown[];
+};
+
+function isColumn(value: unknown): value is Predicate['column'] {
+  return Boolean(
+    value &&
+    typeof value === 'object' &&
+    'name' in value &&
+    'table' in value &&
+    !('queryChunks' in value),
+  );
 }
 
-function createSdk(
-  initialRoles: Record<string, string[]>,
-  options: { removeFailure?: Error } = {},
+function isParam(value: unknown): value is { value: unknown } {
+  return Boolean(
+    value &&
+    typeof value === 'object' &&
+    'value' in value &&
+    'encoder' in value,
+  );
+}
+
+function collectPredicates(condition: unknown, output: Predicate[] = []) {
+  const chunks = (condition as { queryChunks?: unknown[] } | undefined)
+    ?.queryChunks;
+  if (!Array.isArray(chunks)) return output;
+
+  for (let index = 0; index < chunks.length; index += 1) {
+    const chunk = chunks[index];
+    if (isColumn(chunk)) {
+      const operator = (chunks[index + 1] as { value?: string[] } | undefined)
+        ?.value?.[0];
+      const right = chunks[index + 2];
+      if (operator === ' = ' && isParam(right)) {
+        output.push({ column: chunk, values: [right.value] });
+      } else if (operator === ' in ' && Array.isArray(right)) {
+        output.push({
+          column: chunk,
+          values: right.filter(isParam).map((param) => param.value),
+        });
+      }
+    } else if (chunk && typeof chunk === 'object' && 'queryChunks' in chunk) {
+      collectPredicates(chunk, output);
+    }
+  }
+
+  return output;
+}
+
+function propertyName(columnName: string): string {
+  return columnName.replace(/_([a-z])/g, (_, letter: string) =>
+    letter.toUpperCase(),
+  );
+}
+
+function matches(
+  table: Table,
+  row: Record<string, unknown>,
+  condition: unknown,
+): boolean {
+  return collectPredicates(condition).every((predicate) => {
+    if (predicate.column.table !== table) return true;
+    const actual = row[propertyName(predicate.column.name)];
+    return predicate.values.includes(actual);
+  });
+}
+
+function project(
+  selection: Record<string, unknown>,
+  table: Table,
+  row: Record<string, unknown>,
 ) {
+  return Object.fromEntries(
+    Object.entries(selection).map(([key, column]) => [
+      key,
+      isColumn(column) ? row[propertyName(column.name)] : row[key],
+    ]),
+  );
+}
+
+class StatefulDb {
+  readonly employees: EmployeeRow[];
+  readonly jobs: JobRow[];
+  readonly updates: Array<{
+    table: Table;
+    values: Record<string, unknown>;
+    condition: unknown;
+    matched: number;
+  }> = [];
+  readonly claims: string[] = [];
+
+  constructor(employeeRow: EmployeeRow, jobs: JobRow[]) {
+    this.employees = [employeeRow];
+    this.jobs = jobs;
+  }
+
+  select = jest.fn((selection: Record<string, unknown>) => {
+    const query = {
+      table: undefined as Table | undefined,
+      condition: undefined as unknown,
+      from: jest.fn((table: Table) => {
+        query.table = table;
+        return query;
+      }),
+      where: jest.fn((condition: unknown) => {
+        query.condition = condition;
+        return query;
+      }),
+      orderBy: jest.fn().mockReturnThis(),
+      limit: jest.fn(async (limit: number) => {
+        const rows = this.rows(query.table).filter((row) =>
+          matches(query.table!, row, query.condition),
+        );
+        return rows
+          .slice(0, limit)
+          .map((row) => project(selection, query.table!, row));
+      }),
+    };
+    return query;
+  });
+
+  update = jest.fn((table: Table) => {
+    const query = {
+      values: {} as Record<string, unknown>,
+      condition: undefined as unknown,
+      executed: false,
+      result: [] as Record<string, unknown>[],
+      set: jest.fn((values: Record<string, unknown>) => {
+        query.values = values;
+        return query;
+      }),
+      where: jest.fn((condition: unknown) => {
+        query.condition = condition;
+        return query;
+      }),
+      returning: jest.fn(async (selection: Record<string, unknown>) => {
+        const rows = query.executed
+          ? query.result
+          : this.executeUpdate(table, query);
+        query.executed = true;
+        query.result = rows;
+        return rows.map((row) => project(selection, table, row));
+      }),
+      then: (
+        resolve: (value: Record<string, unknown>[]) => unknown,
+        reject?: (reason: unknown) => unknown,
+      ) => {
+        const rows = query.executed
+          ? query.result
+          : this.executeUpdate(table, query);
+        query.executed = true;
+        query.result = rows;
+        return Promise.resolve(rows).then(resolve, reject);
+      },
+    };
+    return query;
+  });
+
+  insert = jest.fn((table: Table) => ({
+    values: jest.fn(async (values: Record<string, unknown>) => {
+      if (table !== authorizationSyncJob) return;
+      const duplicate = this.jobs.some(
+        (job) =>
+          job.employeeId === values.employeeId &&
+          job.authorizationVersion === values.authorizationVersion,
+      );
+      if (duplicate) {
+        throw new Error('authorization job version already exists');
+      }
+      this.jobs.push({
+        id: `job-${this.jobs.length + 1}`,
+        employeeId: String(values.employeeId),
+        authorizationVersion: Number(values.authorizationVersion),
+        status: String(values.status) as JobRow['status'],
+        attemptCount: Number(values.attemptCount ?? 0),
+        errorMessage: (values.errorMessage as string | null) ?? null,
+      });
+    }),
+  }));
+
+  private rows(table: Table | undefined): Record<string, unknown>[] {
+    return table === authorizationSyncJob ? this.jobs : this.employees;
+  }
+
+  private executeUpdate(
+    table: Table,
+    query: {
+      values: Record<string, unknown>;
+      condition: unknown;
+    },
+  ): Record<string, unknown>[] {
+    const rows = this.rows(table).filter((row) =>
+      matches(table, row, query.condition),
+    );
+    for (const row of rows) {
+      for (const [key, value] of Object.entries(query.values)) {
+        if (key === 'authorizationVersion' && typeof value !== 'number') {
+          row[key] = Number(row[key]) + 1;
+        } else if (key === 'attemptCount' && typeof value !== 'number') {
+          row[key] = Number(row[key]) + 1;
+        } else {
+          row[key] = value;
+        }
+      }
+      if (
+        table === authorizationSyncJob &&
+        query.values.status === 'processing'
+      ) {
+        this.claims.push(String(row.id));
+      }
+      this.updates.push({
+        table,
+        values: query.values,
+        condition: query.condition,
+        matched: rows.length,
+      });
+    }
+    return rows;
+  }
+}
+
+function createSdk(initialRoles: Record<string, string[]>) {
   const rolesByUser = new Map(
     Object.entries(initialRoles).map(([userId, roles]) => [
       userId,
@@ -75,9 +285,6 @@ function createSdk(
       remove: jest.fn(async (role: string, input: any) => {
         const userId = input.members.userList[0].userID;
         events.push(`remove:${role}`);
-        if (options.removeFailure && role === 'admin') {
-          throw options.removeFailure;
-        }
         rolesByUser.get(userId)?.delete(role);
       }),
     },
@@ -90,120 +297,63 @@ function createRoleManagerService(authzSDK: Record<string, any>) {
   return new (RoleManagerService as any)({}, authzSDK) as RoleManagerService;
 }
 
-function createSyncDb(employeeRow: EmployeeRow, jobRow: JobRow) {
-  const events: string[] = [];
-  const updates: Array<Record<string, unknown>> = [];
-  const insertedJobs: Array<Record<string, unknown>> = [];
-  const db = {
-    select: jest.fn((selection: unknown) => {
-      const query = {
-        from: jest.fn((table: unknown) => {
-          query.table = table;
-          return query;
-        }),
-        where: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        limit: jest.fn(async () => {
-          if (query.table === authorizationSyncJob) return [jobRow];
-          return [employeeRow];
-        }),
-        then: (
-          resolve: (value: unknown[]) => unknown,
-          reject?: (reason: unknown) => unknown,
-        ) =>
-          Promise.resolve(
-            query.table === authorizationSyncJob ? [jobRow] : [employeeRow],
-          ).then(resolve, reject),
-        selection,
-        table: undefined as unknown,
-      };
-      return query;
-    }),
-    update: jest.fn(() => {
-      const query = {
-        set: jest.fn((values: Record<string, unknown>) => {
-          updates.push(values);
-          if ('authorizationStatus' in values) {
-            events.push(`employee:${values.authorizationStatus}`);
-          } else if ('status' in values) {
-            events.push(`job:${values.status}`);
-          }
-          return query;
-        }),
-        where: jest.fn().mockReturnThis(),
-        returning: jest.fn(async () =>
-          updates.at(-1)?.authorizationStatus
-            ? [{ authorizationVersion: employeeRow.authorizationVersion }]
-            : [],
-        ),
-      };
-      return query;
-    }),
-    insert: jest.fn(() => ({
-      values: jest.fn(async (values: Record<string, unknown>) => {
-        insertedJobs.push(values);
-      }),
-    })),
+function employeeRow(overrides: Partial<EmployeeRow> = {}): EmployeeRow {
+  return {
+    employeeId: 'employee-1',
+    authorizationRoles: ['employee'],
+    authorizationStatus: 'pending',
+    authorizationVersion: 2,
+    status: true,
+    deletedAt: null,
+    ...overrides,
   };
+}
 
-  return { db, events, updates, insertedJobs };
+function jobRow(overrides: Partial<JobRow> = {}): JobRow {
+  return {
+    id: 'job-2',
+    employeeId: 'employee-1',
+    authorizationVersion: 2,
+    status: 'pending',
+    attemptCount: 0,
+    errorMessage: null,
+    ...overrides,
+  };
 }
 
 function createSyncService(
-  employeeRow: EmployeeRow,
-  jobRow: JobRow,
+  db: StatefulDb,
   roleManagerService: RoleManagerService,
 ) {
-  const dbState = createSyncDb(employeeRow, jobRow);
-  const service = new (AuthorizationSyncService as any)(
-    dbState.db,
+  return new (AuthorizationSyncService as any)(
+    db,
     roleManagerService,
   ) as AuthorizationSyncService;
-  return { service, ...dbState };
 }
 
 describe('durable authorization reconciliation', () => {
   it('removes stale privileged roles before adding desired roles', async () => {
-    const { sdk, events } = createSdk({
+    const { sdk, events, rolesByUser } = createSdk({
       'employee-1': ['admin'],
     });
     const service = createRoleManagerService(sdk);
-    jest
-      .spyOn(service, 'getUserRolesStrict')
-      .mockResolvedValueOnce(['admin'])
-      .mockResolvedValueOnce(['employee']);
 
-    await (service as any).reconcileUserRoles('employee-1', ['employee']);
+    await service.reconcileUserRoles('employee-1', ['employee']);
 
     expect(
       events.filter(
         (event) => event.startsWith('remove:') || event.startsWith('add:'),
       ),
     ).toEqual(['remove:admin', 'add:employee']);
-    expect(service.getUserRolesStrict).toHaveBeenCalledTimes(2);
+    expect([...rolesByUser.get('employee-1')!]).toEqual(['employee']);
   });
 
   it('marks matching version synced only after an exact SDK verification read', async () => {
-    const { sdk, events } = createSdk({
-      'employee-1': ['admin'],
+    const { sdk, events, rolesByUser } = createSdk({
+      'employee-1': ['admin', 'employee'],
     });
-    const roleManagerService = createRoleManagerService(sdk);
-    const { service, events: dbEvents } = createSyncService(
-      {
-        employeeId: 'employee-1',
-        authorizationRoles: ['employee'],
-        authorizationStatus: 'pending',
-        authorizationVersion: 2,
-      },
-      {
-        id: 'job-2',
-        employeeId: 'employee-1',
-        authorizationVersion: 2,
-        status: 'pending',
-        attemptCount: 0,
-      },
-      roleManagerService,
-    );
+    const db = new StatefulDb(employeeRow(), [jobRow()]);
+    const service = createSyncService(db, createRoleManagerService(sdk));
 
     const result = await service.processEmployeeAuthorization('employee-1');
 
@@ -211,80 +361,35 @@ describe('durable authorization reconciliation', () => {
       status: 'synced',
       version: 2,
     });
-    expect(events.filter((event) => event.startsWith('list:'))).toEqual([
-      'list:admin',
-      'list:admin',
-      'list:employee',
-    ]);
-    expect(dbEvents).toEqual(
-      expect.arrayContaining([expect.stringContaining('employee:synced')]),
-    );
+    expect([...rolesByUser.get('employee-1')!]).toEqual(['employee']);
+    expect(events.filter((event) => event.startsWith('list:'))).toHaveLength(4);
+    expect(db.employees[0].authorizationStatus).toBe('synced');
+    expect(db.jobs[0].status).toBe('succeeded');
   });
 
   it('marks matching version failed after a partial SDK failure', async () => {
-    const { sdk } = createSdk(
-      {
-        'employee-1': ['admin', 'employee'],
-      },
-      { removeFailure: new Error('remove admin failed') },
-    );
-    const roleManagerService = createRoleManagerService(sdk);
-    const { service, updates } = createSyncService(
-      {
-        employeeId: 'employee-1',
-        authorizationRoles: ['employee'],
-        authorizationStatus: 'pending',
-        authorizationVersion: 3,
-      },
-      {
-        id: 'job-3',
-        employeeId: 'employee-1',
-        authorizationVersion: 3,
-        status: 'pending',
-        attemptCount: 0,
-      },
-      roleManagerService,
-    );
+    const { sdk } = createSdk({
+      'employee-1': ['admin', 'employee'],
+    });
+    sdk.members.remove.mockImplementationOnce(async () => {
+      throw new Error('remove admin failed');
+    });
+    const db = new StatefulDb(employeeRow(), [jobRow()]);
+    const service = createSyncService(db, createRoleManagerService(sdk));
 
     const result = await service.processEmployeeAuthorization('employee-1');
 
     expect(result.status).toBe('failed');
-    expect(updates).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          authorizationStatus: 'failed',
-          authorizationVersion: 3,
-        }),
-      ]),
-    );
-    expect(updates).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ authorizationStatus: 'synced' }),
-      ]),
-    );
+    expect(db.employees[0].authorizationStatus).toBe('failed');
+    expect(db.jobs[0].status).toBe('failed');
   });
 
   it('does not mark an obsolete version synced', async () => {
-    const { sdk, events } = createSdk({
-      'employee-1': ['admin'],
-    });
-    const roleManagerService = createRoleManagerService(sdk);
-    const { service, updates } = createSyncService(
-      {
-        employeeId: 'employee-1',
-        authorizationRoles: ['employee'],
-        authorizationStatus: 'pending',
-        authorizationVersion: 4,
-      },
-      {
-        id: 'job-3',
-        employeeId: 'employee-1',
-        authorizationVersion: 3,
-        status: 'pending',
-        attemptCount: 0,
-      },
-      roleManagerService,
-    );
+    const { sdk } = createSdk({ 'employee-1': ['admin'] });
+    const db = new StatefulDb(employeeRow({ authorizationVersion: 4 }), [
+      jobRow({ authorizationVersion: 3 }),
+    ]);
+    const service = createSyncService(db, createRoleManagerService(sdk));
 
     const result = await service.processEmployeeAuthorization('employee-1', 3);
 
@@ -292,54 +397,162 @@ describe('durable authorization reconciliation', () => {
       status: 'superseded',
       version: 3,
     });
-    expect(events).toEqual([]);
-    expect(updates).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ status: 'superseded' }),
-      ]),
-    );
-    expect(updates).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ authorizationStatus: 'synced' }),
-      ]),
-    );
+    expect(sdk.roles.list).not.toHaveBeenCalled();
+    expect(db.jobs[0].status).toBe('superseded');
+    expect(db.employees[0].authorizationStatus).not.toBe('synced');
   });
 
   it('retries a failed latest-version job idempotently', async () => {
-    const { sdk } = createSdk({
+    const { sdk, rolesByUser } = createSdk({
       'employee-1': ['employee'],
     });
-    const roleManagerService = createRoleManagerService(sdk);
-    const { service, updates } = createSyncService(
-      {
-        employeeId: 'employee-1',
-        authorizationRoles: ['employee'],
-        authorizationStatus: 'failed',
-        authorizationVersion: 5,
-      },
-      {
-        id: 'job-5',
-        employeeId: 'employee-1',
-        authorizationVersion: 5,
-        status: 'failed',
-        attemptCount: 1,
-      },
-      roleManagerService,
-    );
+    const db = new StatefulDb(employeeRow({ authorizationStatus: 'failed' }), [
+      jobRow({ status: 'failed', attemptCount: 1 }),
+    ]);
+    const service = createSyncService(db, createRoleManagerService(sdk));
 
     const result = await service.retryEmployeeAuthorization('employee-1');
 
     expect(result).toEqual<AuthorizationSyncResult>({
       status: 'synced',
-      version: 5,
+      version: 2,
     });
-    expect(updates).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          authorizationStatus: 'synced',
-          authorizationVersion: 5,
-        }),
-      ]),
+    expect([...rolesByUser.get('employee-1')!]).toEqual(['employee']);
+    expect(db.jobs[0].status).toBe('succeeded');
+  });
+
+  it('does not retry a succeeded job or call the SDK', async () => {
+    const db = new StatefulDb(
+      employeeRow({ authorizationStatus: 'synced' }),
+      [jobRow({ status: 'succeeded' })],
     );
+    const reconcile = jest.fn().mockResolvedValue(undefined);
+    const service = createSyncService(
+      db,
+      { reconcileUserRoles: reconcile } as any,
+    );
+
+    const result = await service.retryEmployeeAuthorization('employee-1');
+
+    expect(result.status).toBe('not_processable');
+    expect(reconcile).not.toHaveBeenCalled();
+    expect(db.jobs[0].status).toBe('succeeded');
+  });
+
+  it('allows only one of two workers to claim a job', async () => {
+    const db = new StatefulDb(employeeRow(), [jobRow()]);
+    const reconcile = jest.fn().mockResolvedValue(undefined);
+    const roleManager = { reconcileUserRoles: reconcile } as any;
+    const first = createSyncService(db, roleManager);
+    const second = createSyncService(db, roleManager);
+
+    const results = await Promise.all([
+      first.processEmployeeAuthorization('employee-1'),
+      second.processEmployeeAuthorization('employee-1'),
+    ]);
+
+    expect(results.map((result) => result.status).sort()).toEqual([
+      'not_processable',
+      'synced',
+    ]);
+    expect(reconcile).toHaveBeenCalledTimes(1);
+    expect(db.claims).toEqual(['job-2']);
+    expect(db.jobs[0].status).toBe('succeeded');
+  });
+
+  it('allocates different versions for concurrent staging calls', async () => {
+    const db = new StatefulDb(employeeRow(), []);
+    const service = createSyncService(db, {} as RoleManagerService);
+
+    const versions = await Promise.all([
+      service.stageAuthorizationChange(db as any, 'employee-1', ['employee']),
+      service.stageAuthorizationChange(db as any, 'employee-1', ['admin']),
+    ]);
+
+    expect(versions.sort()).toEqual([3, 4]);
+    expect(db.employees[0].authorizationVersion).toBe(4);
+    expect(db.jobs.map((job) => job.authorizationVersion).sort()).toEqual([
+      3, 4,
+    ]);
+  });
+
+  it('does not reconcile when the latest version has no job', async () => {
+    const db = new StatefulDb(employeeRow(), []);
+    const reconcile = jest.fn().mockResolvedValue(undefined);
+    const service = createSyncService(db, {
+      reconcileUserRoles: reconcile,
+    } as any);
+
+    const result = await service.processEmployeeAuthorization('employee-1');
+
+    expect(result.status).toBe('not_processable');
+    expect(reconcile).not.toHaveBeenCalled();
+    expect(db.employees[0].authorizationStatus).not.toBe('synced');
+  });
+
+  it('does not write back when the employee version changes during SDK reconcile', async () => {
+    const db = new StatefulDb(employeeRow(), [jobRow()]);
+    let releaseReconcile!: () => void;
+    const reconcile = jest.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseReconcile = resolve;
+        }),
+    );
+    const service = createSyncService(db, {
+      reconcileUserRoles: reconcile,
+    } as any);
+
+    const processing = service.processEmployeeAuthorization('employee-1');
+    await new Promise((resolve) => setImmediate(resolve));
+    db.employees[0].authorizationVersion = 3;
+    db.employees[0].authorizationRoles = ['admin'];
+    releaseReconcile();
+
+    const result = await processing;
+
+    expect(result.status).toBe('superseded');
+    expect(db.employees[0].authorizationStatus).toBe('pending');
+    expect(db.jobs[0].status).toBe('superseded');
+  });
+
+  it('does not let a failed worker overwrite a succeeded job', async () => {
+    const db = new StatefulDb(employeeRow(), [jobRow()]);
+    let releaseReconcile!: () => void;
+    const reconcile = jest.fn(
+      () =>
+        new Promise<void>((_, reject) => {
+          releaseReconcile = () => reject(new Error('late SDK failure'));
+        }),
+    );
+    const service = createSyncService(db, {
+      reconcileUserRoles: reconcile,
+    } as any);
+
+    const processing = service.processEmployeeAuthorization('employee-1');
+    await new Promise((resolve) => setImmediate(resolve));
+    db.jobs[0].status = 'succeeded';
+    releaseReconcile();
+
+    await processing;
+
+    expect(db.jobs[0].status).toBe('succeeded');
+    expect(db.employees[0].authorizationStatus).not.toBe('failed');
+  });
+
+  it.each([
+    ['inactive', { status: false, deletedAt: null }],
+    ['deleted', { status: true, deletedAt: new Date('2026-07-18') }],
+  ])('converges %s employees to no SDK roles', async (_, state) => {
+    const { sdk, rolesByUser } = createSdk({
+      'employee-1': ['admin', 'employee'],
+    });
+    const db = new StatefulDb(employeeRow(state), [jobRow()]);
+    const service = createSyncService(db, createRoleManagerService(sdk));
+
+    await service.processEmployeeAuthorization('employee-1');
+
+    expect([...rolesByUser.get('employee-1')!]).toEqual([]);
+    expect(db.employees[0].authorizationStatus).toBe('synced');
   });
 });

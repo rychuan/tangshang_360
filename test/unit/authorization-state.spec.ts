@@ -5,18 +5,23 @@ import {
 import { readFileSync } from 'node:fs';
 import { authorizationSyncJob, employee } from '../../server/database/schema';
 
-type IsAny<T> = 0 extends (1 & T) ? true : false;
-type ExpectExactlyStringArray<T> = IsAny<T> extends true
-  ? never
-  : T extends string[]
-    ? (string[] extends T ? true : never)
-    : never;
+type IsAny<T> = 0 extends 1 & T ? true : false;
+type ExpectExactlyStringArray<T> =
+  IsAny<T> extends true
+    ? never
+    : T extends string[]
+      ? string[] extends T
+        ? true
+        : never
+      : never;
 
-const employeeAuthorizationRolesCheck:
-  ExpectExactlyStringArray<typeof employee.$inferSelect.authorizationRoles> = true;
-type DesiredRolesFieldMustBeAbsent = 'desiredRoles' extends keyof typeof authorizationSyncJob.$inferSelect
-  ? never
-  : true;
+const employeeAuthorizationRolesCheck: ExpectExactlyStringArray<
+  typeof employee.$inferSelect.authorizationRoles
+> = true;
+type DesiredRolesFieldMustBeAbsent =
+  'desiredRoles' extends keyof typeof authorizationSyncJob.$inferSelect
+    ? never
+    : true;
 const authorizationJobDesiredRolesCheck: DesiredRolesFieldMustBeAbsent = true;
 
 describe('authorization state helpers', () => {
@@ -26,10 +31,9 @@ describe('authorization state helpers', () => {
   });
 
   it('normalizes authorization roles', () => {
-    expect(normalizeAuthorizationRoles([' admin ', 'employee', 'admin', ''])).toEqual([
-      'admin',
-      'employee',
-    ]);
+    expect(
+      normalizeAuthorizationRoles([' admin ', 'employee', 'admin', '']),
+    ).toEqual(['admin', 'employee']);
   });
 
   it('derives effective authorization roles for active employees', () => {
@@ -89,6 +93,12 @@ describe('authorization state helpers', () => {
     expect(migration).not.toContain('desired_roles');
     expect(migration).toContain(
       "CHECK (status IN ('pending', 'processing', 'succeeded', 'failed', 'superseded'))",
+    );
+    expect(migration).toContain(
+      'CREATE UNIQUE INDEX IF NOT EXISTS authorization_sync_job_employee_version_unique',
+    );
+    expect(migration).toContain(
+      'ON authorization_sync_job (employee_id, authorization_version)',
     );
   });
 });

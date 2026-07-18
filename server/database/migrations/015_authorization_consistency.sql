@@ -45,4 +45,7 @@ CREATE TABLE IF NOT EXISTS authorization_sync_job (
     CHECK (status IN ('pending', 'processing', 'succeeded', 'failed', 'superseded'))
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS authorization_sync_job_employee_version_unique
+  ON authorization_sync_job (employee_id, authorization_version);
+
 COMMIT;

@@ -547,7 +547,12 @@ export const authorizationSyncJob = pgTable("authorization_sync_job", {
   updatedAt: customTimestamptz("_updated_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
   // System field: Updater (auto-filled, do not modify)
   updatedBy: userProfile("_updated_by"),
-});
+}, (table) => [
+  uniqueIndex("authorization_sync_job_employee_version_unique").on(
+    table.employeeId,
+    table.authorizationVersion,
+  ),
+]);
 
 // table aliases
 export const assessmentDimensionTable = assessmentDimension;
