@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  HttpException,
   Injectable,
   Logger,
   Inject,
@@ -482,23 +481,12 @@ export class RoleManagerService {
         throw new BadRequestException('角色仍有成员，请先移除全部成员后再删除');
       }
 
-      let sdkResult: unknown;
-      let alreadyDeleted = false;
-      try {
-        sdkResult = await deleteFromSdk();
-      } catch (error) {
-        if (!this.isPlatformRoleNotFound(error)) {
-          throw error;
-        }
-        alreadyDeleted = true;
-      }
+      const sdkResult = await deleteFromSdk();
 
       await tx
         .delete(rolePermissionConfig)
         .where(eq(rolePermissionConfig.roleBizId, roleBizId));
-      return alreadyDeleted
-        ? { success: true, alreadyDeleted: true }
-        : sdkResult;
+      return sdkResult;
     });
   }
 
@@ -644,18 +632,6 @@ export class RoleManagerService {
   ): Promise<void> {
     await tx.execute(
       sql`SELECT pg_advisory_xact_lock(hashtextextended(${`custom-role:${roleBizId}`}, 0))`,
-    );
-  }
-
-  private isPlatformRoleNotFound(error: unknown): boolean {
-    if (!(error instanceof HttpException) || error.getStatus() !== 404) {
-      return false;
-    }
-    const response = error.getResponse();
-    return (
-      typeof response === 'object' &&
-      response !== null &&
-      (response as { code?: unknown }).code === 'PLATFORM_API_ERROR'
     );
   }
 

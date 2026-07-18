@@ -483,7 +483,7 @@ describe('role administration invariants', () => {
     );
   });
 
-  it('cleans local config when SDK reports the custom role already missing', async () => {
+  it('preserves local config for a generic platform-wrapped 404', async () => {
     const { db, tx } = createDeleteDb([]);
     const service = new (RoleManagerService as any)(
       db,
@@ -493,7 +493,8 @@ describe('role administration invariants', () => {
       {
         statusCode: 404,
         code: 'PLATFORM_API_ERROR',
-        message: 'role not found',
+        message: 'tenant resource not found',
+        platformCode: 'TENANT_RESOURCE_NOT_FOUND',
       },
       404,
     );
@@ -503,9 +504,9 @@ describe('role administration invariants', () => {
         'custom-reviewer',
         jest.fn().mockRejectedValue(sdkNotFound),
       ),
-    ).resolves.toMatchObject({ success: true, alreadyDeleted: true });
+    ).rejects.toBe(sdkNotFound);
 
-    expect(tx.delete).toHaveBeenCalled();
+    expect(tx.delete).not.toHaveBeenCalled();
   });
 
   it('does not treat arbitrary SDK errors as idempotent role deletion', async () => {

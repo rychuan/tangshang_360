@@ -1,3 +1,5 @@
+import type { ApiErrorDetails } from '@shared/api.interface';
+
 // 错误统一响应
 export interface ApiErrorResponse {
   /** 错误详情 */
@@ -7,7 +9,7 @@ export interface ApiErrorResponse {
     /** 错误消息 */
     message: string;
     /** 错误详情 */
-    details?: string;
+    details?: ApiErrorDetails;
     /** 字段验证错误 */
     fieldErrors?: Record<string, string[]>;
     /** 调用栈（仅开发环境） */
@@ -18,4 +20,3 @@ export interface ApiErrorResponse {
     timestamp?: number;
   };
 }
-

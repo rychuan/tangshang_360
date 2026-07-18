@@ -183,6 +183,11 @@ export interface RoleMemberMutationResponse {
   outcomes: RoleMemberMutationOutcome[];
 }
 
+export interface RoleMemberMutationErrorDetails extends RoleMemberMutationResponse {
+  message: string;
+  success: false;
+}
+
 export const BUILTIN_ROLE_CODES = [
   'admin',
   'hrd',
