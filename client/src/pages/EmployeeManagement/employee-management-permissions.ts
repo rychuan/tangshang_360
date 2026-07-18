@@ -11,25 +11,14 @@ const TAB_ORDER: EmployeeManagementTab[] = [
 
 export function getVisibleEmployeeManagementTabs(
   permissions: PermissionItem[],
-  identityRoles: string[],
 ): EmployeeManagementTab[] {
   const visible = new Set<EmployeeManagementTab>();
   if (hasPermission(permissions, 'employees', 'view')) {
     visible.add('employees');
-  }
-  if (
-    hasPermission(permissions, 'organization', 'view') &&
-    identityRoles.some((role) =>
-      ['admin', 'hrd', 'dept_head'].includes(role),
-    )
-  ) {
-    visible.add('departments');
-  }
-  if (
-    hasPermission(permissions, 'employees', 'view') &&
-    identityRoles.some((role) => ['admin', 'hrd'].includes(role))
-  ) {
     visible.add('bitable');
+  }
+  if (hasPermission(permissions, 'organization', 'view')) {
+    visible.add('departments');
   }
 
   return TAB_ORDER.filter((tab) => visible.has(tab));
@@ -60,9 +49,7 @@ export function hasEmployeeRowMenuAction(
   return canManageBindings || canManageEmployees;
 }
 
-export function getEmployeeListCapabilities(
-  permissions: PermissionItem[],
-): {
+export function getEmployeeListCapabilities(permissions: PermissionItem[]): {
   loadTemplates: boolean;
   showBindings: boolean;
   showSelection: boolean;

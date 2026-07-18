@@ -14,6 +14,8 @@ import { eq, and, asc, count, sql, isNull, inArray } from 'drizzle-orm';
 import { department, employee, auditLog } from '@server/database/schema';
 import { EmployeeRepository } from '../employee-management/employee.repository';
 import { RoleManagerService } from '../role-manager/role-manager.service';
+import { AuthorizationSyncService } from '../role-manager/authorization-sync.service';
+import { normalizeAuthorizationRoles } from '../role-manager/authorization-state';
 import {
   AccessScopeService,
   type AccessScope,
@@ -25,6 +27,16 @@ import type {
   CreateDepartmentRequest,
 } from '@shared/api.interface';
 
+type DepartmentHeadRoleChange = {
+  employeeId: string;
+  mutation: 'add' | 'remove';
+};
+
+type StagedAuthorization = {
+  employeeId: string;
+  version: number;
+};
+
 @Injectable()
 export class DepartmentService {
   private readonly logger = new Logger(DepartmentService.name);
@@ -34,6 +46,7 @@ export class DepartmentService {
     private readonly employeeRepo: EmployeeRepository,
     private readonly roleManagerService: RoleManagerService,
     private readonly accessScopeService: AccessScopeService,
+    private readonly authorizationSyncService: AuthorizationSyncService,
   ) {}
 
   async list(userId: string): Promise<DepartmentListResponse> {
@@ -188,7 +201,7 @@ export class DepartmentService {
       throw new BadRequestException('部门名称已存在');
     }
 
-    return this.db.transaction(async (tx) => {
+    const result = await this.db.transaction(async (tx) => {
       const [inserted] = await tx
         .insert(department)
         .values({
@@ -207,15 +220,17 @@ export class DepartmentService {
         changes: { after: body },
       });
 
-      if (body.headId) {
-        await this.roleManagerService.ensureUserRoleStrict(
-          body.headId,
-          'dept_head',
-        );
-      }
+      const authorizations = body.headId
+        ? await this.stageDepartmentHeadRoleChanges(tx, [
+            { employeeId: body.headId, mutation: 'add' },
+          ])
+        : [];
 
-      return { id: inserted.id };
+      return { id: inserted.id, authorizations };
     });
+
+    await this.processAuthorizations(result.authorizations);
+    return { id: result.id };
   }
 
   async update(
@@ -254,7 +269,7 @@ export class DepartmentService {
       await this.assertHeadMutationPermission(userId);
     }
 
-    await this.db.transaction(async (tx) => {
+    const authorizations = await this.db.transaction(async (tx) => {
       await tx
         .update(department)
         .set({
@@ -290,6 +305,7 @@ export class DepartmentService {
         );
       }
 
+      const roleChanges: DepartmentHeadRoleChange[] = [];
       if (oldHeadId && oldHeadId !== newHeadId) {
         const stillHead = await tx
           .select({ id: department.id })
@@ -297,20 +313,23 @@ export class DepartmentService {
           .where(eq(department.headId, oldHeadId))
           .limit(1);
         if (stillHead.length === 0) {
-          await this.roleManagerService.removeUserRoleStrict(
-            oldHeadId,
-            'dept_head',
-          );
+          roleChanges.push({
+            employeeId: oldHeadId,
+            mutation: 'remove',
+          });
         }
       }
       if (newHeadId && newHeadId !== oldHeadId) {
-        await this.roleManagerService.ensureUserRoleStrict(
-          newHeadId,
-          'dept_head',
-        );
+        roleChanges.push({
+          employeeId: newHeadId,
+          mutation: 'add',
+        });
       }
+
+      return this.stageDepartmentHeadRoleChanges(tx, roleChanges);
     });
 
+    await this.processAuthorizations(authorizations);
     return { success: true };
   }
 
@@ -347,10 +366,7 @@ export class DepartmentService {
         .select({ id: department.id })
         .from(department)
         .where(
-          and(
-            eq(department.headId, headId),
-            sql`${department.id} <> ${id}`,
-          ),
+          and(eq(department.headId, headId), sql`${department.id} <> ${id}`),
         )
         .limit(1);
       removesFinalHeadRole = otherHeadRows.length === 0;
@@ -359,7 +375,7 @@ export class DepartmentService {
       }
     }
 
-    await this.db.transaction(async (tx) => {
+    const authorizations = await this.db.transaction(async (tx) => {
       await tx.delete(department).where(eq(department.id, id));
 
       await tx.insert(auditLog).values({
@@ -371,10 +387,14 @@ export class DepartmentService {
       });
 
       if (headId && removesFinalHeadRole) {
-        await this.roleManagerService.removeUserRoleStrict(headId, 'dept_head');
+        return this.stageDepartmentHeadRoleChanges(tx, [
+          { employeeId: headId, mutation: 'remove' },
+        ]);
       }
+      return [];
     });
 
+    await this.processAuthorizations(authorizations);
     return { success: true };
   }
 
@@ -490,6 +510,107 @@ export class DepartmentService {
     );
     if (!canEditRoles) {
       throw new ForbiddenException('无权修改部门负责人');
+    }
+  }
+
+  private async stageDepartmentHeadRoleChanges(
+    tx: PostgresJsDatabase,
+    changes: DepartmentHeadRoleChange[],
+  ): Promise<StagedAuthorization[]> {
+    if (changes.length === 0) {
+      return [];
+    }
+
+    const mutationByEmployeeId = new Map(
+      changes.map((change) => [change.employeeId, change.mutation]),
+    );
+    const employeeIds = Array.from(mutationByEmployeeId.keys()).sort((a, b) =>
+      a.localeCompare(b),
+    );
+    const employeeIdColumn = sql<string>`(${employee.employeeId}).user_id`;
+    const rows = await tx
+      .select({
+        employeeId: employeeIdColumn,
+        authorizationRoles: employee.authorizationRoles,
+        authorizationStatus: employee.authorizationStatus,
+        authorizationVersion: employee.authorizationVersion,
+      })
+      .from(employee)
+      .where(inArray(employeeIdColumn, employeeIds))
+      .orderBy(employeeIdColumn)
+      .for('update');
+    const rowByEmployeeId = new Map(rows.map((row) => [row.employeeId, row]));
+    const staged: StagedAuthorization[] = [];
+
+    for (const employeeId of employeeIds) {
+      const row = rowByEmployeeId.get(employeeId);
+      if (!row) {
+        throw new BadRequestException(`部门负责人 ${employeeId} 不存在`);
+      }
+      const currentRoles = this.getDurableRoles(row.authorizationRoles);
+      const desiredRoles = normalizeAuthorizationRoles(
+        mutationByEmployeeId.get(employeeId) === 'add'
+          ? [...currentRoles, 'dept_head']
+          : currentRoles.filter((role) => role !== 'dept_head'),
+      );
+
+      if (this.sameRoles(currentRoles, desiredRoles)) {
+        if (
+          row.authorizationStatus === 'pending' ||
+          row.authorizationStatus === 'failed'
+        ) {
+          staged.push({
+            employeeId,
+            version: row.authorizationVersion,
+          });
+        }
+        continue;
+      }
+
+      const version =
+        await this.authorizationSyncService.stageAuthorizationChange(
+          tx,
+          employeeId,
+          desiredRoles,
+        );
+      staged.push({ employeeId, version });
+    }
+
+    return staged;
+  }
+
+  private getDurableRoles(value: unknown): string[] {
+    if (
+      !Array.isArray(value) ||
+      value.some((role) => typeof role !== 'string')
+    ) {
+      throw new BadRequestException('员工授权角色数据无效');
+    }
+    return normalizeAuthorizationRoles(value);
+  }
+
+  private sameRoles(left: string[], right: string[]): boolean {
+    return (
+      left.length === right.length &&
+      left.every((role, index) => role === right[index])
+    );
+  }
+
+  private async processAuthorizations(
+    authorizations: StagedAuthorization[],
+  ): Promise<void> {
+    for (const authorization of authorizations) {
+      const result =
+        await this.authorizationSyncService.processEmployeeAuthorization(
+          authorization.employeeId,
+          authorization.version,
+        );
+      if (result.status !== 'synced') {
+        throw new Error(
+          result.error ||
+            `Employee ${authorization.employeeId} authorization sync finished with ${result.status}`,
+        );
+      }
     }
   }
 }

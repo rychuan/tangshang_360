@@ -10,38 +10,33 @@ import {
 } from '../../client/src/pages/EmployeeManagement/employee-management-permissions';
 
 describe('employee management tab permissions', () => {
-  it('hides the department tab from organization viewers without an allowed identity role', () => {
+  it('shows the department tab to matching custom-role permissions', () => {
     expect(
       getVisibleEmployeeManagementTabs([
         { resource: 'organization', actions: ['view'] },
-      ], ['custom-role']),
-    ).toEqual([]);
-  });
-
-  it('shows the department tab to department heads with organization view permission', () => {
-    expect(
-      getVisibleEmployeeManagementTabs(
-        [{ resource: 'organization', actions: ['view'] }],
-        ['dept_head'],
-      ),
+      ]),
     ).toEqual(['departments']);
   });
 
-  it('keeps the employee tab permission-only while hiding Bitable from non-global identities', () => {
+  it('shows employee and Bitable tabs to matching custom-role permissions', () => {
     expect(
       getVisibleEmployeeManagementTabs([
         { resource: 'employees', actions: ['view'] },
-      ], ['supervisor']),
-    ).toEqual(['employees']);
+      ]),
+    ).toEqual(['employees', 'bitable']);
   });
 
-  it('shows Bitable only to global identities with the employee view permission', () => {
+  it('hides every tab when no matching dynamic view permission exists', () => {
+    expect(getVisibleEmployeeManagementTabs([])).toEqual([]);
+  });
+
+  it('keeps the existing admin permission-matrix behavior', () => {
     expect(
-      getVisibleEmployeeManagementTabs(
-        [{ resource: 'employees', actions: ['view'] }],
-        ['hrd'],
-      ),
-    ).toEqual(['employees', 'bitable']);
+      getVisibleEmployeeManagementTabs([
+        { resource: 'employees', actions: ['view'] },
+        { resource: 'organization', actions: ['view'] },
+      ]),
+    ).toEqual(['employees', 'departments', 'bitable']);
   });
 
   it('defaults to the first visible tab', () => {
@@ -127,7 +122,7 @@ describe('employee management tab permissions', () => {
     expect(canManageDepartmentHead([], ['admin'])).toBe(false);
   });
 
-  it('passes current identity roles into tab visibility and gates the head selector', () => {
+  it('uses permission-first tab visibility while retaining the admin-only head selector', () => {
     const pageSource = fs.readFileSync(
       path.resolve(
         __dirname,
@@ -144,8 +139,12 @@ describe('employee management tab permissions', () => {
     );
 
     expect(pageSource).toMatch(
-      /getVisibleEmployeeManagementTabs\(\s*permissions,\s*identityRoles\s*\)/,
+      /getVisibleEmployeeManagementTabs\(\s*permissions\s*\)/,
     );
+    expect(pageSource).not.toContain('identityRoles');
+    expect(pageSource).not.toContain('BUILTIN_ROLE_CODES');
+    expect(pageSource).not.toContain('ROLE_SUBJECT');
+    expect(pageSource).not.toContain('useAuth');
     expect(departmentSource).toContain(
       'canManageDepartmentHead(permissions, identityRoles)',
     );

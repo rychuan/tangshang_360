@@ -24,12 +24,16 @@ export class AssessmentDashboardService {
   ) {}
 
   async todos(userId: string): Promise<DashboardTodosResponse> {
-    const subIds = await this.employeeRepo.findSubordinateIds(userId);
+    const managedEmployeeIds =
+      await this.accessScopeService.getManagedEmployeeIds(userId);
 
     const employeeCond = sql`(${assessmentInstance.employeeId}).user_id = ${userId}`;
     const supervisorCond =
-      subIds.length > 0
-        ? buildEmployeeIdInCondition(assessmentInstance.employeeId, subIds)
+      managedEmployeeIds.length > 0
+        ? buildEmployeeIdInCondition(
+            assessmentInstance.employeeId,
+            managedEmployeeIds,
+          )
         : sql`FALSE`;
 
     const instances = await this.db

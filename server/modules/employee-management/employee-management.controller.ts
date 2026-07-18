@@ -61,8 +61,8 @@ export class EmployeeManagementController {
 
   @RequirePermission('employees', 'view')
   @Get('positions')
-  async getPositions(): Promise<{ positions: string[] }> {
-    return this.service.getPositions();
+  async getPositions(@Req() req: Request): Promise<{ positions: string[] }> {
+    return this.service.getPositions(req.userContext?.userId || '');
   }
 
   @RequirePermission('employee_binding', 'edit')

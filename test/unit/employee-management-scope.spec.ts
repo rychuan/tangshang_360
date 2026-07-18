@@ -1,3 +1,5 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { sql } from 'drizzle-orm';
 import { EmployeeManagementService } from '../../server/modules/employee-management/employee-management.service';
 
@@ -72,6 +74,56 @@ describe('employee management access scope', () => {
     expect(accessScopeService.buildEmployeeScopeCondition).toHaveBeenCalledWith(
       'manager-1',
       { includeSelf: true },
+    );
+  });
+
+  it('filters employee positions by the caller employee scope', async () => {
+    const positionQuery = {
+      from: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      orderBy: jest
+        .fn()
+        .mockResolvedValue([{ position: '工程师' }, { position: '工程师' }]),
+    };
+    const db = {
+      select: jest.fn().mockReturnValue(positionQuery),
+    };
+    const accessScopeService = {
+      buildEmployeeScopeCondition: jest.fn().mockResolvedValue(sql`TRUE`),
+    };
+    const service = new (EmployeeManagementService as any)(
+      db,
+      {},
+      {},
+      accessScopeService,
+      {},
+    ) as EmployeeManagementService;
+
+    await expect(service.getPositions('manager-1')).resolves.toEqual({
+      positions: ['工程师'],
+    });
+
+    expect(accessScopeService.buildEmployeeScopeCondition).toHaveBeenCalledWith(
+      'manager-1',
+      { includeSelf: true },
+    );
+    expect(positionQuery.where).toHaveBeenCalledTimes(1);
+  });
+
+  it('passes the caller user ID from the positions endpoint to the service', () => {
+    const controllerSource = fs.readFileSync(
+      path.resolve(
+        __dirname,
+        '../../server/modules/employee-management/employee-management.controller.ts',
+      ),
+      'utf8',
+    );
+
+    expect(controllerSource).toMatch(
+      /async getPositions\(\s*@Req\(\) req: Request\s*\)/,
+    );
+    expect(controllerSource).toContain(
+      "return this.service.getPositions(req.userContext?.userId || '');",
     );
   });
 

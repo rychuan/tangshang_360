@@ -22,7 +22,10 @@ jest.mock('@lark-apaas/fullstack-nestjs-core', () => {
 
 import { PERMISSION_META_KEY } from '../../server/common/decorators/require-permission.decorator';
 import { AssessmentDashboardController } from '../../server/modules/assessment-dashboard/assessment-dashboard.controller';
-import { dashboardEmployeeIds } from '../../server/modules/assessment-dashboard/assessment-dashboard.service';
+import {
+  AssessmentDashboardService,
+  dashboardEmployeeIds,
+} from '../../server/modules/assessment-dashboard/assessment-dashboard.service';
 import { DEFAULT_PERMISSIONS } from '../../shared/types/permission.types';
 
 describe('dashboard permission enforcement', () => {
@@ -97,5 +100,38 @@ describe('dashboard permission enforcement', () => {
         [],
       ),
     ).toEqual(['user-1']);
+  });
+
+  it('uses AccessScopeService managed IDs for dashboard todos', async () => {
+    const query = {
+      from: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockResolvedValue([]),
+    };
+    const db = {
+      select: jest.fn().mockReturnValue(query),
+    };
+    const employeeRepo = {
+      findSubordinateIds: jest.fn(() => {
+        throw new Error('dashboard todos must not infer subordinate IDs');
+      }),
+    };
+    const accessScopeService = {
+      getManagedEmployeeIds: jest
+        .fn()
+        .mockResolvedValue(['managed-1', 'managed-2']),
+    };
+    const service = new (AssessmentDashboardService as any)(
+      db,
+      employeeRepo,
+      accessScopeService,
+    ) as AssessmentDashboardService;
+
+    await expect(service.todos('manager-1')).resolves.toEqual({ items: [] });
+
+    expect(accessScopeService.getManagedEmployeeIds).toHaveBeenCalledWith(
+      'manager-1',
+    );
+    expect(employeeRepo.findSubordinateIds).not.toHaveBeenCalled();
   });
 });
