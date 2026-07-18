@@ -129,7 +129,7 @@ describe('app shell navigation utilities', () => {
 
   it('生成中文考核周期', () => {
     expect(formatCurrentCycle(new Date('2026-07-17T00:00:00+08:00'))).toBe(
-      '2026 年 7 月考核周期',
+      '考核周期 2026-07',
     );
   });
 });
