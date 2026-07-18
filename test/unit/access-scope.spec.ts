@@ -228,4 +228,43 @@ describe('AccessScopeService', () => {
       accessScopeService.canAccessEmployee('head-1', 'dept-synced'),
     ).resolves.toBe(true);
   });
+
+  it.each([
+    {
+      label: 'pending',
+      employee: createEmployeeRow({ authorizationStatus: 'pending' }),
+    },
+    {
+      label: 'failed',
+      employee: createEmployeeRow({ authorizationStatus: 'failed' }),
+    },
+    {
+      label: 'inactive',
+      employee: createEmployeeRow({ status: false }),
+    },
+    {
+      label: 'deleted',
+      employee: createEmployeeRow({
+        deletedAt: new Date('2026-07-18T00:00:00Z'),
+      }),
+    },
+  ] as const)(
+    'fails closed for %s self target access',
+    async ({ employee }) => {
+      const { accessScopeService } = createServices({
+        employees: [employee],
+        rolesByUser: {
+          [employee.employeeId]: ['employee'],
+        },
+      });
+
+      await expect(
+        accessScopeService.canAccessEmployee(
+          employee.employeeId,
+          employee.employeeId,
+          { includeSelf: true },
+        ),
+      ).resolves.toBe(false);
+    },
+  );
 });

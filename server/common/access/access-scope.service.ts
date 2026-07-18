@@ -178,14 +178,11 @@ export class AccessScopeService {
   ): Promise<boolean> {
     const scope = await this.getScope(userId);
     if (scope.kind === 'global') return true;
-    if (employeeId === userId) {
-      return Boolean(options.includeSelf);
-    }
-    if (scope.subordinateIds.includes(employeeId)) return true;
-    if (scope.departmentIds.length === 0) return false;
-
     const rows = await this.db
-      .select({ departmentId: employee.departmentId })
+      .select({
+        departmentId: employee.departmentId,
+        userId: sql<string>`(${employee.employeeId}).user_id`,
+      })
       .from(employee)
       .where(
         and(
@@ -196,6 +193,12 @@ export class AccessScopeService {
         ),
       )
       .limit(1);
-    return rows.length > 0 && scope.departmentIds.includes(rows[0].departmentId);
+    if (rows.length === 0) return false;
+    if (employeeId === userId) {
+      return Boolean(options.includeSelf);
+    }
+    if (scope.subordinateIds.includes(employeeId)) return true;
+    if (scope.departmentIds.length === 0) return false;
+    return scope.departmentIds.includes(rows[0].departmentId);
   }
 }
