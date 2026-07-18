@@ -643,9 +643,6 @@ export class BitableConnectionService {
               department: row.department || existing[0].department,
               departmentId: existing[0].departmentId || undefined,
               title: row.title || existing[0].title || undefined,
-              role: (row.role ||
-                existing[0].role ||
-                'employee') as UpdateEmployeeRequest['role'],
               phone: row.phone || existing[0].phone || undefined,
               hireDate: row.hireDate || this.toDateString(existing[0].hireDate),
               probationMonths: existing[0].probationMonths || undefined,
@@ -655,6 +652,9 @@ export class BitableConnectionService {
                 String(existing[0].supervisorId || '') ||
                 undefined,
             };
+            if (row.role) {
+              updateBody.role = row.role as UpdateEmployeeRequest['role'];
+            }
             await this.employeeManagementService.syncImportedEmployee(
               employeeId,
               updateBody,

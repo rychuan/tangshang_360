@@ -184,6 +184,85 @@ describe('employee authorization lifecycle', () => {
     expect(db.select).not.toHaveBeenCalled();
   });
 
+  it('updates legacy permissions without reading admin counts or changing durable authorization state', async () => {
+    const durableEmployee = {
+      employeeId: 'employee-2',
+      name: '管理员旧权限员工',
+      role: 'admin',
+      permissions: [],
+      authorizationRoles: [],
+      authorizationVersion: 7,
+      authorizationStatus: 'synced',
+      status: true,
+      deletedAt: null,
+    };
+    const jobs = [
+      {
+        employeeId: 'employee-2',
+        authorizationVersion: 7,
+        status: 'succeeded',
+      },
+    ];
+    const targetQuery = limitedQuery([durableEmployee]);
+    const updateValues: Record<string, unknown>[] = [];
+    const updateWhere = jest.fn().mockImplementation(async () => {
+      durableEmployee.permissions = updateValues[0]?.permissions;
+    });
+    const tx = {
+      update: jest.fn().mockReturnValue({
+        set: jest.fn((values: Record<string, unknown>) => {
+          updateValues.push(values);
+          return { where: updateWhere };
+        }),
+      }),
+      insert: jest.fn().mockReturnValue({
+        values: jest.fn().mockResolvedValue(undefined),
+      }),
+    };
+    const db = {
+      select: jest
+        .fn()
+        .mockReturnValueOnce(targetQuery)
+        .mockImplementation(() => {
+          throw new Error('legacy admin count read');
+        }),
+      transaction: jest.fn(async (callback: (value: unknown) => unknown) =>
+        callback(tx),
+      ),
+    };
+    const { service, roleManagerService, authorizationSyncService } =
+      createEmployeeService(db);
+    roleManagerService.checkUserPermission.mockResolvedValue(true);
+
+    await service.updatePermissions(
+      'employee-2',
+      [{ resource: 'employees', actions: ['edit'] }],
+      'admin-1',
+    );
+
+    expect(durableEmployee.permissions).toEqual([
+      { resource: 'employees', actions: ['edit'] },
+    ]);
+    expect(durableEmployee.authorizationRoles).toEqual([]);
+    expect(durableEmployee.authorizationVersion).toBe(7);
+    expect(jobs).toEqual([
+      {
+        employeeId: 'employee-2',
+        authorizationVersion: 7,
+        status: 'succeeded',
+      },
+    ]);
+    expect(updateValues).toEqual([
+      { permissions: [{ resource: 'employees', actions: ['edit'] }] },
+    ]);
+    expect(
+      authorizationSyncService.stageAuthorizationChange,
+    ).not.toHaveBeenCalled();
+    expect(
+      authorizationSyncService.processEmployeeAuthorization,
+    ).not.toHaveBeenCalled();
+  });
+
   it('restores a soft-deleted employee through create before staging stored roles', async () => {
     const { tx } = transactionWithAudit();
     const restoreWhere = jest.fn().mockResolvedValue(undefined);
@@ -352,6 +431,18 @@ describe('employee authorization lifecycle', () => {
 
   it('activates from current durable desired roles instead of audit snapshots', async () => {
     const { tx } = transactionWithAudit();
+    tx.select = jest.fn().mockReturnValue(
+      limitedQuery([
+        {
+          employeeId: 'employee-2',
+          role: 'employee',
+          status: false,
+          authorizationRoles: ['employee', 'supervisor'],
+          authorizationStatus: 'synced',
+          deletedAt: null,
+        },
+      ]),
+    );
     const db = {
       select: jest
         .fn()
@@ -384,6 +475,38 @@ describe('employee authorization lifecycle', () => {
     ).toHaveBeenCalledWith('employee-2', 1);
     expect(roleManagerService.syncUserRolesStrict).not.toHaveBeenCalled();
     expect(db.select).toHaveBeenCalledTimes(1);
+  });
+
+  it('activates a durable empty role set without restoring the legacy admin role', async () => {
+    const row = {
+      employeeId: 'employee-2',
+      role: 'admin',
+      status: false,
+      authorizationRoles: [],
+      authorizationStatus: 'synced',
+      deletedAt: null,
+    };
+    const { tx } = transactionWithAudit();
+    tx.select = jest.fn().mockReturnValue(limitedQuery([row]));
+    const db = {
+      select: jest.fn().mockReturnValue(limitedQuery([row])),
+      transaction: jest.fn(async (callback: (value: unknown) => unknown) =>
+        callback(tx),
+      ),
+    };
+    const { service, roleManagerService, authorizationSyncService } =
+      createEmployeeService(db);
+    roleManagerService.checkUserPermission.mockResolvedValue(true);
+
+    await service.activate('employee-2', 'admin-1');
+
+    expect(
+      authorizationSyncService.stageAuthorizationChange,
+    ).toHaveBeenCalledWith(tx, 'employee-2', []);
+    expect(
+      authorizationSyncService.processEmployeeAuthorization,
+    ).toHaveBeenCalledWith('employee-2', 1);
+    expect(roleManagerService.syncUserRolesStrict).not.toHaveBeenCalled();
   });
 
   it('treats repeated activation as an idempotent no-op', async () => {
@@ -698,6 +821,7 @@ describe('employee authorization lifecycle', () => {
     };
     const { service, roleManagerService, authorizationSyncService } =
       createEmployeeService(db);
+    roleManagerService.checkUserPermission.mockResolvedValue(true);
 
     await service.syncImportedEmployee(
       'employee-2',
@@ -716,7 +840,48 @@ describe('employee authorization lifecycle', () => {
 
     expect(
       authorizationSyncService.stageAuthorizationChange,
-    ).toHaveBeenCalledWith(tx, 'employee-2', ['employee', 'custom-reviewer']);
+    ).toHaveBeenCalledWith(tx, 'employee-2', ['employee']);
+    expect(roleManagerService.syncUserRolesStrict).not.toHaveBeenCalled();
+  });
+
+  it('preserves durable custom roles when an imported update omits role', async () => {
+    const row = {
+      employeeId: 'employee-2',
+      role: 'admin',
+      status: false,
+      authorizationRoles: ['custom-reviewer'],
+      authorizationStatus: 'synced',
+      deletedAt: null,
+    };
+    const { tx } = transactionWithAudit();
+    tx.select = jest.fn().mockReturnValue(limitedQuery([row]));
+    const db = {
+      select: jest.fn().mockReturnValue(limitedQuery([row])),
+      transaction: jest.fn(async (callback: (value: unknown) => unknown) =>
+        callback(tx),
+      ),
+    };
+    const { service, roleManagerService, authorizationSyncService } =
+      createEmployeeService(db);
+    roleManagerService.checkUserPermission.mockResolvedValue(true);
+
+    await service.syncImportedEmployee(
+      'employee-2',
+      {
+        name: '员工二',
+        position: '工程师',
+        positionCode: 'engineer',
+        department: '研发部',
+        departmentId: 'dept-1',
+        supervisorId: 'supervisor-1',
+      },
+      true,
+      'admin-1',
+    );
+
+    expect(
+      authorizationSyncService.stageAuthorizationChange,
+    ).toHaveBeenCalledWith(tx, 'employee-2', ['custom-reviewer']);
     expect(roleManagerService.syncUserRolesStrict).not.toHaveBeenCalled();
   });
 

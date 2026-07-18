@@ -24,21 +24,13 @@ import { AccessScopeService } from '@server/common/access/access-scope.service';
 import { LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY } from '../employee-management/admin-safety';
 import type { TeamUpdateEmployeeRequest } from '@shared/api.interface';
 
-function getDurableRoles(row: {
-  authorizationRoles?: unknown;
-  role?: string | null;
-}): string[] {
-  if (Array.isArray(row.authorizationRoles)) {
-    const roles = row.authorizationRoles.filter(
-      (role): role is string => typeof role === 'string',
-    );
-    if (roles.length > 0) return roles;
+function getDurableRoles(row: { authorizationRoles?: unknown }): string[] {
+  if (!Array.isArray(row.authorizationRoles)) {
+    throw new BadRequestException('员工授权角色数据缺失，拒绝恢复 legacy 角色');
   }
-  const roles = String(row.role || 'employee')
-    .split(',')
-    .map((role) => role.trim())
-    .filter(Boolean);
-  return roles.length > 0 ? roles : ['employee'];
+  return row.authorizationRoles.filter(
+    (role): role is string => typeof role === 'string',
+  );
 }
 
 function isEffectiveAdmin(row: {
@@ -210,7 +202,6 @@ export class TeamStructureService {
       const targetRows = await tx
         .select({
           employeeId: sql<string>`(${employee.employeeId}).user_id`,
-          role: employee.role,
           status: employee.status,
           authorizationRoles: employee.authorizationRoles,
           authorizationStatus: employee.authorizationStatus,

@@ -295,6 +295,32 @@ describe('Bitable import employee lifecycle', () => {
     );
   });
 
+  it('omits role when a plugin row does not provide it so durable custom roles are preserved', async () => {
+    const { service, employeeManagementService } = createPluginImportService({
+      record: {
+        姓名: [2004],
+        状态: 'active',
+      },
+      existing: [
+        {
+          employeeId: '2004',
+          name: '自定义角色员工',
+          position: '工程师',
+          department: '研发部',
+          role: 'admin',
+          authorizationRoles: ['custom-reviewer'],
+          status: false,
+        },
+      ],
+    });
+
+    await service.importFromBitable('operator-1');
+
+    const updateBody =
+      employeeManagementService.syncImportedEmployee.mock.calls[0][1];
+    expect(updateBody).not.toHaveProperty('role');
+  });
+
   it('creates a new inactive plugin employee directly as inactive', async () => {
     const { service, db, roleManagerService, employeeManagementService } =
       createPluginImportService({
@@ -441,6 +467,36 @@ describe('Bitable import employee lifecycle', () => {
       false,
       'operator-1',
     );
+  });
+
+  it('omits role when a connection row does not provide it so durable custom roles are preserved', async () => {
+    const { service, employeeManagementService } =
+      createConnectionImportService({
+        fields: {
+          姓名: '自定义角色员工',
+          工号: 'E008',
+          岗位: '工程师',
+          状态: 'active',
+        },
+        existing: [
+          {
+            employeeId: 'employee-8',
+            employeeNo: 'E008',
+            name: '自定义角色员工',
+            position: '工程师',
+            department: '研发部',
+            role: 'admin',
+            authorizationRoles: ['custom-reviewer'],
+            status: false,
+          },
+        ],
+      });
+
+    await service.importEmployees('connection-1', 'operator-1');
+
+    const updateBody =
+      employeeManagementService.syncImportedEmployee.mock.calls[0][1];
+    expect(updateBody).not.toHaveProperty('role');
   });
 
   it('rejects an inactive row requesting a template before employee or binding side effects', async () => {

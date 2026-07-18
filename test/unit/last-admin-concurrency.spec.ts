@@ -389,6 +389,56 @@ describe('last active admin concurrency protection', () => {
     expect(tx.select).toHaveBeenCalledTimes(1);
     expect(
       authorizationSyncService.stageAuthorizationChange,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('uses durable admin roles instead of the legacy role during demotion', async () => {
+    const { tx } = createAdminMutationTransaction(2, {
+      employeeId: 'admin-2',
+      role: 'employee',
+      status: true,
+      authorizationRoles: ['admin'],
+      authorizationStatus: 'synced',
+      deletedAt: null,
+    });
+    const db = {
+      select: jest.fn().mockReturnValue(
+        limitedQuery([
+          {
+            employeeId: 'admin-2',
+            role: 'employee',
+            status: true,
+            authorizationRoles: ['admin'],
+            authorizationStatus: 'synced',
+          },
+        ]),
+      ),
+      transaction: jest.fn(async (callback: (value: unknown) => unknown) =>
+        callback(tx),
+      ),
+    };
+    const { service, authorizationSyncService } = createEmployeeService(db);
+
+    await service.update(
+      'admin-2',
+      {
+        name: '管理员二',
+        position: '负责人',
+        positionCode: 'manager',
+        department: '管理部',
+        departmentId: 'dept-1',
+        supervisorId: 'admin-1',
+        role: 'employee',
+      },
+      'admin-1',
+    );
+
+    expectLockBeforeCountAndMutation(
+      tx as any,
+      tx.update.mock.invocationCallOrder[0],
+    );
+    expect(
+      authorizationSyncService.stageAuthorizationChange,
     ).toHaveBeenCalledWith(tx, 'admin-2', ['employee']);
   });
 });

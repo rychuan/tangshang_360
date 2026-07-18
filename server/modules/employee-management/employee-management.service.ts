@@ -602,9 +602,10 @@ export class EmployeeManagementService {
       throw new NotFoundException('员工不存在');
     }
 
-    const currentRole = String(rows[0].role || 'employee');
-    const nextRole = body.role || currentRole;
-    const roleChanged = nextRole !== currentRole;
+    const currentRoles = this.getDurableRolesForComparison(rows[0]);
+    const desiredRoles =
+      body.role !== undefined ? this.parseRoles(body.role) : currentRoles;
+    const roleChanged = !this.sameRoles(currentRoles, desiredRoles);
     if (roleChanged) {
       await this.assertRoleMutationPermission(
         userId,
@@ -624,7 +625,10 @@ export class EmployeeManagementService {
       position: body.position,
       positionCode,
       title: body.title || null,
-      role: nextRole,
+      role:
+        body.role !== undefined
+          ? body.role
+          : String(rows[0].role || 'employee'),
       department: body.department || '',
       departmentId,
       supervisorId: await this.resolveSupervisor(
@@ -644,19 +648,19 @@ export class EmployeeManagementService {
       );
       const current = await this.loadEmployeeForLifecycle(tx, id);
       const currentEmployee = current || rows[0];
-      const desiredRoles = roleChanged
-        ? this.parseRoles(nextRole)
-        : this.getDurableRoles(currentEmployee);
+      const currentRoles = this.getDurableRoles(currentEmployee);
+      const transactionDesiredRoles =
+        body.role !== undefined ? this.parseRoles(body.role) : currentRoles;
       const transactionValues = {
         ...values,
         role:
           body.role !== undefined
-            ? nextRole
-            : String(currentEmployee.role || currentRole),
+            ? body.role
+            : String(currentEmployee.role || 'employee'),
       };
       if (
         this.isEffectiveAdmin(currentEmployee) &&
-        (!desiredStatus || !desiredRoles.includes('admin'))
+        (!desiredStatus || !transactionDesiredRoles.includes('admin'))
       ) {
         await this.assertAdminCountAfterReduction(
           tx,
@@ -687,17 +691,16 @@ export class EmployeeManagementService {
         changes: { after: transactionValues },
       });
 
-      const currentRoles = this.getDurableRoles(currentEmployee);
       const shouldStage =
         Boolean(currentEmployee.status) !== desiredStatus ||
-        !this.sameRoles(currentRoles, desiredRoles);
+        !this.sameRoles(currentRoles, transactionDesiredRoles);
       if (!shouldStage) {
         return null;
       }
       return this.authorizationSyncService.stageAuthorizationChange(
         tx,
         id,
-        desiredRoles,
+        transactionDesiredRoles,
       );
     });
 
@@ -732,9 +735,10 @@ export class EmployeeManagementService {
       throw new NotFoundException('员工不存在');
     }
 
-    const currentRole = String(rows[0].role || 'employee');
-    const nextRole = body.role || currentRole;
-    const roleChanged = nextRole !== currentRole;
+    const currentRoles = this.getDurableRolesForComparison(rows[0]);
+    const desiredRoles =
+      body.role !== undefined ? this.parseRoles(body.role) : currentRoles;
+    const roleChanged = !this.sameRoles(currentRoles, desiredRoles);
     if (roleChanged) {
       await this.assertRoleMutationPermission(
         userId,
@@ -756,7 +760,10 @@ export class EmployeeManagementService {
       position: body.position,
       positionCode,
       title: body.title || null,
-      role: nextRole,
+      role:
+        body.role !== undefined
+          ? body.role
+          : String(rows[0].role || 'employee'),
       department: body.department || '',
       departmentId,
       supervisorId: await this.resolveSupervisor(
@@ -774,11 +781,13 @@ export class EmployeeManagementService {
         await tx.execute(
           sql`SELECT pg_advisory_xact_lock(${LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY})`,
         );
-        const current = await this.loadEmployeeForLifecycle(tx, id);
+      }
+      const current = await this.loadEmployeeForLifecycle(tx, id);
+      if (body.role !== undefined) {
         if (
           current &&
           this.isEffectiveAdmin(current) &&
-          !this.parseRoles(nextRole).includes('admin')
+          !this.parseRoles(body.role).includes('admin')
         ) {
           await this.assertAdminCountAfterReduction(
             tx,
@@ -786,21 +795,37 @@ export class EmployeeManagementService {
           );
         }
       }
-      await tx.update(employee).set(values).where(eq(employee.employeeId, id));
+      const currentEmployee = current || rows[0];
+      const transactionValues = {
+        ...values,
+        role:
+          body.role !== undefined
+            ? body.role
+            : String(currentEmployee.role || 'employee'),
+      };
+      await tx
+        .update(employee)
+        .set(transactionValues)
+        .where(eq(employee.employeeId, id));
       await tx.insert(auditLog).values({
         operatorId: userId,
         action: 'update_employee',
         targetType: 'employee',
         targetId: id,
-        changes: { after: values },
+        changes: { after: transactionValues },
       });
-      if (!roleChanged) {
+      const transactionCurrentRoles = this.getDurableRoles(currentEmployee);
+      const transactionDesiredRoles =
+        body.role !== undefined
+          ? this.parseRoles(body.role)
+          : transactionCurrentRoles;
+      if (this.sameRoles(transactionCurrentRoles, transactionDesiredRoles)) {
         return null;
       }
       return this.authorizationSyncService.stageAuthorizationChange(
         tx,
         id,
-        this.parseRoles(nextRole),
+        transactionDesiredRoles,
       );
     });
 
@@ -845,10 +870,12 @@ export class EmployeeManagementService {
         targetType: 'employee',
         targetId: id,
       });
+      const current = await this.loadEmployeeForLifecycle(tx, id);
+      const currentEmployee = current || rows[0];
       return this.authorizationSyncService.stageAuthorizationChange(
         tx,
         id,
-        this.getDurableRoles(rows[0]),
+        this.getDurableRoles(currentEmployee),
       );
     });
 
@@ -976,7 +1003,6 @@ export class EmployeeManagementService {
     const rows = await this.db
       .select({
         id: employee.employeeId,
-        role: employee.role,
         name: employee.name,
       })
       .from(employee)
@@ -987,16 +1013,6 @@ export class EmployeeManagementService {
 
     if (rows.length === 0) {
       throw new NotFoundException('员工不存在');
-    }
-
-    // 防止移除最后一个管理员的权限
-    if (this.hasRole(rows[0].role, 'admin')) {
-      const adminCount = await this.validateAdminsExist();
-      if (adminCount <= 1) {
-        throw new BadRequestException(
-          '系统中至少保留一个系统管理员，无法移除其权限',
-        );
-      }
     }
 
     await this.db.transaction(async (tx) => {
@@ -1076,13 +1092,6 @@ export class EmployeeManagementService {
     return roles.length > 0 ? roles : ['employee'];
   }
 
-  private hasRole(
-    role: string | null | undefined,
-    expectedRole: string,
-  ): boolean {
-    return this.parseRoles(role).includes(expectedRole);
-  }
-
   private adminRoleCondition(): SQL {
     return sql`COALESCE(${employee.authorizationRoles}, '[]'::jsonb) ? 'admin'`;
   }
@@ -1128,19 +1137,25 @@ export class EmployeeManagementService {
     }
   }
 
-  private getDurableRoles(row: {
-    authorizationRoles?: unknown;
-    role?: string | null;
-  }): string[] {
-    if (Array.isArray(row.authorizationRoles)) {
-      const durableRoles = row.authorizationRoles.filter(
-        (role): role is string => typeof role === 'string',
+  private getDurableRoles(row: { authorizationRoles?: unknown }): string[] {
+    if (!Array.isArray(row.authorizationRoles)) {
+      throw new BadRequestException(
+        '员工授权角色数据缺失，拒绝恢复 legacy 角色',
       );
-      if (durableRoles.length > 0) {
-        return durableRoles;
-      }
     }
-    return this.parseRoles(row.role);
+    return row.authorizationRoles.filter(
+      (role): role is string => typeof role === 'string',
+    );
+  }
+
+  private getDurableRolesForComparison(row: {
+    authorizationRoles?: unknown;
+  }): string[] {
+    return Array.isArray(row.authorizationRoles)
+      ? row.authorizationRoles.filter(
+          (role): role is string => typeof role === 'string',
+        )
+      : [];
   }
 
   private isEffectiveAdmin(row: {

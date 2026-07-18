@@ -256,9 +256,6 @@ export class BitableSyncService {
             ? (refs.departmentId ?? undefined)
             : existing.departmentId || undefined,
           title: existing.title || undefined,
-          role: (p.role ||
-            existing.role ||
-            'employee') as UpdateEmployeeRequest['role'],
           supervisorId:
             p.supervisorUserId ||
             String(existing.supervisorId || '') ||
@@ -268,6 +265,9 @@ export class BitableSyncService {
           probationMonths: existing.probationMonths || undefined,
           employeeNo: p.employeeNo || existing.employeeNo || undefined,
         };
+        if (p.role) {
+          updateBody.role = p.role as UpdateEmployeeRequest['role'];
+        }
         const desiredStatus = p.status
           ? p.status !== 'inactive'
           : existing.status;
