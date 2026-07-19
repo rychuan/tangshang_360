@@ -414,7 +414,7 @@ const AssessmentDetailPage: React.FC = () => {
 
       {/* Actions — always visible at bottom */}
       {(canEditSelf || canSignSelf || canEditSupervisor || canSignSupervisor || isCompleted) && (
-        <div className="sticky bottom-0 z-20 -mx-4 -mb-5 border-t bg-background/95 px-4 py-3 backdrop-blur lg:-mx-6">
+        <div className="sticky bottom-0 z-20 -mx-4 -mb-5 border-t bg-background/95 px-4 py-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] backdrop-blur lg:-mx-6">
           <div className="flex flex-wrap items-center justify-center gap-3">
             {canEditSelf && (
               <>
