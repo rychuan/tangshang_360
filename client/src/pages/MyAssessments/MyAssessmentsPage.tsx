@@ -307,7 +307,7 @@ const MyAssessmentsPage: React.FC = () => {
               <AreaChart
                 accessibilityLayer
                 data={trendItems.map((t) => ({ ...t, score: t.avgScore }))}
-                margin={{ left: 12, right: 12 }}
+                margin={{ left: 12, right: 12, top: 8, bottom: 0 }}
               >
                 <defs>
                   <linearGradient id="fillScore" x1="0" y1="0" x2="0" y2="1">
@@ -328,15 +328,15 @@ const MyAssessmentsPage: React.FC = () => {
                   dataKey="period"
                   tickLine={false}
                   axisLine={false}
-                  tickMargin={8}
+                  tickMargin={4}
                   tickFormatter={(value: string) => {
                     const parts = value.split('-');
                     return parts[1] ?? value;
                   }}
                   interval={0}
-                  angle={-45}
+                  angle={-35}
                   textAnchor="end"
-                  height={60}
+                  height={30}
                   className="text-xs text-muted-foreground"
                 />
                 <YAxis
