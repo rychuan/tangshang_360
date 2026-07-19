@@ -7,7 +7,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Smartphone, Loader2 } from 'lucide-react';
+import { Smartphone, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import SignaturePad from '@/components/SignaturePad';
@@ -29,6 +29,374 @@ interface SignDialogProps {
   onSubmitRatings?: () => Promise<void>;
 }
 
+/* ------------------------------------------------------------------ */
+/*  Desktop signature pad section (shared by both Dialog and mobile)  */
+/* ------------------------------------------------------------------ */
+
+const DesktopSignSection: React.FC<{
+  signImage: string | null;
+  setSignImage: (v: string | null) => void;
+  loading: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+  mobileSent: boolean;
+  mobileSending: boolean;
+  onSendToPhone: () => void;
+  instanceId?: string;
+}> = ({
+  signImage: _signImage,
+  setSignImage,
+  loading,
+  onConfirm,
+  onCancel,
+  mobileSent,
+  mobileSending,
+  onSendToPhone,
+  instanceId,
+}) => (
+  <div className="flex flex-col gap-4 pt-4">
+    <SignaturePad onChange={setSignImage} disabled={loading} />
+    <div className="flex justify-end gap-3">
+      <Button variant="outline" onClick={onCancel} disabled={loading}>
+        取消
+      </Button>
+      <Button onClick={onConfirm} disabled={loading || !_signImage}>
+        确认签名
+      </Button>
+    </div>
+
+    <div className="relative">
+      <div className="absolute inset-0 flex items-center">
+        <span className="w-full border-t" />
+      </div>
+      <div className="relative flex justify-center text-xs uppercase">
+        <span className="bg-card px-2 text-muted-foreground">或者</span>
+      </div>
+    </div>
+
+    <div className="flex flex-col items-center gap-2 rounded-lg border bg-muted/30 p-4">
+      {mobileSent ? (
+        <div className="flex flex-col items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Loader2 className="size-4 animate-spin text-primary" />
+            <span className="text-sm font-medium text-primary">
+              等待手机签名...
+            </span>
+          </div>
+          <p className="text-center text-xs text-muted-foreground">
+            已发送到您的飞书，请在手机上点击链接完成签名
+          </p>
+        </div>
+      ) : (
+        <>
+          <Smartphone className="size-8 text-muted-foreground" />
+          <p className="text-center text-sm text-muted-foreground">
+            手机全屏签名更方便
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onSendToPhone}
+            disabled={mobileSending || !instanceId}
+          >
+            {mobileSending ? (
+              <>
+                <Loader2 className="size-3.5 mr-1 animate-spin" />
+                发送中...
+              </>
+            ) : (
+              <>
+                <Smartphone className="size-3.5 mr-1" />
+                发送到手机签名
+              </>
+            )}
+          </Button>
+        </>
+      )}
+    </div>
+  </div>
+);
+
+/* ------------------------------------------------------------------ */
+/*  Mobile full-screen landscape signature overlay                    */
+/* ------------------------------------------------------------------ */
+
+const MobileSignOverlay: React.FC<{
+  signType: 'self' | 'supervisor';
+  signImage: string | null;
+  setSignImage: (v: string | null) => void;
+  loading: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+  mobileSent: boolean;
+  mobileSending: boolean;
+  onSendToPhone: () => void;
+  instanceId?: string;
+}> = ({
+  signType,
+  signImage: _signImage,
+  setSignImage,
+  loading,
+  onConfirm,
+  onCancel,
+  mobileSent,
+  mobileSending,
+  onSendToPhone,
+  instanceId,
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const drawingRef = useRef(false);
+  const lastPointRef = useRef<{ x: number; y: number } | null>(null);
+  const hasDrawnRef = useRef(false);
+  const [isEmpty, setIsEmpty] = useState(true);
+
+  /* ---- canvas helpers ---- */
+  const getCtx = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    return canvas.getContext('2d');
+  }, []);
+
+  const resizeCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    if (hasDrawnRef.current) {
+      hasDrawnRef.current = false;
+      setIsEmpty(true);
+      setSignImage(null);
+    }
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = getCtx();
+    if (!ctx) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#1a1a1a';
+  }, [getCtx, setSignImage]);
+
+  useEffect(() => {
+    resizeCanvas();
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const schedule = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(resizeCanvas, 250);
+    };
+    window.addEventListener('orientationchange', schedule);
+    window.screen.orientation?.addEventListener('change', schedule);
+    // Try to lock landscape
+    try {
+      (screen.orientation as any)?.lock?.('landscape').catch(() => {});
+    } catch {}
+    return () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener('orientationchange', schedule);
+      window.screen.orientation?.removeEventListener('change', schedule);
+      try { (screen.orientation as any)?.unlock?.(); } catch {}
+    };
+  }, [resizeCanvas]);
+
+  const getPoint = useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>): { x: number; y: number } => {
+      const canvas = canvasRef.current;
+      if (!canvas) return { x: 0, y: 0 };
+      const rect = canvas.getBoundingClientRect();
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    },
+    [],
+  );
+
+  /* ---- pointer handlers ---- */
+  const handleDown = useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>) => {
+      if (loading) return;
+      e.preventDefault();
+      canvasRef.current?.setPointerCapture(e.pointerId);
+      drawingRef.current = true;
+      lastPointRef.current = getPoint(e);
+    },
+    [loading, getPoint],
+  );
+
+  const handleMove = useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>) => {
+      if (!drawingRef.current || loading) return;
+      e.preventDefault();
+      const ctx = getCtx();
+      if (!ctx || !lastPointRef.current) return;
+      const cur = getPoint(e);
+      const last = lastPointRef.current;
+      ctx.beginPath();
+      ctx.moveTo(last.x, last.y);
+      ctx.lineTo(cur.x, cur.y);
+      ctx.stroke();
+      lastPointRef.current = cur;
+      if (!hasDrawnRef.current) {
+        hasDrawnRef.current = true;
+        setIsEmpty(false);
+      }
+    },
+    [loading, getPoint, getCtx],
+  );
+
+  const handleUp = useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>) => {
+      if (!drawingRef.current) return;
+      e.preventDefault();
+      drawingRef.current = false;
+      lastPointRef.current = null;
+      const canvas = canvasRef.current;
+      if (canvas && hasDrawnRef.current) {
+        setSignImage(canvas.toDataURL('image/png'));
+      }
+    },
+    [setSignImage],
+  );
+
+  const handleClear = useCallback(() => {
+    const canvas = canvasRef.current;
+    const ctx = getCtx();
+    if (!canvas || !ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    hasDrawnRef.current = false;
+    setIsEmpty(true);
+    setSignImage(null);
+  }, [getCtx, setSignImage]);
+
+  const title =
+    signType === 'self' ? '本人签名确认' : '上级签名确认';
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex flex-col bg-white"
+      role="dialog"
+      aria-modal="true"
+    >
+      {/* Compact header — absolute overlay in landscape */}
+      <header className="flex h-11 shrink-0 items-center justify-between border-b bg-white px-3 landscape:absolute landscape:left-1.5 landscape:top-1.5 landscape:z-20 landscape:h-8 landscape:max-w-[45vw] landscape:rounded-md landscape:border landscape:bg-white/95 landscape:px-1.5 landscape:shadow-sm">
+        <div className="flex min-w-0 items-center gap-2">
+          <button
+            type="button"
+            className="shrink-0 text-muted-foreground"
+            onClick={onCancel}
+            title="关闭"
+          >
+            <X className="size-5 landscape:size-4" />
+          </button>
+          <span className="truncate text-sm font-medium landscape:text-[11px]">
+            {title}
+          </span>
+        </div>
+        <span className="truncate text-xs text-muted-foreground landscape:hidden">
+          {signType === 'self' ? '自评签名' : '上级签名'}
+        </span>
+      </header>
+
+      {/* Signature pad — fills remaining space */}
+      <div className="relative flex min-h-0 flex-1 p-2 landscape:p-1">
+        <div className="relative flex min-h-0 flex-1 rounded-lg border-2 border-dashed border-input bg-white">
+          <canvas
+            ref={canvasRef}
+            className="absolute inset-0 size-full touch-none"
+            style={{ touchAction: 'none' }}
+            onPointerDown={handleDown}
+            onPointerMove={handleMove}
+            onPointerUp={handleUp}
+            onPointerLeave={handleUp}
+          />
+          {isEmpty && (
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+              <span className="text-base landscape:text-sm">
+                请在此区域手写签名
+              </span>
+              <span className="border-t border-muted-foreground/30 pt-2 text-xs landscape:pt-1 landscape:text-[10px]">
+                使用手指在屏幕上书写
+              </span>
+            </div>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleClear}
+            disabled={isEmpty || loading}
+            className="absolute right-2 top-2 z-10 bg-white/95 shadow-sm landscape:right-1.5 landscape:top-1.5 landscape:size-7 landscape:p-0"
+            title="清空签名"
+          >
+            <span className="landscape:hidden text-xs">清空</span>
+            <span className="hidden landscape:inline text-xs">✕</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Footer — floating in landscape */}
+      <footer className="shrink-0 border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] landscape:absolute landscape:bottom-2 landscape:right-2 landscape:z-20 landscape:border-0 landscape:p-0">
+        <div className="flex items-center justify-between gap-3">
+          {/* Send-to-phone card — hidden in landscape */}
+          <div className="hidden flex-col items-center gap-1 rounded-lg border bg-muted/30 p-2 landscape:hidden sm:hidden xs:flex">
+            {mobileSent ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="size-3.5 animate-spin text-primary" />
+                <span className="text-xs font-medium text-primary">
+                  等待手机签名...
+                </span>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onSendToPhone}
+                disabled={mobileSending || !instanceId}
+                className="h-8 text-xs px-2.5"
+              >
+                {mobileSending ? (
+                  <>
+                    <Loader2 className="size-3 mr-1 animate-spin" />
+                    发送中...
+                  </>
+                ) : (
+                  <>
+                    <Smartphone className="size-3 mr-1" />
+                    发送到手机签名
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+
+          <div className="flex gap-3 ml-auto landscape:gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onCancel}
+              disabled={loading}
+              className="landscape:h-8 landscape:text-xs landscape:px-3"
+            >
+              取消
+            </Button>
+            <Button
+              size="sm"
+              onClick={onConfirm}
+              disabled={loading || !_signImage}
+              className="landscape:h-8 landscape:text-xs landscape:px-3 landscape:shadow-lg"
+            >
+              确认签名
+            </Button>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+/* ------------------------------------------------------------------ */
+/*  Main SignDialog — switches between desktop Dialog / mobile overlay */
+/* ------------------------------------------------------------------ */
+
 const SignDialog: React.FC<SignDialogProps> = ({
   open,
   onOpenChange,
@@ -44,9 +412,20 @@ const SignDialog: React.FC<SignDialogProps> = ({
 }) => {
   const [mobileSent, setMobileSent] = useState(false);
   const [mobileSending, setMobileSending] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollGenerationRef = useRef(0);
 
+  /* ---- media query ---- */
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
+  /* ---- polling ---- */
   const clearPolling = useCallback(() => {
     pollGenerationRef.current += 1;
     if (pollRef.current) {
@@ -134,82 +513,52 @@ const SignDialog: React.FC<SignDialogProps> = ({
     }
   };
 
+  const handleCancel = onCancel ?? (() => onOpenChange(false));
+
+  /* ---- render ---- */
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-sm:!top-auto max-sm:!bottom-0 max-sm:!translate-y-0 max-sm:!rounded-b-none max-sm:!rounded-t-2xl max-sm:!max-w-full max-sm:!w-full max-sm:!px-4 max-sm:!pb-[calc(1.25rem+env(safe-area-inset-bottom))] max-sm:!pt-5 max-sm:!gap-4 max-sm:data-[state=open]:!animate-[slideUp_0.25s_ease-out] max-sm:[&_[data-slot=dialog-close]]:!top-3 max-sm:[&_[data-slot=dialog-close]]:!right-3">
-        <DialogHeader>
-          <DialogTitle>
-            {signType === 'self' ? '本人签名确认' : '上级签名确认'}
-          </DialogTitle>
-          <DialogDescription>请在下方区域手写签名</DialogDescription>
-        </DialogHeader>
-        <div className="flex flex-col gap-4 pt-4">
-          <SignaturePad onChange={setSignImage} disabled={loading} />
-          <div className="flex justify-end gap-3">
-            <Button
-              variant="outline"
-              onClick={onCancel ?? (() => onOpenChange(false))}
-              disabled={loading}
-            >
-              取消
-            </Button>
-            <Button onClick={onConfirm} disabled={loading || !signImage}>
-              确认签名
-            </Button>
-          </div>
+    <>
+      {/* Desktop: standard centred Dialog */}
+      {!isMobile && (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {signType === 'self' ? '本人签名确认' : '上级签名确认'}
+              </DialogTitle>
+              <DialogDescription>请在下方区域手写签名</DialogDescription>
+            </DialogHeader>
+            <DesktopSignSection
+              signImage={signImage}
+              setSignImage={setSignImage}
+              loading={loading}
+              onConfirm={onConfirm}
+              onCancel={handleCancel}
+              mobileSent={mobileSent}
+              mobileSending={mobileSending}
+              onSendToPhone={handleSendToPhone}
+              instanceId={instanceId}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">或者</span>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center gap-2 rounded-lg border bg-muted/30 p-4">
-            {mobileSent ? (
-              <div className="flex flex-col items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="size-4 animate-spin text-primary" />
-                  <span className="text-sm font-medium text-primary">
-                    等待手机签名...
-                  </span>
-                </div>
-                <p className="text-center text-xs text-muted-foreground">
-                  已发送到您的飞书，请在手机上点击链接完成签名
-                </p>
-              </div>
-            ) : (
-              <>
-                <Smartphone className="size-8 text-muted-foreground" />
-                <p className="text-center text-sm text-muted-foreground">
-                  手机全屏签名更方便
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSendToPhone}
-                  disabled={mobileSending || !instanceId}
-                >
-                  {mobileSending ? (
-                    <>
-                      <Loader2 className="size-3.5 mr-1 animate-spin" />
-                      发送中...
-                    </>
-                  ) : (
-                    <>
-                      <Smartphone className="size-3.5 mr-1" />
-                      发送到手机签名
-                    </>
-                  )}
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+      {/* Mobile: full-screen landscape overlay */}
+      {isMobile && open && (
+        <MobileSignOverlay
+          signType={signType}
+          signImage={signImage}
+          setSignImage={setSignImage}
+          loading={loading}
+          onConfirm={onConfirm}
+          onCancel={handleCancel}
+          mobileSent={mobileSent}
+          mobileSending={mobileSending}
+          onSendToPhone={handleSendToPhone}
+          instanceId={instanceId}
+        />
+      )}
+    </>
   );
 };
 
