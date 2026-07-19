@@ -6,6 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import {
+  Progress,
+} from '@/components/ui/progress';
+import {
   Empty,
   EmptyHeader,
   EmptyMedia,
@@ -136,6 +139,12 @@ const MyAssessmentsPage: React.FC = () => {
   const loading = recordsQuery.isLoading;
   const recordsError = recordsQuery.error ? '加载绩效记录失败' : null;
   const trendItems = trendQuery.data?.items ?? [];
+  const summaryQuery = useQuery({
+    queryKey: queryKeys.myAssessments.summary(yearFilter),
+    queryFn: () => myAssessmentApi.getSummary(yearFilter),
+  });
+  const summary = summaryQuery.data;
+  const summaryLoading = summaryQuery.isLoading;
   const trendLoading = trendQuery.isLoading;
   const trendError = trendQuery.error ? '加载趋势数据失败' : null;
 
@@ -194,35 +203,107 @@ const MyAssessmentsPage: React.FC = () => {
       />
 
       {/* Trend Chart */}
-      <Card className="rounded-xl">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
-            <AreaChartIcon className="size-4 text-muted-foreground" />
-            绩效趋势
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {trendLoading ? (
-            <div className="flex items-center justify-center h-[300px]">
-              <Spinner className="size-6" />
-            </div>
-          ) : trendError ? (
-            <div className="flex items-center justify-center h-[300px] text-sm text-destructive">
-              趋势数据加载失败：{trendError}
-            </div>
-          ) : trendItems.length === 0 ? (
-            <div className="flex items-center justify-center h-[300px]">
-              <Empty>
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <AreaChartIcon className="size-6" />
-                  </EmptyMedia>
-                  <EmptyTitle>暂无趋势数据</EmptyTitle>
-                </EmptyHeader>
-              </Empty>
-            </div>
-          ) : (
-            <ChartContainer config={chartConfig} className="h-[300px] w-full">
+      <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
+        {/* Left: Summary card */}
+        <Card className="rounded-xl">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">{yearFilter}年考核概览</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {summaryLoading ? (
+              <div className="flex items-center justify-center h-40">
+                <Spinner className="size-5" />
+              </div>
+            ) : !summary ? (
+              <div className="flex items-center justify-center h-40 text-sm text-muted-foreground">
+                暂无数据
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg bg-muted/50 p-3 text-center">
+                    <p className="text-2xl font-bold">{summary.totalCount}</p>
+                    <p className="text-xs text-muted-foreground">考核总数</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/50 p-3 text-center">
+                    <p className="text-2xl font-bold">{summary.completedCount}</p>
+                    <p className="text-xs text-muted-foreground">已完成</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/50 p-3 text-center">
+                    <p className="text-2xl font-bold">{summary.avgScore}</p>
+                    <p className="text-xs text-muted-foreground">平均分</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/50 p-3 text-center">
+                    <p className="text-2xl font-bold">{summary.pendingCount}</p>
+                    <p className="text-xs text-muted-foreground">待完成</p>
+                  </div>
+                </div>
+                {summary.completedCount > 0 && (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">完成进度</span>
+                      <span className="font-medium">
+                        {Math.round((summary.completedCount / summary.totalCount) * 100)}%
+                      </span>
+                    </div>
+                    <Progress
+                      value={Math.round((summary.completedCount / summary.totalCount) * 100)}
+                      className="h-2"
+                    />
+                  </div>
+                )}
+                {summary.latestGrade && (
+                  <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm">
+                    <span className="text-muted-foreground">最新等级</span>
+                    <GradeBadge grade={summary.latestGrade} />
+                  </div>
+                )}
+                {sortedRecords.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => navigate(`/assessment/${sortedRecords[0].id}`)}
+                  >
+                    <Eye className="size-3.5 mr-1" />
+                    查看最新考核详情
+                  </Button>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Right: Trend Chart */}
+        <Card className="rounded-xl">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <AreaChartIcon className="size-4 text-muted-foreground" />
+              绩效趋势
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {trendLoading ? (
+              <div className="flex items-center justify-center h-[220px]">
+                <Spinner className="size-6" />
+              </div>
+            ) : trendError ? (
+              <div className="flex items-center justify-center h-[220px] text-sm text-destructive">
+                趋势数据加载失败：{trendError}
+              </div>
+            ) : trendItems.length === 0 ? (
+              <div className="flex items-center justify-center h-[220px]">
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <AreaChartIcon className="size-6" />
+                    </EmptyMedia>
+                    <EmptyTitle>暂无趋势数据</EmptyTitle>
+                  </EmptyHeader>
+                </Empty>
+              </div>
+            ) : (
+              <ChartContainer config={chartConfig} className="h-[220px] w-full">
               <AreaChart
                 accessibilityLayer
                 data={trendItems.map((t) => ({ ...t, score: t.avgScore }))}
@@ -288,6 +369,7 @@ const MyAssessmentsPage: React.FC = () => {
           )}
         </CardContent>
       </Card>
+      </div>
 
       {/* Records Table */}
       <Card className="rounded-xl">

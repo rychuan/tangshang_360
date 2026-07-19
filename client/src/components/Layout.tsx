@@ -19,6 +19,7 @@ import {
 } from '@/components/app-shell/app-shell-utils';
 import { useSidebarBadges } from '@/components/app-shell/useSidebarBadges';
 import { hasPermission } from './permission-policy';
+import { ScrollToTop } from '@/components/app-shell/ScrollToTop';
 import {
   useBreadcrumb,
   BreadcrumbProvider,
@@ -99,6 +100,7 @@ const LayoutContent: React.FC = () => {
         >
           <Outlet />
         </div>
+        <ScrollToTop />
       </SidebarInset>
     </SidebarProvider>
   );
