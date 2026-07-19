@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { usePermissions } from '@/hooks/usePermissions';
 import { getOverview, getTodos } from '@/api/dashboard';
+import { getPeriodStatistics } from '@/api/assessment-publish';
 import type { NavItem } from '@/components/navigation';
 
 export interface SidebarBadges {
@@ -24,6 +25,16 @@ export function useSidebarBadges(items: NavItem[]): SidebarBadges {
     staleTime: 60_000,
     enabled: hasTodoAccess,
   });
+  const publishStatsQuery = useQuery({
+    queryKey: ['publish', 'sidebar-stats'],
+    queryFn: () => {
+      const now = new Date();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      return getPeriodStatistics(`${now.getFullYear()}-${m}`);
+    },
+    staleTime: 60_000,
+    enabled: hasTodoAccess,
+  });
 
   const overviewQuery = useQuery({
     queryKey: ['dashboard', 'overview'],
@@ -33,9 +44,9 @@ export function useSidebarBadges(items: NavItem[]): SidebarBadges {
   });
 
   if (!hasTodoAccess || !todosQuery.data || !overviewQuery.data) return {};
+  if (!hasTodoAccess) return {};
 
   const todos = todosQuery.data.items;
-  const overview = overviewQuery.data.stats;
 
   const badges: SidebarBadges = {};
 
@@ -61,7 +72,8 @@ export function useSidebarBadges(items: NavItem[]): SidebarBadges {
     }
 
     if (item.badgeResource === 'publish_management') {
-      const count = overview.pendingCount ?? 0;
+      if (!publishStatsQuery.data) continue;
+      const count = publishStatsQuery.data.toPublishCount;
       if (count > 0) {
         badges[item.path] = { text: String(count), tone: 'destructive' };
       } else {
