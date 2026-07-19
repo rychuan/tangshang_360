@@ -7,7 +7,7 @@ export const queryKeys = {
       periodEnd: string;
     }) => ['my-assessments', 'records', params] as const,
     trend: (year: string) => ['my-assessments', 'trend', year] as const,
-    summary: () => ['my-assessments', 'summary'] as const,
+    summary: (year: string) => ['my-assessments', 'summary', year] as const,
   },
   assessmentDetail: (id: string) => ['assessment-detail', id] as const,
   assessmentInstances: (params: Record<string, string | number>) =>

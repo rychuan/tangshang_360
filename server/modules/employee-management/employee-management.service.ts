@@ -528,6 +528,7 @@ export class EmployeeManagementService {
       position: body.position,
       positionCode,
       title: body.title || null,
+      // TODO: legacy `role` 列，后续迁移统一使用 `authorizationRoles`
       role: body.role || 'employee',
       department: body.department || '',
       departmentId,
