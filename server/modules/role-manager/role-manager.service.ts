@@ -302,9 +302,16 @@ export class RoleManagerService {
       return null;
     }
 
+    const raw = rows[0].permissions as PermissionItem[];
+    let permissions = raw;
+    try {
+      permissions = normalizePermissionConfig(roleBizId, raw);
+    } catch {
+      // If stored data is invalid, return as-is; will be fixed on next save
+    }
     return {
       roleBizId: rows[0].roleBizId,
-      permissions: rows[0].permissions as PermissionItem[],
+      permissions,
     };
   }
 

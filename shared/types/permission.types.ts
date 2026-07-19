@@ -224,7 +224,23 @@ export function normalizePermissionConfig(
 
     const resource = (item as { resource?: unknown }).resource;
     const actions = (item as { actions?: unknown }).actions;
-    if (typeof resource !== 'string' || !knownResources.has(resource)) {
+    if (typeof resource !== 'string') {
+      throw new Error(`未知权限资源: ${String(resource)}`);
+    }
+
+    if (resource === '*') {
+      for (const res of Object.keys(PERMISSION_MATRIX) as PermissionResource[]) {
+        const set =
+          merged.get(res) ?? new Set<PermissionAction>();
+        for (const act of PERMISSION_MATRIX[res]) {
+          set.add(act);
+        }
+        merged.set(res, set);
+      }
+      continue;
+    }
+
+    if (!knownResources.has(resource)) {
       throw new Error(`未知权限资源: ${String(resource)}`);
     }
     if (!Array.isArray(actions)) {
@@ -235,6 +251,12 @@ export function normalizePermissionConfig(
       merged.get(resource as PermissionResource) ?? new Set<PermissionAction>();
     const allowedActions = PERMISSION_MATRIX[resource as PermissionResource];
     for (const action of actions) {
+      if (action === '*') {
+        for (const act of allowedActions) {
+          actionSet.add(act);
+        }
+        continue;
+      }
       if (
         typeof action !== 'string' ||
         !allowedActions.includes(action as PermissionAction)
