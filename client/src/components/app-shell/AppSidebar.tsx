@@ -40,7 +40,7 @@ export function AppSidebar({
   badges,
 }: AppSidebarProps) {
   return (
-    <Sidebar variant="inset" collapsible="offcanvas" className="[font-size:14px]">
+    <Sidebar variant="inset" collapsible="icon" className="[font-size:14px]">
       <SidebarHeader className="gap-3 p-3">
         <Link to={homePath} className="flex h-10 items-center gap-3 px-2">
           <span className="grid size-8 place-items-center rounded-lg bg-[#171720] text-white">

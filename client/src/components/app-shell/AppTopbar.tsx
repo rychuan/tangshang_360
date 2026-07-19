@@ -62,7 +62,7 @@ export function AppTopbar({
           }`
         }
       >
-        <SidebarTrigger className="md:hidden" />
+        <SidebarTrigger />
         <p className="min-w-0 truncate text-[14px] font-semibold">
           {currentLabel}
         </p>
