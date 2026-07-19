@@ -41,16 +41,16 @@ export function AppSidebar({
 }: AppSidebarProps) {
   return (
     <Sidebar variant="inset" collapsible="icon" className="[font-size:14px]">
-      <SidebarHeader className="gap-3 p-3">
-        <Link to={homePath} className="flex h-10 items-center gap-3 px-2">
+      <SidebarHeader className="gap-3 p-3 group-data-[collapsible=icon]:p-1.5 group-data-[collapsible=icon]:gap-1">
+        <Link to={homePath} className="flex h-10 items-center gap-3 px-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
           <span className="grid size-8 place-items-center rounded-lg bg-[#171720] text-white">
             <Icon icon="hugeicons:dashboard-square-02" className="size-4" />
           </span>
-          <span className="truncate text-[16px] font-semibold">
+          <span className="truncate text-[16px] font-semibold group-data-[collapsible=icon]:hidden">
             {appName || '绩效考核'}
           </span>
         </Link>
-        <div className="flex h-10 items-center gap-2 rounded-lg border bg-background px-3 text-[12px]">
+        <div className="flex h-10 items-center gap-2 rounded-lg border bg-background px-3 text-[12px] group-data-[collapsible=icon]:hidden">
           <Icon icon="hugeicons:calendar-03" className="size-4 text-warning" />
           <span>{formatCurrentCycle(new Date())}</span>
         </div>
