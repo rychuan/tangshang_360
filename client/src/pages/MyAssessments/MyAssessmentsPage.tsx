@@ -128,6 +128,10 @@ const MyAssessmentsPage: React.FC = () => {
   });
 
   const records = recordsQuery.data?.items ?? [];
+  const sortedRecords = useMemo(
+    () => [...records].sort((a, b) => b.period.localeCompare(a.period)),
+    [records],
+  );
   const total = recordsQuery.data?.total ?? 0;
   const loading = recordsQuery.isLoading;
   const recordsError = recordsQuery.error ? '加载绩效记录失败' : null;
@@ -244,7 +248,14 @@ const MyAssessmentsPage: React.FC = () => {
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
-                  tickFormatter={(value) => value.slice(0, 3)}
+                  tickFormatter={(value: string) => {
+                    const parts = value.split('-');
+                    return parts[1] ?? value;
+                  }}
+                  interval={0}
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
                   className="text-xs text-muted-foreground"
                 />
                 <YAxis
@@ -293,7 +304,7 @@ const MyAssessmentsPage: React.FC = () => {
               <div className="hidden md:block">
                 <PageTable
                   columns={myAssessmentColumns}
-                  data={records}
+                  data={sortedRecords}
                   loading={loading}
                   emptyMessage="暂无绩效记录"
                   page={page}
@@ -303,7 +314,7 @@ const MyAssessmentsPage: React.FC = () => {
                 />
               </div>
               <div className="md:hidden">
-                {records.length === 0 ? (
+                {sortedRecords.length === 0 ? (
                   <div className="flex items-center justify-center py-12">
                     <Empty>
                       <EmptyHeader>
@@ -316,7 +327,7 @@ const MyAssessmentsPage: React.FC = () => {
                   </div>
                 ) : (
                   <div className="flex flex-col divide-y">
-                    {records.map((item) => (
+                    {sortedRecords.map((item) => (
                       <div key={item.id} className="flex flex-col gap-3 p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
