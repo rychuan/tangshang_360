@@ -53,7 +53,7 @@ export function AppTopbar({
 
   return (
     <>
-      <header className="flex h-16 shrink-0 items-center gap-3 border-b px-4 lg:px-6">
+      <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b bg-background px-4 lg:px-6">
         <SidebarTrigger className="md:hidden" />
         <p className="min-w-0 truncate text-[14px] font-semibold">
           {currentLabel}
