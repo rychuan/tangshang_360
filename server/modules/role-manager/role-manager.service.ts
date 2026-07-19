@@ -61,7 +61,7 @@ export class RoleManagerService {
     string,
     { roles: string[]; expiresAt: number }
   >();
-  private readonly ROLE_CACHE_TTL_MS = 30_000;
+  private readonly ROLE_CACHE_TTL_MS = 10_000;
 
   constructor(
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
@@ -84,8 +84,7 @@ export class RoleManagerService {
       this.logger.error(
         `Failed to get user roles: ${err instanceof Error ? err.message : String(err)}`,
       );
-      this.cacheUserRoles(userId, []);
-      return [];
+      throw new Error(`无法获取用户角色（AuthorizationSDK 不可用）: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
@@ -97,6 +96,7 @@ export class RoleManagerService {
 
   /**
    * 将用户添加到 'employee' 角色（新建员工时自动调用）
+   * @deprecated 直接操作 SDK 角色，绕过 durable authorization staging。请使用 reconciliation 路径（AuthorizationSyncService.stageAuthorizationChange + processEmployeeAuthorization）。
    */
   async addUserToEmployeeRole(userId: string): Promise<void> {
     try {
@@ -121,6 +121,7 @@ export class RoleManagerService {
 
   /**
    * 确保用户拥有指定角色（幂等）
+   * @deprecated 直接操作 SDK 角色，绕过 durable authorization staging。请使用 reconciliation 路径或 ensureUserRoleStrict。
    */
   async ensureUserRole(userId: string, roleBizId: string): Promise<void> {
     try {
@@ -142,6 +143,7 @@ export class RoleManagerService {
 
   /**
    * 移除用户的指定角色（幂等）
+   * @deprecated 直接操作 SDK 角色，绕过 durable authorization staging。请使用 reconciliation 路径或 removeUserRoleStrict。
    */
   async removeUserRole(userId: string, roleBizId: string): Promise<void> {
     try {
@@ -193,6 +195,7 @@ export class RoleManagerService {
 
   /**
    * 同步用户角色：对比新旧角色列表，add 新增的，remove 移除的
+   * @deprecated 直接操作 SDK 角色，绕过 durable authorization staging。请使用 reconciliation 路径或 syncUserRolesStrict。
    */
   async syncUserRoles(userId: string, newRoles: string[]): Promise<void> {
     try {
