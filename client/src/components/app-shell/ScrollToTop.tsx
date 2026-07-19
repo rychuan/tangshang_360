@@ -16,14 +16,16 @@ export function ScrollToTop() {
   if (!visible) return null;
 
   return (
-    <Button
-      variant="secondary"
-      size="icon"
-      className="fixed bottom-6 right-6 z-50 size-10 rounded-full shadow-lg"
-      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-      aria-label="回到顶部"
-    >
-      <ArrowUp className="size-5" />
-    </Button>
+    <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+      <Button
+        variant="secondary"
+        size="icon"
+        className="size-10 rounded-full shadow-lg transition-shadow hover:shadow-xl"
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        aria-label="回到顶部"
+      >
+        <ArrowUp className="size-5" />
+      </Button>
+    </div>
   );
 }

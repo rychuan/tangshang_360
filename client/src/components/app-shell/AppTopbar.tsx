@@ -1,4 +1,5 @@
 import React from 'react';
+import { useScrollStuck } from '@/hooks/useScrollStuck';
 import { Moon, Search, Sun } from 'lucide-react';
 import type { NavItem } from '@/components/navigation';
 import type { UserInput } from '@/components/business-ui/types/user';
@@ -20,6 +21,7 @@ export function AppTopbar({
   userInfo,
 }: AppTopbarProps) {
   const [commandOpen, setCommandOpen] = React.useState(false);
+  const stuck = useScrollStuck();
   const [isDark, setIsDark] = React.useState(() => {
     const saved = localStorage.getItem('theme');
     if (saved === 'dark') {
@@ -53,7 +55,13 @@ export function AppTopbar({
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b bg-background px-4 lg:px-6">
+      <header
+        className={
+          `sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b bg-background px-4 lg:px-6 transition-shadow duration-300 ${
+            stuck ? 'shadow-sm' : ''
+          }`
+        }
+      >
         <SidebarTrigger className="md:hidden" />
         <p className="min-w-0 truncate text-[14px] font-semibold">
           {currentLabel}
