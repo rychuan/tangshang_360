@@ -414,26 +414,38 @@ const AssessmentDetailPage: React.FC = () => {
 
       {/* Actions — always visible at bottom */}
       {(canEditSelf || canSignSelf || canEditSupervisor || canSignSupervisor || isCompleted) && (
-        <div className="sticky bottom-0 z-20 -mx-4 -mb-5 border-t bg-background/95 px-4 py-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] backdrop-blur lg:-mx-6">
-          <div className="flex flex-wrap items-center justify-center gap-3">
+        <div className="sticky bottom-0 z-20 -mx-4 -mb-5 border-t bg-background/95 px-4 py-3.5 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] backdrop-blur-sm lg:-mx-6">
+          <div className="flex items-center justify-center gap-3 max-sm:flex-col max-sm:[&>*]:w-full">
             {canEditSelf && (
               <>
                 <Button
                   variant="outline"
+                  size="lg"
+                  className="max-sm:w-full max-sm:h-11 max-sm:text-[15px] max-sm:rounded-xl"
                   onClick={() => void handleSaveDraft()}
                   disabled={submitting}
                 >
                   <Save data-icon="inline-start" />
                   保存草稿
                 </Button>
-                <Button onClick={handleSubmitClick} disabled={submitting}>
+                <Button
+                  size="lg"
+                  className="max-sm:w-full max-sm:h-11 max-sm:text-[15px] max-sm:rounded-xl"
+                  onClick={handleSubmitClick}
+                  disabled={submitting}
+                >
                   <Send data-icon="inline-start" />
                   提交自评
                 </Button>
               </>
             )}
             {canSignSelf && (
-              <Button onClick={handleSubmitClick} disabled={submitting}>
+              <Button
+                size="lg"
+                className="max-sm:w-full max-sm:h-11 max-sm:text-[15px] max-sm:rounded-xl"
+                onClick={handleSubmitClick}
+                disabled={submitting}
+              >
                 <Send data-icon="inline-start" />
                 签名确认
               </Button>
@@ -442,20 +454,32 @@ const AssessmentDetailPage: React.FC = () => {
               <>
                 <Button
                   variant="outline"
+                  size="lg"
+                  className="max-sm:w-full max-sm:h-11 max-sm:text-[15px] max-sm:rounded-xl"
                   onClick={() => void handleSaveDraft()}
                   disabled={submitting}
                 >
                   <Save data-icon="inline-start" />
                   保存草稿
                 </Button>
-                <Button onClick={handleSubmitClick} disabled={submitting}>
+                <Button
+                  size="lg"
+                  className="max-sm:w-full max-sm:h-11 max-sm:text-[15px] max-sm:rounded-xl"
+                  onClick={handleSubmitClick}
+                  disabled={submitting}
+                >
                   <Send data-icon="inline-start" />
                   提交评分
                 </Button>
               </>
             )}
             {canSignSupervisor && (
-              <Button onClick={handleSubmitClick} disabled={submitting}>
+              <Button
+                size="lg"
+                className="max-sm:w-full max-sm:h-11 max-sm:text-[15px] max-sm:rounded-xl"
+                onClick={handleSubmitClick}
+                disabled={submitting}
+              >
                 <Send data-icon="inline-start" />
                 签名确认
               </Button>

@@ -136,7 +136,7 @@ const SignDialog: React.FC<SignDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-sm:!top-auto max-sm:!bottom-0 max-sm:!translate-y-0 max-sm:!rounded-b-none max-sm:!rounded-t-2xl max-sm:!max-w-full max-sm:!w-full max-sm:!px-4 max-sm:!pb-[calc(1.25rem+env(safe-area-inset-bottom))] max-sm:!pt-5 max-sm:!gap-4 max-sm:data-[state=open]:!animate-[slideUp_0.25s_ease-out] max-sm:[&_[data-slot=dialog-close]]:!top-3 max-sm:[&_[data-slot=dialog-close]]:!right-3">
         <DialogHeader>
           <DialogTitle>
             {signType === 'self' ? '本人签名确认' : '上级签名确认'}
