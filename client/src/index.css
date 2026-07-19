@@ -5,3 +5,9 @@
 
 @source "../../node_modules/streamdown/dist/*.js";
 @config "../../tailwind.config.ts";
+
+/* Mobile bottom-sheet slide-up animation */
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}

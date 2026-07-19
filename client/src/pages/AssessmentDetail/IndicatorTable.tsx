@@ -127,7 +127,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
           )}
 
           <Card>
-            <CardHeader className="pb-4 bg-muted">
+            <CardHeader className="pb-4 bg-muted/60">
               <div className="flex items-center gap-3">
                 <h3 className="text-base font-semibold">
                   {group.dimensionName}
@@ -141,11 +141,11 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col gap-3 md:hidden">
+              <div className="flex flex-col gap-3.5 md:hidden">
                 {group.indicators.map((indicator) => (
                   <div
                     key={indicator.id}
-                    className="rounded-md border bg-background p-3"
+                    className="rounded-xl border bg-background p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
