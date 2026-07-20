@@ -82,7 +82,7 @@ const RoleListPanel: React.FC<RoleListPanelProps> = ({
                 <div
                   key={role.bizID || String(role.id ?? '')}
                   onClick={() => onSelectRole(role)}
-                  className={`group grid cursor-pointer grid-cols-[minmax(0,7fr)_minmax(0,3fr)] overflow-hidden rounded-lg border transition-colors ${
+                  className={`group grid cursor-pointer grid-cols-[minmax(0,8fr)_minmax(0,2fr)] overflow-hidden rounded-lg border transition-colors ${
                     selected
                       ? 'border-primary bg-primary/5'
                       : 'border-transparent hover:bg-muted/50'
