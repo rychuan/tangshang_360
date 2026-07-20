@@ -379,7 +379,7 @@ const AssessmentDetailPage: React.FC = () => {
                           <img
                             src={step.signImage}
                             alt={`${step.label}签名`}
-                            className="max-h-12 max-w-full object-scale-down"
+                            className="max-h-12 sm:max-h-16 max-w-full object-scale-down"
                           />
                         ) : (
                           <span className="text-xs text-muted-foreground">
