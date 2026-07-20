@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -149,6 +149,19 @@ const MobileSignOverlay: React.FC<{
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
   const hasDrawnRef = useRef(false);
   const [isEmpty, setIsEmpty] = useState(true);
+  const [landscape, setLandscape] = useState<boolean>(
+    typeof window !== "undefined" ? window.innerWidth > window.innerHeight : false
+  );
+
+  useEffect(() => {
+    const update = () => setLandscape(window.innerWidth > window.innerHeight);
+    window.addEventListener("orientationchange", update);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("orientationchange", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
 
   /* ---- canvas helpers ---- */
   const getCtx = useCallback(() => {
@@ -180,6 +193,16 @@ const MobileSignOverlay: React.FC<{
   }, [getCtx, setSignImage]);
 
   useEffect(() => {
+    const update = () => setLandscape(window.innerWidth > window.innerHeight);
+    window.addEventListener("orientationchange", update);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("orientationchange", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
+  useEffect(() => {
     resizeCanvas();
     let timer: ReturnType<typeof setTimeout> | null = null;
     const schedule = () => {
@@ -196,7 +219,6 @@ const MobileSignOverlay: React.FC<{
       if (timer) clearTimeout(timer);
       window.removeEventListener('orientationchange', schedule);
       window.screen.orientation?.removeEventListener('change', schedule);
-      try { (screen.orientation as any)?.unlock?.(); } catch {}
     };
   }, [resizeCanvas]);
 
@@ -276,8 +298,13 @@ const MobileSignOverlay: React.FC<{
       role="dialog"
       aria-modal="true"
     >
-      {/* Compact header — absolute overlay in landscape */}
-      <header className="flex h-11 shrink-0 items-center justify-between border-b bg-white px-3 landscape:absolute landscape:left-1.5 landscape:top-1.5 landscape:z-20 landscape:h-8 landscape:max-w-[45vw] landscape:rounded-md landscape:border landscape:bg-white/95 landscape:px-1.5 landscape:shadow-sm">
+      {/* Header: full bar in portrait, compact floating in landscape */}
+      <header
+        className={'flex shrink-0 items-center justify-between border-b bg-white px-3 ' +
+          (landscape
+            ? 'absolute left-1.5 top-1.5 z-20 h-8 max-w-[45vw] rounded-md border bg-white/95 px-1.5 shadow-sm'
+            : 'h-11')}
+      >
         <div className="flex min-w-0 items-center gap-2">
           <button
             type="button"
@@ -285,19 +312,29 @@ const MobileSignOverlay: React.FC<{
             onClick={onCancel}
             title="关闭"
           >
-            <X className="size-5 landscape:size-4" />
+            <X className={landscape ? 'size-4' : 'size-5'} />
           </button>
-          <span className="truncate text-sm font-medium landscape:text-[11px]">
+          <span className={'truncate font-medium ' + (landscape ? 'text-[11px]' : 'text-sm')}>
             {title}
           </span>
         </div>
-        <span className="truncate text-xs text-muted-foreground landscape:hidden">
-          {signType === 'self' ? '自评签名' : '上级签名'}
-        </span>
+        {!landscape && (
+          <span className="truncate text-xs text-muted-foreground">
+            {signType === 'self' ? '自评签名' : '上级签名'}
+          </span>
+        )}
       </header>
 
-      {/* Signature pad — fills remaining space */}
-      <div className="relative flex min-h-0 flex-1 p-2 landscape:p-1">
+      {/* Rotate hint — subtle, portrait only */}
+      {!landscape && (
+        <div className="flex items-center justify-center gap-1.5 bg-amber-50 px-3 py-1.5 text-[11px] text-amber-700">
+          <span>📱 ↺</span>
+          <span>旋转手机至横屏，签名区域更大</span>
+        </div>
+      )}
+
+      {/* Signature pad */}
+      <div className={'relative flex min-h-0 flex-1 ' + (landscape ? 'p-1' : 'p-3')}>
         <div className="relative flex min-h-0 flex-1 rounded-lg border-2 border-dashed border-input bg-white">
           <canvas
             ref={canvasRef}
@@ -310,10 +347,10 @@ const MobileSignOverlay: React.FC<{
           />
           {isEmpty && (
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
-              <span className="text-base landscape:text-sm">
+              <span className={landscape ? 'text-sm' : 'text-base'}>
                 请在此区域手写签名
               </span>
-              <span className="border-t border-muted-foreground/30 pt-2 text-xs landscape:pt-1 landscape:text-[10px]">
+              <span className={'border-t border-muted-foreground/30 pt-2 ' + (landscape ? 'pt-1 text-[10px]' : 'text-xs')}>
                 使用手指在屏幕上书写
               </span>
             </div>
@@ -324,51 +361,56 @@ const MobileSignOverlay: React.FC<{
             size="sm"
             onClick={handleClear}
             disabled={isEmpty || loading}
-            className="absolute right-2 top-2 z-10 bg-white/95 shadow-sm landscape:right-1.5 landscape:top-1.5 landscape:size-7 landscape:p-0"
+            className={'absolute z-10 bg-white/95 shadow-sm ' + (landscape ? 'right-1.5 top-1.5 size-7 p-0' : 'right-2 top-2')}
             title="清空签名"
           >
-            <span className="landscape:hidden text-xs">清空</span>
-            <span className="hidden landscape:inline text-xs">✕</span>
+            {landscape ? <span className="text-xs">✕</span> : <span className="text-xs">清空</span>}
           </Button>
         </div>
       </div>
 
-      {/* Footer — floating in landscape */}
-      <footer className="shrink-0 border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] landscape:absolute landscape:bottom-2 landscape:right-2 landscape:z-20 landscape:border-0 landscape:p-0">
+      {/* Footer: full bar in portrait, floating in landscape */}
+      <footer
+        className={
+          'shrink-0 border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] ' +
+          (landscape ? 'absolute bottom-2 right-2 z-20 border-0 p-0' : '')
+        }
+      >
         <div className="flex items-center justify-between gap-3">
-          {/* Send-to-phone card — hidden in landscape */}
-          <div className="hidden flex-col items-center gap-1 rounded-lg border bg-muted/30 p-2 landscape:hidden sm:hidden xs:flex">
-            {mobileSent ? (
-              <div className="flex items-center gap-2">
-                <Loader2 className="size-3.5 animate-spin text-primary" />
-                <span className="text-xs font-medium text-primary">
-                  等待手机签名...
-                </span>
-              </div>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onSendToPhone}
-                disabled={mobileSending || !instanceId}
-                className="h-8 text-xs px-2.5"
-              >
-                {mobileSending ? (
-                  <>
-                    <Loader2 className="size-3 mr-1 animate-spin" />
-                    发送中...
-                  </>
-                ) : (
-                  <>
-                    <Smartphone className="size-3 mr-1" />
-                    发送到手机签名
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
-
-          <div className="flex gap-3 ml-auto landscape:gap-2">
+          {/* Send-to-phone — portrait only */}
+          {!landscape && (
+            <div className="flex flex-col items-center gap-1 rounded-lg border bg-muted/30 p-2">
+              {mobileSent ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="size-3.5 animate-spin text-primary" />
+                  <span className="text-xs font-medium text-primary">
+                    等待手机签名...
+                  </span>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onSendToPhone}
+                  disabled={mobileSending || !instanceId}
+                  className="h-8 text-xs px-2.5"
+                >
+                  {mobileSending ? (
+                    <>
+                      <Loader2 className="size-3 mr-1 animate-spin" />
+                      发送中...
+                    </>
+                  ) : (
+                    <>
+                      <Smartphone className="size-3 mr-1" />
+                      发送到手机签名
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          )}
+          <div className="ml-auto flex gap-3 landscape:gap-2">
             <Button
               variant="outline"
               size="sm"
