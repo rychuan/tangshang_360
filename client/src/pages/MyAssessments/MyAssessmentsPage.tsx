@@ -307,23 +307,23 @@ const MyAssessmentsPage: React.FC = () => {
               <AreaChart
                 accessibilityLayer
                 data={trendItems.map((t) => ({ ...t, score: t.avgScore }))}
-                margin={{ left: 12, right: 12, top: 8, bottom: 0 }}
+                margin={{ left: 0, right: 8, top: 8, bottom: 0 }}
               >
                 <defs>
                   <linearGradient id="fillScore" x1="0" y1="0" x2="0" y2="1">
                     <stop
                       offset="5%"
                       stopColor="var(--color-score)"
-                      stopOpacity={0.8}
+                      stopOpacity={0.3}
                     />
                     <stop
                       offset="95%"
                       stopColor="var(--color-score)"
-                      stopOpacity={0.1}
+                      stopOpacity={0.04}
                     />
                   </linearGradient>
                 </defs>
-                <CartesianGrid vertical={false} className="stroke-muted" />
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
                 <XAxis
                   dataKey="period"
                   tickLine={false}
@@ -342,6 +342,7 @@ const MyAssessmentsPage: React.FC = () => {
                 <YAxis
                   tickLine={false}
                   axisLine={false}
+                  width={32}
                   className="text-xs text-muted-foreground"
                   domain={[0, 100]}
                 />
@@ -351,18 +352,12 @@ const MyAssessmentsPage: React.FC = () => {
                 />
                 <Area
                   dataKey="score"
-                  type="natural"
+                  type="monotone"
                   fill="url(#fillScore)"
-                  fillOpacity={0.4}
-                  stroke="none"
-                />
-                <Line
-                  dataKey="score"
-                  type="basis"
                   stroke="var(--color-score)"
                   strokeWidth={2}
-                  dot={false}
-                  connectNulls
+                  animationDuration={800}
+                  animationEasing="ease-out"
                 />
               </AreaChart>
             </ChartContainer>
