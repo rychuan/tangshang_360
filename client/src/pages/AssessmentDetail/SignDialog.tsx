@@ -274,6 +274,20 @@ const MobileSignOverlay: React.FC<{
       className="fixed inset-0 z-50 flex flex-col bg-white"
       role="dialog"
       aria-modal="true"
+      style={{
+        // Force landscape: when device is portrait, rotate the entire window 90°
+        // width/height are swapped because we rotate around top-left after positioning at top-right
+        ...(typeof window !== 'undefined' && window.innerWidth < window.innerHeight
+          ? {
+              top: 0,
+              left: '100%',
+              width: '100vh',
+              height: '100vw',
+              transformOrigin: 'top left',
+              transform: 'rotate(90deg)',
+            }
+          : {}),
+      }}
     >
       {/* Header */}
       <header
