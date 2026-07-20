@@ -149,19 +149,6 @@ const MobileSignOverlay: React.FC<{
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
   const hasDrawnRef = useRef(false);
   const [isEmpty, setIsEmpty] = useState(true);
-  const [landscape, setLandscape] = useState<boolean>(
-    typeof window !== "undefined" ? window.innerWidth > window.innerHeight : false
-  );
-
-  useEffect(() => {
-    const update = () => setLandscape(window.innerWidth > window.innerHeight);
-    window.addEventListener("orientationchange", update);
-    window.addEventListener("resize", update);
-    return () => {
-      window.removeEventListener("orientationchange", update);
-      window.removeEventListener("resize", update);
-    };
-  }, []);
 
   /* ---- canvas helpers ---- */
   const getCtx = useCallback(() => {
@@ -191,16 +178,6 @@ const MobileSignOverlay: React.FC<{
     ctx.lineJoin = 'round';
     ctx.strokeStyle = '#1a1a1a';
   }, [getCtx, setSignImage]);
-
-  useEffect(() => {
-    const update = () => setLandscape(window.innerWidth > window.innerHeight);
-    window.addEventListener("orientationchange", update);
-    window.addEventListener("resize", update);
-    return () => {
-      window.removeEventListener("orientationchange", update);
-      window.removeEventListener("resize", update);
-    };
-  }, []);
 
   useEffect(() => {
     resizeCanvas();
@@ -300,12 +277,7 @@ const MobileSignOverlay: React.FC<{
     >
       {/* Header */}
       <header
-        className={
-          'flex shrink-0 items-center justify-between border-b bg-white px-3 ' +
-          (landscape
-            ? 'absolute left-1.5 top-1.5 z-20 h-8 max-w-[45vw] rounded-md border bg-white/95 px-1.5 shadow-sm'
-            : 'h-11')
-        }
+        className="flex h-10 shrink-0 items-center justify-between border-b bg-white px-3 landscape:absolute landscape:left-1.5 landscape:top-1.5 landscape:z-20 landscape:h-7 landscape:max-w-[45vw] landscape:rounded-md landscape:border landscape:bg-white/95 landscape:px-1.5 landscape:shadow-sm"
       >
         <div className="flex min-w-0 items-center gap-2">
           <button
@@ -314,33 +286,20 @@ const MobileSignOverlay: React.FC<{
             onClick={onCancel}
             title="关闭"
           >
-            <X className={landscape ? 'size-4' : 'size-5'} />
+            <X className="size-5 landscape:size-3.5" />
           </button>
-          <span className={'truncate font-medium ' + (landscape ? 'text-[11px]' : 'text-sm')}>
+          <span className="truncate text-sm font-medium landscape:text-[11px]">
             {title}
           </span>
         </div>
-        {!landscape && (
-          <span className="truncate text-xs text-muted-foreground">
-            {signType === 'self' ? '自评签名' : '上级签名'}
-          </span>
-        )}
+        <span className="truncate text-xs text-muted-foreground landscape:hidden">
+          {signType === 'self' ? '自评签名' : '上级签名'}
+        </span>
       </header>
 
-      {/* Signature pad — auto-rotated 90° in portrait, maximized in landscape */}
-      <div className={'relative flex min-h-0 flex-1 items-center justify-center overflow-hidden ' + (landscape ? 'p-1' : 'p-2')}>
-        <div
-          className="relative rounded-lg border-2 border-dashed border-input bg-white"
-          style={
-            landscape
-              ? { width: '100%', height: '100%' }
-              : {
-                  transform: 'rotate(90deg)',
-                  width: 'calc(100dvh - 180px)',
-                  height: 'calc(100dvw - 16px)',
-                }
-          }
-        >
+      {/* Signature pad — fills all remaining space */}
+      <div className="relative flex min-h-0 flex-1 landscape:p-1">
+        <div className="relative flex min-h-0 flex-1 rounded-none border-2 border-dashed border-input bg-white landscape:rounded-lg">
           <canvas
             ref={canvasRef}
             className="absolute inset-0 size-full touch-none"
@@ -352,10 +311,10 @@ const MobileSignOverlay: React.FC<{
           />
           {isEmpty && (
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
-              <span className={landscape ? 'text-sm' : 'text-base'}>
+              <span className="text-base landscape:text-sm">
                 请在此区域手写签名
               </span>
-              <span className={'border-t border-muted-foreground/30 pt-2 ' + (landscape ? 'pt-1 text-[10px]' : 'text-xs')}>
+              <span className="border-t border-muted-foreground/30 pt-2 text-xs landscape:pt-1 landscape:text-[10px]">
                 使用手指在屏幕上书写
               </span>
             </div>
@@ -366,24 +325,22 @@ const MobileSignOverlay: React.FC<{
             size="sm"
             onClick={handleClear}
             disabled={isEmpty || loading}
-            className={'absolute z-10 bg-white/95 shadow-sm ' + (landscape ? 'right-1.5 top-1.5 size-7 p-0' : 'right-2 top-2')}
+            className="absolute right-2 top-2 z-10 bg-white/95 shadow-sm landscape:right-1.5 landscape:top-1.5 landscape:size-7 landscape:p-0"
             title="清空签名"
           >
-            {landscape ? <span className="text-xs">✕</span> : <span className="text-xs">清空</span>}
+            <span className="text-xs landscape:hidden">清空</span>
+            <span className="hidden text-xs landscape:inline">✕</span>
           </Button>
         </div>
       </div>
 
       {/* Footer */}
       <footer
-        className={
-          'shrink-0 border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] ' +
-          (landscape ? 'absolute bottom-2 right-2 z-20 border-0 p-0' : '')
-        }
+        className="shrink-0 border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] landscape:absolute landscape:bottom-2 landscape:right-2 landscape:z-20 landscape:border-0 landscape:p-0"
       >
         <div className="flex items-center justify-between gap-3">
-          {!landscape && (
-            <div className="flex flex-col items-center gap-1 rounded-lg border bg-muted/30 p-2">
+          {/* send-to-phone: portrait only below */ true && (
+            <div className="flex flex-col items-center gap-1 rounded-lg border bg-muted/30 p-2 landscape:hidden">
               {mobileSent ? (
                 <div className="flex items-center gap-2">
                   <Loader2 className="size-3.5 animate-spin text-primary" />
