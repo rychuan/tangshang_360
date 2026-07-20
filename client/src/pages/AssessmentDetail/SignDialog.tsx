@@ -294,9 +294,9 @@ const MobileSignOverlay: React.FC<{
         </div>
       </header>
 
-      {/* Signature pad — fills all remaining space */}
-      <div className="relative flex min-h-0 flex-1 p-1">
-        <div className="relative flex min-h-0 flex-1 rounded-lg border-2 border-dashed border-input bg-white">
+      {/* Signature pad — landscape aspect ratio, vertically centered */}
+      <div className="relative flex min-h-0 flex-1 items-center justify-center p-2">
+        <div className="relative w-full aspect-[3/2] max-h-[60vh] rounded-lg border-2 border-dashed border-input bg-white">
           <canvas
             ref={canvasRef}
             className="absolute inset-0 size-full touch-none"
