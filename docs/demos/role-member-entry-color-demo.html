@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>角色成员入口配色 Demo</title>
+    <script src="https://unpkg.com/lucide@0.554.0/dist/umd/lucide.min.js"></script>
+    <style>
+      :root {
+        color-scheme: light;
+        --background: #f7f8fa;
+        --surface: #ffffff;
+        --surface-subtle: #f8fafc;
+        --surface-hover: #f1f5f9;
+        --border: #dce1e8;
+        --border-soft: #e8ebf0;
+        --text: #181b20;
+        --muted: #717b8c;
+        --primary: #2864be;
+        --primary-hover: #1f57aa;
+        --primary-soft: #edf4ff;
+        --primary-soft-hover: #dceaff;
+        --primary-border: #90b4ea;
+        --radius: 7px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        min-height: 100vh;
+        background: var(--background);
+        color: var(--text);
+        font-family:
+          Inter, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+        letter-spacing: 0;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      .page {
+        width: min(1180px, calc(100% - 40px));
+        margin: 0 auto;
+        padding: 32px 0;
+      }
+
+      .page-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 0;
+        font-size: 30px;
+        line-height: 1.2;
+      }
+
+      .page-description {
+        margin: 8px 0 24px;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(340px, 38%) minmax(0, 1fr);
+        min-height: 680px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+      }
+
+      .role-panel {
+        min-width: 0;
+        border-right: 1px solid var(--border);
+      }
+
+      .panel-header {
+        display: flex;
+        min-height: 72px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .panel-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0;
+        font-size: 18px;
+      }
+
+      .primary-action {
+        display: inline-flex;
+        height: 40px;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border: 0;
+        border-radius: 6px;
+        padding: 0 16px;
+        background: var(--primary);
+        color: white;
+        cursor: pointer;
+        font-weight: 600;
+        box-shadow: 0 1px 2px rgb(15 23 42 / 14%);
+      }
+
+      .primary-action:hover {
+        background: var(--primary-hover);
+      }
+
+      .role-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px;
+      }
+
+      .role-card {
+        display: grid;
+        grid-template-columns: minmax(0, 4fr) minmax(64px, 1fr);
+        min-height: 106px;
+        overflow: hidden;
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius);
+        background: var(--surface-subtle);
+        transition:
+          border-color 160ms ease,
+          background-color 160ms ease,
+          box-shadow 160ms ease;
+      }
+
+      .role-card:hover {
+        border-color: #cdd5df;
+        background: var(--surface-hover);
+        box-shadow: 0 2px 8px rgb(15 23 42 / 5%);
+      }
+
+      .role-card.selected {
+        border-color: var(--primary-border);
+        background: #f3f7fd;
+        box-shadow: 0 0 0 1px rgb(40 100 190 / 8%);
+      }
+
+      .role-main {
+        position: relative;
+        min-width: 0;
+        border: 0;
+        padding: 16px 76px 16px 16px;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        text-align: left;
+      }
+
+      .role-name-line {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .role-name {
+        overflow: hidden;
+        font-size: 17px;
+        font-weight: 650;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .builtin-badge {
+        flex: 0 0 auto;
+        border-radius: 5px;
+        padding: 4px 8px;
+        background: #edf0f4;
+        color: #303640;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .role-description,
+      .role-count {
+        margin: 7px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.35;
+      }
+
+      .role-count {
+        margin-top: 5px;
+      }
+
+      .role-tools {
+        position: absolute;
+        top: 50%;
+        right: 8px;
+        display: flex;
+        gap: 2px;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-50%);
+        transition: opacity 140ms ease;
+      }
+
+      .role-card:hover .role-tools {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .icon-button {
+        display: inline-flex;
+        width: 30px;
+        height: 30px;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: 5px;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+      }
+
+      .icon-button:hover {
+        background: #e5e9ef;
+        color: var(--text);
+      }
+
+      .member-entry {
+        display: flex;
+        width: 100%;
+        min-width: 0;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-left: 1px solid #d7e4f7;
+        background: var(--primary-soft);
+        color: var(--primary);
+        cursor: pointer;
+        transition:
+          background-color 160ms ease,
+          color 160ms ease;
+      }
+
+      .member-entry:hover {
+        background: var(--primary-soft-hover);
+      }
+
+      .role-card.selected .member-entry {
+        border-left-color: var(--primary);
+        background: var(--primary);
+        color: #ffffff;
+      }
+
+      .role-card.selected .member-entry:hover {
+        background: var(--primary-hover);
+      }
+
+      .detail-panel {
+        min-width: 0;
+        background: var(--surface);
+      }
+
+      .tabs {
+        display: flex;
+        min-height: 72px;
+        align-items: end;
+        gap: 8px;
+        padding: 0 20px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .tab {
+        display: inline-flex;
+        height: 48px;
+        align-items: center;
+        gap: 8px;
+        border: 0;
+        border-bottom: 3px solid transparent;
+        padding: 0 14px;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      .tab.active {
+        border-bottom-color: var(--primary);
+        color: var(--text);
+      }
+
+      .detail-content {
+        padding: 28px;
+      }
+
+      .detail-heading {
+        margin: 0 0 8px;
+        font-size: 21px;
+      }
+
+      .detail-copy {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .permission-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 24px;
+      }
+
+      .permission-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        border: 1px solid var(--border-soft);
+        border-radius: 6px;
+        padding: 14px 16px;
+        background: var(--surface-subtle);
+      }
+
+      .switch {
+        width: 36px;
+        height: 20px;
+        border-radius: 999px;
+        background: var(--primary);
+        box-shadow: inset 0 0 0 1px rgb(15 23 42 / 8%);
+      }
+
+      .switch::after {
+        display: block;
+        width: 16px;
+        height: 16px;
+        margin: 2px 2px 2px auto;
+        border-radius: 50%;
+        background: white;
+        content: '';
+      }
+
+      @media (max-width: 760px) {
+        .page {
+          width: min(100% - 24px, 520px);
+          padding: 20px 0;
+        }
+
+        .workspace {
+          grid-template-columns: 1fr;
+        }
+
+        .role-panel {
+          border-right: 0;
+        }
+
+        .detail-panel {
+          display: none;
+        }
+
+        .panel-header {
+          padding-inline: 14px;
+        }
+
+        .role-list {
+          padding: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <h1 class="page-title">
+        <i data-lucide="shield"></i>
+        权限管理
+      </h1>
+      <p class="page-description">基于角色配置功能权限与成员归属。</p>
+
+      <section class="workspace">
+        <aside class="role-panel">
+          <header class="panel-header">
+            <h2 class="panel-title">
+              <i data-lucide="shield"></i>
+              角色列表
+            </h2>
+            <button class="primary-action" type="button">
+              <i data-lucide="plus"></i>
+              新增角色
+            </button>
+          </header>
+
+          <div class="role-list" id="roleList"></div>
+        </aside>
+
+        <section class="detail-panel">
+          <nav class="tabs" aria-label="角色配置">
+            <button class="tab active" data-tab="permissions" type="button">
+              <i data-lucide="lock-keyhole"></i>
+              权限配置
+            </button>
+            <button class="tab" data-tab="members" type="button">
+              <i data-lucide="users"></i>
+              <span id="memberTabLabel">成员管理(3)</span>
+            </button>
+          </nav>
+
+          <div class="detail-content">
+            <h3 class="detail-heading" id="detailHeading">系统管理员</h3>
+            <p class="detail-copy" id="detailCopy">拥有全部管理权限</p>
+            <div class="permission-list" id="permissionList">
+              <div class="permission-row">
+                <span>员工管理</span>
+                <span class="switch"></span>
+              </div>
+              <div class="permission-row">
+                <span>考核模板管理</span>
+                <span class="switch"></span>
+              </div>
+              <div class="permission-row">
+                <span>绩效结果查看</span>
+                <span class="switch"></span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script>
+      const roles = [
+        {
+          name: '系统管理员',
+          description: '拥有全部管理权限',
+          count: 3,
+        },
+        {
+          name: '人力资源总监',
+          description: 'HR管理权限',
+          count: 1,
+        },
+        {
+          name: '员工',
+          description: '查看个人考核',
+          count: 6,
+        },
+        {
+          name: '部门负责人',
+          description: '部门管理权限',
+          count: 5,
+        },
+        {
+          name: '直属上级',
+          description: '团队绩效管理',
+          count: 0,
+        },
+      ];
+
+      let selectedIndex = 0;
+      let activeTab = 'permissions';
+
+      const roleList = document.querySelector('#roleList');
+      const detailHeading = document.querySelector('#detailHeading');
+      const detailCopy = document.querySelector('#detailCopy');
+      const memberTabLabel = document.querySelector('#memberTabLabel');
+      const permissionList = document.querySelector('#permissionList');
+
+      const selectRole = (index, nextTab = activeTab) => {
+        selectedIndex = index;
+        activeTab = nextTab;
+        render();
+      };
+
+      const renderRoles = () => {
+        roleList.innerHTML = roles
+          .map(
+            (role, index) => `
+              <article class="role-card ${selectedIndex === index ? 'selected' : ''}">
+                <div
+                  class="role-main"
+                  data-role="${index}"
+                  role="button"
+                  tabindex="0"
+                >
+                  <span class="role-name-line">
+                    <span class="role-name">${role.name}</span>
+                    <span class="builtin-badge">内置</span>
+                  </span>
+                  <span class="role-description">${role.description}</span>
+                  <span class="role-count">成员 ${role.count}</span>
+                  <span class="role-tools">
+                    <button class="icon-button" type="button" title="编辑角色">
+                      <i data-lucide="pencil"></i>
+                    </button>
+                    <button class="icon-button" type="button" title="删除角色">
+                      <i data-lucide="trash-2"></i>
+                    </button>
+                  </span>
+                </div>
+                <button
+                  class="member-entry"
+                  type="button"
+                  data-members="${index}"
+                  aria-label="进入${role.name}的成员管理"
+                  title="成员管理"
+                >
+                  <i data-lucide="chevron-right"></i>
+                </button>
+              </article>
+            `,
+          )
+          .join('');
+
+        roleList.querySelectorAll('[data-role]').forEach((button) => {
+          button.addEventListener('click', () => {
+            selectRole(Number(button.dataset.role), 'permissions');
+          });
+          button.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              selectRole(Number(button.dataset.role), 'permissions');
+            }
+          });
+        });
+
+        roleList.querySelectorAll('.role-tools button').forEach((button) => {
+          button.addEventListener('click', (event) => {
+            event.stopPropagation();
+          });
+        });
+
+        roleList.querySelectorAll('[data-members]').forEach((button) => {
+          button.addEventListener('click', () => {
+            selectRole(Number(button.dataset.members), 'members');
+          });
+        });
+      };
+
+      const renderDetail = () => {
+        const role = roles[selectedIndex];
+        detailHeading.textContent =
+          activeTab === 'permissions' ? role.name : `${role.name} · 成员管理`;
+        detailCopy.textContent =
+          activeTab === 'permissions'
+            ? role.description
+            : `当前角色共有 ${role.count} 名成员`;
+        memberTabLabel.textContent = `成员管理(${role.count})`;
+        permissionList.style.display =
+          activeTab === 'permissions' ? 'grid' : 'none';
+
+        document.querySelectorAll('.tab').forEach((tab) => {
+          tab.classList.toggle('active', tab.dataset.tab === activeTab);
+        });
+      };
+
+      const render = () => {
+        renderRoles();
+        renderDetail();
+        if (window.lucide) {
+          lucide.createIcons({
+            attrs: {
+              'stroke-width': 2,
+              width: 18,
+              height: 18,
+            },
+          });
+        }
+      };
+
+      document.querySelectorAll('.tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+          activeTab = tab.dataset.tab;
+          render();
+        });
+      });
+
+      render();
+    </script>
+  </body>
+</html>
