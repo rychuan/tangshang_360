@@ -387,11 +387,15 @@ const SignDialog: React.FC<SignDialogProps> = ({
   /* ---- media query ---- */
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 639px)');
-    const update = () => setIsMobile(mq.matches);
+    const update = () => {
+      // Lock mode while overlay is open to prevent switching
+      // when phone rotates to landscape (width > 640px)
+      if (!open) setIsMobile(mq.matches);
+    };
     update();
     mq.addEventListener('change', update);
     return () => mq.removeEventListener('change', update);
-  }, []);
+  }, [open]);
 
   /* ---- polling ---- */
   const clearPolling = useCallback(() => {
