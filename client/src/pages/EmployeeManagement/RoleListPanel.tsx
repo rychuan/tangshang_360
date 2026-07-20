@@ -73,7 +73,7 @@ const RoleListPanel: React.FC<RoleListPanelProps> = ({
             </Empty>
           </div>
         ) : (
-          <div className="flex flex-col gap-1 p-2">
+          <div className="flex flex-col gap-2 p-2">
             {roles.map((role) => {
               const selected = role.bizID === selectedBizID;
               const builtin = isBuiltinRole(role.bizID);
@@ -84,8 +84,8 @@ const RoleListPanel: React.FC<RoleListPanelProps> = ({
                   onClick={() => onSelectRole(role)}
                   className={`group grid cursor-pointer grid-cols-[minmax(0,8fr)_minmax(0,2fr)] overflow-hidden rounded-lg border transition-colors ${
                     selected
-                      ? 'border-primary bg-primary/5'
-                      : 'border-transparent hover:bg-muted/50'
+                      ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/10'
+                      : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/40 hover:shadow-sm'
                   }`}
                 >
                   <div className="relative min-w-0 p-3 pr-16">
@@ -144,8 +144,13 @@ const RoleListPanel: React.FC<RoleListPanelProps> = ({
                   </div>
 
                   <Button
+                    variant="ghost"
                     size="icon"
-                    className="h-full w-full self-stretch rounded-none"
+                    className={`h-full w-full self-stretch rounded-none border-l ${
+                      selected
+                        ? 'border-primary bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground'
+                        : 'border-primary/15 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary'
+                    }`}
                     title="成员管理"
                     aria-label={`进入${role.name || role.bizID}的成员管理`}
                     onClick={(e) => {
