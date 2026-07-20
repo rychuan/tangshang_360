@@ -12,7 +12,7 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from '@/components/ui/empty';
-import { Plus, Pencil, Trash2, Shield, Users } from 'lucide-react';
+import { Plus, Pencil, Trash2, Shield, ChevronRight } from 'lucide-react';
 import { getRoleMemberCount, isBuiltinRole } from './role-utils';
 
 interface RoleListPanelProps {
@@ -82,80 +82,79 @@ const RoleListPanel: React.FC<RoleListPanelProps> = ({
                 <div
                   key={role.bizID || String(role.id ?? '')}
                   onClick={() => onSelectRole(role)}
-                  className={`group cursor-pointer rounded-lg border p-3 transition-colors ${
+                  className={`group relative cursor-pointer overflow-hidden rounded-lg border transition-colors ${
                     selected
                       ? 'border-primary bg-primary/5'
                       : 'border-transparent hover:bg-muted/50'
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="truncate text-sm font-medium">
-                          {role.name || role.bizID}
-                        </span>
-                        {builtin && (
-                          <Badge variant="secondary" className="shrink-0">
-                            内置
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
-                        {role.description || '暂无描述'}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        成员 {count}
-                      </p>
+                  <div className="min-w-0 py-3 pl-3 pr-24">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm font-medium">
+                        {role.name || role.bizID}
+                      </span>
+                      {builtin && (
+                        <Badge variant="secondary" className="shrink-0">
+                          内置
+                        </Badge>
+                      )}
                     </div>
-                    <div className="flex shrink-0 flex-col items-end gap-1">
-                      <Button
-                        size="sm"
-                        className="h-7 gap-1 px-2"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onOpenMembers(role);
-                        }}
-                      >
-                        <Users className="size-3.5" />
-                        成员
-                      </Button>
-                      <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                        <CanRole roles={['admin']}>
-                          <CanDo resource="permission_management" action="edit">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-7"
-                              title="编辑角色"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onEditClick(role);
-                              }}
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                          </CanDo>
-                        </CanRole>
-                        <CanRole roles={['admin']}>
-                          <CanDo resource="permission_management" action="edit">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-7"
-                              title={builtin ? '内置角色不可删除' : '删除角色'}
-                              disabled={builtin}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDeleteClick(role);
-                              }}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </CanDo>
-                        </CanRole>
-                      </div>
-                    </div>
+                    <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+                      {role.description || '暂无描述'}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      成员 {count}
+                    </p>
                   </div>
+
+                  <div className="pointer-events-none absolute inset-y-0 right-12 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+                    <CanRole roles={['admin']}>
+                      <CanDo resource="permission_management" action="edit">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-7"
+                          title="编辑角色"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditClick(role);
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </CanDo>
+                    </CanRole>
+                    <CanRole roles={['admin']}>
+                      <CanDo resource="permission_management" action="edit">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-7"
+                          title={builtin ? '内置角色不可删除' : '删除角色'}
+                          disabled={builtin}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteClick(role);
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </CanDo>
+                    </CanRole>
+                  </div>
+
+                  <Button
+                    size="icon"
+                    className="absolute inset-y-0 right-0 h-full w-12 rounded-none"
+                    title="成员管理"
+                    aria-label={`进入${role.name || role.bizID}的成员管理`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenMembers(role);
+                    }}
+                  >
+                    <ChevronRight className="size-5" />
+                  </Button>
                 </div>
               );
             })}
