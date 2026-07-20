@@ -43,7 +43,7 @@ function signBadge(label: string, signedAt?: string) {
 }
 
 const chartConfig = {
-  score: { label: '绩效均分', color: 'hsl(var(--chart-2))' },
+  score: { label: '绩效均分', color: 'var(--chart-2)' },
 };
 
 const MyAssessmentsPage: React.FC = () => {
