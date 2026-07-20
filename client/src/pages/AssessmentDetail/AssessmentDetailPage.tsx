@@ -497,6 +497,10 @@ const AssessmentDetailPage: React.FC = () => {
         open={signDialogOpen}
         onOpenChange={(open) => {
           if (!open) {
+            // Exit fullscreen on close
+            if (document.fullscreenElement) {
+              document.exitFullscreen?.().catch(() => {});
+            }
             void handleCancelSign();
           } else {
             setSignDialogOpen(open);
