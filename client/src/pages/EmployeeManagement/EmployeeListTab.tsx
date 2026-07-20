@@ -324,7 +324,7 @@ const EmployeeListTab: React.FC = () => {
               onValueChange={(value) => setters.setPageSize(Number(value))}
             >
               <SelectTrigger
-                className="h-8 w-20 text-xs sm:h-9 sm:text-sm"
+                className="h-8 w-24 shrink-0 text-xs sm:h-9 sm:text-sm"
                 aria-label="每页条数"
               >
                 <SelectValue />

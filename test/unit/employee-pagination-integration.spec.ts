@@ -76,6 +76,9 @@ describe('employee pagination integration', () => {
     expect(source).toContain('onPageOutOfRange: setters.setPage');
     expect(source).toContain('value={String(filters.pageSize)}');
     expect(source).toContain('setters.setPageSize(Number(value))');
+    expect(source).toContain(
+      'className="h-8 w-24 shrink-0 text-xs sm:h-9 sm:text-sm"',
+    );
     expect(source).toContain('第 {filters.page} / {totalPages} 页');
     expect(source).toContain('aria-disabled={filters.page === 1}');
     expect(source).toContain('aria-disabled={filters.page === totalPages}');
