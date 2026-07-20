@@ -57,6 +57,11 @@ const PermissionPage: React.FC = () => {
     setFormOpen(true);
   };
 
+  const handleOpenMembers = (role: ForceRoleDTO) => {
+    setSelectedRole(role);
+    setActiveTab('members');
+  };
+
   const handleFormSuccess = () => {
     if (formMode === 'edit' && editingRole?.bizID) {
       queryClient.invalidateQueries({ queryKey: ['roles', 'list'] });
@@ -97,6 +102,7 @@ const PermissionPage: React.FC = () => {
             loading={rolesLoading}
             selectedBizID={selectedRole?.bizID ?? null}
             onSelectRole={setSelectedRole}
+            onOpenMembers={handleOpenMembers}
             onCreateClick={handleCreateClick}
             onEditClick={handleEditClick}
             onDeleteClick={(r) => setDeleteTarget(r)}
