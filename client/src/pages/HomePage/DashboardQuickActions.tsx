@@ -1,4 +1,4 @@
-import { ArrowUpRight, CircleAlert, Grid2X2, RefreshCw } from 'lucide-react';
+import { ArrowUpRight, CircleAlert, Grid2X2, RefreshCw } from '@/components/ui/hugeicons';
 import { Link } from 'react-router-dom';
 import {
   Empty,

@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { X, Eraser, CheckCircle } from 'lucide-react';
+import { X, Eraser, CheckCircle } from '@/components/ui/hugeicons';
 import { Button } from '@/components/ui/button';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import * as signTokenApi from '@client/src/api/sign-token';

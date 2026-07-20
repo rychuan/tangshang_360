@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown } from '@/components/ui/hugeicons';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 

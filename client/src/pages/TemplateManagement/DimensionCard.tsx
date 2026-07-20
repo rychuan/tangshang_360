@@ -1,6 +1,6 @@
 import React from 'react';
 import { useFieldArray, type UseFormReturn } from 'react-hook-form';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from '@/components/ui/hugeicons';
 import { Card, CardContent, CardHeader } from '@client/src/components/ui/card';
 import { Button } from '@client/src/components/ui/button';
 import { Input } from '@client/src/components/ui/input';

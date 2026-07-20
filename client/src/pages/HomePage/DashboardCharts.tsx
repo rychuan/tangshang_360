@@ -3,8 +3,8 @@ import {
   BarChart3,
   CircleAlert,
   RefreshCw,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+} from '@/components/ui/hugeicons';
+import type { LucideIcon } from '@/components/ui/hugeicons';
 import type { DashboardOverviewResponse } from '@shared/api.interface';
 import {
   Area,

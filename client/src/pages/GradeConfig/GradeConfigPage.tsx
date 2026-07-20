@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Pencil, Trash2, Award } from 'lucide-react';
+import { Plus, Pencil, Trash2, Award } from '@/components/ui/hugeicons';
 import { CanDo } from '@/hooks/usePermissions';
 import { Button } from '@client/src/components/ui/button';
 import { ActionBadge } from '@/components/business-ui/action-badge';

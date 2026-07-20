@@ -17,7 +17,7 @@ import { logger } from '@lark-apaas/client-toolkit/logger';
 import { handleApiError } from '@/utils/api-error';
 import { getUnlockHistory } from '@/api/assessment-publish';
 import { PUBLISHED_STATUS_LABELS } from './published-assessment-columns';
-import { Clock } from 'lucide-react';
+import { Clock } from '@/components/ui/hugeicons';
 import dayjs from 'dayjs';
 import type { UnlockHistoryItem } from '@shared/api.interface';
 

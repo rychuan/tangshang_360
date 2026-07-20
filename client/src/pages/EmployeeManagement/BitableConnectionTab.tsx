@@ -38,7 +38,7 @@ import {
   ChevronDown,
   ChevronUp,
   HelpCircle,
-} from 'lucide-react';
+} from '@/components/ui/hugeicons';
 import BitableConnectionDialog from './BitableConnectionDialog';
 import SyncLogDrawer from './SyncLogDrawer';
 import * as api from '@/api/bitable-connection';

@@ -1,4 +1,4 @@
-import { Asterisk } from 'lucide-react';
+import { Asterisk } from '@/components/ui/hugeicons';
 
 import type { FieldLayoutProps } from '@client/src/components/business-ui/form/types';
 import { cn } from '@/lib/utils';

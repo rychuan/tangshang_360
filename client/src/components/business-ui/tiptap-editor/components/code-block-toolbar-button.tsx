@@ -1,6 +1,6 @@
 'use client';
 
-import { CodeXml } from 'lucide-react';
+import { CodeXml } from '@/components/ui/hugeicons';
 
 import { useTiptapEditor } from '@/components/business-ui/tiptap-editor/hooks/use-tiptap-editor';
 import { Toggle } from '@/components/ui/toggle';

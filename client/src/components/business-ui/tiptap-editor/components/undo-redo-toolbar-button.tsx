@@ -1,6 +1,6 @@
 'use client';
 
-import { Redo, Undo } from 'lucide-react';
+import { Redo, Undo } from '@/components/ui/hugeicons';
 
 import { useTiptapEditor } from '@/components/business-ui/tiptap-editor/hooks/use-tiptap-editor';
 import { Button } from '@/components/ui/button';

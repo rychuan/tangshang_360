@@ -3,7 +3,7 @@
 ## 核心原则
 
 - 组件位置：`/client/src/components/ui/`
-- 图标库：必须使用 `lucide-react`，禁用 Emoji
+- 图标库：必须使用 `@/components/ui/hugeicons` 提供的 Hugeicons 组件，禁用 Emoji
 - 查阅源码实现：直接读取组件源码了解最新组件实现
 - 交互系统：Button、Badge 使用 elevate 遮罩系统处理 hover/active 状态（通过 `::after` 伪元素叠加 `--elevate-1` / `--elevate-2`）
 

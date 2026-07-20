@@ -37,7 +37,7 @@ import {
   Users,
   ArrowDownToLine,
   ArrowUpFromLine,
-} from 'lucide-react';
+} from '@/components/ui/hugeicons';
 import { toast } from 'sonner';
 import { handleApiError } from '@client/src/utils/api-error';
 import { importFromBitable, exportToBitable } from '@/api/bitable-sync';

@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import { CanDo, usePermission } from '@/hooks/usePermissions';
 import { UserDisplay } from '@/components/business-ui/user-display';
-import { Unlock, BellRing, Download, Award, Undo2 } from 'lucide-react';
+import { Unlock, BellRing, Download, Award, Undo2 } from '@/components/ui/hugeicons';
 import dayjs from 'dayjs';
 import type { AssessmentInstanceItem } from '@shared/api.interface';
 import { StatusBadge } from '@/components/business-ui/status-badge';

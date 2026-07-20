@@ -16,7 +16,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty';
-import { ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Inbox } from '@/components/ui/hugeicons';
 
 // ---------------------------------------------------------------------------
 // Column definition

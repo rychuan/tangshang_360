@@ -1,4 +1,4 @@
-import { CircleAlert, Gauge, RefreshCw } from 'lucide-react';
+import { CircleAlert, Gauge, RefreshCw } from '@/components/ui/hugeicons';
 import type { DashboardOverviewResponse } from '@shared/api.interface';
 import {
   Empty,

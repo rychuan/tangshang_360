@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Link2Off, Pencil } from 'lucide-react';
+import { Link2Off, Pencil } from '@/components/ui/hugeicons';
 
 import { LinkEditForm } from '@/components/business-ui/tiptap-editor/components/link-edit-form';
 import { useTiptapEditor } from '@/components/business-ui/tiptap-editor/hooks/use-tiptap-editor';

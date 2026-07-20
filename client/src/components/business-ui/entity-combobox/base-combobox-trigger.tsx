@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus } from 'lucide-react';
+import { Plus } from '@/components/ui/hugeicons';
 
 import { useEntityComboboxContext } from '@client/src/components/business-ui/entity-combobox/context';
 import { SearchTrigger } from '@client/src/components/business-ui/entity-combobox/search-trigger';

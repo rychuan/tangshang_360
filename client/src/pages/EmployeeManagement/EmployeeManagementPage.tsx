@@ -4,7 +4,7 @@ import { PageHeader } from '@/components/business-ui/page-header';
 import EmployeeListTab from './EmployeeListTab';
 import DepartmentManagementTab from './DepartmentManagementTab';
 import BitableConnectionTab from './BitableConnectionTab';
-import { UserCog } from 'lucide-react';
+import { UserCog } from '@/components/ui/hugeicons';
 import { usePermissions } from '@/hooks/usePermissions';
 import {
   getDefaultEmployeeManagementTab,

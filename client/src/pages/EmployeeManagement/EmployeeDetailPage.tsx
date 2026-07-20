@@ -19,7 +19,7 @@ import {
   ClipboardList,
   CheckCircle2,
   Award,
-} from 'lucide-react';
+} from '@/components/ui/hugeicons';
 
 const roleLabels: Record<string, string> = {
   admin: '系统管理员',

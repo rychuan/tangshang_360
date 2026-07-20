@@ -5,7 +5,7 @@ import {
   Clock3,
   RefreshCw,
   Users,
-} from 'lucide-react';
+} from '@/components/ui/hugeicons';
 import { Link } from 'react-router-dom';
 import type { DashboardTodosResponse } from '@shared/api.interface';
 import { Badge } from '@/components/ui/badge';

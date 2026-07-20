@@ -9,7 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { BellRing } from 'lucide-react';
+import { BellRing } from '@/components/ui/hugeicons';
 import type { ReminderPreviewResponse } from '@shared/api.interface';
 
 interface UnfinishedReminderDialogProps {

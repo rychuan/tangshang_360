@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Baseline, Check, ChevronDown } from 'lucide-react';
+import { Baseline, Check, ChevronDown } from '@/components/ui/hugeicons';
 
 import { useTiptapEditor } from '@/components/business-ui/tiptap-editor/hooks/use-tiptap-editor';
 import { cn } from '@/lib/utils';

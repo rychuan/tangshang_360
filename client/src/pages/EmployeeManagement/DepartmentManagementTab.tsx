@@ -53,7 +53,7 @@ import {
   ChevronDown,
   Building2,
   Users,
-} from 'lucide-react';
+} from '@/components/ui/hugeicons';
 import { showConfirm } from '@lark-apaas/client-toolkit';
 import DepartmentMembersDialog from './DepartmentMembersDialog';
 import { CanDo, usePermission, usePermissions } from '@/hooks/usePermissions';

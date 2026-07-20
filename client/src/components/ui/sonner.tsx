@@ -9,7 +9,7 @@ import {
   InfoIcon,
   Loader2Icon,
   XIcon,
-} from 'lucide-react';
+} from '@/components/ui/hugeicons';
 import { useTheme } from 'next-themes';
 import { Toaster as Sonner, type ToasterProps } from 'sonner';
 

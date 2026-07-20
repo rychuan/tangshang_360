@@ -1,6 +1,6 @@
 'use client';
 
-import { Minus } from 'lucide-react';
+import { Minus } from '@/components/ui/hugeicons';
 
 import { useTiptapEditor } from '@/components/business-ui/tiptap-editor/hooks/use-tiptap-editor';
 import { Button } from '@/components/ui/button';

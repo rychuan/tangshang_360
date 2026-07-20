@@ -7,7 +7,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Smartphone, Loader2, X } from 'lucide-react';
+import { Smartphone, Loader2, X } from '@/components/ui/hugeicons';
 import { toast } from 'sonner';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import SignaturePad from '@/components/SignaturePad';

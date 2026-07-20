@@ -26,7 +26,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty';
-import { Inbox } from 'lucide-react';
+import { Inbox } from '@/components/ui/hugeicons';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useFieldArray, type Control } from 'react-hook-form';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from '@/components/ui/hugeicons';
 import { Button } from '@client/src/components/ui/button';
 import {
   FormControl,

@@ -6,7 +6,7 @@ import {
   ReactNodeViewRenderer,
   type NodeViewProps,
 } from '@tiptap/react';
-import { CircleAlert, DownloadIcon, EyeIcon, Trash2Icon } from 'lucide-react';
+import { CircleAlert, DownloadIcon, EyeIcon, Trash2Icon } from '@/components/ui/hugeicons';
 import { nanoid } from 'nanoid';
 import { toast } from 'sonner';
 

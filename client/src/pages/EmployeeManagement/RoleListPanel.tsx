@@ -12,7 +12,13 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from '@/components/ui/empty';
-import { Plus, Pencil, Trash2, Shield, ChevronRight } from 'lucide-react';
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Shield,
+  ChevronRight,
+} from '@/components/ui/hugeicons';
 import { getRoleMemberCount, isBuiltinRole } from './role-utils';
 
 interface RoleListPanelProps {
@@ -82,9 +88,9 @@ const RoleListPanel: React.FC<RoleListPanelProps> = ({
                 <div
                   key={role.bizID || String(role.id ?? '')}
                   onClick={() => onSelectRole(role)}
-                  className={`group grid cursor-pointer grid-cols-[minmax(0,8fr)_minmax(0,2fr)] overflow-hidden rounded-lg border transition-colors ${
+                  className={`group relative isolate grid min-h-[76px] cursor-pointer grid-cols-[minmax(0,8fr)_minmax(0,2fr)] overflow-hidden rounded-lg border transition-colors ${
                     selected
-                      ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/10'
+                      ? 'border-primary/40 bg-primary/5 after:pointer-events-none after:absolute after:inset-0 after:z-10 after:rounded-[inherit] after:ring-1 after:ring-inset after:ring-primary/60'
                       : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/40 hover:shadow-sm'
                   }`}
                 >

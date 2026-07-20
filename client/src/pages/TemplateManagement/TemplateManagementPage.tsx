@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/api/queryKeys';
 import { toast } from 'sonner';
-import { Plus, Eye, Ban, Trash2, Search, RotateCcw } from 'lucide-react';
+import { Plus, Eye, Ban, Trash2, Search, RotateCcw } from '@/components/ui/hugeicons';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { CanDo, usePermission } from '@/hooks/usePermissions';
 import { Button } from '@client/src/components/ui/button';
