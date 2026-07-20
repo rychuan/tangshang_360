@@ -298,12 +298,14 @@ const MobileSignOverlay: React.FC<{
       role="dialog"
       aria-modal="true"
     >
-      {/* Header: full bar in portrait, compact floating in landscape */}
+      {/* Header */}
       <header
-        className={'flex shrink-0 items-center justify-between border-b bg-white px-3 ' +
+        className={
+          'flex shrink-0 items-center justify-between border-b bg-white px-3 ' +
           (landscape
             ? 'absolute left-1.5 top-1.5 z-20 h-8 max-w-[45vw] rounded-md border bg-white/95 px-1.5 shadow-sm'
-            : 'h-11')}
+            : 'h-11')
+        }
       >
         <div className="flex min-w-0 items-center gap-2">
           <button
@@ -325,17 +327,20 @@ const MobileSignOverlay: React.FC<{
         )}
       </header>
 
-      {/* Rotate hint — subtle, portrait only */}
-      {!landscape && (
-        <div className="flex items-center justify-center gap-1.5 bg-amber-50 px-3 py-1.5 text-[11px] text-amber-700">
-          <span>📱 ↺</span>
-          <span>旋转手机至横屏，签名区域更大</span>
-        </div>
-      )}
-
-      {/* Signature pad */}
-      <div className={'relative flex min-h-0 flex-1 ' + (landscape ? 'p-1' : 'p-3')}>
-        <div className="relative flex min-h-0 flex-1 rounded-lg border-2 border-dashed border-input bg-white">
+      {/* Signature pad — auto-rotated 90° in portrait, maximized in landscape */}
+      <div className={'relative flex min-h-0 flex-1 items-center justify-center overflow-hidden ' + (landscape ? 'p-1' : 'p-2')}>
+        <div
+          className="relative rounded-lg border-2 border-dashed border-input bg-white"
+          style={
+            landscape
+              ? { width: '100%', height: '100%' }
+              : {
+                  transform: 'rotate(90deg)',
+                  width: 'calc(100dvh - 180px)',
+                  height: 'calc(100dvw - 16px)',
+                }
+          }
+        >
           <canvas
             ref={canvasRef}
             className="absolute inset-0 size-full touch-none"
@@ -369,7 +374,7 @@ const MobileSignOverlay: React.FC<{
         </div>
       </div>
 
-      {/* Footer: full bar in portrait, floating in landscape */}
+      {/* Footer */}
       <footer
         className={
           'shrink-0 border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] ' +
@@ -377,7 +382,6 @@ const MobileSignOverlay: React.FC<{
         }
       >
         <div className="flex items-center justify-between gap-3">
-          {/* Send-to-phone — portrait only */}
           {!landscape && (
             <div className="flex flex-col items-center gap-1 rounded-lg border bg-muted/30 p-2">
               {mobileSent ? (
