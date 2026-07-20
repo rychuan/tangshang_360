@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>绩效详情 — 移动端竖屏适配预览</title>
+<style>
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --border: 214.3 31.8% 91.4%;
+    --success: 142.1 76.2% 36.3%;
+    --success-bg: 142.1 76.2% 36.3% / 0.1;
+    --warning: 38 92% 50%;
+    --warning-bg: 38 92% 50% / 0.1;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-bg: 0 84.2% 60.2% / 0.1;
+    --radius: 0.5rem;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
+    background: #f0f2f5;
+    color: hsl(222.2, 84%, 4.9%);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100dvh;
+    display: flex;
+    justify-content: center;
+  }
+  .phone-frame {
+    width: 100%;
+    max-width: 430px;
+    background: #f8f9fb;
+    min-height: 100dvh;
+    position: relative;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.05), 0 20px 60px rgba(0,0,0,.12);
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  @media (min-width: 768px) {
+    body { align-items: center; padding: 24px 0; }
+    .phone-frame { border-radius: 40px; min-height: auto; height: 932px; }
+  }
+
+  /* topbar */
+  .topbar {
+    position: sticky; top: 0; z-index: 30;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px;
+    background: rgba(255,255,255,.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid hsl(var(--border));
+    transition: box-shadow .25s;
+  }
+  .topbar.scrolled { box-shadow: 0 1px 8px rgba(0,0,0,.06); }
+  .topbar-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .topbar-back {
+    display: flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; border-radius: 50%; border: 1px solid hsl(var(--border));
+    background: #fff; color: hsl(var(--foreground)); font-size: 16px; cursor: pointer;
+    flex-shrink: 0;
+  }
+  .topbar-title { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .topbar-avatar { width: 32px; height: 32px; border-radius: 50%; background: hsl(var(--primary)); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
+
+  /* page content */
+  .page-content { padding: 14px 16px; padding-bottom: calc(100px + var(--safe-bottom)); display: flex; flex-direction: column; gap: 14px; }
+
+  /* status row */
+  .status-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .period-label { font-size: 15px; font-weight: 600; color: hsl(var(--foreground)); }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500;
+  }
+  .status-pill.self-review { background: hsla(38, 92%, 50%, 0.1); color: hsl(38, 92%, 50%); }
+  .status-pill.completed { background: hsla(142.1, 76.2%, 36.3%, 0.1); color: hsl(142.1, 76.2%, 36.3%); }
+
+  /* score summary card */
+  .score-card {
+    background: #fff; border-radius: 12px; padding: 16px; border: 1px solid hsl(var(--border));
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  }
+  .score-item { text-align: center; }
+  .score-item-label { font-size: 12px; color: hsl(var(--muted-foreground)); margin-bottom: 2px; }
+  .score-item-value { font-size: 22px; font-weight: 700; color: hsl(var(--primary)); line-height: 1.2; }
+  .score-item-grade {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 32px; height: 28px; padding: 0 10px;
+    border-radius: 6px; font-size: 16px; font-weight: 700;
+    background: hsl(var(--primary)); color: #fff;
+  }
+
+  /* stepper cards */
+  .stepper-section { display: flex; flex-direction: column; gap: 10px; }
+  .stepper-card {
+    background: #fff; border-radius: 12px; padding: 14px 16px; border: 1px solid hsl(var(--border));
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .stepper-card.active { border-color: hsl(var(--primary)); background: hsla(221.2, 83.2%, 53.3%, 0.03); box-shadow: 0 0 0 3px hsla(221.2, 83.2%, 53.3%, 0.08); }
+  .stepper-card.done { border-color: hsla(142.1, 76.2%, 36.3%, 0.25); background: hsla(142.1, 76.2%, 36.3%, 0.02); }
+  .stepper-header { display: flex; align-items: center; justify-content: space-between; }
+  .stepper-label { font-size: 14px; font-weight: 600; }
+  .stepper-badge {
+    display: inline-flex; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;
+  }
+  .stepper-badge.active { background: hsla(221.2, 83.2%, 53.3%, 0.1); color: hsl(var(--primary)); }
+  .stepper-badge.done { background: hsla(142.1, 76.2%, 36.3%, 0.1); color: hsl(142.1, 76.2%, 36.3%); }
+  .stepper-badge.pending { background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
+  .stepper-user { display: flex; align-items: center; gap: 6px; }
+  .stepper-user-avatar { width: 24px; height: 24px; border-radius: 50%; background: hsl(var(--muted)); display: flex; align-items: center; justify-content: center; font-size: 11px; color: hsl(var(--muted-foreground)); }
+  .stepper-user-name { font-size: 13px; color: hsl(var(--muted-foreground)); }
+  .stepper-result {
+    display: flex; align-items: center; gap: 12px;
+    background: #f8f9fb; border-radius: 8px; padding: 10px 12px; border: 1px solid hsl(var(--border));
+  }
+  .stepper-score { width: 64px; text-align: center; flex-shrink: 0; }
+  .stepper-score-val { font-size: 17px; font-weight: 600; }
+  .stepper-divider { width: 1px; height: 36px; background: hsl(var(--border)); flex-shrink: 0; }
+  .stepper-sign { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; }
+  .stepper-sign img { max-height: 40px; max-width: 100%; }
+  .stepper-sign-placeholder { font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .stepper-arrow {
+    display: flex; justify-content: center; padding: 0px 0;
+    color: hsl(214.3, 31.8%, 80%); font-size: 18px;
+  }
+
+  /* indicator cards */
+  .dimension-section { display: flex; flex-direction: column; gap: 8px; }
+  .dimension-card {
+    background: #fff; border-radius: 12px; border: 1px solid hsl(var(--border)); overflow: hidden;
+  }
+  .dimension-header {
+    background: #f8f9fb; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .dimension-name { font-size: 15px; font-weight: 600; }
+  .dimension-weight {
+    display: inline-flex; padding: 2px 10px; border-radius: 12px;
+    font-size: 12px; font-weight: 700;
+    background: hsla(221.2, 83.2%, 53.3%, 0.1); color: hsl(var(--primary));
+  }
+  .indicator-item { padding: 14px 16px; border-top: 1px solid #f0f1f3; }
+  .indicator-top { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+  .indicator-content { font-size: 14px; font-weight: 500; line-height: 1.45; flex: 1; }
+  .indicator-weight-badge {
+    display: inline-flex; padding: 1px 8px; border-radius: 6px; font-size: 12px;
+    border: 1px solid hsl(var(--border)); color: hsl(var(--muted-foreground)); white-space: nowrap; height: 22px; align-items: center;
+  }
+  .indicator-desc { font-size: 12px; color: hsl(var(--muted-foreground)); margin-bottom: 8px; line-height: 1.4; }
+  .indicator-fields { display: flex; flex-direction: column; gap: 8px; }
+  .indicator-field { display: flex; flex-direction: column; gap: 3px; }
+  .indicator-field-label { font-size: 11px; color: hsl(var(--muted-foreground)); font-weight: 500; }
+  .indicator-field input, .indicator-field textarea {
+    width: 100%; padding: 8px 10px; border: 1px solid hsl(var(--border)); border-radius: 6px;
+    font-size: 13px; font-family: inherit; background: #fff; outline: none;
+  }
+  .indicator-field input:focus, .indicator-field textarea:focus {
+    border-color: hsl(var(--primary)); box-shadow: 0 0 0 3px hsla(221.2, 83.2%, 53.3%, 0.1);
+  }
+  .indicator-field textarea { min-height: 60px; resize: vertical; }
+  .indicator-score-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .score-input-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .score-input-wrap input {
+    width: 72px; text-align: center; padding: 6px; border: 1px solid hsl(var(--border)); border-radius: 6px; font-size: 14px; outline: none;
+  }
+  .score-input-wrap input:focus { border-color: hsl(var(--primary)); box-shadow: 0 0 0 3px hsla(221.2, 83.2%, 53.3%, 0.1); }
+  .score-warning { font-size: 11px; color: hsl(var(--warning)); margin-top: 1px; }
+
+  .indicator-done .indicator-fields { display: flex; flex-direction: column; gap: 6px; }
+  .indicator-done-value { font-size: 13px; line-height: 1.4; }
+  .indicator-done-label { font-size: 11px; color: hsl(var(--muted-foreground)); }
+
+  /* bottom bar */
+  .bottom-bar {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 430px;
+    background: rgba(255,255,255,.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid hsl(var(--border));
+    padding: 12px 16px; padding-bottom: calc(12px + var(--safe-bottom));
+    display: flex; gap: 10px; justify-content: center;
+    box-shadow: 0 -4px 12px rgba(0,0,0,.06);
+    z-index: 25;
+  }
+  .bottom-bar .btn {
+    height: 44px; border-radius: 10px; font-size: 15px; font-weight: 600; padding: 0 24px;
+    border: none; cursor: pointer; display: flex; align-items: center; gap: 6px;
+    transition: all .15s;
+  }
+  .btn-outline { background: #fff; border: 1px solid hsl(var(--border)); color: hsl(var(--foreground)); }
+  .btn-primary { background: hsl(var(--primary)); color: #fff; }
+  .btn-outline:active { background: hsl(var(--muted)); }
+  .btn-primary:active { background: hsl(221.2, 83.2%, 45%); }
+
+  /* sign dialog overlay */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 50; justify-content: center; align-items: flex-end; }
+  .overlay.show { display: flex; }
+  .dialog {
+    background: #fff; border-radius: 16px 16px 0 0; width: 100%; max-width: 430px;
+    padding: 20px 16px; padding-bottom: calc(20px + var(--safe-bottom));
+    display: flex; flex-direction: column; gap: 16px;
+    animation: slideUp .25s ease-out;
+    max-height: 85vh; overflow-y: auto;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .dialog-title { font-size: 17px; font-weight: 600; }
+  .dialog-desc { font-size: 13px; color: hsl(var(--muted-foreground)); }
+  .sign-pad { border: 2px dashed hsl(var(--border)); border-radius: 10px; background: #fafafa; height: 180px; position: relative; overflow: hidden; }
+  .sign-pad-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: hsl(var(--muted-foreground)); font-size: 14px; pointer-events: none; }
+  .sign-pad-hint { font-size: 12px; border-top: 1px solid rgba(0,0,0,.1); padding-top: 6px; margin-top: 4px; }
+  .sign-pad-clear {
+    position: absolute; right: 8px; top: 8px; z-index: 1;
+    width: 30px; height: 30px; border-radius: 50%; background: #fff; border: 1px solid hsl(var(--border));
+    display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px;
+  }
+  .dialog-actions { display: flex; gap: 10px; justify-content: flex-end; }
+  .dialog-divider { display: flex; align-items: center; gap: 10px; margin: 2px 0; }
+  .dialog-divider::before, .dialog-divider::after { content: ''; flex: 1; height: 1px; background: hsl(var(--border)); }
+  .dialog-divider span { font-size: 11px; color: hsl(var(--muted-foreground)); text-transform: uppercase; }
+  .send-phone-card { background: #f8f9fb; border-radius: 10px; border: 1px solid hsl(var(--border)); padding: 14px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .send-phone-icon { font-size: 32px; }
+  .send-phone-text { font-size: 13px; color: hsl(var(--muted-foreground)); text-align: center; }
+  .btn-phone {
+    height: 38px; padding: 0 16px; border-radius: 8px; font-size: 13px; border: 1px solid hsl(var(--border)); background: #fff; cursor: pointer; display: flex; align-items: center; gap: 6px;
+  }
+
+  /* back to top */
+  .back-to-top {
+    position: fixed; bottom: 90px; right: 20px; z-index: 26;
+    width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 1px solid hsl(var(--border));
+    box-shadow: 0 2px 8px rgba(0,0,0,.08); display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 18px; opacity: 0; transform: translateY(10px);
+    transition: opacity .3s, transform .3s; pointer-events: none;
+  }
+  .back-to-top.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+
+  /* toast */
+  .toast {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+    background: #333; color: #fff; padding: 10px 20px; border-radius: 8px;
+    font-size: 14px; z-index: 100; animation: fadeIn .3s;
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(-8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+</style>
+</head>
+<body>
+<div class="phone-frame" id="phone">
+
+  <!-- topbar -->
+  <div class="topbar" id="topbar">
+    <div class="topbar-left">
+      <button class="topbar-back" title="返回">←</button>
+      <span class="topbar-title">绩效详情</span>
+    </div>
+    <div class="topbar-right">
+      <span style="font-size:14px;">🔍</span>
+      <div class="topbar-avatar">C</div>
+    </div>
+  </div>
+
+  <!-- page content -->
+  <div class="page-content" id="pageContent">
+
+    <!-- status row -->
+    <div class="status-row">
+      <span class="period-label">2026年7月考核</span>
+      <span class="status-pill self-review">⏳ 自评进行中</span>
+    </div>
+
+    <!-- score summary card -->
+    <div class="score-card">
+      <div class="score-item">
+        <div class="score-item-label">总分</div>
+        <div class="score-item-value">92.5</div>
+      </div>
+      <div class="score-item">
+        <div class="score-item-label">等级</div>
+        <div class="score-item-grade">A</div>
+      </div>
+      <div class="score-item">
+        <div class="score-item-label">系数</div>
+        <div class="score-item-value">1.2</div>
+      </div>
+    </div>
+
+    <!-- stepper section -->
+    <div class="stepper-section">
+      <div class="stepper-card active">
+        <div class="stepper-header">
+          <span class="stepper-label">本人自评 + 签名</span>
+          <span class="stepper-badge active">进行中</span>
+        </div>
+        <div class="stepper-user">
+          <div class="stepper-user-avatar">陈</div>
+          <span class="stepper-user-name">陈小明 · 前端工程师</span>
+        </div>
+        <div class="stepper-result">
+          <div class="stepper-score"><span class="stepper-score-val">88.0分</span></div>
+          <div class="stepper-divider"></div>
+          <div class="stepper-sign"><span class="stepper-sign-placeholder">未签名</span></div>
+        </div>
+      </div>
+      <div class="stepper-arrow">↓</div>
+      <div class="stepper-card">
+        <div class="stepper-header">
+          <span class="stepper-label">上级评分 + 签名</span>
+          <span class="stepper-badge pending">待进行</span>
+        </div>
+        <div class="stepper-user">
+          <div class="stepper-user-avatar">李</div>
+          <span class="stepper-user-name">李主管 · 技术总监</span>
+        </div>
+        <div class="stepper-result">
+          <div class="stepper-score"><span class="stepper-sign-placeholder" style="font-size:14px;">待进行</span></div>
+          <div class="stepper-divider"></div>
+          <div class="stepper-sign"><span class="stepper-sign-placeholder">未签名</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- dimension section -->
+    <div class="dimension-section">
+      <!-- dim 1: 工作业绩 -->
+      <div class="dimension-card">
+        <div class="dimension-header">
+          <span class="dimension-name">📊 工作业绩</span>
+          <span class="dimension-weight">权重分 40%</span>
+        </div>
+        <!-- indicator 1 -->
+        <div class="indicator-item">
+          <div class="indicator-top">
+            <span class="indicator-content">核心功能开发完成率</span>
+            <span class="indicator-weight-badge">10分</span>
+          </div>
+          <div class="indicator-desc">按时完成分配的模块开发任务，包括需求分析、编码、自测</div>
+          <div class="indicator-fields">
+            <div class="indicator-field">
+              <span class="indicator-field-label">完成情况</span>
+              <textarea placeholder="填写完成情况">已完成用户管理模块、权限管理模块、绩效看板模块的开发工作，全部通过测试验收。</textarea>
+            </div>
+            <div class="indicator-score-row">
+              <div class="score-input-wrap">
+                <span class="indicator-field-label">自评</span>
+                <input type="number" placeholder="0" value="9">
+                <span class="score-warning">超过1.2系数</span>
+              </div>
+              <div class="score-input-wrap">
+                <span class="indicator-field-label">上级评分</span>
+                <input type="number" placeholder="0" disabled style="background:hsl(var(--muted))">
+              </div>
+            </div>
+            <div class="indicator-field">
+              <span class="indicator-field-label">备注</span>
+              <input placeholder="备注" value="">
+            </div>
+          </div>
+        </div>
+        <!-- indicator 2 -->
+        <div class="indicator-item">
+          <div class="indicator-top">
+            <span class="indicator-content">代码质量与规范执行</span>
+            <span class="indicator-weight-badge">8分</span>
+          </div>
+          <div class="indicator-desc">代码评审通过率、单元测试覆盖率、编码规范遵守</div>
+          <div class="indicator-fields">
+            <div class="indicator-field">
+              <span class="indicator-field-label">完成情况</span>
+              <textarea placeholder="填写完成情况">代码评审通过率100%，单元测试覆盖率达到85%</textarea>
+            </div>
+            <div class="indicator-score-row">
+              <div class="score-input-wrap">
+                <span class="indicator-field-label">自评</span>
+                <input type="number" placeholder="0" value="8">
+              </div>
+              <div class="score-input-wrap">
+                <span class="indicator-field-label">上级评分</span>
+                <input type="number" placeholder="0" disabled style="background:hsl(var(--muted))">
+              </div>
+            </div>
+            <div class="indicator-field">
+              <span class="indicator-field-label">备注</span>
+              <input placeholder="备注" value="">
+            </div>
+          </div>
+        </div>
+        <!-- indicator 3 -->
+        <div class="indicator-item">
+          <div class="indicator-top">
+            <span class="indicator-content">技术文档编写</span>
+            <span class="indicator-weight-badge">5分</span>
+          </div>
+          <div class="indicator-desc">API文档、技术方案文档、项目周报的完整性</div>
+          <div class="indicator-fields">
+            <div class="indicator-field">
+              <span class="indicator-field-label">完成情况</span>
+              <textarea placeholder="填写完成情况">已完成</textarea>
+            </div>
+            <div class="indicator-score-row">
+              <div class="score-input-wrap">
+                <span class="indicator-field-label">自评</span>
+                <input type="number" placeholder="0" value="4">
+              </div>
+              <div class="score-input-wrap">
+                <span class="indicator-field-label">上级评分</span>
+                <input type="number" placeholder="0" disabled style="background:hsl(var(--muted))">
+              </div>
+            </div>
+            <div class="indicator-field">
+              <span class="indicator-field-label">备注</span>
+              <input placeholder="备注" value="">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:center;color:hsl(214.3,31.8%,80%);font-size:16px;">↓</div>
+
+      <!-- dim 2: 工作态度 (已完成) -->
+      <div class="dimension-card">
+        <div class="dimension-header">
+          <span class="dimension-name">💪 工作态度</span>
+          <span class="dimension-weight">权重分 30%</span>
+        </div>
+        <div class="indicator-item indicator-done">
+          <div class="indicator-top">
+            <span class="indicator-content">团队协作与沟通</span>
+            <span class="indicator-weight-badge">8分</span>
+          </div>
+          <div class="indicator-fields">
+            <div>
+              <span class="indicator-done-label">完成情况</span>
+              <div class="indicator-done-value">积极响应需求变更，协助后端团队排查接口问题2次</div>
+            </div>
+            <div class="indicator-score-row">
+              <div style="text-align:center;">
+                <span class="indicator-done-label">自评</span>
+                <div class="indicator-done-value" style="font-weight:600;">8</div>
+              </div>
+              <div style="text-align:center;">
+                <span class="indicator-done-label">上级评分</span>
+                <div class="indicator-done-value" style="font-weight:600;">8</div>
+              </div>
+            </div>
+            <div>
+              <span class="indicator-done-label">备注</span>
+              <div class="indicator-done-value">自评：协作积极，响应及时<br>上级：表现良好</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:center;color:hsl(214.3,31.8%,80%);font-size:16px;">↓</div>
+
+      <!-- dim 3: 学习成长 (已完成 - 只读) -->
+      <div class="dimension-card">
+        <div class="dimension-header">
+          <span class="dimension-name">📚 学习成长</span>
+          <span class="dimension-weight">权重分 20%</span>
+        </div>
+        <div class="indicator-item indicator-done">
+          <div class="indicator-top">
+            <span class="indicator-content">技术分享与知识沉淀</span>
+            <span class="indicator-weight-badge">10分</span>
+          </div>
+          <div class="indicator-fields">
+            <div>
+              <span class="indicator-done-label">完成情况</span>
+              <div class="indicator-done-value">组织团队技术分享2次，输出前端性能优化实践文档1篇</div>
+            </div>
+            <div class="indicator-score-row">
+              <div style="text-align:center;">
+                <span class="indicator-done-label">自评</span>
+                <div class="indicator-done-value" style="font-weight:600;">9</div>
+              </div>
+              <div style="text-align:center;">
+                <span class="indicator-done-label">上级评分</span>
+                <div class="indicator-done-value" style="font-weight:600;">9</div>
+              </div>
+            </div>
+            <div>
+              <span class="indicator-done-label">备注</span>
+              <div class="indicator-done-value">自评：分享内容有深度<br>上级：继续保持</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /page-content -->
+
+  <!-- bottom bar -->
+  <div class="bottom-bar" id="bottomBar">
+    <button class="btn btn-outline" id="btnDraft">💾 保存草稿</button>
+    <button class="btn btn-primary" id="btnSubmit">📨 提交自评</button>
+  </div>
+
+  <!-- back to top -->
+  <div class="back-to-top" id="backToTop">↑</div>
+
+  <!-- sign dialog overlay -->
+  <div class="overlay" id="signOverlay">
+    <div class="dialog">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div class="dialog-title">本人签名确认</div>
+          <div class="dialog-desc">请在下方区域手写签名</div>
+        </div>
+        <button style="width:30px;height:30px;border-radius:50%;border:1px solid hsl(var(--border));background:#fff;font-size:16px;cursor:pointer;flex-shrink:0;" id="btnCloseDialog">✕</button>
+      </div>
+      <div class="sign-pad" id="signPad">
+        <div class="sign-pad-empty">
+          <span>请在此区域手写签名</span>
+          <span class="sign-pad-hint">使用手指在屏幕上书写</span>
+        </div>
+        <button class="sign-pad-clear" id="btnClearSign">🧹</button>
+        <canvas id="signCanvas" style="position:absolute;inset:0;width:100%;height:100%;touch-action:none;"></canvas>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn btn-outline" style="font-size:14px;height:42px;" id="btnCancelSign">取消</button>
+        <button class="btn btn-primary" style="font-size:14px;height:42px;" id="btnConfirmSign">确认签名</button>
+      </div>
+      <div class="dialog-divider"><span>或者</span></div>
+      <div class="send-phone-card" id="sendPhoneCard">
+        <div class="send-phone-icon">📱</div>
+        <div class="send-phone-text">手机全屏签名更方便</div>
+        <button class="btn-phone" id="btnSendPhone">📱 发送到手机签名</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const phone = document.getElementById('phone');
+  const topbar = document.getElementById('topbar');
+  const backToTop = document.getElementById('backToTop');
+
+  // --- topbar scroll shadow ---
+  phone.addEventListener('scroll', function() {
+    if (phone.scrollTop > 4) topbar.classList.add('scrolled');
+    else topbar.classList.remove('scrolled');
+
+    // back to top visibility
+    if (phone.scrollTop > phone.clientHeight) {
+      backToTop.classList.add('visible');
+    } else {
+      backToTop.classList.remove('visible');
+    }
+  });
+
+  // --- back to top ---
+  backToTop.addEventListener('click', function() {
+    phone.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // --- sign dialog ---
+  var overlay = document.getElementById('signOverlay');
+  var btnSubmit = document.getElementById('btnSubmit');
+  function closeDialog() { overlay.classList.remove('show'); }
+
+  btnSubmit.addEventListener('click', function() { overlay.classList.add('show'); });
+  document.getElementById('btnCloseDialog').addEventListener('click', closeDialog);
+  document.getElementById('btnCancelSign').addEventListener('click', closeDialog);
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) closeDialog(); });
+
+  // --- signature pad ---
+  var signPad = document.getElementById('signPad');
+  var canvas = document.getElementById('signCanvas');
+  var ctx = canvas.getContext('2d');
+  var drawing = false;
+  var emptyEl = document.querySelector('.sign-pad-empty');
+
+  function resizeCanvas() {
+    var dpr = window.devicePixelRatio || 1;
+    var rect = signPad.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#1a1a1a';
+  }
+  resizeCanvas();
+
+  function getPos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var cx = e.touches ? e.touches[0].clientX : e.clientX;
+    var cy = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: cx - rect.left, y: cy - rect.top };
+  }
+
+  canvas.addEventListener('pointerdown', function(e) { drawing = true; ctx.beginPath(); var p = getPos(e); ctx.moveTo(p.x, p.y); e.preventDefault(); });
+  canvas.addEventListener('pointermove', function(e) {
+    if (!drawing) return;
+    e.preventDefault();
+    var p = getPos(e);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    if (emptyEl) emptyEl.style.display = 'none';
+  });
+  canvas.addEventListener('pointerup', function() { drawing = false; ctx.beginPath(); });
+  canvas.addEventListener('pointerleave', function() { drawing = false; ctx.beginPath(); });
+
+  document.getElementById('btnClearSign').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    resizeCanvas();
+    if (emptyEl) emptyEl.style.display = '';
+  });
+
+  // --- send to phone flow ---
+  document.getElementById('btnSendPhone').addEventListener('click', function() {
+    document.getElementById('sendPhoneCard').innerHTML =
+      '<div style="display:flex;align-items:center;gap:8px;color:hsl(var(--primary));"><span style="font-size:18px;">⏳</span><span style="font-size:14px;font-weight:500;">等待手机签名...</span></div>' +
+      '<div style="font-size:12px;color:hsl(var(--muted-foreground));text-align:center;">已发送到您的飞书，请在手机上点击链接完成签名</div>';
+  });
+
+  // --- save draft toast ---
+  document.getElementById('btnDraft').addEventListener('click', function() {
+    var t = document.createElement('div');
+    t.className = 'toast';
+    t.textContent = '✅ 草稿已保存';
+    document.body.appendChild(t);
+    setTimeout(function() { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(function() { t.remove(); }, 300); }, 1500);
+  });
+
+  // --- confirm sign ---
+  document.getElementById('btnConfirmSign').addEventListener('click', function() {
+    closeDialog();
+    var t = document.createElement('div');
+    t.className = 'toast';
+    t.textContent = '✅ 签名已确认，绩效提交成功';
+    document.body.appendChild(t);
+    setTimeout(function() { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(function() { t.remove(); }, 300); }, 2000);
+  });
+})();
+</script>
+</body>
+</html>

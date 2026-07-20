@@ -52,10 +52,7 @@ import {
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
 import { CanDo, usePermissions } from '@/hooks/usePermissions';
-import {
-  useAuth,
-  ROLE_SUBJECT,
-} from '@lark-apaas/client-toolkit/auth';
+import { useAuth, ROLE_SUBJECT } from '@lark-apaas/client-toolkit/auth';
 import { useEmployeeFilters } from './hooks/useEmployeeFilters';
 import { useEmployeeList } from './hooks/useEmployeeList';
 import { useEmployeeDialogs } from './hooks/useEmployeeDialogs';
@@ -64,8 +61,11 @@ import {
   hasPermission,
 } from '@/components/permission-policy';
 import { getEmployeeListCapabilities } from './employee-management-permissions';
-
-const PAGE_SIZE = 20;
+import {
+  EMPLOYEE_PAGE_SIZES,
+  getEmployeeTotalPages,
+  getEmployeeVisiblePages,
+} from '@shared/employee-pagination';
 
 const EmployeeListTab: React.FC = () => {
   const [syncLoading, setSyncLoading] = React.useState<
@@ -89,6 +89,7 @@ const EmployeeListTab: React.FC = () => {
     refetch,
   } = useEmployeeList(filters, {
     loadTemplates: capabilities.loadTemplates,
+    onPageOutOfRange: setters.setPage,
   });
   const dialogs = useEmployeeDialogs(refetch);
 
@@ -109,7 +110,10 @@ const EmployeeListTab: React.FC = () => {
     );
   };
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = getEmployeeTotalPages(total, filters.pageSize);
+  const visiblePages = getEmployeeVisiblePages(filters.page, totalPages);
+  const isFirstPage = filters.page === 1;
+  const isLastPage = filters.page === totalPages;
 
   const handleSync = async (direction: 'import' | 'export'): Promise<void> => {
     setSyncLoading(direction);
@@ -308,47 +312,90 @@ const EmployeeListTab: React.FC = () => {
       </Card>
 
       {/* 分页 */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => setters.setPage(Math.max(1, filters.page - 1))}
-                  className="h-8 sm:h-9 text-xs sm:text-sm"
-                />
-              </PaginationItem>
-              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                const start = Math.max(
-                  1,
-                  Math.min(filters.page - 2, totalPages - 4),
-                );
-                const p = start + i;
-                if (p > totalPages) return null;
-                return (
-                  <PaginationItem key={p}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-center text-xs text-muted-foreground sm:text-left sm:text-sm">
+          第 {filters.page} / {totalPages} 页，共 {total} 条
+        </div>
+        <div className="flex flex-col items-center gap-3 sm:flex-row">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground sm:text-sm">
+            <span>每页</span>
+            <Select
+              value={String(filters.pageSize)}
+              onValueChange={(value) => setters.setPageSize(Number(value))}
+            >
+              <SelectTrigger
+                className="h-8 w-20 text-xs sm:h-9 sm:text-sm"
+                aria-label="每页条数"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {EMPLOYEE_PAGE_SIZES.map((pageSize) => (
+                    <SelectItem key={pageSize} value={String(pageSize)}>
+                      {pageSize} 条
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+          {totalPages > 1 && (
+            <Pagination className="w-auto">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    aria-disabled={filters.page === 1}
+                    tabIndex={isFirstPage ? -1 : 0}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      if (!isFirstPage) {
+                        setters.setPage(filters.page - 1);
+                      }
+                    }}
+                    className={`h-8 text-xs sm:h-9 sm:text-sm ${
+                      isFirstPage
+                        ? 'pointer-events-none opacity-50'
+                        : 'cursor-pointer'
+                    }`}
+                  />
+                </PaginationItem>
+                {visiblePages.map((page) => (
+                  <PaginationItem key={page}>
                     <PaginationLink
-                      isActive={p === filters.page}
-                      onClick={() => setters.setPage(p)}
-                      className="h-8 w-8 sm:h-9 sm:w-9 text-xs sm:text-sm"
+                      isActive={page === filters.page}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        setters.setPage(page);
+                      }}
+                      className="h-8 w-8 cursor-pointer text-xs sm:h-9 sm:w-9 sm:text-sm"
                     >
-                      {p}
+                      {page}
                     </PaginationLink>
                   </PaginationItem>
-                );
-              })}
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() =>
-                    setters.setPage(Math.min(totalPages, filters.page + 1))
-                  }
-                  className="h-8 sm:h-9 text-xs sm:text-sm"
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+                ))}
+                <PaginationItem>
+                  <PaginationNext
+                    aria-disabled={filters.page === totalPages}
+                    tabIndex={isLastPage ? -1 : 0}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      if (!isLastPage) {
+                        setters.setPage(filters.page + 1);
+                      }
+                    }}
+                    className={`h-8 text-xs sm:h-9 sm:text-sm ${
+                      isLastPage
+                        ? 'pointer-events-none opacity-50'
+                        : 'cursor-pointer'
+                    }`}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
         </div>
-      )}
+      </div>
 
       {/* 表单对话框 */}
       <EmployeeFormDialog

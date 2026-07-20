@@ -1,8 +1,13 @@
 import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import {
+  normalizeEmployeePage,
+  normalizeEmployeePageSize,
+} from '@shared/employee-pagination';
 
 export interface EmployeeFilters {
   page: number;
+  pageSize: number;
   keyword: string;
   department: string;
   positions: string[];
@@ -13,6 +18,7 @@ export interface EmployeeFilters {
 
 export interface EmployeeFiltersSetters {
   setPage: (v: number) => void;
+  setPageSize: (v: number) => void;
   setKeyword: (v: string) => void;
   setDepartment: (v: string) => void;
   setPositions: (v: string[]) => void;
@@ -37,7 +43,8 @@ export function useEmployeeFilters(): [
 
   const filters: EmployeeFilters = useMemo(
     () => ({
-      page: parseInt(getParam('page', '1'), 10),
+      page: normalizeEmployeePage(searchParams.get('page')),
+      pageSize: normalizeEmployeePageSize(searchParams.get('pageSize')),
       keyword: getParam('keyword', ''),
       department: getParam('department', ''),
       positions: getParam('positions', '')
@@ -74,6 +81,7 @@ export function useEmployeeFilters(): [
   const setters: EmployeeFiltersSetters = useMemo(
     () => ({
       setPage: (v: number) => updateParam('page', String(v)),
+      setPageSize: (v: number) => updateParam('pageSize', String(v)),
       setKeyword: (v: string) => updateParam('keyword', v),
       setDepartment: (v: string) => updateParam('department', v),
       setPositions: (v: string[]) =>

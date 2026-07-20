@@ -12,8 +12,7 @@ import type {
 } from '@shared/api.interface';
 import { handleApiError } from '@/utils/api-error';
 import type { EmployeeFilters } from './useEmployeeFilters';
-
-const PAGE_SIZE = 20;
+import { getEmployeeTotalPages } from '@shared/employee-pagination';
 
 interface UseEmployeeListReturn {
   employees: EmployeeItem[];
@@ -26,13 +25,18 @@ interface UseEmployeeListReturn {
   refetch: () => void;
 }
 
+interface UseEmployeeListOptions {
+  loadTemplates: boolean;
+  onPageOutOfRange: (page: number) => void;
+}
+
 /**
  * 封装员工列表数据获取逻辑。
  * 沿用项目现有的 useCallback + useEffect 模式，无外部数据获取库。
  */
 export function useEmployeeList(
   filters: EmployeeFilters,
-  options: { loadTemplates: boolean },
+  options: UseEmployeeListOptions,
 ): UseEmployeeListReturn {
   const [employees, setEmployees] = useState<EmployeeItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -46,7 +50,7 @@ export function useEmployeeList(
     try {
       const res = await employeeManagement.list({
         page: filters.page,
-        pageSize: PAGE_SIZE,
+        pageSize: filters.pageSize,
         keyword: filters.keyword || undefined,
         department: filters.department || undefined,
         positions:
@@ -57,9 +61,14 @@ export function useEmployeeList(
         status: filters.status || undefined,
         binding: filters.binding || undefined,
       });
-      setEmployees(res.items);
       setTotal(res.total);
       setSelectedRowKeys([]);
+      const totalPages = getEmployeeTotalPages(res.total, filters.pageSize);
+      if (filters.page > totalPages) {
+        options.onPageOutOfRange(totalPages);
+        return;
+      }
+      setEmployees(res.items);
     } catch (error: unknown) {
       handleApiError(error);
     } finally {
@@ -67,11 +76,14 @@ export function useEmployeeList(
     }
   }, [
     filters.page,
+    filters.pageSize,
     filters.keyword,
     filters.department,
     filters.positions,
     filters.role,
     filters.status,
+    filters.binding,
+    options.onPageOutOfRange,
   ]);
 
   const fetchPositions = useCallback(async () => {

@@ -24,6 +24,10 @@ import type {
   BindingTemplateOption,
   EmployeeBindingHistoryResponse,
 } from '@shared/api.interface';
+import {
+  normalizeEmployeePage,
+  normalizeEmployeePageSize,
+} from '@shared/employee-pagination';
 
 @Controller('api/employees')
 export class EmployeeManagementController {
@@ -45,8 +49,8 @@ export class EmployeeManagementController {
   ): Promise<EmployeeListResponse> {
     return this.service.list(
       {
-        page: parseInt(page, 10) || 1,
-        pageSize: Math.min(parseInt(pageSize, 10) || 20, 100),
+        page: normalizeEmployeePage(page),
+        pageSize: normalizeEmployeePageSize(pageSize),
         keyword,
         department,
         positions: positions ? positions.split(',').filter(Boolean) : undefined,
