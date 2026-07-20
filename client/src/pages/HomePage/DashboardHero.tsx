@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react';
+import { Plus } from '@/components/ui/hugeicons';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { getGreeting } from './dashboard-utils';

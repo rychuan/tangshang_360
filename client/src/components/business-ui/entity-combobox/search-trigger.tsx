@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, ChevronUp, CircleX, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, CircleX, X } from '@/components/ui/hugeicons';
 
 import { useEntityComboboxContext } from '@client/src/components/business-ui/entity-combobox/context';
 import {

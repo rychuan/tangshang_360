@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-import { X } from 'lucide-react';
+import { X } from '@/components/ui/hugeicons';
 
 import type { Chat } from '@client/src/components/business-ui/chat-select/types';
 import {

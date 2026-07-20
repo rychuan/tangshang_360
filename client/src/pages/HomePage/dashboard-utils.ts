@@ -9,7 +9,7 @@ import {
   UserCog,
   Users,
   type LucideIcon,
-} from 'lucide-react';
+} from '@/components/ui/hugeicons';
 import type {
   DashboardOverviewResponse,
   PermissionItem,

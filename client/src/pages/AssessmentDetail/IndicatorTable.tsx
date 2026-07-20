@@ -17,7 +17,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty';
-import { ChevronDown, BarChart3 } from 'lucide-react';
+import { ChevronDown, BarChart3 } from '@/components/ui/hugeicons';
 import type { AssessmentIndicatorDetail } from '@shared/api.interface';
 import {
   type RatingsState,

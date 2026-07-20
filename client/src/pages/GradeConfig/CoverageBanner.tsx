@@ -1,4 +1,4 @@
-import { CheckCircle2, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, AlertTriangle } from '@/components/ui/hugeicons';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { CoverageResult } from './useGradeConfig';
 

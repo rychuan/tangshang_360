@@ -18,7 +18,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Database } from 'lucide-react';
+import { Plus, Pencil, Trash2, Database } from '@/components/ui/hugeicons';
 import { handleApiError } from '@/utils/api-error';
 import {
   AlertDialog,

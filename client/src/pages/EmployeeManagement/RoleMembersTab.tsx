@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/empty';
 import { toast } from 'sonner';
 import { handleApiError } from '@client/src/utils/api-error';
-import { UserPlus, UserX, Building2, Users } from 'lucide-react';
+import { UserPlus, UserX, Building2, Users } from '@/components/ui/hugeicons';
 import { i18nText } from './role-utils';
 import AddMemberDialog from './AddMemberDialog';
 

@@ -28,7 +28,7 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty';
 import { UserDisplay } from '@/components/business-ui/user-display';
-import { Users } from 'lucide-react';
+import { Users } from '@/components/ui/hugeicons';
 
 import { ROLE_LABELS as roleLabels } from './role-utils';
 

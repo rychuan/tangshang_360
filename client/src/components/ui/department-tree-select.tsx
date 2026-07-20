@@ -8,7 +8,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Building2, ChevronRight, ChevronDown, Check } from 'lucide-react';
+import { Building2, ChevronRight, ChevronDown, Check } from '@/components/ui/hugeicons';
 
 export interface DepartmentTreeSelectProps {
   value: string;

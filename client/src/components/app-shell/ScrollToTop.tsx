@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowUp } from 'lucide-react';
+import { ArrowUp } from '@/components/ui/hugeicons';
 import { Button } from '@/components/ui/button';
 
 export function ScrollToTop() {

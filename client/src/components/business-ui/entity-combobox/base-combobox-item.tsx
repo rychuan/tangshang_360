@@ -1,6 +1,6 @@
 'use client';
 
-import { Check } from 'lucide-react';
+import { Check } from '@/components/ui/hugeicons';
 
 import { useEntityComboboxContext } from '@client/src/components/business-ui/entity-combobox/context';
 import type { ItemValue } from '@client/src/components/business-ui/entity-combobox/types';

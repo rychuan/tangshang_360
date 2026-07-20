@@ -7,7 +7,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { ChevronDown, X } from 'lucide-react';
+import { ChevronDown, X } from '@/components/ui/hugeicons';
 
 export interface PositionMultiSelectProps {
   positions: string[];

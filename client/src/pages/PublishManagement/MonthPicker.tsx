@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon } from '@/components/ui/hugeicons';
 import dayjs from 'dayjs';
 import {
   Popover,

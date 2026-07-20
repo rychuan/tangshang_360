@@ -24,7 +24,7 @@ import {
   CheckCircle,
   AlertTriangle,
   XCircle,
-} from 'lucide-react';
+} from '@/components/ui/hugeicons';
 import { Spinner } from '@/components/ui/spinner';
 import {
   Empty,

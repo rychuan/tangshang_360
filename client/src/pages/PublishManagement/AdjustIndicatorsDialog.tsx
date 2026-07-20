@@ -39,7 +39,7 @@ import {
   FolderPlus,
   X,
   Check,
-} from 'lucide-react';
+} from '@/components/ui/hugeicons';
 import { getEmployeeSnapshot } from '@/api/assessment-publish';
 import {
   validateTotalWeight,

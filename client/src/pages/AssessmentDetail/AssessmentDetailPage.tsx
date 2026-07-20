@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCurrentUserProfile } from '@lark-apaas/client-toolkit/hooks/useCurrentUserProfile';
 import { useBreadcrumb } from '@/components/business-ui/breadcrumb-context';
-import { ArrowLeft, Save, Send, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Save, Send, ChevronRight } from '@/components/ui/hugeicons';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

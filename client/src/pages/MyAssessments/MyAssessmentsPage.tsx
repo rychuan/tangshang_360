@@ -22,7 +22,7 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { Area, AreaChart, CartesianGrid, Line, XAxis, YAxis } from 'recharts';
-import { Eye, ChevronLeft, ChevronRight, AreaChartIcon } from 'lucide-react';
+import { Eye, ChevronLeft, ChevronRight, AreaChartIcon } from '@/components/ui/hugeicons';
 import { PageHeader } from '@/components/business-ui/page-header';
 import { StatusBadge, GradeBadge } from '@/components/business-ui/status-badge';
 import { PageTable } from '@/components/business-ui/page-table';

@@ -4,7 +4,7 @@ import {
   Clock3,
   RefreshCw,
   TrendingUp,
-} from 'lucide-react';
+} from '@/components/ui/hugeicons';
 import type { DashboardOverviewResponse } from '@shared/api.interface';
 import { Button } from '@/components/ui/button';
 import {

@@ -9,7 +9,7 @@ import {
   Eye,
   FileDown,
   Upload,
-} from 'lucide-react';
+} from '@/components/ui/hugeicons';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { toast } from 'sonner';
 import { CanDo, usePermission } from '@/hooks/usePermissions';

@@ -6,7 +6,7 @@ import {
   AlignRight,
   Check,
   ChevronDown,
-} from 'lucide-react';
+} from '@/components/ui/hugeicons';
 
 import { useTiptapEditor } from '@/components/business-ui/tiptap-editor/hooks/use-tiptap-editor';
 import { cn } from '@/lib/utils';

@@ -1,6 +1,6 @@
 'use client';
 
-import { X } from 'lucide-react';
+import { X } from '@/components/ui/hugeicons';
 
 import { IconDepartment } from '@client/src/components/business-ui/department-select/icon-department';
 import type { Department } from '@client/src/components/business-ui/department-select/types';

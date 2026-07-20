@@ -28,7 +28,7 @@ import {
   Trash2,
   Users,
   MoreHorizontal,
-} from 'lucide-react';
+} from '@/components/ui/hugeicons';
 
 export interface EmployeeTableProps {
   employees: EmployeeItem[];

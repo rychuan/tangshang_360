@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { handleApiError } from '@client/src/utils/api-error';
-import { Save, RotateCcw } from 'lucide-react';
+import { Save, RotateCcw } from '@/components/ui/hugeicons';
 
 interface PermissionMatrixTabProps {
   role: ForceRoleDTO;

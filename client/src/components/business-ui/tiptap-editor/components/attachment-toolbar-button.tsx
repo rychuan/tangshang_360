@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Paperclip } from 'lucide-react';
+import { Paperclip } from '@/components/ui/hugeicons';
 import { toast } from 'sonner';
 
 import { useTiptapEditor } from '@/components/business-ui/tiptap-editor/hooks/use-tiptap-editor';

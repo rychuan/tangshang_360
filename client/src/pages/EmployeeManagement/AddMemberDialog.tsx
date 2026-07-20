@@ -17,7 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { toast } from 'sonner';
 import { handleApiError } from '@client/src/utils/api-error';
-import { Search, User, Building2, Users } from 'lucide-react';
+import { Search, User, Building2, Users } from '@/components/ui/hugeicons';
 import { i18nText } from './role-utils';
 
 interface AddMemberDialogProps {

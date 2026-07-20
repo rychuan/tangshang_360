@@ -1,6 +1,6 @@
 import React from 'react';
 import { useScrollStuck } from '@/hooks/useScrollStuck';
-import { Moon, Search, Sun } from 'lucide-react';
+import { Moon, Search, Sun } from '@/components/ui/hugeicons';
 import type { NavItem } from '@/components/navigation';
 import type { UserInput } from '@/components/business-ui/types/user';
 import { NavigationCommand } from '@/components/app-shell/NavigationCommand';

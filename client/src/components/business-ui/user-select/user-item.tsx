@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2 } from 'lucide-react';
+import { Loader2 } from '@/components/ui/hugeicons';
 
 import { BaseComboboxItem } from '@client/src/components/business-ui/entity-combobox/base-combobox-item';
 import { HighlightText } from '@client/src/components/business-ui/entity-combobox/highlight-text';

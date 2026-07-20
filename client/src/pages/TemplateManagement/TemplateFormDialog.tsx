@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { Plus, Eye, Pencil } from 'lucide-react';
+import { Plus, Eye, Pencil } from '@/components/ui/hugeicons';
 import {
   Dialog,
   DialogContent,

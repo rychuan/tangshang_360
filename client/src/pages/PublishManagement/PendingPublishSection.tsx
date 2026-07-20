@@ -22,7 +22,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty';
-import { Award, Settings2, Trash2 } from 'lucide-react';
+import { Award, Settings2, Trash2 } from '@/components/ui/hugeicons';
 import {
   Table,
   TableBody,

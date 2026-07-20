@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Bold, Code, Italic, Strikethrough, Underline } from 'lucide-react';
+import { Bold, Code, Italic, Strikethrough, Underline } from '@/components/ui/hugeicons';
 
 import { useTiptapEditor } from '@/components/business-ui/tiptap-editor/hooks/use-tiptap-editor';
 import { Toggle } from '@/components/ui/toggle';

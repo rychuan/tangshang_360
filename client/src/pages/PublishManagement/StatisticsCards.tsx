@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, CheckCircle, TrendingUp, Clock } from 'lucide-react';
+import { Users, CheckCircle, TrendingUp, Clock } from '@/components/ui/hugeicons';
 import type { PeriodStatisticsResponse } from '@shared/api.interface';
 import { Card, CardContent } from '@/components/ui/card';
 

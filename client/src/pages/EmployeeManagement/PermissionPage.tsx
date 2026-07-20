@@ -22,7 +22,7 @@ import {
 import { PageHeader } from '@/components/business-ui/page-header';
 import { toast } from 'sonner';
 import { handleApiError } from '@client/src/utils/api-error';
-import { Shield, Lock, Users, ShieldCheck } from 'lucide-react';
+import { Shield, Lock, Users, ShieldCheck } from '@/components/ui/hugeicons';
 import RoleListPanel from './RoleListPanel';
 import { getRoleMemberCount } from './role-utils';
 import PermissionMatrixTab from './PermissionMatrixTab';
@@ -55,6 +55,11 @@ const PermissionPage: React.FC = () => {
     setFormMode('edit');
     setEditingRole(role);
     setFormOpen(true);
+  };
+
+  const handleSelectRole = (role: ForceRoleDTO) => {
+    setSelectedRole(role);
+    setActiveTab('permissions');
   };
 
   const handleOpenMembers = (role: ForceRoleDTO) => {
@@ -101,7 +106,7 @@ const PermissionPage: React.FC = () => {
             roles={roles}
             loading={rolesLoading}
             selectedBizID={selectedRole?.bizID ?? null}
-            onSelectRole={setSelectedRole}
+            onSelectRole={handleSelectRole}
             onOpenMembers={handleOpenMembers}
             onCreateClick={handleCreateClick}
             onEditClick={handleEditClick}

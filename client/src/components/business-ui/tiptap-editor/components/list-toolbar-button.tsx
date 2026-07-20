@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, ChevronDown, List, ListOrdered, ListTodo } from 'lucide-react';
+import { Check, ChevronDown, List, ListOrdered, ListTodo } from '@/components/ui/hugeicons';
 
 import { useTiptapEditor } from '@/components/business-ui/tiptap-editor/hooks/use-tiptap-editor';
 import { cn } from '@/lib/utils';
