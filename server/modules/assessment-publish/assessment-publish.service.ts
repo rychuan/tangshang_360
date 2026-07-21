@@ -817,7 +817,6 @@ export class AssessmentPublishService {
     for (const instanceId of instanceIds) {
       validateUUID(instanceId, '实例ID');
     }
-    await this.assertInstanceScopes(userId, instanceIds);
     this.logger.log(
       `batchReturn instanceIds=${JSON.stringify(instanceIds)} userId=${userId}`,
     );
@@ -840,6 +839,15 @@ export class AssessmentPublishService {
           }
 
           const instance = instanceRows[0];
+
+          const canAccess = await this.accessScopeService.canAccessEmployee(
+            userId,
+            instance.employeeId,
+            { includeSelf: false },
+          );
+          if (!canAccess) {
+            throw new ForbiddenException('无权操作该考核实例');
+          }
 
           // 仅允许退回 self_review 状态的实例（尚未开始评分）
           if (instance.status !== 'self_review') {
