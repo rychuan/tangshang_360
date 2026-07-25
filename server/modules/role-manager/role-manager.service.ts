@@ -700,13 +700,18 @@ export class RoleManagerService {
 
       const memberPayload = this.unwrapSdkData(membersResult);
       const members = (memberPayload as any)?.members || memberPayload || {};
-      const isMember =
-        Boolean((members as any).allEmployees) ||
-        Boolean((members as any).presetGroup?.isContainsAdmin) ||
-        (Array.isArray((members as any).userList) &&
-          (members as any).userList.some(
-            (user: any) => user.userID === userId || user.user_id === userId,
-          ));
+      const allEmployees = Boolean((members as any).allEmployees);
+      const isContainsAdmin = Boolean(
+        (members as any).presetGroup?.isContainsAdmin,
+      );
+      const userListMatch =
+        Array.isArray((members as any).userList) &&
+        (members as any).userList.some(
+          (user: any) => user.userID === userId || user.user_id === userId,
+        );
+      const isMember = strict
+        ? userListMatch
+        : allEmployees || isContainsAdmin || userListMatch;
       if (isMember) {
         return true;
       }

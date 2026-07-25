@@ -305,9 +305,7 @@ export class EmployeeManagementService {
     const emp = rows[0];
 
     const version = await this.db.transaction(async (tx) => {
-      await tx.execute(
-        sql`SELECT pg_advisory_xact_lock(${LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY})`,
-      );
+      await this.acquireAdminAdvisoryLock(tx);
       const current = await this.loadEmployeeForLifecycle(tx, id);
       const currentEmployee = current || emp;
       if (this.isEffectiveAdmin(currentEmployee)) {
@@ -656,9 +654,7 @@ export class EmployeeManagementService {
     };
 
     const version = await this.db.transaction(async (tx) => {
-      await tx.execute(
-        sql`SELECT pg_advisory_xact_lock(${LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY})`,
-      );
+      await this.acquireAdminAdvisoryLock(tx);
       const current = await this.loadEmployeeForLifecycle(tx, id);
       const currentEmployee = current || rows[0];
       const currentRoles = this.getDurableRoles(currentEmployee);
@@ -802,9 +798,7 @@ export class EmployeeManagementService {
 
     const version = await this.db.transaction(async (tx) => {
       if (body.role !== undefined) {
-        await tx.execute(
-          sql`SELECT pg_advisory_xact_lock(${LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY})`,
-        );
+        await this.acquireAdminAdvisoryLock(tx);
       }
       const current = await this.loadEmployeeForLifecycle(tx, id);
       const currentEmployee = current || rows[0];
@@ -938,9 +932,7 @@ export class EmployeeManagementService {
     }
 
     const version = await this.db.transaction(async (tx) => {
-      await tx.execute(
-        sql`SELECT pg_advisory_xact_lock(${LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY})`,
-      );
+      await this.acquireAdminAdvisoryLock(tx);
       const current = await this.loadEmployeeForLifecycle(tx, id);
       const currentEmployee = current || rows[0];
       if (this.isEffectiveAdmin(currentEmployee)) {
@@ -1155,6 +1147,20 @@ export class EmployeeManagementService {
       .where(eq(employee.employeeId, employeeId))
       .limit(1);
     return rows[0];
+  }
+
+  private async acquireAdminAdvisoryLock(
+    tx: PostgresJsDatabase,
+  ): Promise<void> {
+    const lockResult = await tx.execute(
+      sql`SELECT pg_try_advisory_xact_lock(${LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY}) AS got_lock`,
+    );
+    const gotLock =
+      (lockResult as unknown as Array<{ got_lock?: boolean }>)[0]?.got_lock ===
+      true;
+    if (!gotLock) {
+      throw new ConflictException('操作正在被其他请求处理，请稍后重试');
+    }
   }
 
   private async assertAdminCountAfterReduction(

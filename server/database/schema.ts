@@ -514,15 +514,10 @@ export const employee = pgTable("employee", {
   position: varchar("position", { length: 255 }).notNull(),
   // Synced field: auto-synced, do not modify or delete
   department: varchar("department", { length: 255 }).notNull(),
-  // Synced field: auto-synced, do not modify or delete
   supervisorId: userProfile("supervisor_id"),
-  // Synced field: auto-synced, do not modify or delete
   status: boolean("status").notNull().default(true),
-  // Synced field: auto-synced, do not modify or delete
   employeeNo: varchar("employee_no", { length: 50 }),
-  // Synced field: auto-synced, do not modify or delete
   title: varchar("title", { length: 100 }),
-  // Synced field: auto-synced, do not modify or delete
   role: varchar("role", { length: 50 }).default('employee'),
   phone: varchar("phone", { length: 50 }),
   hireDate: customTimestamptz("hire_date", { precision: 6 }),
