@@ -14,11 +14,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import { UserSelect } from '@/components/business-ui/user-select';
 import { toast } from 'sonner';
 import { handleApiError, isApiNotFound } from '@client/src/utils/api-error';
@@ -33,7 +28,6 @@ import {
   X,
   Minus,
   FolderPlus,
-  UserPlus,
 } from '@/components/ui/hugeicons';
 
 interface DepartmentTreePanelProps {
@@ -126,8 +120,6 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
     headId: '',
   });
   const [saving, setSaving] = useState(false);
-  const [headPopoverNode, setHeadPopoverNode] = useState<DepartmentTreeNode | null>(null);
-  const [headChanging, setHeadChanging] = useState(false);
 
   const { data: deptData, isLoading } = useQuery({
     queryKey: ['departments'],
@@ -267,44 +259,6 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
     }
   };
 
-  const handleHeadChange = async (userId: string | null) => {
-    if (!headPopoverNode || !userId) return;
-    setHeadChanging(true);
-    try {
-      await departmentApi.update(headPopoverNode.id, {
-        name: headPopoverNode.name,
-        parentId: headPopoverNode.parentId || undefined,
-        headId: userId,
-      });
-      toast.success('负责人已更新');
-      queryClient.invalidateQueries({ queryKey: ['departments'] });
-      setHeadPopoverNode(null);
-    } catch (e) {
-      handleApiError(e);
-    } finally {
-      setHeadChanging(false);
-    }
-  };
-
-  const handleClearHead = async () => {
-    if (!headPopoverNode) return;
-    setHeadChanging(true);
-    try {
-      await departmentApi.update(headPopoverNode.id, {
-        name: headPopoverNode.name,
-        parentId: headPopoverNode.parentId || undefined,
-        headId: '',
-      } as any);
-      toast.success('已清空负责人');
-      queryClient.invalidateQueries({ queryKey: ['departments'] });
-      setHeadPopoverNode(null);
-    } catch (e) {
-      handleApiError(e);
-    } finally {
-      setHeadChanging(false);
-    }
-  };
-
   const renderTree = (
     nodes: DepartmentTreeNode[],
     depth: number,
@@ -342,44 +296,13 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
               <span className="w-4 shrink-0" />
             )}
             <Building2 className="size-3.5 shrink-0 text-muted-foreground" />
-            <div className="flex-1 min-w-0">
-              <span className="truncate block">{node.name}</span>
-              <span className={`text-[11px] leading-tight ${node.headName ? 'text-muted-foreground' : 'text-muted-foreground/40'}`}>
-                {node.headName || '未设置负责人'}
-              </span>
-            </div>
+            <span className="flex-1 truncate">{node.name}</span>
             {total > 0 && (
               <span className="text-xs text-muted-foreground shrink-0">
                 {total}
               </span>
             )}
             <div className="hidden group-hover:flex items-center gap-0.5 shrink-0 ml-1">
-              <Popover open={headPopoverNode?.id === node.id} onOpenChange={(open) => { if (!open) setHeadPopoverNode(null); }}>
-                <PopoverTrigger asChild>
-                  <button
-                    className="size-5 flex items-center justify-center rounded hover:bg-muted"
-                    onClick={(e) => { e.stopPropagation(); setHeadPopoverNode(node); }}
-                    title="设置负责人"
-                  >
-                    <UserPlus className="size-3" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-56 p-3" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex flex-col gap-2">
-                    <Label className="text-xs">部门负责人</Label>
-                    <UserSelect
-                      value={node.headId || null}
-                      onChange={(v) => handleHeadChange(v)}
-                      placeholder="选择负责人"
-                    />
-                    {node.headId && (
-                      <Button variant="ghost" size="sm" className="text-xs text-destructive h-7" onClick={handleClearHead} disabled={headChanging}>
-                        清空负责人
-                      </Button>
-                    )}
-                  </div>
-                </PopoverContent>
-              </Popover>
               <button
                 className="size-5 flex items-center justify-center rounded hover:bg-muted"
                 onClick={(e) => {
