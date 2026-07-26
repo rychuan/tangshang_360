@@ -134,9 +134,9 @@ const DictPanel: React.FC<{ dictType: string }> = ({ dictType }) => {
   };
 
   return (
-    <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
+    <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
+      <Card className="flex flex-1 min-h-0 flex-col">
+        <CardHeader className="shrink-0 flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-base flex items-center gap-2">
             <Database className="size-4" />共 {items.length} 个条目
           </CardTitle>
@@ -147,7 +147,7 @@ const DictPanel: React.FC<{ dictType: string }> = ({ dictType }) => {
             </Button>
           </CanDo>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="flex-1 overflow-y-auto min-h-0 p-0">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Spinner className="size-6" />
@@ -159,7 +159,7 @@ const DictPanel: React.FC<{ dictType: string }> = ({ dictType }) => {
             </div>
           ) : (
             <Table>
-              <TableHeader>
+              <TableHeader className="sticky top-0 z-10 bg-background">
                 <TableRow className="border-b bg-muted/50">
                   <TableHead className="h-10 px-4 text-left text-xs font-medium text-muted-foreground">
                     编码
@@ -320,7 +320,7 @@ const DictPanel: React.FC<{ dictType: string }> = ({ dictType }) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 };
 
@@ -341,13 +341,13 @@ const DictionaryConfigPage: React.FC = () => {
   const activeMeta = DICT_TYPES.find((t) => t.type === activeType);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-1 flex-col min-h-0 overflow-hidden gap-4">
       <PageHeader
         title="字段管理"
         description="管理系统中的各类字典数据，支持岗位、职级等字段的统一定义与维护。"
       />
 
-      <Tabs value={activeType} onValueChange={handleTabChange}>
+      <Tabs value={activeType} onValueChange={handleTabChange} className="flex flex-1 flex-col min-h-0 overflow-hidden">
         <TabsList>
           {DICT_TYPES.map((dt) => (
             <TabsTrigger key={dt.type} value={dt.type}>
@@ -357,7 +357,7 @@ const DictionaryConfigPage: React.FC = () => {
         </TabsList>
 
         {DICT_TYPES.map((dt) => (
-          <TabsContent key={dt.type} value={dt.type} className="mt-4">
+          <TabsContent key={dt.type} value={dt.type} className="flex-1 flex-col min-h-0 overflow-hidden mt-4">
             {dt.desc && (
               <p className="text-sm text-muted-foreground mb-4">{dt.desc}</p>
             )}

@@ -68,17 +68,26 @@ const EmployeeManagementPage: React.FC = () => {
           )}
         </TabsList>
         {visibleTabs.includes('employees') && (
-          <TabsContent value="employees" className="flex-1 flex-col min-h-0 overflow-hidden mt-4">
+          <TabsContent
+            value="employees"
+            className="flex-1 flex-col min-h-0 overflow-hidden mt-4"
+          >
             <EmployeeListTab />
           </TabsContent>
         )}
         {visibleTabs.includes('departments') && (
-          <TabsContent value="departments" className="flex-1 flex-col min-h-0 overflow-hidden mt-4">
+          <TabsContent
+            value="departments"
+            className="flex-1 flex-col min-h-0 overflow-hidden mt-4"
+          >
             <DepartmentManagementTab />
           </TabsContent>
         )}
         {visibleTabs.includes('bitable') && (
-          <TabsContent value="bitable" className="flex-1 flex-col min-h-0 overflow-hidden mt-4">
+          <TabsContent
+            value="bitable"
+            className="flex-1 flex-col min-h-0 overflow-hidden mt-4"
+          >
             <BitableConnectionTab />
           </TabsContent>
         )}

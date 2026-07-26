@@ -127,7 +127,7 @@ const GradeConfigPage: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col gap-4 md:gap-6">
+    <div className="flex flex-1 flex-col min-h-0 overflow-hidden gap-4 md:gap-6">
       <PageHeader
         title="绩效等级配置"
         description="管理绩效分数对应的绩效等级规则"
@@ -147,6 +147,7 @@ const GradeConfigPage: React.FC = () => {
         columns={gradeColumns}
         data={sortedItems}
         loading={loading}
+        scrollable
         rowKey={(item) => item.id}
         emptyIcon={<Award className="size-6" />}
       />

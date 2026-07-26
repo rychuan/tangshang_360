@@ -460,7 +460,7 @@ const StatisticsPage: React.FC = () => {
   ];
 
   return (
-    <div className="@container/main flex flex-1 flex-col gap-4 md:gap-6">
+    <div className="@container/main flex flex-1 flex-col min-h-0 overflow-hidden gap-4 md:gap-6">
       <PageHeader title="绩效统计查询" visuallyHidden />
 
       {/* Filters */}
@@ -721,6 +721,7 @@ const StatisticsPage: React.FC = () => {
         columns={statisticsColumns}
         data={records}
         loading={loading}
+        scrollable
         rowKey={(item) => item.id}
         page={page}
         totalPages={Math.ceil(total / pageSize)}
