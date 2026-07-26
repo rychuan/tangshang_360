@@ -14,18 +14,18 @@
 
 /* Sonner toast — subtle tinted backgrounds per type */
 [data-sonner-toast][data-type='success'] {
-  background-color: hsl(var(--success) / 0.08) !important;
-  border-color: hsl(var(--success) / 0.2) !important;
+  background-color: rgb(34 197 94 / 0.08);
+  border-color: rgb(34 197 94 / 0.15);
 }
 [data-sonner-toast][data-type='error'] {
-  background-color: hsl(var(--destructive) / 0.08) !important;
-  border-color: hsl(var(--destructive) / 0.2) !important;
+  background-color: rgb(239 68 68 / 0.08);
+  border-color: rgb(239 68 68 / 0.15);
 }
 [data-sonner-toast][data-type='warning'] {
-  background-color: hsl(var(--warning) / 0.08) !important;
-  border-color: hsl(var(--warning) / 0.2) !important;
+  background-color: rgb(234 179 8 / 0.08);
+  border-color: rgb(234 179 8 / 0.15);
 }
 [data-sonner-toast][data-type='info'] {
-  background-color: hsl(var(--info) / 0.08) !important;
-  border-color: hsl(var(--info) / 0.2) !important;
+  background-color: rgb(59 130 246 / 0.08);
+  border-color: rgb(59 130 246 / 0.15);
 }

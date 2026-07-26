@@ -301,7 +301,11 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={submitting}
+          >
             取消
           </Button>
           <Button onClick={onSave} disabled={submitting}>
