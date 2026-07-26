@@ -458,7 +458,9 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
           </div>
           {totalPages > 1 && (
             <div className="shrink-0 flex items-center justify-between px-4 py-3 border-t">
-              <span className="text-sm text-muted-foreground">共 {total} 条</span>
+              <span className="text-sm text-muted-foreground">
+                共 {total} 条
+              </span>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
