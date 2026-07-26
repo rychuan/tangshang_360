@@ -75,9 +75,20 @@ function PageTable<T>({
   className,
 }: PageTableProps<T>) {
   return (
-    <div className={cn('overflow-hidden rounded-lg border', scrollable && 'flex flex-col flex-1 min-h-0', className)}>
+    <div
+      className={cn(
+        'overflow-hidden rounded-lg border',
+        scrollable && 'flex flex-col flex-1 min-h-0',
+        className,
+      )}
+    >
       {toolbar && (
-        <div className={cn('flex items-center gap-3 border-b px-4 py-3', scrollable && 'shrink-0')}>
+        <div
+          className={cn(
+            'flex items-center gap-3 border-b px-4 py-3',
+            scrollable && 'shrink-0',
+          )}
+        >
           {toolbar}
         </div>
       )}
@@ -116,9 +127,16 @@ function PageTable<T>({
               </div>
             </div>
           )}
-          <div className={cn('overflow-x-auto', scrollable && 'flex-1 overflow-auto min-h-0')}>
+          <div
+            className={cn(
+              'overflow-x-auto',
+              scrollable && 'flex-1 overflow-auto min-h-0',
+            )}
+          >
             <Table>
-              <TableHeader className={scrollable ? 'sticky top-0 z-10 bg-background' : ''}>
+              <TableHeader
+                className={scrollable ? 'sticky top-0 z-10 bg-background' : ''}
+              >
                 <TableRow className="bg-muted/30">
                   {columns.map((col) => (
                     <TableHead
@@ -158,7 +176,12 @@ function PageTable<T>({
           </div>
 
           {page != null && totalPages != null && totalPages > 1 && (
-            <div className={cn('flex items-center justify-between border-t px-4 py-3', scrollable && 'shrink-0')}>
+            <div
+              className={cn(
+                'flex items-center justify-between border-t px-4 py-3',
+                scrollable && 'shrink-0',
+              )}
+            >
               <span className="text-sm text-muted-foreground">
                 {'共'} {total ?? data.length} {'条'}
               </span>

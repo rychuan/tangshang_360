@@ -347,7 +347,11 @@ const DictionaryConfigPage: React.FC = () => {
         description="管理系统中的各类字典数据，支持岗位、职级等字段的统一定义与维护。"
       />
 
-      <Tabs value={activeType} onValueChange={handleTabChange} className="flex flex-1 flex-col min-h-0 overflow-hidden">
+      <Tabs
+        value={activeType}
+        onValueChange={handleTabChange}
+        className="flex flex-1 flex-col min-h-0 overflow-hidden"
+      >
         <TabsList>
           {DICT_TYPES.map((dt) => (
             <TabsTrigger key={dt.type} value={dt.type}>
@@ -357,7 +361,11 @@ const DictionaryConfigPage: React.FC = () => {
         </TabsList>
 
         {DICT_TYPES.map((dt) => (
-          <TabsContent key={dt.type} value={dt.type} className="flex-1 flex-col min-h-0 overflow-hidden mt-4">
+          <TabsContent
+            key={dt.type}
+            value={dt.type}
+            className="flex-1 flex-col min-h-0 overflow-hidden mt-4"
+          >
             {dt.desc && (
               <p className="text-sm text-muted-foreground mb-4">{dt.desc}</p>
             )}

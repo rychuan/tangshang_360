@@ -103,9 +103,9 @@ const LayoutContent: React.FC = () => {
         <div
           ref={scrollRef}
           key={pathname}
-          className="flex-1 overflow-y-auto min-h-0"
+          className="flex flex-1 flex-col overflow-y-auto min-h-0"
         >
-          <div className="@container/main flex min-w-0 flex-1 flex-col px-4 py-5 lg:px-6">
+          <div className="@container/main flex min-w-0 flex-1 flex-col min-h-0 px-4 py-5 lg:px-6">
             <div className="mx-auto w-full max-w-7xl">
               <Suspense
                 fallback={
