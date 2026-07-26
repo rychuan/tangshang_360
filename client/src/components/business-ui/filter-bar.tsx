@@ -14,6 +14,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
 }) => {
   return (
     <div
+      role="search"
       className={cn('flex flex-wrap items-center gap-3', className)}
       {...props}
     >

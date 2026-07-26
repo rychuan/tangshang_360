@@ -13,23 +13,56 @@ import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { DefaultLandingRoute } from './components/app-shell/DefaultLandingRoute';
 import { PermissionsProvider } from './hooks/usePermissions';
+import { Spinner } from '@/components/ui/spinner';
 import NotFound from './pages/NotFound/NotFound';
-import TemplateManagementPage from './pages/TemplateManagement/TemplateManagementPage';
-import PublishManagementPage from './pages/PublishManagement/PublishManagementPage';
-import AssessmentDetailPage from './pages/AssessmentDetail/AssessmentDetailPage';
-import StatisticsPage from './pages/Statistics/StatisticsPage';
-import MyAssessmentsPage from './pages/MyAssessments/MyAssessmentsPage';
-import TeamPerformancePage from './pages/TeamPerformance/TeamPerformancePage';
-import EmployeeManagementPage from './pages/EmployeeManagement/EmployeeManagementPage';
-import EmployeeDetailPage from './pages/EmployeeManagement/EmployeeDetailPage';
-import PermissionPage from './pages/EmployeeManagement/PermissionPage';
-import GradeConfigPage from './pages/GradeConfig/GradeConfigPage';
-import DictionaryConfigPage from './pages/DictionaryConfig/DictionaryConfigPage';
-import HomePage from './pages/HomePage/HomePage';
-import MobileSignPage from './pages/MobileSign/MobileSignPage';
+
+// 路由级懒加载 — 按需分块加载，减少首屏 JS 体积
+const HomePage = React.lazy(() => import('./pages/HomePage/HomePage'));
+const TemplateManagementPage = React.lazy(
+  () => import('./pages/TemplateManagement/TemplateManagementPage'),
+);
+const PublishManagementPage = React.lazy(
+  () => import('./pages/PublishManagement/PublishManagementPage'),
+);
+const AssessmentDetailPage = React.lazy(
+  () => import('./pages/AssessmentDetail/AssessmentDetailPage'),
+);
+const StatisticsPage = React.lazy(
+  () => import('./pages/Statistics/StatisticsPage'),
+);
+const MyAssessmentsPage = React.lazy(
+  () => import('./pages/MyAssessments/MyAssessmentsPage'),
+);
+const TeamPerformancePage = React.lazy(
+  () => import('./pages/TeamPerformance/TeamPerformancePage'),
+);
+const EmployeeManagementPage = React.lazy(
+  () => import('./pages/EmployeeManagement/EmployeeManagementPage'),
+);
+const EmployeeDetailPage = React.lazy(
+  () => import('./pages/EmployeeManagement/EmployeeDetailPage'),
+);
+const PermissionPage = React.lazy(
+  () => import('./pages/EmployeeManagement/PermissionPage'),
+);
+const GradeConfigPage = React.lazy(
+  () => import('./pages/GradeConfig/GradeConfigPage'),
+);
+const DictionaryConfigPage = React.lazy(
+  () => import('./pages/DictionaryConfig/DictionaryConfigPage'),
+);
+const MobileSignPage = React.lazy(
+  () => import('./pages/MobileSign/MobileSignPage'),
+);
+
+const PAGE_LOADING = (
+  <div className="flex items-center justify-center py-20 text-muted-foreground">
+    <Spinner className="size-6" />
+  </div>
+);
 
 const ForbiddenPage: React.FC = () => (
-  <div className="flex h-screen items-center justify-center">
+  <div className="flex h-full items-center justify-center">
     <div className="text-center">
       <h1 className="text-2xl font-bold text-muted-foreground">403</h1>
       <p className="mt-2 text-sm text-muted-foreground">您没有权限访问此页面</p>
@@ -71,9 +104,7 @@ const RoutesComponent = () => {
               <Route
                 path="template-management"
                 element={
-                  <ProtectedRoute
-                    resources={['template_management']}
-                  >
+                  <ProtectedRoute resources={['template_management']}>
                     <TemplateManagementPage />
                   </ProtectedRoute>
                 }
@@ -171,7 +202,14 @@ const RoutesComponent = () => {
               />
               <Route path="403" element={<ForbiddenPage />} />
             </Route>
-            <Route path="mobile-sign" element={<MobileSignPage />} />
+            <Route
+              path="mobile-sign"
+              element={
+                <React.Suspense fallback={PAGE_LOADING}>
+                  <MobileSignPage />
+                </React.Suspense>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </PermissionsProvider>

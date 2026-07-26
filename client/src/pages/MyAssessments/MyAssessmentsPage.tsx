@@ -5,9 +5,7 @@ import { queryKeys } from '@/api/queryKeys';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import {
-  Progress,
-} from '@/components/ui/progress';
+import { Progress } from '@/components/ui/progress';
 import {
   Empty,
   EmptyHeader,
@@ -22,7 +20,12 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { Area, AreaChart, CartesianGrid, Line, XAxis, YAxis } from 'recharts';
-import { Eye, ChevronLeft, ChevronRight, AreaChartIcon } from '@/components/ui/hugeicons';
+import {
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  AreaChartIcon,
+} from '@/components/ui/hugeicons';
 import { PageHeader } from '@/components/business-ui/page-header';
 import { StatusBadge, GradeBadge } from '@/components/business-ui/status-badge';
 import { PageTable } from '@/components/business-ui/page-table';
@@ -173,7 +176,12 @@ const MyAssessmentsPage: React.FC = () => {
         title="我的绩效"
         actions={
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon" onClick={handlePrevYear}>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handlePrevYear}
+              aria-label="上一年"
+            >
               <ChevronLeft />
             </Button>
             <span className="text-base font-semibold min-w-[72px] text-center text-foreground">
@@ -184,6 +192,7 @@ const MyAssessmentsPage: React.FC = () => {
               size="icon"
               onClick={handleNextYear}
               disabled={parseInt(yearFilter, 10) >= new Date().getFullYear()}
+              aria-label="下一年"
             >
               <ChevronRight />
             </Button>
@@ -226,7 +235,9 @@ const MyAssessmentsPage: React.FC = () => {
                     <p className="text-xs text-muted-foreground">考核总数</p>
                   </div>
                   <div className="rounded-lg bg-muted/50 p-3 text-center">
-                    <p className="text-2xl font-bold">{summary.completedCount}</p>
+                    <p className="text-2xl font-bold">
+                      {summary.completedCount}
+                    </p>
                     <p className="text-xs text-muted-foreground">已完成</p>
                   </div>
                   <div className="rounded-lg bg-muted/50 p-3 text-center">
@@ -243,11 +254,16 @@ const MyAssessmentsPage: React.FC = () => {
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-muted-foreground">完成进度</span>
                       <span className="font-medium">
-                        {Math.round((summary.completedCount / summary.totalCount) * 100)}%
+                        {Math.round(
+                          (summary.completedCount / summary.totalCount) * 100,
+                        )}
+                        %
                       </span>
                     </div>
                     <Progress
-                      value={Math.round((summary.completedCount / summary.totalCount) * 100)}
+                      value={Math.round(
+                        (summary.completedCount / summary.totalCount) * 100,
+                      )}
                       className="h-2"
                     />
                   </div>
@@ -263,7 +279,9 @@ const MyAssessmentsPage: React.FC = () => {
                     variant="outline"
                     size="sm"
                     className="w-full"
-                    onClick={() => navigate(`/assessment/${sortedRecords[0].id}`)}
+                    onClick={() =>
+                      navigate(`/assessment/${sortedRecords[0].id}`)
+                    }
                   >
                     <Eye className="size-3.5 mr-1" />
                     查看最新考核详情
@@ -304,66 +322,66 @@ const MyAssessmentsPage: React.FC = () => {
               </div>
             ) : (
               <ChartContainer config={chartConfig} className="h-[220px] w-full">
-              <AreaChart
-                accessibilityLayer
-                data={trendItems.map((t) => ({ ...t, score: t.avgScore }))}
-                margin={{ left: 0, right: 8, top: 8, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient id="fillScore" x1="0" y1="0" x2="0" y2="1">
-                    <stop
-                      offset="5%"
-                      stopColor="var(--color-score)"
-                      stopOpacity={0.3}
-                    />
-                    <stop
-                      offset="95%"
-                      stopColor="var(--color-score)"
-                      stopOpacity={0.04}
-                    />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="period"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={4}
-                  tickFormatter={(value: string) => {
-                    const parts = value.split('-');
-                    return parts[1] ?? value;
-                  }}
-                  interval={0}
-                  angle={-35}
-                  textAnchor="end"
-                  height={30}
-                  className="text-xs text-muted-foreground"
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  width={32}
-                  className="text-xs text-muted-foreground"
-                  domain={[0, 100]}
-                />
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent indicator="line" />}
-                />
-                <Area
-                  dataKey="score"
-                  type="monotone"
-                  fill="url(#fillScore)"
-                  stroke="var(--color-score)"
-                  strokeWidth={2}
-                  animationDuration={800}
-                  animationEasing="ease-out"
-                />
-              </AreaChart>
-            </ChartContainer>
-          )}
-        </CardContent>
-      </Card>
+                <AreaChart
+                  accessibilityLayer
+                  data={trendItems.map((t) => ({ ...t, score: t.avgScore }))}
+                  margin={{ left: 0, right: 8, top: 8, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="fillScore" x1="0" y1="0" x2="0" y2="1">
+                      <stop
+                        offset="5%"
+                        stopColor="var(--color-score)"
+                        stopOpacity={0.3}
+                      />
+                      <stop
+                        offset="95%"
+                        stopColor="var(--color-score)"
+                        stopOpacity={0.04}
+                      />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="period"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={4}
+                    tickFormatter={(value: string) => {
+                      const parts = value.split('-');
+                      return parts[1] ?? value;
+                    }}
+                    interval={0}
+                    angle={-35}
+                    textAnchor="end"
+                    height={30}
+                    className="text-xs text-muted-foreground"
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    width={32}
+                    className="text-xs text-muted-foreground"
+                    domain={[0, 100]}
+                  />
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent indicator="line" />}
+                  />
+                  <Area
+                    dataKey="score"
+                    type="monotone"
+                    fill="url(#fillScore)"
+                    stroke="var(--color-score)"
+                    strokeWidth={2}
+                    animationDuration={800}
+                    animationEasing="ease-out"
+                  />
+                </AreaChart>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Records Table */}
@@ -383,6 +401,7 @@ const MyAssessmentsPage: React.FC = () => {
                   columns={myAssessmentColumns}
                   data={sortedRecords}
                   loading={loading}
+                  rowKey={(item) => item.id}
                   emptyMessage="暂无绩效记录"
                   page={page}
                   totalPages={totalPages}

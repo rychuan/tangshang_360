@@ -39,7 +39,13 @@ import {
 } from '@/components/ui/chart';
 import { Pie, PieChart } from 'recharts';
 import MultiMonthPicker from '@/components/ui/multi-month-picker';
-import { Users, TrendingUp, AlertCircle, Bell, Eye } from '@/components/ui/hugeicons';
+import {
+  Users,
+  TrendingUp,
+  AlertCircle,
+  Bell,
+  Eye,
+} from '@/components/ui/hugeicons';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { logger } from '@lark-apaas/client-toolkit/logger';
@@ -420,6 +426,7 @@ const TeamPerformancePage: React.FC = () => {
               columns={teamColumns}
               data={subordinates}
               loading={loadingList}
+              rowKey={(item) => item.id}
               emptyMessage={
                 statusFilter
                   ? '暂无符合筛选条件的绩效记录'

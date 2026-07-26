@@ -19,21 +19,8 @@ import { useGradeConfig } from './useGradeConfig';
 import { CoverageBanner } from './CoverageBanner';
 import { GradeFormDialog } from './GradeFormDialog';
 import type { PerformanceGradeItem } from '@shared/api.interface';
-import { Spinner } from '@/components/ui/spinner';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Empty,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from '@/components/ui/empty';
+import { PageTable } from '@/components/business-ui/page-table';
+import type { PageTableColumn } from '@/components/business-ui/page-table';
 
 const GradeConfigPage: React.FC = () => {
   const {
@@ -87,8 +74,60 @@ const GradeConfigPage: React.FC = () => {
     }
   };
 
+  const gradeColumns: PageTableColumn<PerformanceGradeItem>[] = [
+    { key: 'name', header: '等级名称', render: (item) => item.name },
+    {
+      key: 'scoreRange',
+      header: '分数区间',
+      render: (item) => `${item.minScore} ~ ${item.maxScore}`,
+    },
+    { key: 'sortOrder', header: '排序值', render: (item) => item.sortOrder },
+    {
+      key: 'coefficient',
+      header: '绩效系数',
+      render: (item) => item.coefficient || '-',
+    },
+    {
+      key: 'isActive',
+      header: '启用状态',
+      render: (item) =>
+        item.isActive ? (
+          <Badge variant="default">启用</Badge>
+        ) : (
+          <Badge variant="secondary">停用</Badge>
+        ),
+    },
+    {
+      key: 'actions',
+      header: '操作',
+      headerClassName: 'sticky right-0 bg-background z-20 border-l',
+      className:
+        'sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l',
+      render: (item) => (
+        <div className="flex items-center gap-1">
+          <CanDo resource="grade_config" action="edit">
+            <ActionBadge
+              actionType="edit"
+              icon={<Pencil className="size-3" />}
+              label="编辑"
+              onClick={() => handleOpenEdit(item)}
+            />
+          </CanDo>
+          <CanDo resource="grade_config" action="edit">
+            <ActionBadge
+              actionType="delete"
+              icon={<Trash2 className="size-3" />}
+              label="删除"
+              onClick={() => setDeleteId(item.id)}
+            />
+          </CanDo>
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4 md:gap-6">
       <PageHeader
         title="绩效等级配置"
         description="管理绩效分数对应的绩效等级规则"
@@ -104,91 +143,13 @@ const GradeConfigPage: React.FC = () => {
 
       <CoverageBanner coverage={coverage} />
 
-      <div className="overflow-hidden rounded-lg border">
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Spinner className="size-6" />
-          </div>
-        ) : sortedItems.length === 0 ? (
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <Award className="size-6" />
-              </EmptyMedia>
-              <EmptyTitle>暂无数据</EmptyTitle>
-            </EmptyHeader>
-          </Empty>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow className="border-b text-muted-foreground">
-                <TableHead className="py-3 px-4 font-medium text-left">
-                  等级名称
-                </TableHead>
-                <TableHead className="py-3 px-4 font-medium text-left">
-                  分数区间
-                </TableHead>
-                <TableHead className="py-3 px-4 font-medium text-left">
-                  排序值
-                </TableHead>
-                <TableHead className="py-3 px-4 font-medium text-left">
-                  绩效系数
-                </TableHead>
-                <TableHead className="py-3 px-4 font-medium text-left">
-                  启用状态
-                </TableHead>
-                <TableHead className="py-3 px-4 font-medium text-left sticky right-0 bg-background z-20 border-l">
-                  操作
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedItems.map((item: PerformanceGradeItem) => (
-                <TableRow
-                  key={item.id}
-                  className="group border-b hover:bg-muted/50"
-                >
-                  <TableCell className="py-3 px-4">{item.name}</TableCell>
-                  <TableCell className="py-3 px-4">
-                    {item.minScore} ~ {item.maxScore}
-                  </TableCell>
-                  <TableCell className="py-3 px-4">{item.sortOrder}</TableCell>
-                  <TableCell className="py-3 px-4 text-muted-foreground">
-                    {item.coefficient || '-'}
-                  </TableCell>
-                  <TableCell className="py-3 px-4">
-                    {item.isActive ? (
-                      <Badge variant="default">启用</Badge>
-                    ) : (
-                      <Badge variant="secondary">停用</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="py-3 px-4 sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
-                    <div className="flex items-center gap-1">
-                      <CanDo resource="grade_config" action="edit">
-                        <ActionBadge
-                          actionType="edit"
-                          icon={<Pencil className="size-3" />}
-                          label="编辑"
-                          onClick={() => handleOpenEdit(item)}
-                        />
-                      </CanDo>
-                      <CanDo resource="grade_config" action="edit">
-                        <ActionBadge
-                          actionType="delete"
-                          icon={<Trash2 className="size-3" />}
-                          label="删除"
-                          onClick={() => setDeleteId(item.id)}
-                        />
-                      </CanDo>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
+      <PageTable
+        columns={gradeColumns}
+        data={sortedItems}
+        loading={loading}
+        rowKey={(item) => item.id}
+        emptyIcon={<Award className="size-6" />}
+      />
 
       <GradeFormDialog
         open={formOpen}

@@ -2,16 +2,22 @@ import React, { useEffect, useState } from 'react';
 import { ArrowUp } from '@/components/ui/hugeicons';
 import { Button } from '@/components/ui/button';
 
-export function ScrollToTop() {
+interface ScrollToTopProps {
+  containerRef: React.RefObject<HTMLDivElement | null>;
+}
+
+export function ScrollToTop({ containerRef }: ScrollToTopProps) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
     const onScroll = () => {
-      setVisible(window.scrollY > window.innerHeight);
+      setVisible(el.scrollTop > el.clientHeight);
     };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [containerRef]);
 
   if (!visible) return null;
 
@@ -21,7 +27,9 @@ export function ScrollToTop() {
         variant="secondary"
         size="icon"
         className="size-10 rounded-full shadow-lg transition-shadow hover:shadow-xl"
-        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        onClick={() =>
+          containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+        }
         aria-label="回到顶部"
       >
         <ArrowUp className="size-5" />

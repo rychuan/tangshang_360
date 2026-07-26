@@ -42,6 +42,7 @@ interface PageTableProps<T> {
   emptyMessage?: string;
   emptyIcon?: React.ReactNode;
   renderEmpty?: () => React.ReactNode;
+  rowKey?: (item: T, index: number) => string | number;
   page?: number;
   totalPages?: number;
   total?: number;
@@ -63,6 +64,7 @@ function PageTable<T>({
   emptyMessage = '暂无数据',
   emptyIcon,
   renderEmpty,
+  rowKey,
   page,
   totalPages,
   total,
@@ -78,13 +80,13 @@ function PageTable<T>({
         </div>
       )}
 
-      {loading && (
+      {loading && data.length === 0 && (
         <div className="flex items-center justify-center py-12">
           <Spinner className="size-6" />
         </div>
       )}
 
-      {!loading && data.length === 0 && (
+      {data.length === 0 && (
         <>
           {renderEmpty ? (
             renderEmpty()
@@ -103,8 +105,15 @@ function PageTable<T>({
         </>
       )}
 
-      {!loading && data.length > 0 && (
+      {data.length > 0 && (
         <>
+          {loading && (
+            <div className="relative">
+              <div className="absolute inset-0 z-10 flex items-start justify-center bg-background/40 pt-8">
+                <Spinner className="size-5" />
+              </div>
+            </div>
+          )}
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -125,7 +134,10 @@ function PageTable<T>({
               </TableHeader>
               <TableBody>
                 {data.map((item, idx) => (
-                  <TableRow key={idx} className="group">
+                  <TableRow
+                    key={rowKey ? rowKey(item, idx) : idx}
+                    className="group"
+                  >
                     {columns.map((col) => (
                       <TableCell
                         key={col.key}

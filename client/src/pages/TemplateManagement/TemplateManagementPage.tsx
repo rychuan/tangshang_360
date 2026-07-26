@@ -2,7 +2,14 @@ import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/api/queryKeys';
 import { toast } from 'sonner';
-import { Plus, Eye, Ban, Trash2, Search, RotateCcw } from '@/components/ui/hugeicons';
+import {
+  Plus,
+  Eye,
+  Ban,
+  Trash2,
+  Search,
+  RotateCcw,
+} from '@/components/ui/hugeicons';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { CanDo, usePermission } from '@/hooks/usePermissions';
 import { Button } from '@client/src/components/ui/button';
@@ -281,7 +288,7 @@ const TemplateManagementPage: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4 md:gap-6">
       <PageHeader
         title="绩效模板管理"
         actions={
@@ -381,6 +388,7 @@ const TemplateManagementPage: React.FC = () => {
         columns={templateColumns}
         data={items}
         loading={loading}
+        rowKey={(item) => item.id}
         emptyMessage="暂无数据"
         page={page}
         totalPages={totalPages}

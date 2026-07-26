@@ -19,7 +19,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
   const heading = (
     <h1
       className={`flex items-center gap-2 text-2xl font-semibold tracking-tight ${
-        visuallyHidden ? 'hidden' : ''
+        visuallyHidden ? 'sr-only' : ''
       }`}
     >
       {Icon && <Icon className="size-5 shrink-0" />}

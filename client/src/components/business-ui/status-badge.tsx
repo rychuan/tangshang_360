@@ -20,10 +20,18 @@ export const ASSESSMENT_STATUS_BADGE_VARIANT: Record<
 > = {
   draft: 'outline',
   self_review: 'default',
-  supervisor_review: 'default',
+  supervisor_review: 'secondary',
   pending_sign: 'outline',
   supervisor_sign: 'outline',
   completed: 'outline',
+};
+
+const STATUS_EXTRA_CLASS: Record<string, string> = {
+  pending_sign:
+    'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800',
+  supervisor_sign:
+    'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950 dark:text-sky-300 dark:border-sky-800',
+  completed: 'bg-success/10 text-success border-success/20',
 };
 
 // ---------------------------------------------------------------------------
@@ -53,12 +61,9 @@ interface StatusBadgeProps {
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className }) => {
   const label = ASSESSMENT_STATUS_LABELS[status] ?? status;
   const variant = ASSESSMENT_STATUS_BADGE_VARIANT[status] ?? 'secondary';
-  const completedClass =
-    status === 'completed'
-      ? 'bg-success/10 text-success border-success/20'
-      : '';
+  const extraClass = STATUS_EXTRA_CLASS[status] ?? '';
   return (
-    <Badge variant={variant} className={`${completedClass} ${className ?? ''}`}>
+    <Badge variant={variant} className={`${extraClass} ${className ?? ''}`}>
       {label}
     </Badge>
   );

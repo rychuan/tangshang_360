@@ -134,7 +134,10 @@ const AssessmentDetailPage: React.FC = () => {
   const handleCancelSign = async () => {
     setSignDialogOpen(false);
     setSignImage(null);
-    if (detail?.status === 'self_review' || detail?.status === 'supervisor_review') {
+    if (
+      detail?.status === 'self_review' ||
+      detail?.status === 'supervisor_review'
+    ) {
       await handleSaveDraft({
         successMessage: '已保存草稿，签名确认后才会提交',
       });
@@ -413,8 +416,15 @@ const AssessmentDetailPage: React.FC = () => {
       />
 
       {/* Actions — always visible at bottom */}
-      {(canEditSelf || canSignSelf || canEditSupervisor || canSignSupervisor || isCompleted) && (
-        <div className="sticky bottom-0 z-20 -mx-4 -mb-5 border-t bg-background/95 px-4 py-3.5 shadow-[0_-4px_12px_rgba(0_0_0_0.06)] backdrop-blur-sm lg:-mx-6">
+      {(canEditSelf ||
+        canSignSelf ||
+        canEditSupervisor ||
+        canSignSupervisor ||
+        isCompleted) && (
+        <div
+          className="sticky bottom-0 z-20 -mx-4 -mb-5 border-t bg-background/95 px-4 py-3.5 backdrop-blur-sm lg:-mx-6"
+          style={{ boxShadow: 'var(--shadow-up-sm)' }}
+        >
           <div className="flex items-center justify-center gap-3 max-sm:flex-col max-sm:[&>*]:w-full">
             {canEditSelf && (
               <>
@@ -497,7 +507,7 @@ const AssessmentDetailPage: React.FC = () => {
         open={signDialogOpen}
         onOpenChange={(open) => {
           if (!open) {
-void handleCancelSign();
+            void handleCancelSign();
           } else {
             setSignDialogOpen(open);
           }

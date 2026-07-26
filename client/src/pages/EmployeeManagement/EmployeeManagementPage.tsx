@@ -43,7 +43,7 @@ const EmployeeManagementPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4 md:gap-6">
       <PageHeader title="员工管理" icon={UserCog} />
       <Tabs
         value={activeTab}

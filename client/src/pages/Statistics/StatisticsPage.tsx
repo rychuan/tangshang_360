@@ -21,14 +21,12 @@ import { exportDetail as getAssessmentExportDetail } from '@/api/assessment-oper
 import { useStatisticsData } from './useStatisticsData';
 import type { FilterState } from './useStatisticsData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageTable } from '@/components/business-ui/page-table';
+import type { PageTableColumn } from '@/components/business-ui/page-table';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  FilterBar,
+  FilterBarActions,
+} from '@/components/business-ui/filter-bar';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { ActionBadge } from '@/components/business-ui/action-badge';
@@ -46,12 +44,6 @@ import MultiSelect, {
 } from '@/components/ui/multi-select';
 import { Spinner } from '@/components/ui/spinner';
 import {
-  Empty,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from '@/components/ui/empty';
-import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
@@ -65,6 +57,7 @@ import {
   PieChart,
   Pie,
   Cell,
+  Legend,
   Area,
   AreaChart,
 } from 'recharts';
@@ -374,6 +367,98 @@ const StatisticsPage: React.FC = () => {
 
   const totalPages = Math.ceil(total / pageSize);
 
+  const statisticsColumns: PageTableColumn<StatisticsRecordItem>[] = [
+    { key: 'period', header: '绩效周期', render: (r) => r.period },
+    {
+      key: 'employeeName',
+      header: '员工',
+      render: (r) => <span className="font-medium">{r.employeeName}</span>,
+    },
+    {
+      key: 'department',
+      header: '部门',
+      className: 'hidden sm:table-cell text-muted-foreground',
+      headerClassName: 'hidden sm:table-cell',
+      render: (r) => r.department,
+    },
+    {
+      key: 'position',
+      header: '岗位',
+      className: 'hidden md:table-cell text-muted-foreground',
+      headerClassName: 'hidden md:table-cell',
+      render: (r) => r.position,
+    },
+    {
+      key: 'supervisorName',
+      header: '上级',
+      className: 'hidden md:table-cell text-muted-foreground',
+      headerClassName: 'hidden md:table-cell',
+      render: (r) => r.supervisorName,
+    },
+    {
+      key: 'totalScore',
+      header: '总分',
+      align: 'right',
+      render: (r) => <span className="font-mono">{r.totalScore}</span>,
+    },
+    {
+      key: 'grade',
+      header: '等级',
+      className: 'hidden sm:table-cell',
+      headerClassName: 'hidden sm:table-cell',
+      render: (r) => <GradeBadge grade={r.grade} />,
+    },
+    {
+      key: 'status',
+      header: '状态',
+      render: (r) => <StatusBadge status={r.status} />,
+    },
+    {
+      key: 'completedAt',
+      header: '完成时间',
+      className: 'hidden lg:table-cell text-muted-foreground',
+      headerClassName: 'hidden lg:table-cell',
+      render: (r) =>
+        r.completedAt
+          ? new Date(r.completedAt).toLocaleDateString('zh-CN')
+          : '-',
+    },
+    ...(canShowRecordActions
+      ? [
+          {
+            key: 'actions' as const,
+            header: '操作',
+            headerClassName: 'sticky right-0 bg-background z-20 border-l',
+            className:
+              'sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l',
+            render: (r: StatisticsRecordItem) => (
+              <div className="flex items-center gap-1">
+                <CanDo {...COMMAND_PERMISSIONS.assessmentView}>
+                  <ActionBadge
+                    actionType="view"
+                    icon={<Eye className="size-3" />}
+                    label="详情"
+                    onClick={() => navigate(`../assessment/${r.id}`)}
+                  />
+                </CanDo>
+                <CanDo resource="statistics" action="export">
+                  <ActionBadge
+                    actionType="preview"
+                    icon={<FileDown className="size-3" />}
+                    label="导出"
+                    disabled={exportingPdfId === r.id}
+                    onClick={() =>
+                      handleExportPdf(r.id, r.employeeName, r.period)
+                    }
+                  />
+                </CanDo>
+              </div>
+            ),
+          },
+        ]
+      : []),
+  ];
+
   return (
     <div className="@container/main flex flex-1 flex-col gap-4 md:gap-6">
       <PageHeader title="绩效统计查询" visuallyHidden />
@@ -381,11 +466,9 @@ const StatisticsPage: React.FC = () => {
       {/* Filters */}
       <Card className="rounded-xl">
         <CardContent className="p-4">
-          <div className="flex items-start gap-3 flex-wrap">
+          <FilterBar>
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs text-muted-foreground h-4 leading-4">
-                绩效周期
-              </Label>
+              <Label className="text-xs text-muted-foreground">绩效周期</Label>
               <MultiMonthPicker
                 value={filters.periods}
                 onChange={(value: string[]) =>
@@ -394,9 +477,7 @@ const StatisticsPage: React.FC = () => {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs text-muted-foreground h-4 leading-4">
-                部门
-              </Label>
+              <Label className="text-xs text-muted-foreground">部门</Label>
               <MultiDepartmentTreeSelect
                 value={filters.departments}
                 onChange={(value: string[]) =>
@@ -406,9 +487,7 @@ const StatisticsPage: React.FC = () => {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs text-muted-foreground h-4 leading-4">
-                岗位
-              </Label>
+              <Label className="text-xs text-muted-foreground">岗位</Label>
               <MultiSelect
                 options={positionOptions}
                 value={filters.positions}
@@ -420,9 +499,7 @@ const StatisticsPage: React.FC = () => {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs text-muted-foreground h-4 leading-4">
-                等级
-              </Label>
+              <Label className="text-xs text-muted-foreground">等级</Label>
               <MultiSelect
                 options={gradeSelectOptions}
                 value={filters.grades}
@@ -433,43 +510,45 @@ const StatisticsPage: React.FC = () => {
                 className="h-8 text-xs w-28"
               />
             </div>
-            <div className="flex flex-col gap-1.5 ml-auto">
-              <Label className="text-xs text-muted-foreground h-4 leading-4 invisible">
-                &nbsp;
-              </Label>
-              <div className="flex items-center gap-2">
-                <Button size="sm" onClick={handleSearch} className="shrink-0">
-                  <SearchIcon data-icon="inline-start" />
-                  查询
-                </Button>
-                <CanDo resource="statistics" action="export">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExport}
-                    disabled={exporting}
-                    className="shrink-0"
-                  >
+            <FilterBarActions className="ml-auto">
+              <Button size="sm" onClick={handleSearch} className="shrink-0">
+                <SearchIcon data-icon="inline-start" />
+                查询
+              </Button>
+              <CanDo resource="statistics" action="export">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExport}
+                  disabled={exporting}
+                  className="shrink-0"
+                >
+                  {exporting ? (
+                    <Spinner className="size-4" />
+                  ) : (
                     <DownloadIcon data-icon="inline-start" />
-                    {exporting && <Spinner className="mr-2 size-4" />}导出
-                  </Button>
-                </CanDo>
-                <CanDo resource="statistics" action="export">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSyncToBitable}
-                    disabled={syncingOut}
-                    className="shrink-0"
-                  >
+                  )}
+                  导出
+                </Button>
+              </CanDo>
+              <CanDo resource="statistics" action="export">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSyncToBitable}
+                  disabled={syncingOut}
+                  className="shrink-0"
+                >
+                  {syncingOut ? (
+                    <Spinner className="size-4" />
+                  ) : (
                     <Upload data-icon="inline-start" />
-                    {syncingOut && <Spinner className="mr-2 size-4" />}
-                    同步
-                  </Button>
-                </CanDo>
-              </div>
-            </div>
-          </div>
+                  )}
+                  同步
+                </Button>
+              </CanDo>
+            </FilterBarActions>
+          </FilterBar>
         </CardContent>
       </Card>
 
@@ -484,9 +563,11 @@ const StatisticsPage: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {!charts || charts.gradeDistribution.length === 0 ? (
+            {(loading && !charts) ||
+            !charts ||
+            charts.gradeDistribution.length === 0 ? (
               <div className="flex items-center justify-center h-[250px] text-sm text-muted-foreground">
-                暂无数据
+                {loading ? '加载中...' : '暂无数据'}
               </div>
             ) : (
               <ChartContainer config={chartConfig} className="h-[250px] w-full">
@@ -508,6 +589,12 @@ const StatisticsPage: React.FC = () => {
                     ))}
                   </Pie>
                   <ChartTooltip content={<ChartTooltipContent />} />
+                  <Legend
+                    verticalAlign="bottom"
+                    iconType="circle"
+                    iconSize={8}
+                    wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
+                  />
                 </PieChart>
               </ChartContainer>
             )}
@@ -523,9 +610,11 @@ const StatisticsPage: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {!charts || charts.departmentAvg.length === 0 ? (
+            {(loading && !charts) ||
+            !charts ||
+            charts.departmentAvg.length === 0 ? (
               <div className="flex items-center justify-center h-[250px] text-sm text-muted-foreground">
-                暂无数据
+                {loading ? '加载中...' : '暂无数据'}
               </div>
             ) : (
               <ChartContainer config={chartConfig} className="h-[250px] w-full">
@@ -575,9 +664,9 @@ const StatisticsPage: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {!charts || charts.trend.length === 0 ? (
+            {(loading && !charts) || !charts || charts.trend.length === 0 ? (
               <div className="flex items-center justify-center h-[250px] text-sm text-muted-foreground">
-                暂无数据
+                {loading ? '加载中...' : '暂无数据'}
               </div>
             ) : (
               <ChartContainer config={chartConfig} className="h-[250px] w-full">
@@ -628,166 +717,20 @@ const StatisticsPage: React.FC = () => {
       </div>
 
       {/* Records Table */}
-      <Card className="rounded-xl">
-        <CardHeader className="flex flex-row items-center justify-between">
+      <PageTable
+        columns={statisticsColumns}
+        data={records}
+        loading={loading}
+        rowKey={(item) => item.id}
+        page={page}
+        totalPages={Math.ceil(total / pageSize)}
+        total={total}
+        onPageChange={setPage}
+        emptyMessage="暂无绩效记录"
+        toolbar={
           <CardTitle className="text-base">绩效记录（共 {total} 条）</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="flex items-center justify-center h-64">
-              <Spinner className="size-8" />
-            </div>
-          ) : records.length === 0 ? (
-            <div className="flex items-center justify-center py-8">
-              <Empty>
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <BarChart3Icon className="size-6" />
-                  </EmptyMedia>
-                  <EmptyTitle>暂无数据</EmptyTitle>
-                </EmptyHeader>
-              </Empty>
-            </div>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/30">
-                      <TableHead className="text-left py-3 px-4 font-medium">
-                        绩效周期
-                      </TableHead>
-                      <TableHead className="text-left py-3 px-4 font-medium">
-                        员工
-                      </TableHead>
-                      <TableHead className="text-left py-3 px-4 font-medium hidden sm:table-cell">
-                        部门
-                      </TableHead>
-                      <TableHead className="text-left py-3 px-4 font-medium hidden md:table-cell">
-                        岗位
-                      </TableHead>
-                      <TableHead className="text-left py-3 px-4 font-medium hidden md:table-cell">
-                        上级
-                      </TableHead>
-                      <TableHead className="text-right py-3 px-4 font-medium">
-                        总分
-                      </TableHead>
-                      <TableHead className="py-3 px-4 font-medium hidden sm:table-cell">
-                        等级
-                      </TableHead>
-                      <TableHead className="py-3 px-4 font-medium">
-                        状态
-                      </TableHead>
-                      <TableHead className="text-left py-3 px-4 font-medium hidden lg:table-cell">
-                        完成时间
-                      </TableHead>
-                      {canShowRecordActions && (
-                        <TableHead className="py-3 px-4 font-medium sticky right-0 bg-background z-20 border-l">
-                          操作
-                        </TableHead>
-                      )}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {records.map((r: StatisticsRecordItem) => (
-                      <TableRow
-                        key={r.id}
-                        className="group border-b hover:bg-muted/50"
-                      >
-                        <TableCell className="py-3 px-4">{r.period}</TableCell>
-                        <TableCell className="py-3 px-4 font-medium">
-                          {r.employeeName}
-                        </TableCell>
-                        <TableCell className="py-3 px-4 hidden sm:table-cell text-muted-foreground">
-                          {r.department}
-                        </TableCell>
-                        <TableCell className="py-3 px-4 hidden md:table-cell text-muted-foreground">
-                          {r.position}
-                        </TableCell>
-                        <TableCell className="py-3 px-4 hidden md:table-cell text-muted-foreground">
-                          {r.supervisorName}
-                        </TableCell>
-                        <TableCell className="py-3 px-4 text-right font-mono">
-                          {r.totalScore}
-                        </TableCell>
-                        <TableCell className="py-3 px-4 hidden sm:table-cell">
-                          <GradeBadge grade={r.grade} />
-                        </TableCell>
-                        <TableCell className="py-3 px-4">
-                          <StatusBadge status={r.status} />
-                        </TableCell>
-                        <TableCell className="py-3 px-4 hidden lg:table-cell text-muted-foreground">
-                          {r.completedAt
-                            ? new Date(r.completedAt).toLocaleDateString(
-                                'zh-CN',
-                              )
-                            : '-'}
-                        </TableCell>
-                        {canShowRecordActions && (
-                          <TableCell className="py-3 px-4 sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
-                            <div className="flex items-center gap-1">
-                              <CanDo {...COMMAND_PERMISSIONS.assessmentView}>
-                                <ActionBadge
-                                  actionType="view"
-                                  icon={<Eye className="size-3" />}
-                                  label="详情"
-                                  onClick={() =>
-                                    navigate(`../assessment/${r.id}`)
-                                  }
-                                />
-                              </CanDo>
-                              <CanDo resource="statistics" action="export">
-                                <ActionBadge
-                                  actionType="preview"
-                                  icon={<FileDown className="size-3" />}
-                                  label="导出"
-                                  disabled={exportingPdfId === r.id}
-                                  onClick={() =>
-                                    handleExportPdf(
-                                      r.id,
-                                      r.employeeName,
-                                      r.period,
-                                    )
-                                  }
-                                />
-                              </CanDo>
-                            </div>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between px-4 py-3 border-t">
-                  <span className="text-sm text-muted-foreground">
-                    第 {page} / {totalPages} 页
-                  </span>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={page <= 1}
-                      onClick={() => setPage(Math.max(1, page - 1))}
-                    >
-                      上一页
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={page >= totalPages}
-                      onClick={() => setPage(Math.min(totalPages, page + 1))}
-                    >
-                      下一页
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
+        }
+      />
 
       {/* Hidden div for PDF rendering */}
       <div

@@ -1,14 +1,11 @@
-import React from 'react';
+import React, { Suspense, useEffect, useRef } from 'react';
 import { useLocation, Outlet } from 'react-router-dom';
 import { useCurrentUserProfile } from '@lark-apaas/client-toolkit/hooks/useCurrentUserProfile';
 import { useAppInfo } from '@lark-apaas/client-toolkit/hooks/useAppInfo';
 import { useAuth, ROLE_SUBJECT } from '@lark-apaas/client-toolkit/auth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { navGroups } from './navigation';
-import {
-  SidebarInset,
-  SidebarProvider,
-} from '@/components/ui/sidebar';
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-shell/AppSidebar';
 import { AppTopbar } from '@/components/app-shell/AppTopbar';
 import {
@@ -24,6 +21,7 @@ import {
   useBreadcrumb,
   BreadcrumbProvider,
 } from '@/components/business-ui/breadcrumb-context';
+import { Spinner } from '@/components/ui/spinner';
 
 const LayoutContent: React.FC = () => {
   const { pathname } = useLocation();
@@ -55,6 +53,14 @@ const LayoutContent: React.FC = () => {
   );
   const canManageEmployees = hasPermission(permissions, 'employees', 'edit');
   const badges = useSidebarBadges(navGroups.flatMap((g) => g.items));
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // 根据路由标签更新页面标题
+  useEffect(() => {
+    if (currentLabel) {
+      document.title = `${appName} - ${currentLabel}`;
+    }
+  }, [currentLabel, appName]);
 
   if (loading) {
     return (
@@ -69,7 +75,7 @@ const LayoutContent: React.FC = () => {
           homePath={homePath}
           badges={{}}
         />
-        <SidebarInset className="min-w-0 bg-background md:rounded-lg">
+        <SidebarInset className="min-w-0 bg-background md:rounded-lg flex flex-col max-h-dvh overflow-hidden">
           <div className="flex flex-1 flex-col" />
         </SidebarInset>
       </SidebarProvider>
@@ -88,19 +94,32 @@ const LayoutContent: React.FC = () => {
         homePath={homePath}
         badges={badges}
       />
-        <SidebarInset className="min-w-0 bg-background md:rounded-lg">
+      <SidebarInset className="min-w-0 bg-background md:rounded-lg flex flex-col max-h-dvh overflow-hidden">
         <AppTopbar
           currentLabel={currentLabel}
           items={allItems}
           userInfo={userInfo}
         />
         <div
+          ref={scrollRef}
           key={pathname}
-          className="@container/main flex min-w-0 flex-1 flex-col px-4 py-5 lg:px-6"
+          className="flex-1 overflow-y-auto min-h-0"
         >
-          <Outlet />
+          <div className="@container/main flex min-w-0 flex-1 flex-col px-4 py-5 lg:px-6">
+            <div className="mx-auto w-full max-w-7xl">
+              <Suspense
+                fallback={
+                  <div className="flex items-center justify-center py-20 text-muted-foreground">
+                    <Spinner className="size-6" />
+                  </div>
+                }
+              >
+                <Outlet />
+              </Suspense>
+            </div>
+          </div>
         </div>
-        <ScrollToTop />
+        <ScrollToTop containerRef={scrollRef} />
       </SidebarInset>
     </SidebarProvider>
   );
