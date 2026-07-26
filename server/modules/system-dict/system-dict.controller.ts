@@ -24,6 +24,7 @@ export class SystemDictController {
   constructor(private readonly service: SystemDictService) {}
 
   @RequirePermission('dictionary_config', 'view')
+  @NeedLogin()
   @Get(':type')
   async list(
     @Param('type') type: string,

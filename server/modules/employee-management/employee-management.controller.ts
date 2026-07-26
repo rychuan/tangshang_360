@@ -34,6 +34,7 @@ export class EmployeeManagementController {
   constructor(private readonly service: EmployeeManagementService) {}
 
   @RequirePermission('employees', 'view')
+  @NeedLogin()
   @Get()
   async list(
     @Req() req: Request,
@@ -64,12 +65,14 @@ export class EmployeeManagementController {
   }
 
   @RequirePermission('employees', 'view')
+  @NeedLogin()
   @Get('positions')
   async getPositions(@Req() req: Request): Promise<{ positions: string[] }> {
     return this.service.getPositions(req.userContext?.userId || '');
   }
 
   @RequirePermission('employee_binding', 'edit')
+  @NeedLogin()
   @Get('binding-templates')
   async bindingTemplates(): Promise<{ items: BindingTemplateOption[] }> {
     return this.service.bindingTemplates();
@@ -94,6 +97,7 @@ export class EmployeeManagementController {
   }
 
   @RequirePermission('employee_binding', 'view')
+  @NeedLogin()
   @Get(':id/binding-history')
   async bindingHistory(
     @Req() req: Request,
@@ -103,6 +107,7 @@ export class EmployeeManagementController {
   }
 
   @RequirePermission('employees', 'view')
+  @NeedLogin()
   @Get(':id')
   async detail(
     @Req() req: Request,

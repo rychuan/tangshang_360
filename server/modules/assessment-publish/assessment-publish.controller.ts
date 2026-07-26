@@ -29,6 +29,7 @@ export class AssessmentPublishController {
   constructor(private readonly service: AssessmentPublishService) {}
 
   @RequirePermission('publish_management', 'view')
+  @NeedLogin()
   @Get('publish/employees')
   async listEmployees(
     @Req() req: Request,
@@ -58,6 +59,7 @@ export class AssessmentPublishController {
   }
 
   @RequirePermission('publish_management', 'view')
+  @NeedLogin()
   @Get('assessment-instances')
   async listInstances(
     @Req() req: Request,
@@ -82,6 +84,7 @@ export class AssessmentPublishController {
   }
 
   @RequirePermission('publish_management', 'view')
+  @NeedLogin()
   @Get('publish/statistics')
   async getStatistics(@Req() req: Request, @Query('periods') periods: string) {
     const { userId } = req.userContext;
@@ -192,6 +195,7 @@ export class AssessmentPublishController {
   }
 
   @RequirePermission('publish_management', 'view')
+  @NeedLogin()
   @Get('assessment-instances/:id/unlock-history')
   async getUnlockHistory(@Req() req: Request, @Param('id') id: string) {
     const { userId } = req.userContext;
@@ -199,6 +203,7 @@ export class AssessmentPublishController {
   }
 
   @RequirePermission('publish_management', 'view')
+  @NeedLogin()
   @Get('assessment-instances/:id/indicators')
   async getInstanceIndicators(@Req() req: Request, @Param('id') id: string) {
     const { userId } = req.userContext;

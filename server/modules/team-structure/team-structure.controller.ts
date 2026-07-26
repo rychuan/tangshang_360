@@ -23,6 +23,7 @@ export class TeamStructureController {
   constructor(private readonly service: TeamStructureService) {}
 
   @RequirePermission('employees', 'view')
+  @NeedLogin()
   @Get()
   async list(
     @Req() req: Request,
@@ -66,6 +67,7 @@ export class TeamStructureController {
   }
 
   @RequirePermission('employees', 'view')
+  @NeedLogin()
   @Get('employee/:id')
   async getEmployee(@Req() req: Request, @Param('id') id: string) {
     return this.service.getEmployee(id, req.userContext?.userId || '');
@@ -92,6 +94,7 @@ export class TeamStructureController {
   }
 
   @RequirePermission('employee_binding', 'view')
+  @NeedLogin()
   @Get(':employeeId/history')
   async history(@Req() req: Request, @Param('employeeId') employeeId: string) {
     return this.service.history(employeeId, req.userContext?.userId || '');

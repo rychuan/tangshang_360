@@ -28,6 +28,7 @@ export class AssessmentTemplateController {
   constructor(private readonly service: AssessmentTemplateService) {}
 
   @RequirePermission('template_management', 'view')
+  @NeedLogin()
   @Get()
   async list(
     @Query('page') page: string,
@@ -42,6 +43,7 @@ export class AssessmentTemplateController {
   }
 
   @RequirePermission('template_management', 'view')
+  @NeedLogin()
   @Get(':id')
   async detail(@Param('id') id: string): Promise<AssessmentTemplateDetail> {
     return this.service.detail(id);

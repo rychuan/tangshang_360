@@ -13,6 +13,7 @@ export class TeamPerformanceController {
   ) {}
 
   @RequirePermission('team_performance', 'view')
+  @NeedLogin()
   @Get('overview')
   async getOverview(
     @Req() req: Request,
@@ -26,6 +27,7 @@ export class TeamPerformanceController {
   }
 
   @RequirePermission('team_performance', 'view')
+  @NeedLogin()
   @Get('subordinates')
   async getSubordinates(
     @Req() req: Request,

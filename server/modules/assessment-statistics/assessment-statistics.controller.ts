@@ -15,6 +15,7 @@ export class AssessmentStatisticsController {
   constructor(private readonly service: AssessmentStatisticsService) {}
 
   @RequirePermission('statistics', 'view')
+  @NeedLogin()
   @Get('records')
   async records(
     @Req() req: Request,
@@ -44,6 +45,7 @@ export class AssessmentStatisticsController {
   }
 
   @RequirePermission('statistics', 'view')
+  @NeedLogin()
   @Get('charts')
   async charts(
     @Req() req: Request,

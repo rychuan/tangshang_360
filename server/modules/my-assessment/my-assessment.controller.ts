@@ -1,4 +1,5 @@
 import { Controller, Get, Query, Req } from '@nestjs/common';
+import { NeedLogin } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import type { Request } from 'express';
 import { MyAssessmentService } from './my-assessment.service';
@@ -13,6 +14,7 @@ export class MyAssessmentController {
   constructor(private readonly service: MyAssessmentService) {}
 
   @RequirePermission('my_assessments', 'view')
+  @NeedLogin()
   @Get('years')
   async getYears(@Req() req: Request): Promise<string[]> {
     const { userId } = req.userContext;
@@ -20,6 +22,7 @@ export class MyAssessmentController {
   }
 
   @RequirePermission('my_assessments', 'view')
+  @NeedLogin()
   @Get('summary')
   async getSummary(
     @Req() req: Request,
@@ -30,6 +33,7 @@ export class MyAssessmentController {
   }
 
   @RequirePermission('my_assessments', 'view')
+  @NeedLogin()
   @Get('records')
   async getRecords(
     @Req() req: Request,
@@ -46,6 +50,7 @@ export class MyAssessmentController {
   }
 
   @RequirePermission('my_assessments', 'view')
+  @NeedLogin()
   @Get('trend')
   async getTrend(
     @Req() req: Request,

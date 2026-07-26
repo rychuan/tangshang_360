@@ -72,6 +72,7 @@ export class AssessmentOperationController {
   }
 
   @RequirePermission('my_assessments', 'view')
+  @NeedLogin()
   @Get(':id')
   async detail(@Req() req: Request, @Param('id') id: string) {
     const { userId } = req.userContext as { userId: string };
