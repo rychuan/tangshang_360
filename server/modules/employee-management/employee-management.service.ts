@@ -980,6 +980,9 @@ export class EmployeeManagementService {
   async getMyPermissions(
     userId: string,
   ): Promise<CurrentUserAuthorizationContext> {
+    // 预取用户角色填充缓存，避免下方两个方法各自触发 fetchUserRoles
+    // （对每个角色调 authzSDK.members.list 分页，N+1 外部调用）重复打鉴权服务
+    await this.roleManagerService.getUserRoles(userId);
     const [permissions, scope] = await Promise.all([
       this.roleManagerService.getUserEffectivePermissions(userId),
       this.accessScopeService.getScope(userId),
