@@ -61,7 +61,7 @@ export class RoleManagerService {
     string,
     { roles: string[]; expiresAt: number }
   >();
-  private readonly ROLE_CACHE_TTL_MS = 10_000;
+  private readonly ROLE_CACHE_TTL_MS = 60_000;
 
   constructor(
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
@@ -662,17 +662,17 @@ export class RoleManagerService {
     const roleList = Array.isArray(rolePayload)
       ? rolePayload
       : (rolePayload as any)?.items || (rolePayload as any)?.roles || [];
-    const roles: string[] = [];
+    const bizIDs: string[] = roleList
+      .map((role: any) => role.bizID)
+      .filter((bizID: string) => Boolean(bizID));
 
-    for (const role of roleList) {
-      const bizID = role.bizID;
-      if (!bizID) continue;
-      if (await this.isUserInRole(userId, bizID, strict)) {
-        roles.push(bizID);
-      }
-    }
+    const checks = await Promise.all(
+      bizIDs.map((bizID: string) =>
+        this.isUserInRole(userId, bizID, strict),
+      ),
+    );
 
-    return roles;
+    return bizIDs.filter((_: string, i: number) => checks[i]);
   }
 
   private async isUserInRole(
