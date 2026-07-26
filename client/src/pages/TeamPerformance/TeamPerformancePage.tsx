@@ -397,7 +397,11 @@ const TeamPerformancePage: React.FC = () => {
       </div>
 
       {/* Team Performance List */}
-      <Card ref={tableRef} className="rounded-xl flex flex-col overflow-hidden" style={{ maxHeight: tableMaxHeight }}>
+      <Card
+        ref={tableRef}
+        className="rounded-xl flex flex-col overflow-hidden"
+        style={{ maxHeight: tableMaxHeight }}
+      >
         <CardHeader className="shrink-0 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-base">团队绩效列表</CardTitle>
           <Select

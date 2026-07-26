@@ -293,7 +293,11 @@ const EmployeeListTab: React.FC = () => {
       </Card>
 
       {/* 员工表格 + 分页 */}
-      <Card ref={tableRef} className="flex flex-col overflow-hidden" style={{ maxHeight: tableMaxHeight }}>
+      <Card
+        ref={tableRef}
+        className="flex flex-col overflow-hidden"
+        style={{ maxHeight: tableMaxHeight }}
+      >
         <CardContent className="flex-1 overflow-y-auto min-h-0 p-0">
           <EmployeeTable
             employees={employees}
@@ -312,90 +316,79 @@ const EmployeeListTab: React.FC = () => {
             showActions={capabilities.showActions}
           />
         </CardContent>
-        {/* 分页：固定在卡片底部，不随表格滚动 */}
-        <div className="shrink-0 border-t px-4 py-3">
-        <div className="text-center text-xs text-muted-foreground sm:text-left sm:text-sm">
-          第 {filters.page} / {totalPages} 页，共 {total} 条
-        </div>
-        <div className="flex flex-col items-center gap-3 sm:flex-row">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground sm:text-sm">
-            <span>每页</span>
-            <Select
-              value={String(filters.pageSize)}
-              onValueChange={(value) => setters.setPageSize(Number(value))}
-            >
-              <SelectTrigger
-                className="h-8 w-24 shrink-0 text-xs sm:h-9 sm:text-sm"
-                aria-label="每页条数"
+        {/* 分页：固定在卡片底部，左文右器 */}
+        <div className="shrink-0 border-t px-4 py-3 flex items-center justify-between">
+          <span className="text-sm text-muted-foreground whitespace-nowrap">
+            第 {filters.page} / {totalPages} 页，共 {total} 条
+          </span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span className="whitespace-nowrap">每页</span>
+              <Select
+                value={String(filters.pageSize)}
+                onValueChange={(value) => setters.setPageSize(Number(value))}
               >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {EMPLOYEE_PAGE_SIZES.map((pageSize) => (
-                    <SelectItem key={pageSize} value={String(pageSize)}>
-                      {pageSize} 条
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-          {totalPages > 1 && (
-            <Pagination className="w-auto">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    aria-disabled={filters.page === 1}
-                    tabIndex={isFirstPage ? -1 : 0}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      if (!isFirstPage) {
-                        setters.setPage(filters.page - 1);
-                      }
-                    }}
-                    className={`h-8 text-xs sm:h-9 sm:text-sm ${
-                      isFirstPage
-                        ? 'pointer-events-none opacity-50'
-                        : 'cursor-pointer'
-                    }`}
-                  />
-                </PaginationItem>
-                {visiblePages.map((page) => (
-                  <PaginationItem key={page}>
-                    <PaginationLink
-                      isActive={page === filters.page}
+                <SelectTrigger className="h-8 w-20 shrink-0 text-xs" aria-label="每页条数">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {EMPLOYEE_PAGE_SIZES.map((pageSize) => (
+                      <SelectItem key={pageSize} value={String(pageSize)}>
+                        {pageSize}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+            {totalPages > 1 && (
+              <Pagination className="w-auto">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      aria-disabled={filters.page === 1}
+                      tabIndex={isFirstPage ? -1 : 0}
                       onClick={(event) => {
                         event.preventDefault();
-                        setters.setPage(page);
+                        if (!isFirstPage) {
+                          setters.setPage(filters.page - 1);
+                        }
                       }}
-                      className="h-8 w-8 cursor-pointer text-xs sm:h-9 sm:w-9 sm:text-sm"
-                    >
-                      {page}
-                    </PaginationLink>
+                      className={`h-8 text-xs ${isFirstPage ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
+                    />
                   </PaginationItem>
-                ))}
-                <PaginationItem>
-                  <PaginationNext
-                    aria-disabled={filters.page === totalPages}
-                    tabIndex={isLastPage ? -1 : 0}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      if (!isLastPage) {
-                        setters.setPage(filters.page + 1);
-                      }
-                    }}
-                    className={`h-8 text-xs sm:h-9 sm:text-sm ${
-                      isLastPage
-                        ? 'pointer-events-none opacity-50'
-                        : 'cursor-pointer'
-                    }`}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          )}
-        </div>
+                  {visiblePages.map((page) => (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        isActive={page === filters.page}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          setters.setPage(page);
+                        }}
+                        className="h-8 w-8 cursor-pointer text-xs"
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      aria-disabled={filters.page === totalPages}
+                      tabIndex={isLastPage ? -1 : 0}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        if (!isLastPage) {
+                          setters.setPage(filters.page + 1);
+                        }
+                      }}
+                      className={`h-8 text-xs ${isLastPage ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
+          </div>
         </div>
       </Card>
 

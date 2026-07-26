@@ -298,7 +298,7 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
         )}
       </div>
       {totalPages > 1 && (
-        <div className="shrink-0 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mt-4 border-t pt-4">
+        <div className="shrink-0 flex items-center justify-between mt-4 border-t pt-4">
           <span className="text-sm text-muted-foreground">
             第 {page} / {totalPages} 页，共 {total} 条
           </span>
