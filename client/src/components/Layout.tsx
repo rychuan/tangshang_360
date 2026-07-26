@@ -75,7 +75,7 @@ const LayoutContent: React.FC = () => {
           homePath={homePath}
           badges={{}}
         />
-        <SidebarInset className="min-w-0 bg-background md:rounded-lg flex flex-col max-h-dvh overflow-hidden">
+        <SidebarInset className="min-w-0 bg-background md:rounded-lg">
           <div className="flex flex-1 flex-col" />
         </SidebarInset>
       </SidebarProvider>
@@ -94,7 +94,7 @@ const LayoutContent: React.FC = () => {
         homePath={homePath}
         badges={badges}
       />
-      <SidebarInset className="min-w-0 bg-background md:rounded-lg flex flex-col max-h-dvh overflow-hidden">
+      <SidebarInset className="min-w-0 bg-background md:rounded-lg">
         <AppTopbar
           currentLabel={currentLabel}
           items={allItems}
@@ -103,20 +103,18 @@ const LayoutContent: React.FC = () => {
         <div
           ref={scrollRef}
           key={pathname}
-          className="flex flex-1 flex-col overflow-y-auto min-h-0"
+          className="@container/main flex min-w-0 flex-1 flex-col px-4 py-5 lg:px-6"
         >
-          <div className="@container/main flex min-w-0 flex-1 flex-col min-h-0 px-4 py-5 lg:px-6">
-            <div className="mx-auto w-full max-w-7xl flex flex-1 flex-col min-h-0">
-              <Suspense
-                fallback={
-                  <div className="flex items-center justify-center py-20 text-muted-foreground">
-                    <Spinner className="size-6" />
-                  </div>
-                }
-              >
-                <Outlet />
-              </Suspense>
-            </div>
+          <div className="mx-auto w-full max-w-7xl">
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center py-20 text-muted-foreground">
+                  <Spinner className="size-6" />
+                </div>
+              }
+            >
+              <Outlet />
+            </Suspense>
           </div>
         </div>
         <ScrollToTop containerRef={scrollRef} />

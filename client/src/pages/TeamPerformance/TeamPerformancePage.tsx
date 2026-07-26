@@ -228,7 +228,7 @@ const TeamPerformancePage: React.FC = () => {
   }
 
   return (
-    <div className="@container/main flex flex-1 flex-col min-h-0 overflow-hidden gap-4 md:gap-6">
+    <div className="@container/main flex flex-1 flex-col gap-4 md:gap-6">
       {/* Header + Period Filter */}
       <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
         <PageHeader title="团队绩效" visuallyHidden />
@@ -426,7 +426,6 @@ const TeamPerformancePage: React.FC = () => {
               columns={teamColumns}
               data={subordinates}
               loading={loadingList}
-              scrollable
               rowKey={(item) => item.id}
               emptyMessage={
                 statusFilter

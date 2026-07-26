@@ -68,9 +68,26 @@ import {
 } from '@shared/employee-pagination';
 
 const EmployeeListTab: React.FC = () => {
+  const tableCardRef = React.useRef<HTMLDivElement>(null);
+  const [tableMaxHeight, setTableMaxHeight] = React.useState('auto');
   const [syncLoading, setSyncLoading] = React.useState<
     '' | 'import' | 'export'
   >('');
+
+  // 动态计算表格可用高度：视口剩余高度，确保筛选栏和分页固定
+  React.useEffect(() => {
+    const calcHeight = () => {
+      requestAnimationFrame(() => {
+        if (!tableCardRef.current) return;
+        const top = tableCardRef.current.getBoundingClientRect().top;
+        const available = window.innerHeight - top - 16;
+        setTableMaxHeight(`${Math.max(200, available)}px`);
+      });
+    };
+    calcHeight();
+    window.addEventListener('resize', calcHeight);
+    return () => window.removeEventListener('resize', calcHeight);
+  }, []);
   const [filters, setters] = useEmployeeFilters();
   const { permissions } = usePermissions();
   const { ability } = useAuth();
@@ -130,7 +147,7 @@ const EmployeeListTab: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-1 flex-col min-h-0 gap-4 overflow-hidden">
+    <div className="flex flex-col gap-4">
       {/* 顶部统计 + 批量操作 */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -187,7 +204,7 @@ const EmployeeListTab: React.FC = () => {
       </div>
 
       {/* 筛选条件 */}
-      <Card className="rounded-xl shrink-0">
+      <Card className="rounded-xl">
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-3 items-end">
             <div className="flex flex-col gap-1">
@@ -290,8 +307,8 @@ const EmployeeListTab: React.FC = () => {
       </Card>
 
       {/* 员工表格 */}
-      <Card className="flex flex-1 min-h-0 flex-col">
-        <CardContent className="flex-1 overflow-auto min-h-0 p-0">
+      <Card ref={tableCardRef}>
+        <CardContent className="p-0 overflow-y-auto" style={{ maxHeight: tableMaxHeight }}>
           <EmployeeTable
             employees={employees}
             loading={loading}
@@ -312,7 +329,7 @@ const EmployeeListTab: React.FC = () => {
       </Card>
 
       {/* 分页 */}
-      <div className="shrink-0 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-center text-xs text-muted-foreground sm:text-left sm:text-sm">
           第 {filters.page} / {totalPages} 页，共 {total} 条
         </div>

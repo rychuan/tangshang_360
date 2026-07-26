@@ -288,7 +288,7 @@ const TemplateManagementPage: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-1 flex-col min-h-0 overflow-hidden gap-4 md:gap-6">
+    <div className="flex flex-col gap-4 md:gap-6">
       <PageHeader
         title="绩效模板管理"
         actions={
@@ -388,7 +388,6 @@ const TemplateManagementPage: React.FC = () => {
         columns={templateColumns}
         data={items}
         loading={loading}
-        scrollable
         rowKey={(item) => item.id}
         emptyMessage="暂无数据"
         page={page}

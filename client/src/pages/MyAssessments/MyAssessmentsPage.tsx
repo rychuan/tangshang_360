@@ -171,7 +171,7 @@ const MyAssessmentsPage: React.FC = () => {
   }
 
   return (
-    <div className="@container/main flex flex-1 flex-col min-h-0 overflow-hidden gap-4 md:gap-6">
+    <div className="@container/main flex flex-1 flex-col gap-4 md:gap-6">
       <PageHeader
         title="我的绩效"
         actions={
@@ -401,7 +401,6 @@ const MyAssessmentsPage: React.FC = () => {
                   columns={myAssessmentColumns}
                   data={sortedRecords}
                   loading={loading}
-                  scrollable
                   rowKey={(item) => item.id}
                   emptyMessage="暂无绩效记录"
                   page={page}
