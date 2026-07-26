@@ -25,32 +25,12 @@ function Toaster({ className, style, icons, ...props }: ToasterProps) {
       closeButton
       duration={3000}
       icons={{
-        success: (
-          <CircleCheckIcon
-            fill="currentColor"
-            className="size-4 text-success [&>:not(circle)]:stroke-(--normal-bg)"
-          />
-        ),
-        info: (
-          <InfoIcon
-            fill="currentColor"
-            className="size-4 text-info [&>:not(circle)]:stroke-(--normal-bg)"
-          />
-        ),
-        warning: (
-          <CircleAlertIcon
-            fill="currentColor"
-            className="size-4 text-warning [&>:not(circle)]:stroke-(--normal-bg)"
-          />
-        ),
-        error: (
-          <CircleXIcon
-            fill="currentColor"
-            className="size-4 text-destructive [&>:not(circle)]:stroke-(--normal-bg)"
-          />
-        ),
-        close: <XIcon className="size-4 text-accent-foreground" />,
-        loading: <Loader2Icon className="size-4 animate-spin text-primary" />,
+        success: <CircleCheckIcon className="size-4" />,
+        info: <InfoIcon className="size-4" />,
+        warning: <CircleAlertIcon className="size-4" />,
+        error: <CircleXIcon className="size-4" />,
+        close: <XIcon className="size-4" />,
+        loading: <Loader2Icon className="size-4 animate-spin" />,
         ...icons,
       }}
       style={
