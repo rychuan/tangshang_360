@@ -65,9 +65,7 @@ const EmployeeManagementPage: React.FC = () => {
       <div className="flex flex-1 min-h-0 gap-4">
         {/* 左侧部门树 */}
         {showDepartmentTree && (
-          <aside
-            className="w-[260px] shrink-0 overflow-hidden rounded-lg border bg-card"
-          >
+          <aside className="w-[260px] shrink-0 overflow-hidden rounded-lg border bg-card">
             <DepartmentTreePanel
               selectedId={selectedDeptId}
               onSelect={handleDeptSelect}
