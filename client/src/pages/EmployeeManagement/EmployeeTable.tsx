@@ -135,7 +135,9 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
           cellClass: 'hidden md:table-cell',
         },
         cell: ({ row }) => (
-          <Badge variant="outline" className="text-xs font-normal">{row.original.position}</Badge>
+          <Badge variant="outline" className="text-xs font-normal">
+            {row.original.position}
+          </Badge>
         ),
       },
       {
