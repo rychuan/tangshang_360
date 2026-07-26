@@ -48,6 +48,7 @@ import {
   hasPermission,
 } from '@/components/permission-policy';
 import { getEmployeeListCapabilities } from './employee-management-permissions';
+import { useTableScrollHeight } from '@/hooks/useTableScrollHeight';
 import {
   EMPLOYEE_PAGE_SIZES,
   getEmployeeTotalPages,
@@ -62,6 +63,7 @@ interface EmployeeListTabProps {
 const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
   departmentName,
 }) => {
+  const { tableRef, tableMaxHeight } = useTableScrollHeight();
   // 同步外部部门筛选到内部 filter
   React.useEffect(() => {
     if (departmentName !== undefined) {
@@ -199,9 +201,7 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
       </div>
 
       {/* 员工表格 + 分页 */}
-      <Card
-        className="flex flex-1 flex-col min-h-0"
-      >
+      <Card ref={tableRef} className="flex flex-col overflow-hidden" style={{ maxHeight: tableMaxHeight }}>
         <CardContent className="flex-1 overflow-y-auto min-h-0 p-0">
           <EmployeeTable
             employees={employees}
