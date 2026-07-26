@@ -821,78 +821,123 @@ export class AssessmentPublishService {
       `batchReturn instanceIds=${JSON.stringify(instanceIds)} userId=${userId}`,
     );
 
-    let successCount: number = 0;
-    let failedCount: number = 0;
+    const uniqueIds = [...new Set(instanceIds)];
 
-    for (const instanceId of instanceIds) {
-      try {
-        await this.db.transaction(async (tx) => {
-          const instanceRows = await tx
-            .select()
-            .from(assessmentInstance)
-            .where(eq(assessmentInstance.id, instanceId))
-            .for('update')
-            .limit(1);
+    // 批量获取所有实例信息（一次查询代替 N 次 SELECT）
+    const instances = await this.db
+      .select({
+        id: assessmentInstance.id,
+        employeeId: assessmentInstance.employeeId,
+        period: assessmentInstance.period,
+        status: assessmentInstance.status,
+      })
+      .from(assessmentInstance)
+      .where(inArray(assessmentInstance.id, uniqueIds));
 
-          if (instanceRows.length === 0) {
-            throw new NotFoundException(`实例 ${instanceId} 不存在`);
-          }
+    const instanceMap = new Map(instances.map((i) => [i.id, i]));
 
-          const instance = instanceRows[0];
+    // 批量预校验：实例存在 + 状态
+    const validIds: string[] = [];
+    let preCheckFailedCount = 0;
 
+    for (const instanceId of uniqueIds) {
+      const inst = instanceMap.get(instanceId);
+      if (!inst) {
+        this.logger.warn(`batchReturn: instance ${instanceId} not found`);
+        preCheckFailedCount++;
+        continue;
+      }
+      if (inst.status !== 'self_review') {
+        this.logger.warn(
+          `batchReturn: instance ${instanceId} status=${inst.status}, skip`,
+        );
+        preCheckFailedCount++;
+        continue;
+      }
+      validIds.push(instanceId);
+    }
+
+    if (validIds.length === 0) {
+      return {
+        success: false,
+        successCount: 0,
+        failedCount: preCheckFailedCount,
+      };
+    }
+
+    // 批量权限校验（并行，移出事务减少锁持有时间）
+    const scopeCheckFailed = new Set<string>();
+    await Promise.all(
+      validIds.map(async (instanceId) => {
+        const inst = instanceMap.get(instanceId)!;
+        try {
           const canAccess = await this.accessScopeService.canAccessEmployee(
             userId,
-            instance.employeeId,
+            inst.employeeId,
             { includeSelf: false },
           );
           if (!canAccess) {
-            throw new ForbiddenException('无权操作该考核实例');
+            scopeCheckFailed.add(instanceId);
           }
+        } catch {
+          scopeCheckFailed.add(instanceId);
+        }
+      }),
+    );
 
-          // 仅允许退回 self_review 状态的实例（尚未开始评分）
-          if (instance.status !== 'self_review') {
-            throw new BadRequestException(
-              `实例 ${instanceId} 状态为 ${instance.status}，仅支持退回自评中状态的绩效`,
-            );
-          }
+    const processIds = validIds.filter((id) => !scopeCheckFailed.has(id));
+    preCheckFailedCount += scopeCheckFailed.size;
 
-          // 删除实例级指标快照
-          await tx
-            .delete(assessmentIndicatorSnapshot)
-            .where(eq(assessmentIndicatorSnapshot.instanceId, instanceId));
+    // 并行处理退回（每个实例独立事务，无死锁风险）
+    const concurrency = 10;
+    const results = await runWithConcurrency(
+      processIds,
+      concurrency,
+      async (instanceId) => {
+        try {
+          const inst = instanceMap.get(instanceId)!;
+          await this.db.transaction(async (tx) => {
+            // 锁行防止并发修改
+            await tx
+              .select()
+              .from(assessmentInstance)
+              .where(eq(assessmentInstance.id, instanceId))
+              .for('update')
+              .limit(1);
 
-          // 删除评分记录（自评阶段只有草稿）
-          await tx
-            .delete(ratingRecord)
-            .where(eq(ratingRecord.instanceId, instanceId));
-
-          // 删除实例
-          await tx
-            .delete(assessmentInstance)
-            .where(eq(assessmentInstance.id, instanceId));
-
-          // 记录审计日志
-          await tx.insert(auditLog).values({
-            operatorId: userId,
-            action: 'return',
-            targetType: 'assessment_instance',
-            targetId: instanceId,
-            changes: {
-              employeeId: instance.employeeId,
-              period: instance.period,
-              fromStatus: instance.status,
-            },
+            await tx
+              .delete(assessmentIndicatorSnapshot)
+              .where(eq(assessmentIndicatorSnapshot.instanceId, instanceId));
+            await tx
+              .delete(ratingRecord)
+              .where(eq(ratingRecord.instanceId, instanceId));
+            await tx
+              .delete(assessmentInstance)
+              .where(eq(assessmentInstance.id, instanceId));
+            await tx.insert(auditLog).values({
+              operatorId: userId,
+              action: 'return',
+              targetType: 'assessment_instance',
+              targetId: instanceId,
+              changes: {
+                employeeId: inst.employeeId,
+                period: inst.period,
+                fromStatus: inst.status,
+              },
+            });
           });
-        });
+          return true;
+        } catch (err) {
+          this.logger.warn(
+            `batchReturn: failed for instance ${instanceId}: ${err}`,
+          );
+          return false;
+        }
+      },
+    );
 
-        successCount++;
-      } catch (err) {
-        this.logger.warn(
-          `batchReturn: failed for instance ${instanceId}: ${err}`,
-        );
-        failedCount++;
-      }
-    }
+    const successCount = results.filter(Boolean).length;
+    const failedCount = results.length - successCount + preCheckFailedCount;
 
     return {
       success: failedCount === 0,
