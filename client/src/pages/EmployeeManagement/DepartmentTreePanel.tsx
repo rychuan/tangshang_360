@@ -134,7 +134,10 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
       const ids = new Set<string>();
       const collect = (nodes: DepartmentTreeNode[]) => {
         nodes.forEach((n) => {
-          if (n.children?.length) { ids.add(n.id); collect(n.children); }
+          if (n.children?.length) {
+            ids.add(n.id);
+            collect(n.children);
+          }
         });
       };
       collect(tree);
@@ -235,7 +238,9 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
   const handleDelete = async (node: DepartmentTreeNode) => {
     const total = countEmployees(node);
     if (total > 0) {
-      toast.error(`「${node.name}」及其子部门共有 ${total} 名员工，请先移出员工后再删除`);
+      toast.error(
+        `「${node.name}」及其子部门共有 ${total} 名员工，请先移出员工后再删除`,
+      );
       return;
     }
     try {
