@@ -23,7 +23,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty';
-import { Award, Settings2, Trash2 } from '@/components/ui/hugeicons';
+import { Award, Settings2, Trash2, ChevronLeft, ChevronRight } from '@/components/ui/hugeicons';
 import {
   Table,
   TableBody,
@@ -50,6 +50,11 @@ interface PendingPublishSectionProps {
   period: string;
   onAdjust: (emp: PublishEmployeeItem) => void;
   onDeleteSnapshot: (emp: PublishEmployeeItem) => void;
+  /** 分页 */
+  page: number;
+  pageSize: number;
+  total: number;
+  onPageChange: (page: number) => void;
 }
 
 const LAST_PERIOD_STATUS_LABELS: Record<string, string> = {
@@ -78,9 +83,17 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
   period,
   onAdjust,
   onDeleteSnapshot,
+  page,
+  pageSize,
+  total,
+  onPageChange,
 }) => {
-  const allSelected: boolean =
-    employees.length > 0 && selectedIds.size === employees.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const startIdx = (page - 1) * pageSize;
+  const slicedEmployees = employees.slice(startIdx, startIdx + pageSize);
+
+  const allSelectedOnPage: boolean =
+    slicedEmployees.length > 0 && slicedEmployees.every((e) => selectedIds.has(e.employeeId));
 
   const handleDeptChange = (v: string): void => {
     onDepartmentFilterChange(v === '__all__' ? '' : v);
@@ -163,7 +176,7 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
           <div className="flex items-center justify-center py-12">
             <Spinner />
           </div>
-        ) : employees.length === 0 ? (
+        ) : slicedEmployees.length === 0 ? (
           <Empty>
             <EmptyHeader>
               <EmptyMedia variant="icon">
@@ -178,7 +191,7 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
               <TableRow className="border-b text-left text-muted-foreground">
                 <TableHead className="w-10 py-3 pr-4 font-medium">
                   <Checkbox
-                    checked={allSelected}
+                    checked={allSelectedOnPage}
                     onCheckedChange={(checked: boolean) => onSelectAll(checked)}
                   />
                 </TableHead>
@@ -204,7 +217,7 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {employees.map((emp: PublishEmployeeItem) => (
+              {slicedEmployees.map((emp: PublishEmployeeItem) => (
                 <TableRow
                   key={emp.employeeId}
                   className="border-b hover:bg-muted/50"
@@ -268,6 +281,34 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
           </Table>
         )}
       </div>
+      {totalPages > 1 && (
+        <div className="shrink-0 mt-4 flex items-center justify-between border-t pt-4">
+          <span className="text-sm text-muted-foreground">共 {total} 条</span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => onPageChange(Math.max(1, page - 1))}
+            >
+              <ChevronLeft data-icon="inline-start" />
+              上一页
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              {page} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages}
+              onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+            >
+              下一页
+              <ChevronRight data-icon="inline-end" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
