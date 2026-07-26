@@ -21,6 +21,9 @@ function Toaster({ className, style, icons, ...props }: ToasterProps) {
       theme={theme as ToasterProps['theme']}
       className={cn('toaster group', className)}
       position="top-center"
+      richColors
+      closeButton
+      duration={3000}
       icons={{
         success: (
           <CircleCheckIcon
