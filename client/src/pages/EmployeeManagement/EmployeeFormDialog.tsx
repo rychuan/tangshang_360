@@ -4,6 +4,7 @@ import type {
   CreateEmployeeRequest,
 } from '@shared/api.interface';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -93,6 +94,7 @@ export interface EmployeeFormDialogProps {
   formData: EmployeeFormData;
   setFormData: React.Dispatch<React.SetStateAction<EmployeeFormData>>;
   onSave: () => void;
+  submitting?: boolean;
   positions?: string[];
   canManageRoles: boolean;
 }
@@ -104,6 +106,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
   formData,
   setFormData,
   onSave,
+  submitting = false,
   positions: positionNames = [],
   canManageRoles,
 }) => {
@@ -298,10 +301,13 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
             取消
           </Button>
-          <Button onClick={onSave}>{editingEmployee ? '保存' : '创建'}</Button>
+          <Button onClick={onSave} disabled={submitting}>
+            {submitting && <Spinner className="mr-2 size-4" />}
+            {editingEmployee ? '保存' : '创建'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -19,14 +19,7 @@ function Toaster({ className, style, icons, ...props }: ToasterProps) {
   return (
     <Sonner
       theme={theme as ToasterProps['theme']}
-      className={cn(
-        'toaster group',
-        '[&_[data-type="success"]]:bg-success/10',
-        '[&_[data-type="error"]]:bg-destructive/10',
-        '[&_[data-type="warning"]]:bg-warning/10',
-        '[&_[data-type="info"]]:bg-info/10',
-        className,
-      )}
+      className={cn('toaster group', className)}
       position="top-center"
       closeButton
       duration={3000}

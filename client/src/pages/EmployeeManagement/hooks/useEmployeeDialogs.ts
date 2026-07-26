@@ -42,6 +42,7 @@ export function useEmployeeDialogs(refetch: () => void) {
   const [historyItems, setHistoryItems] = useState<BindingHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
+  const [formSubmitting, setFormSubmitting] = useState(false);
   // ---- 删除对话框 ----
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<EmployeeItem | null>(null);
@@ -69,6 +70,7 @@ export function useEmployeeDialogs(refetch: () => void) {
       toast.error('请填写姓名和岗位');
       return;
     }
+    setFormSubmitting(true);
     try {
       if (editingEmployee) {
         await employeeManagement.update(
@@ -86,6 +88,8 @@ export function useEmployeeDialogs(refetch: () => void) {
       refetch();
     } catch (error: unknown) {
       handleApiError(error);
+    } finally {
+      setFormSubmitting(false);
     }
   }, [editingEmployee, formData, refetch]);
 
@@ -209,6 +213,7 @@ export function useEmployeeDialogs(refetch: () => void) {
       formData,
       setFormData,
       onSave: handleFormSave,
+      submitting: formSubmitting,
     },
     openCreateDialog,
     openEditDialog,

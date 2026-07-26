@@ -310,6 +310,7 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
         formData={dialogs.formDialog.formData}
         setFormData={dialogs.formDialog.setFormData}
         onSave={dialogs.formDialog.onSave}
+        submitting={dialogs.formDialog.submitting}
         positions={positions}
         canManageRoles={canManageRoles}
       />

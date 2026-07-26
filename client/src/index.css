@@ -11,3 +11,21 @@
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
 }
+
+/* Sonner toast — subtle tinted backgrounds per type */
+[data-sonner-toast][data-type='success'] {
+  background-color: hsl(var(--success) / 0.08) !important;
+  border-color: hsl(var(--success) / 0.2) !important;
+}
+[data-sonner-toast][data-type='error'] {
+  background-color: hsl(var(--destructive) / 0.08) !important;
+  border-color: hsl(var(--destructive) / 0.2) !important;
+}
+[data-sonner-toast][data-type='warning'] {
+  background-color: hsl(var(--warning) / 0.08) !important;
+  border-color: hsl(var(--warning) / 0.2) !important;
+}
+[data-sonner-toast][data-type='info'] {
+  background-color: hsl(var(--info) / 0.08) !important;
+  border-color: hsl(var(--info) / 0.2) !important;
+}
