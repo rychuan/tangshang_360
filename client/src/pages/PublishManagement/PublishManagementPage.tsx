@@ -57,8 +57,12 @@ const PublishManagementPage: React.FC = () => {
   const [deptFilter, setDeptFilter] = useState<string>('');
   const [gradeFilter, setGradeFilter] = useState<string>('');
 
-  const [activeTab, setActiveTab] = useState<'pending' | 'published'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'published'>(
+    'pending',
+  );
   const effectivePeriod = periods[0] ?? currentMonth();
+  const [pendingPage, setPendingPage] = useState<number>(1);
+  const pendingPageSize = 20;
 
   const statisticsQuery = useQuery({
     queryKey: ['publish', 'statistics', effectivePeriod],
@@ -548,14 +552,18 @@ const PublishManagementPage: React.FC = () => {
             onPublish={handlePublish}
             publishing={publishing}
             departmentFilter={pendingDeptFilter}
-            onDepartmentFilterChange={setPendingDeptFilter}
+            onDepartmentFilterChange={(v) => { setPendingDeptFilter(v); setPendingPage(1); }}
             templateFilter={pendingTplFilter}
-            onTemplateFilterChange={setPendingTplFilter}
+            onTemplateFilterChange={(v) => { setPendingTplFilter(v); setPendingPage(1); }}
             departments={departments}
             templates={templates}
             period={effectivePeriod}
             onAdjust={handleOpenAdjust}
             onDeleteSnapshot={handleDeleteSnapshot}
+            page={pendingPage}
+            pageSize={pendingPageSize}
+            total={employees.length}
+            onPageChange={setPendingPage}
           />
         </TabsContent>
 
@@ -606,64 +614,64 @@ const PublishManagementPage: React.FC = () => {
       </Tabs>
 
       <AdjustIndicatorsDialog
-          open={adjustOpen}
-          onOpenChange={setAdjustOpen}
-          employee={
-            adjustingEmployee
-              ? {
-                  employeeId: adjustingEmployee.employeeId,
-                  employeeName: adjustingEmployee.employeeName,
-                  templateName: adjustingEmployee.templateName,
-                }
-              : null
+        open={adjustOpen}
+        onOpenChange={setAdjustOpen}
+        employee={
+          adjustingEmployee
+            ? {
+                employeeId: adjustingEmployee.employeeId,
+                employeeName: adjustingEmployee.employeeName,
+                templateName: adjustingEmployee.templateName,
+              }
+            : null
+        }
+        onSubmit={handleAdjustSubmit}
+        onDeleteSnapshot={() => {
+          if (adjustingEmployee) {
+            handleDeleteSnapshot(adjustingEmployee);
+            setAdjustOpen(false);
           }
-          onSubmit={handleAdjustSubmit}
-          onDeleteSnapshot={() => {
-            if (adjustingEmployee) {
-              handleDeleteSnapshot(adjustingEmployee);
-              setAdjustOpen(false);
-            }
-          }}
-          loading={adjustLoading}
-        />
+        }}
+        loading={adjustLoading}
+      />
 
-        <BatchUnlockDialog
-          open={unlockOpen}
-          onOpenChange={setUnlockOpen}
-          selectedCount={unlockTargetIds.length}
-          reason={unlockReason}
-          onReasonChange={setUnlockReason}
-          onSubmit={handleUnlockSubmit}
-          loading={unlockLoading}
-        />
+      <BatchUnlockDialog
+        open={unlockOpen}
+        onOpenChange={setUnlockOpen}
+        selectedCount={unlockTargetIds.length}
+        reason={unlockReason}
+        onReasonChange={setUnlockReason}
+        onSubmit={handleUnlockSubmit}
+        loading={unlockLoading}
+      />
 
-        <UnlockHistoryDialog
-          open={historyOpen}
-          onOpenChange={setHistoryOpen}
-          instanceId={historyInstanceId}
-        />
+      <UnlockHistoryDialog
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        instanceId={historyInstanceId}
+      />
 
-        <UnfinishedReminderDialog
-          open={reminderOpen}
-          onOpenChange={(open: boolean) => {
-            if (!reminderSending) setReminderOpen(open);
-          }}
-          preview={reminderPreview}
-          period={effectivePeriod}
-          department={deptFilter || undefined}
-          statusLabel={
-            statusFilter === 'employee_processing'
-              ? '员工处理中'
-              : statusFilter === 'supervisor_processing'
-                ? '上级处理中'
-                : statusFilter === 'completed'
-                  ? '已完成'
-                  : '全部未完成状态'
-          }
-          grade={gradeFilter || undefined}
-          sending={reminderSending}
-          onConfirm={handleConfirmUnfinishedReminder}
-        />
+      <UnfinishedReminderDialog
+        open={reminderOpen}
+        onOpenChange={(open: boolean) => {
+          if (!reminderSending) setReminderOpen(open);
+        }}
+        preview={reminderPreview}
+        period={effectivePeriod}
+        department={deptFilter || undefined}
+        statusLabel={
+          statusFilter === 'employee_processing'
+            ? '员工处理中'
+            : statusFilter === 'supervisor_processing'
+              ? '上级处理中'
+              : statusFilter === 'completed'
+                ? '已完成'
+                : '全部未完成状态'
+        }
+        grade={gradeFilter || undefined}
+        sending={reminderSending}
+        onConfirm={handleConfirmUnfinishedReminder}
+      />
     </div>
   );
 };

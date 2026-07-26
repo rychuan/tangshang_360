@@ -20,6 +20,8 @@ import {
   Download,
   Award,
   Undo2,
+  ChevronLeft,
+  ChevronRight,
 } from '@/components/ui/hugeicons';
 import dayjs from 'dayjs';
 import type { AssessmentInstanceItem } from '@shared/api.interface';
@@ -41,13 +43,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationPrevious,
-  PaginationNext,
-} from '@/components/ui/pagination';
+// 分页使用统一 Button 风格，与 PageTable 保持一致
 
 interface PublishedAssessmentSectionProps {
   instances: AssessmentInstanceItem[];
@@ -462,33 +458,30 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
           </div>
           {totalPages > 1 && (
             <div className="shrink-0 flex items-center justify-between px-4 py-3 border-t">
-              <span className="text-sm text-muted-foreground">
-                共 {total} 条
-              </span>
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      aria-disabled={page <= 1}
-                      className={
-                        page <= 1 ? 'pointer-events-none opacity-50' : ''
-                      }
-                      onClick={() => onPageChange(page - 1)}
-                    />
-                  </PaginationItem>
-                  <PaginationItem>
-                    <PaginationNext
-                      aria-disabled={page >= totalPages}
-                      className={
-                        page >= totalPages
-                          ? 'pointer-events-none opacity-50'
-                          : ''
-                      }
-                      onClick={() => onPageChange(page + 1)}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
+              <span className="text-sm text-muted-foreground">共 {total} 条</span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => onPageChange(Math.max(1, page - 1))}
+                >
+                  <ChevronLeft data-icon="inline-start" />
+                  上一页
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  {page} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+                >
+                  下一页
+                  <ChevronRight data-icon="inline-end" />
+                </Button>
+              </div>
             </div>
           )}
         </>

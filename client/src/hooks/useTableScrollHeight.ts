@@ -9,7 +9,9 @@ export function useTableScrollHeight(): {
   tableMaxHeight: string;
 } {
   const tableRef = React.useRef<HTMLDivElement>(null);
-  const [tableMaxHeight, setTableMaxHeight] = React.useState(() => `${Math.max(200, window.innerHeight * 0.6)}px`);
+  const [tableMaxHeight, setTableMaxHeight] = React.useState(
+    () => `${Math.max(200, window.innerHeight * 0.6)}px`,
+  );
 
   React.useEffect(() => {
     const calcHeight = () => {
