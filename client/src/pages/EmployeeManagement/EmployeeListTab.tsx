@@ -292,12 +292,9 @@ const EmployeeListTab: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* 员工表格 */}
-      <Card ref={tableRef}>
-        <CardContent
-          className="p-0 overflow-y-auto"
-          style={{ maxHeight: tableMaxHeight }}
-        >
+      {/* 员工表格 + 分页 */}
+      <Card ref={tableRef} className="flex flex-col overflow-hidden" style={{ maxHeight: tableMaxHeight }}>
+        <CardContent className="flex-1 overflow-y-auto min-h-0 p-0">
           <EmployeeTable
             employees={employees}
             loading={loading}
@@ -315,10 +312,8 @@ const EmployeeListTab: React.FC = () => {
             showActions={capabilities.showActions}
           />
         </CardContent>
-      </Card>
-
-      {/* 分页 */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* 分页：固定在卡片底部，不随表格滚动 */}
+        <div className="shrink-0 border-t px-4 py-3">
         <div className="text-center text-xs text-muted-foreground sm:text-left sm:text-sm">
           第 {filters.page} / {totalPages} 页，共 {total} 条
         </div>
@@ -401,7 +396,8 @@ const EmployeeListTab: React.FC = () => {
             </Pagination>
           )}
         </div>
-      </div>
+        </div>
+      </Card>
 
       {/* 表单对话框 */}
       <EmployeeFormDialog

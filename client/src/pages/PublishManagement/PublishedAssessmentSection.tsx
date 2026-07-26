@@ -478,7 +478,9 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
                   <PaginationItem>
                     <PaginationPrevious
                       aria-disabled={page <= 1}
-                      className={page <= 1 ? 'pointer-events-none opacity-50' : ''}
+                      className={
+                        page <= 1 ? 'pointer-events-none opacity-50' : ''
+                      }
                       onClick={() => onPageChange(Math.max(1, page - 1))}
                     />
                   </PaginationItem>
@@ -495,8 +497,14 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
                   <PaginationItem>
                     <PaginationNext
                       aria-disabled={page >= totalPages}
-                      className={page >= totalPages ? 'pointer-events-none opacity-50' : ''}
-                      onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+                      className={
+                        page >= totalPages
+                          ? 'pointer-events-none opacity-50'
+                          : ''
+                      }
+                      onClick={() =>
+                        onPageChange(Math.min(totalPages, page + 1))
+                      }
                     />
                   </PaginationItem>
                 </PaginationContent>

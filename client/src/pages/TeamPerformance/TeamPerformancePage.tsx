@@ -62,6 +62,7 @@ import type {
   SubordinateRecord,
 } from '@shared/api.interface';
 import { COMMAND_PERMISSIONS } from '@/components/permission-policy';
+import { useTableScrollHeight } from '@/hooks/useTableScrollHeight';
 
 const PAGE_SIZE = 10;
 
@@ -102,6 +103,7 @@ const TeamPerformancePage: React.FC = () => {
   const [remindingIds, setRemindingIds] = useState<Set<string>>(new Set());
   const [total, setTotal] = useState(0);
   const pageSize = PAGE_SIZE;
+  const { tableRef, tableMaxHeight } = useTableScrollHeight();
 
   const { data: overview = null, isLoading: loading } = useQuery({
     queryKey: ['team-performance', 'overview', activePeriods],
@@ -395,8 +397,8 @@ const TeamPerformancePage: React.FC = () => {
       </div>
 
       {/* Team Performance List */}
-      <Card className="rounded-xl">
-        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <Card ref={tableRef} className="rounded-xl flex flex-col overflow-hidden" style={{ maxHeight: tableMaxHeight }}>
+        <CardHeader className="shrink-0 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-base">团队绩效列表</CardTitle>
           <Select
             value={statusFilter || '__all'}
@@ -420,12 +422,13 @@ const TeamPerformancePage: React.FC = () => {
             </SelectContent>
           </Select>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="hidden md:block">
+        <CardContent className="flex-1 min-h-0 p-0">
+          <div className="hidden md:block h-full">
             <PageTable
               columns={teamColumns}
               data={subordinates}
               loading={loadingList}
+              scrollable
               rowKey={(item) => item.id}
               emptyMessage={
                 statusFilter

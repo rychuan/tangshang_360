@@ -304,12 +304,7 @@ const TemplateManagementPage: React.FC = () => {
         }
       />
 
-      <div
-        ref={tableRef}
-        style={{ maxHeight: tableMaxHeight }}
-        className="flex flex-col gap-4 overflow-y-auto"
-      >
-        <FilterBar data-ai-section-type="card-list">
+      <FilterBar data-ai-section-type="card-list">
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-muted-foreground">搜索</Label>
             <Input
@@ -392,17 +387,19 @@ const TemplateManagementPage: React.FC = () => {
           </FilterBarActions>
         </FilterBar>
 
+      <div ref={tableRef} style={{ maxHeight: tableMaxHeight }}>
         <PageTable
           columns={templateColumns}
           data={items}
           loading={loading}
+          scrollable
+          maxHeight={tableMaxHeight}
           rowKey={(item) => item.id}
           emptyMessage="暂无数据"
           page={page}
           totalPages={totalPages}
           total={total}
           onPageChange={setPage}
-          className="overflow-hidden"
         />
       </div>
 

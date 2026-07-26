@@ -43,6 +43,10 @@ interface PageTableProps<T> {
   emptyIcon?: React.ReactNode;
   renderEmpty?: () => React.ReactNode;
   rowKey?: (item: T, index: number) => string | number;
+  /** 固定分页模式：表格体独立滚动，分页始终可见 */
+  scrollable?: boolean;
+  /** 表格容器最大高度（配合 scrollable，由 useTableScrollHeight 提供） */
+  maxHeight?: string;
   page?: number;
   totalPages?: number;
   total?: number;
@@ -65,6 +69,8 @@ function PageTable<T>({
   emptyIcon,
   renderEmpty,
   rowKey,
+  scrollable = false,
+  maxHeight,
   page,
   totalPages,
   total,
@@ -73,9 +79,12 @@ function PageTable<T>({
   className,
 }: PageTableProps<T>) {
   return (
-    <div className={cn('overflow-hidden rounded-lg border', className)}>
+    <div
+      className={cn('overflow-hidden rounded-lg border', scrollable && 'flex flex-col', className)}
+      style={maxHeight && scrollable ? { maxHeight } : undefined}
+    >
       {toolbar && (
-        <div className="flex items-center gap-3 border-b px-4 py-3">
+        <div className={cn('flex items-center gap-3 border-b px-4 py-3', scrollable && 'shrink-0')}>
           {toolbar}
         </div>
       )}
@@ -108,15 +117,15 @@ function PageTable<T>({
       {data.length > 0 && (
         <>
           {loading && (
-            <div className="relative">
+            <div className={cn('relative', scrollable && 'shrink-0')}>
               <div className="absolute inset-0 z-10 flex items-start justify-center bg-background/40 pt-8">
                 <Spinner className="size-5" />
               </div>
             </div>
           )}
-          <div className="overflow-x-auto">
+          <div className={cn('overflow-x-auto', scrollable && 'flex-1 overflow-auto min-h-0')}>
             <Table>
-              <TableHeader>
+              <TableHeader className={scrollable ? 'sticky top-0 z-10 bg-background' : ''}>
                 <TableRow className="bg-muted/30">
                   {columns.map((col) => (
                     <TableHead
@@ -156,7 +165,7 @@ function PageTable<T>({
           </div>
 
           {page != null && totalPages != null && totalPages > 1 && (
-            <div className="flex items-center justify-between border-t px-4 py-3">
+            <div className={cn('flex items-center justify-between border-t px-4 py-3', scrollable && 'shrink-0')}>
               <span className="text-sm text-muted-foreground">
                 {'共'} {total ?? data.length} {'条'}
               </span>

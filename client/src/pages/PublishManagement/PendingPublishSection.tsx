@@ -324,7 +324,9 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
               <PaginationItem>
                 <PaginationNext
                   aria-disabled={page >= totalPages}
-                  className={page >= totalPages ? 'pointer-events-none opacity-50' : ''}
+                  className={
+                    page >= totalPages ? 'pointer-events-none opacity-50' : ''
+                  }
                   onClick={() => onPageChange(Math.min(totalPages, page + 1))}
                 />
               </PaginationItem>
