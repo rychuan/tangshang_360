@@ -25,7 +25,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import DepartmentTreeSelect from '@/components/ui/department-tree-select';
 import PositionMultiSelect from './PositionMultiSelect';
 import EmployeeTable from './EmployeeTable';
 import EmployeeFormDialog from './EmployeeFormDialog';
@@ -68,8 +67,19 @@ import {
   getEmployeeVisiblePages,
 } from '@shared/employee-pagination';
 
-const EmployeeListTab: React.FC = () => {
+interface EmployeeListTabProps {
+  /** 从部门树面板传入的部门名称，覆盖内部筛选器 */
+  departmentName?: string | null;
+}
+
+const EmployeeListTab: React.FC<EmployeeListTabProps> = ({ departmentName }) => {
   const { tableRef, tableMaxHeight } = useTableScrollHeight();
+  // 同步外部部门筛选到内部 filter
+  React.useEffect(() => {
+    if (departmentName !== undefined) {
+      setters.setDepartment(departmentName ?? '');
+    }
+  }, [departmentName]);
   const [syncLoading, setSyncLoading] = React.useState<
     '' | 'import' | 'export'
   >('');
@@ -207,15 +217,14 @@ const EmployeeListTab: React.FC = () => {
                 />
               </InputGroup>
             </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs text-muted-foreground">部门</Label>
-              <DepartmentTreeSelect
-                value={filters.department}
-                onChange={(name) => setters.setDepartment(name)}
-                placeholder="全部部门"
-                className="w-36"
-              />
-            </div>
+            {departmentName === undefined && (
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs text-muted-foreground">部门</Label>
+                <span className="text-sm text-muted-foreground h-8 flex items-center">
+                  {filters.department || '全部部门'}
+                </span>
+              </div>
+            )}
             <div className="flex flex-col gap-1">
               <Label className="text-xs text-muted-foreground">岗位</Label>
               <PositionMultiSelect

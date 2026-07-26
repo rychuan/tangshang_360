@@ -1,35 +1,55 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import React, { useCallback, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { department as departmentApi } from '@/api';
+import type { DepartmentTreeNode } from '@shared/api.interface';
 import { PageHeader } from '@/components/business-ui/page-header';
 import EmployeeListTab from './EmployeeListTab';
-import DepartmentManagementTab from './DepartmentManagementTab';
-import BitableConnectionTab from './BitableConnectionTab';
+import { DepartmentTreePanel } from './DepartmentTreePanel';
 import { UserCog } from '@/components/ui/hugeicons';
 import { usePermissions } from '@/hooks/usePermissions';
-import {
-  getDefaultEmployeeManagementTab,
-  getVisibleEmployeeManagementTabs,
-  type EmployeeManagementTab,
-} from './employee-management-permissions';
+import { hasPermission } from '@/components/permission-policy';
+
+/** 在部门树中递归查找节点名称 */
+function findDeptName(
+  nodes: DepartmentTreeNode[],
+  id: string,
+): string | null {
+  for (const node of nodes) {
+    if (node.id === id) return node.name;
+    if (node.children?.length) {
+      const found = findDeptName(node.children, id);
+      if (found !== null) return found;
+    }
+  }
+  return null;
+}
 
 const EmployeeManagementPage: React.FC = () => {
-  const { permissions, canManageGlobalConnections } = usePermissions();
-  const visibleTabs = useMemo(
-    () =>
-      getVisibleEmployeeManagementTabs(permissions, canManageGlobalConnections),
-    [canManageGlobalConnections, permissions],
+  const { permissions } = usePermissions();
+  const canViewEmployees = permissions.some(
+    (p) => p.resource === 'employees' && p.actions.includes('view'),
   );
-  const defaultTab = getDefaultEmployeeManagementTab(visibleTabs);
-  const [activeTab, setActiveTab] =
-    useState<EmployeeManagementTab>('employees');
+  const showDepartmentTree = hasPermission(permissions, 'organization', 'view');
 
-  useEffect(() => {
-    if (defaultTab && !visibleTabs.includes(activeTab)) {
-      setActiveTab(defaultTab);
-    }
-  }, [activeTab, defaultTab, visibleTabs]);
+  const { data: deptData } = useQuery({
+    queryKey: ['departments'],
+    queryFn: () => departmentApi.list(),
+    enabled: showDepartmentTree,
+  });
 
-  if (!defaultTab) {
+  const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
+
+  // 从部门树数据中解析选中节点的名称
+  const selectedDeptName: string | null =
+    selectedDeptId && deptData?.tree
+      ? findDeptName(deptData.tree, selectedDeptId)
+      : null;
+
+  const handleDeptSelect = useCallback((id: string | null) => {
+    setSelectedDeptId(id);
+  }, []);
+
+  if (!canViewEmployees && !showDepartmentTree) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <div className="text-center">
@@ -43,48 +63,24 @@ const EmployeeManagementPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col gap-4 md:gap-6">
+    <div className="flex flex-1 flex-col min-h-0 gap-4 md:gap-6">
       <PageHeader title="员工管理" icon={UserCog} visuallyHidden />
-      <Tabs
-        value={activeTab}
-        onValueChange={(value) => setActiveTab(value as EmployeeManagementTab)}
-      >
-        <TabsList>
-          {visibleTabs.includes('employees') && (
-            <TabsTrigger value="employees" className="text-xs sm:text-sm">
-              员工列表
-            </TabsTrigger>
-          )}
-          {visibleTabs.includes('departments') && (
-            <TabsTrigger value="departments" className="text-xs sm:text-sm">
-              部门管理
-            </TabsTrigger>
-          )}
-          {visibleTabs.includes('bitable') && (
-            <TabsTrigger value="bitable" className="text-xs sm:text-sm">
-              多维表格连接
-            </TabsTrigger>
-          )}
-        </TabsList>
-        {visibleTabs.includes('employees') && (
-          <TabsContent value="employees" className="mt-4">
-            <EmployeeListTab />
-          </TabsContent>
+      <div className="flex flex-1 min-h-0 gap-4">
+        {/* 左侧部门树 */}
+        {showDepartmentTree && (
+          <aside className="w-[260px] shrink-0 overflow-hidden rounded-lg border bg-card">
+            <DepartmentTreePanel
+              selectedId={selectedDeptId}
+              onSelect={handleDeptSelect}
+            />
+          </aside>
         )}
-        {visibleTabs.includes('departments') && (
-          <TabsContent value="departments" className="mt-4">
-            <DepartmentManagementTab />
-          </TabsContent>
-        )}
-        {visibleTabs.includes('bitable') && (
-          <TabsContent
-            value="bitable"
-            className="flex-1 flex-col min-h-0 overflow-hidden mt-4"
-          >
-            <BitableConnectionTab />
-          </TabsContent>
-        )}
-      </Tabs>
+
+        {/* 右侧员工列表 */}
+        <section className="flex-1 min-w-0">
+          <EmployeeListTab departmentName={selectedDeptName} />
+        </section>
+      </div>
     </div>
   );
 };
