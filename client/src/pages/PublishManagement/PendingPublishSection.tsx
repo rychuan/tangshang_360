@@ -23,13 +23,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty';
-import {
-  Award,
-  Settings2,
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
-} from '@/components/ui/hugeicons';
+import { Award, Settings2, Trash2 } from '@/components/ui/hugeicons';
 import {
   Table,
   TableBody,
@@ -38,6 +32,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+} from '@/components/ui/pagination';
 
 interface PendingPublishSectionProps {
   employees: PublishEmployeeItem[];
@@ -95,6 +97,13 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
   onPageChange,
 }) => {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const visiblePages = React.useMemo(() => {
+    const pages: number[] = [];
+    const start = Math.max(1, page - 2);
+    const end = Math.min(totalPages, page + 2);
+    for (let i = start; i <= end; i++) pages.push(i);
+    return pages;
+  }, [page, totalPages]);
   const startIdx = (page - 1) * pageSize;
   const slicedEmployees = employees.slice(startIdx, startIdx + pageSize);
 
@@ -289,31 +298,38 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
         )}
       </div>
       {totalPages > 1 && (
-        <div className="shrink-0 mt-4 flex items-center justify-between border-t pt-4">
-          <span className="text-sm text-muted-foreground">共 {total} 条</span>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page <= 1}
-              onClick={() => onPageChange(Math.max(1, page - 1))}
-            >
-              <ChevronLeft data-icon="inline-start" />
-              上一页
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              {page} / {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page >= totalPages}
-              onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-            >
-              下一页
-              <ChevronRight data-icon="inline-end" />
-            </Button>
-          </div>
+        <div className="shrink-0 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mt-4 border-t pt-4">
+          <span className="text-sm text-muted-foreground">
+            第 {page} / {totalPages} 页，共 {total} 条
+          </span>
+          <Pagination className="w-auto">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  aria-disabled={page <= 1}
+                  className={page <= 1 ? 'pointer-events-none opacity-50' : ''}
+                  onClick={() => onPageChange(Math.max(1, page - 1))}
+                />
+              </PaginationItem>
+              {visiblePages.map((p) => (
+                <PaginationItem key={p}>
+                  <PaginationLink
+                    isActive={p === page}
+                    onClick={() => onPageChange(p)}
+                  >
+                    {p}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext
+                  aria-disabled={page >= totalPages}
+                  className={page >= totalPages ? 'pointer-events-none opacity-50' : ''}
+                  onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       )}
     </div>
