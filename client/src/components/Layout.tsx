@@ -106,7 +106,7 @@ const LayoutContent: React.FC = () => {
           className="flex flex-1 flex-col overflow-y-auto min-h-0"
         >
           <div className="@container/main flex min-w-0 flex-1 flex-col min-h-0 px-4 py-5 lg:px-6">
-            <div className="mx-auto w-full max-w-7xl">
+            <div className="mx-auto w-full max-w-7xl flex flex-1 flex-col min-h-0">
               <Suspense
                 fallback={
                   <div className="flex items-center justify-center py-20 text-muted-foreground">
