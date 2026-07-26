@@ -552,9 +552,15 @@ const PublishManagementPage: React.FC = () => {
             onPublish={handlePublish}
             publishing={publishing}
             departmentFilter={pendingDeptFilter}
-            onDepartmentFilterChange={(v) => { setPendingDeptFilter(v); setPendingPage(1); }}
+            onDepartmentFilterChange={(v) => {
+              setPendingDeptFilter(v);
+              setPendingPage(1);
+            }}
             templateFilter={pendingTplFilter}
-            onTemplateFilterChange={(v) => { setPendingTplFilter(v); setPendingPage(1); }}
+            onTemplateFilterChange={(v) => {
+              setPendingTplFilter(v);
+              setPendingPage(1);
+            }}
             departments={departments}
             templates={templates}
             period={effectivePeriod}

@@ -62,6 +62,14 @@ const LayoutContent: React.FC = () => {
     }
   }, [currentLabel, appName]);
 
+  // 路由切换后将焦点移到内容区 + 滚动至顶部（无障碍：WCAG focus-on-route-change）
+  const contentRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (loading) return;
+    contentRef.current?.focus();
+    scrollRef.current?.scrollTo(0, 0);
+  }, [pathname, loading]);
+
   if (loading) {
     return (
       <SidebarProvider
@@ -76,7 +84,9 @@ const LayoutContent: React.FC = () => {
           badges={{}}
         />
         <SidebarInset className="min-w-0 bg-background md:rounded-lg">
-          <div className="flex flex-1 flex-col" />
+          <div className="flex flex-1 items-center justify-center">
+            <Spinner className="size-8" />
+          </div>
         </SidebarInset>
       </SidebarProvider>
     );
@@ -95,6 +105,13 @@ const LayoutContent: React.FC = () => {
         badges={badges}
       />
       <SidebarInset className="min-w-0 bg-background md:rounded-lg">
+        {/* 跳转到内容：键盘无障碍 skip-link */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-50 focus:rounded focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:text-primary-foreground"
+        >
+          跳到内容
+        </a>
         <AppTopbar
           currentLabel={currentLabel}
           items={allItems}
@@ -105,7 +122,12 @@ const LayoutContent: React.FC = () => {
           key={pathname}
           className="@container/main flex min-w-0 flex-1 flex-col px-4 py-5 lg:px-6"
         >
-          <div className="mx-auto w-full max-w-7xl">
+          <div
+            id="main-content"
+            ref={contentRef}
+            tabIndex={-1}
+            className="mx-auto w-full max-w-7xl outline-none"
+          >
             <Suspense
               fallback={
                 <div className="flex items-center justify-center py-20 text-muted-foreground">

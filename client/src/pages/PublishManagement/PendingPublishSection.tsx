@@ -23,7 +23,13 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty';
-import { Award, Settings2, Trash2, ChevronLeft, ChevronRight } from '@/components/ui/hugeicons';
+import {
+  Award,
+  Settings2,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+} from '@/components/ui/hugeicons';
 import {
   Table,
   TableBody,
@@ -93,7 +99,8 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
   const slicedEmployees = employees.slice(startIdx, startIdx + pageSize);
 
   const allSelectedOnPage: boolean =
-    slicedEmployees.length > 0 && slicedEmployees.every((e) => selectedIds.has(e.employeeId));
+    slicedEmployees.length > 0 &&
+    slicedEmployees.every((e) => selectedIds.has(e.employeeId));
 
   const handleDeptChange = (v: string): void => {
     onDepartmentFilterChange(v === '__all__' ? '' : v);
