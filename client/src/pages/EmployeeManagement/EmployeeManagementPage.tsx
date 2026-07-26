@@ -43,11 +43,12 @@ const EmployeeManagementPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col gap-4 md:gap-6">
+    <div className="flex flex-1 flex-col min-h-0 overflow-hidden gap-4 md:gap-6">
       <PageHeader title="员工管理" icon={UserCog} />
       <Tabs
         value={activeTab}
         onValueChange={(value) => setActiveTab(value as EmployeeManagementTab)}
+        className="flex flex-1 flex-col min-h-0 overflow-hidden"
       >
         <TabsList>
           {visibleTabs.includes('employees') && (
@@ -67,17 +68,17 @@ const EmployeeManagementPage: React.FC = () => {
           )}
         </TabsList>
         {visibleTabs.includes('employees') && (
-          <TabsContent value="employees" className="mt-4">
+          <TabsContent value="employees" className="flex-1 flex-col min-h-0 overflow-hidden mt-4">
             <EmployeeListTab />
           </TabsContent>
         )}
         {visibleTabs.includes('departments') && (
-          <TabsContent value="departments" className="mt-4">
+          <TabsContent value="departments" className="flex-1 flex-col min-h-0 overflow-hidden mt-4">
             <DepartmentManagementTab />
           </TabsContent>
         )}
         {visibleTabs.includes('bitable') && (
-          <TabsContent value="bitable" className="mt-4">
+          <TabsContent value="bitable" className="flex-1 flex-col min-h-0 overflow-hidden mt-4">
             <BitableConnectionTab />
           </TabsContent>
         )}

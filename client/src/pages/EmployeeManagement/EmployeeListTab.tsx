@@ -130,7 +130,7 @@ const EmployeeListTab: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-1 flex-col min-h-0 gap-4 overflow-hidden">
       {/* 顶部统计 + 批量操作 */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -187,7 +187,7 @@ const EmployeeListTab: React.FC = () => {
       </div>
 
       {/* 筛选条件 */}
-      <Card className="rounded-xl">
+      <Card className="rounded-xl shrink-0">
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-3 items-end">
             <div className="flex flex-col gap-1">
@@ -290,8 +290,8 @@ const EmployeeListTab: React.FC = () => {
       </Card>
 
       {/* 员工表格 */}
-      <Card>
-        <CardContent className="p-0">
+      <Card className="flex flex-1 min-h-0 flex-col">
+        <CardContent className="flex-1 overflow-auto min-h-0 p-0">
           <EmployeeTable
             employees={employees}
             loading={loading}
@@ -312,7 +312,7 @@ const EmployeeListTab: React.FC = () => {
       </Card>
 
       {/* 分页 */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="shrink-0 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-center text-xs text-muted-foreground sm:text-left sm:text-sm">
           第 {filters.page} / {totalPages} 页，共 {total} 条
         </div>
