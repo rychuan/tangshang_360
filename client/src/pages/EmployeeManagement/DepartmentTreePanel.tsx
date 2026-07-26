@@ -128,6 +128,20 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
   const tree = deptData?.tree ?? [];
   const filtered = buildTree(tree, search);
 
+  // 数据加载完成后默认展开全部节点
+  React.useEffect(() => {
+    if (tree.length > 0) {
+      const ids = new Set<string>();
+      const collect = (nodes: DepartmentTreeNode[]) => {
+        nodes.forEach((n) => {
+          if (n.children?.length) { ids.add(n.id); collect(n.children); }
+        });
+      };
+      collect(tree);
+      setExpanded(ids);
+    }
+  }, [tree.length]);
+
   const parentName = form.parentId ? findParentName(tree, form.parentId) : '';
 
   const toggleExpand = (id: string) => {
@@ -218,17 +232,22 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (node: DepartmentTreeNode) => {
+    const total = countEmployees(node);
+    if (total > 0) {
+      toast.error(`「${node.name}」及其子部门共有 ${total} 名员工，请先移出员工后再删除`);
+      return;
+    }
     try {
-      await departmentApi.remove(id);
+      await departmentApi.remove(node.id);
       toast.success('已删除');
       queryClient.invalidateQueries({ queryKey: ['departments'] });
-      if (selectedId === id) onSelect(null);
+      if (selectedId === node.id) onSelect(null);
     } catch (e) {
       if (isApiNotFound(e)) {
         toast.warning('该部门已不存在或已被删除');
         queryClient.invalidateQueries({ queryKey: ['departments'] });
-        if (selectedId === id) onSelect(null);
+        if (selectedId === node.id) onSelect(null);
         return;
       }
       handleApiError(e);
@@ -303,7 +322,7 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
                 className="size-5 flex items-center justify-center rounded hover:bg-destructive/10 hover:text-destructive"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDelete(node.id);
+                  handleDelete(node);
                 }}
                 title="删除"
               >
