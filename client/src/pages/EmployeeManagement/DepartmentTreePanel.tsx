@@ -76,10 +76,7 @@ function findNode(
 }
 
 /** 在树中查找节点的父级名称 */
-function findParentName(
-  nodes: DepartmentTreeNode[],
-  parentId: string,
-): string {
+function findParentName(nodes: DepartmentTreeNode[], parentId: string): string {
   for (const n of nodes) {
     if (n.id === parentId) return n.name;
     if (n.children?.length) {
@@ -98,7 +95,9 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [formOpen, setFormOpen] = useState(false);
-  const [editingDept, setEditingDept] = useState<DepartmentTreeNode | null>(null);
+  const [editingDept, setEditingDept] = useState<DepartmentTreeNode | null>(
+    null,
+  );
   const [form, setForm] = useState({
     name: '',
     parentId: '',
@@ -374,9 +373,7 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle>
-              {editingDept ? '编辑部门' : '新建部门'}
-            </DialogTitle>
+            <DialogTitle>{editingDept ? '编辑部门' : '新建部门'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
             {parentName && (

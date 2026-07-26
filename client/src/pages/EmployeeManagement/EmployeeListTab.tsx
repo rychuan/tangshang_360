@@ -27,11 +27,7 @@ import {
 import EmployeeTable from './EmployeeTable';
 import EmployeeFormDialog from './EmployeeFormDialog';
 import { BindDialog, UnbindDialog, HistoryDialog } from './EmployeeDialogs';
-import {
-  Plus,
-  Search,
-  Link2,
-} from '@/components/ui/hugeicons';
+import { Plus, Search, Link2 } from '@/components/ui/hugeicons';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -119,11 +115,13 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
   const isLastPage = filters.page === totalPages;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-1 flex-col min-h-0 gap-4">
       {/* 筛选条件 + 操作按钮 */}
       <div className="flex items-center gap-3 flex-wrap">
         <InputGroup className="w-40">
-          <InputGroupAddon><Search className="size-3.5" /></InputGroupAddon>
+          <InputGroupAddon>
+            <Search className="size-3.5" />
+          </InputGroupAddon>
           <InputGroupInput
             className="h-8 text-xs"
             placeholder="姓名/编号"
@@ -131,8 +129,13 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
             onChange={(e) => setters.setKeyword(e.target.value)}
           />
         </InputGroup>
-        <Select value={filters.role || 'all'} onValueChange={(v) => setters.setRole(v === 'all' ? '' : v)}>
-          <SelectTrigger className="h-8 w-24 text-xs"><SelectValue placeholder="角色" /></SelectTrigger>
+        <Select
+          value={filters.role || 'all'}
+          onValueChange={(v) => setters.setRole(v === 'all' ? '' : v)}
+        >
+          <SelectTrigger className="h-8 w-24 text-xs">
+            <SelectValue placeholder="角色" />
+          </SelectTrigger>
           <SelectContent>
             <SelectGroup>
               <SelectItem value="all">全部角色</SelectItem>
@@ -144,8 +147,13 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
             </SelectGroup>
           </SelectContent>
         </Select>
-        <Select value={filters.status || 'all'} onValueChange={(v) => setters.setStatus(v === 'all' ? '' : v)}>
-          <SelectTrigger className="h-8 w-24 text-xs"><SelectValue placeholder="状态" /></SelectTrigger>
+        <Select
+          value={filters.status || 'all'}
+          onValueChange={(v) => setters.setStatus(v === 'all' ? '' : v)}
+        >
+          <SelectTrigger className="h-8 w-24 text-xs">
+            <SelectValue placeholder="状态" />
+          </SelectTrigger>
           <SelectContent>
             <SelectGroup>
               <SelectItem value="all">全部状态</SelectItem>
@@ -155,8 +163,13 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
           </SelectContent>
         </Select>
         {capabilities.showBindings && (
-          <Select value={filters.binding || 'all'} onValueChange={(v) => setters.setBinding(v === 'all' ? '' : v)}>
-            <SelectTrigger className="h-8 w-24 text-xs"><SelectValue placeholder="绩效" /></SelectTrigger>
+          <Select
+            value={filters.binding || 'all'}
+            onValueChange={(v) => setters.setBinding(v === 'all' ? '' : v)}
+          >
+            <SelectTrigger className="h-8 w-24 text-xs">
+              <SelectValue placeholder="绩效" />
+            </SelectTrigger>
             <SelectContent>
               <SelectGroup>
                 <SelectItem value="all">全部</SelectItem>
@@ -169,14 +182,20 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
         <div className="flex-1" />
         {selectedRowKeys.length > 0 && (
           <CanDo {...COMMAND_PERMISSIONS.employeeBindingEdit}>
-            <Button variant="outline" size="sm" onClick={() => dialogs.openBatchBindDialog(selectedRowKeys)}>
-              <Link2 data-icon="inline-start" />批量绑定({selectedRowKeys.length})
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => dialogs.openBatchBindDialog(selectedRowKeys)}
+            >
+              <Link2 data-icon="inline-start" />
+              批量绑定({selectedRowKeys.length})
             </Button>
           </CanDo>
         )}
         <CanDo resource="employees" action="edit">
           <Button size="sm" onClick={dialogs.openCreateDialog}>
-            <Plus data-icon="inline-start" />新建员工
+            <Plus data-icon="inline-start" />
+            新建员工
           </Button>
         </CanDo>
       </div>
@@ -352,7 +371,6 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
     </div>
   );
 };

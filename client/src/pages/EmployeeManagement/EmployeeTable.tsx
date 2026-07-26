@@ -135,7 +135,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
           cellClass: 'hidden md:table-cell',
         },
         cell: ({ row }) => (
-          <span className="truncate">{row.original.position}</span>
+          <Badge variant="outline" className="text-xs font-normal">{row.original.position}</Badge>
         ),
       },
       {
@@ -206,9 +206,9 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
               },
               cell: ({ row }) =>
                 row.original.currentBinding ? (
-                  <span className="text-xs">
+                  <Badge variant="outline" className="text-xs font-normal">
                     {row.original.currentBinding.templateName}
-                  </span>
+                  </Badge>
                 ) : (
                   <span className="text-xs text-muted-foreground">-</span>
                 ),
