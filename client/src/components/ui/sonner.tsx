@@ -19,7 +19,14 @@ function Toaster({ className, style, icons, ...props }: ToasterProps) {
   return (
     <Sonner
       theme={theme as ToasterProps['theme']}
-      className={cn('toaster group', className)}
+      className={cn(
+        'toaster group',
+        '[&_[data-type="success"]]:bg-success/10',
+        '[&_[data-type="error"]]:bg-destructive/10',
+        '[&_[data-type="warning"]]:bg-warning/10',
+        '[&_[data-type="info"]]:bg-info/10',
+        className,
+      )}
       position="top-center"
       closeButton
       duration={3000}
@@ -31,12 +38,6 @@ function Toaster({ className, style, icons, ...props }: ToasterProps) {
         close: <XIcon className="size-4 text-muted-foreground" />,
         loading: <Loader2Icon className="size-4 animate-spin text-primary" />,
         ...icons,
-      }}
-      toastOptions={{
-        success: { style: { background: 'hsl(var(--success) / 0.08)' } },
-        error: { style: { background: 'hsl(var(--destructive) / 0.08)' } },
-        warning: { style: { background: 'hsl(var(--warning) / 0.08)' } },
-        info: { style: { background: 'hsl(var(--info) / 0.08)' } },
       }}
       style={
         {
