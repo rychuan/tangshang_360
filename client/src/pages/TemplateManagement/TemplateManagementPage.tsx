@@ -291,20 +291,10 @@ const TemplateManagementPage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4 md:gap-6">
-      <PageHeader
-        title="绩效模板管理"
-        visuallyHidden
-        actions={
-          <CanDo resource="template_management" action="edit">
-            <Button onClick={handleOpenCreate}>
-              <Plus data-icon="inline-start" />
-              新建模板
-            </Button>
-          </CanDo>
-        }
-      />
+      <PageHeader title="绩效模板管理" visuallyHidden />
 
-      <FilterBar data-ai-section-type="card-list">
+      <div className="flex items-start gap-3">
+      <FilterBar data-ai-section-type="card-list" className="flex-1">
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">搜索</Label>
           <Input
@@ -386,6 +376,13 @@ const TemplateManagementPage: React.FC = () => {
           </div>
         </FilterBarActions>
       </FilterBar>
+        <CanDo resource="template_management" action="edit">
+          <Button onClick={handleOpenCreate} className="shrink-0">
+            <Plus data-icon="inline-start" />
+            新建模板
+          </Button>
+        </CanDo>
+      </div>
 
       <div ref={tableRef} style={{ maxHeight: tableMaxHeight }}>
         <PageTable
