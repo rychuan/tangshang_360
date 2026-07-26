@@ -24,6 +24,7 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty';
 import { Award, Settings2, Trash2 } from '@/components/ui/hugeicons';
+import { EMPLOYEE_PAGE_SIZES } from '@shared/employee-pagination';
 import {
   Table,
   TableBody,
@@ -63,6 +64,7 @@ interface PendingPublishSectionProps {
   pageSize: number;
   total: number;
   onPageChange: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
 }
 
 const LAST_PERIOD_STATUS_LABELS: Record<string, string> = {
@@ -95,6 +97,7 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
   pageSize,
   total,
   onPageChange,
+  onPageSizeChange,
 }) => {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const visiblePages = React.useMemo(() => {
@@ -123,8 +126,9 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
   return (
     <div
       ref={tableRef}
+      style={{ maxHeight: tableMaxHeight }}
       data-ai-section-type="card-list"
-      className="rounded-lg border bg-card p-6"
+      className="flex flex-col rounded-lg border bg-card p-6"
     >
       <div className="shrink-0 mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">待发布员工</h2>
@@ -187,7 +191,7 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
         </div>
       </div>
 
-      <div style={{ maxHeight: tableMaxHeight }} className="overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Spinner />
@@ -299,39 +303,55 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
       </div>
       {totalPages > 1 && (
         <div className="shrink-0 flex items-center justify-between mt-4 border-t pt-4">
-          <span className="text-sm text-muted-foreground">
+          <span className="text-sm text-muted-foreground whitespace-nowrap">
             第 {page} / {totalPages} 页，共 {total} 条
           </span>
-          <Pagination className="w-auto">
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  aria-disabled={page <= 1}
-                  className={page <= 1 ? 'pointer-events-none opacity-50' : ''}
-                  onClick={() => onPageChange(Math.max(1, page - 1))}
-                />
-              </PaginationItem>
-              {visiblePages.map((p) => (
-                <PaginationItem key={p}>
-                  <PaginationLink
-                    isActive={p === page}
-                    onClick={() => onPageChange(p)}
-                  >
-                    {p}
-                  </PaginationLink>
-                </PaginationItem>
-              ))}
-              <PaginationItem>
-                <PaginationNext
-                  aria-disabled={page >= totalPages}
-                  className={
-                    page >= totalPages ? 'pointer-events-none opacity-50' : ''
-                  }
-                  onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+          <div className="flex items-center gap-3">
+            {onPageSizeChange && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="whitespace-nowrap">每页</span>
+                <Select value={String(pageSize)} onValueChange={(v) => { onPageSizeChange(Number(v)); onPageChange(1); }}>
+                  <SelectTrigger className="h-8 w-20 shrink-0 text-xs" aria-label="每页条数">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {EMPLOYEE_PAGE_SIZES.map((s) => (
+                        <SelectItem key={s} value={String(s)}>{s}</SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {totalPages > 1 && (
+              <Pagination className="w-auto">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      aria-disabled={page <= 1}
+                      className={page <= 1 ? 'pointer-events-none opacity-50' : ''}
+                      onClick={() => onPageChange(Math.max(1, page - 1))}
+                    />
+                  </PaginationItem>
+                  {visiblePages.map((p) => (
+                    <PaginationItem key={p}>
+                      <PaginationLink isActive={p === page} onClick={() => onPageChange(p)}>
+                        {p}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      aria-disabled={page >= totalPages}
+                      className={page >= totalPages ? 'pointer-events-none opacity-50' : ''}
+                      onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
+          </div>
         </div>
       )}
     </div>

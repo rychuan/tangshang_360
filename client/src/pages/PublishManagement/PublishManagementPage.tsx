@@ -39,8 +39,6 @@ import UnlockHistoryDialog from './UnlockHistoryDialog';
 import UnfinishedReminderDialog from './UnfinishedReminderDialog';
 import { getAppBaseUrl } from '@/utils/app-url';
 
-const PAGE_SIZE: number = 20;
-
 function currentMonth(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -62,7 +60,8 @@ const PublishManagementPage: React.FC = () => {
   );
   const effectivePeriod = periods[0] ?? currentMonth();
   const [pendingPage, setPendingPage] = useState<number>(1);
-  const pendingPageSize = 20;
+  const [pendingPageSize, setPendingPageSize] = useState<number>(20);
+  const [publishedPageSize, setPublishedPageSize] = useState<number>(20);
 
   const statisticsQuery = useQuery({
     queryKey: ['publish', 'statistics', effectivePeriod],
@@ -131,7 +130,7 @@ const PublishManagementPage: React.FC = () => {
       listInstances({
         periods: periods.length > 0 ? periods : undefined,
         page: instancesPage,
-        pageSize: PAGE_SIZE,
+        pageSize: publishedPageSize,
         status: statusFilter === '__all__' ? undefined : statusFilter,
         department: deptFilter || undefined,
         grade: gradeFilter || undefined,
@@ -515,7 +514,7 @@ const PublishManagementPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-4 md:gap-6">
+    <div className="flex flex-1 flex-col min-h-0 gap-4 md:gap-6">
       <div className="flex items-center gap-4">
         <PageHeader title="绩效发布管理" visuallyHidden />
       </div>
@@ -532,6 +531,7 @@ const PublishManagementPage: React.FC = () => {
       <Tabs
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as 'pending' | 'published')}
+        className="flex flex-1 flex-col min-h-0"
       >
         <TabsList>
           <TabsTrigger value="pending" className="text-xs sm:text-sm">
@@ -542,7 +542,7 @@ const PublishManagementPage: React.FC = () => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="pending" className="mt-4">
+        <TabsContent value="pending" className="flex-1 flex-col min-h-0 mt-4">
           <PendingPublishSection
             employees={employees}
             loading={loadingEmployees}
@@ -570,20 +570,22 @@ const PublishManagementPage: React.FC = () => {
             pageSize={pendingPageSize}
             total={employees.length}
             onPageChange={setPendingPage}
+            onPageSizeChange={setPendingPageSize}
           />
         </TabsContent>
 
-        <TabsContent value="published" className="mt-4">
+        <TabsContent value="published" className="flex-1 flex-col min-h-0 mt-4">
           <PublishedAssessmentSection
             instances={instances}
             loading={loadingInstances}
             total={instancesTotal}
             page={instancesPage}
-            pageSize={PAGE_SIZE}
+            pageSize={publishedPageSize}
             onPageChange={(nextPage: number) => {
               setInstancesPage(nextPage);
               setSelectedInstanceIds(new Set());
             }}
+            onPageSizeChange={setPublishedPageSize}
             statusFilter={statusFilter}
             onStatusFilterChange={(v: string) => {
               setStatusFilter(v);

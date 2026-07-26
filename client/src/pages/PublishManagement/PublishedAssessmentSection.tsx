@@ -49,6 +49,7 @@ import {
   PaginationPrevious,
   PaginationNext,
 } from '@/components/ui/pagination';
+import { EMPLOYEE_PAGE_SIZES } from '@shared/employee-pagination';
 
 interface PublishedAssessmentSectionProps {
   instances: AssessmentInstanceItem[];
@@ -57,6 +58,7 @@ interface PublishedAssessmentSectionProps {
   page: number;
   pageSize: number;
   onPageChange: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
   statusFilter: string;
   onStatusFilterChange: (value: string) => void;
   departmentFilter: string;
@@ -85,6 +87,7 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
   page,
   pageSize,
   onPageChange,
+  onPageSizeChange,
   statusFilter,
   onStatusFilterChange,
   departmentFilter,
@@ -148,8 +151,9 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
   return (
     <div
       ref={tableRef}
+      style={{ maxHeight: tableMaxHeight }}
       data-ai-section-type="card-list"
-      className="rounded-lg border bg-card p-6"
+      className="flex flex-col rounded-lg border bg-card p-6"
     >
       <div className="shrink-0 mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
@@ -289,8 +293,7 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
       ) : (
         <>
           <div
-            style={{ maxHeight: tableMaxHeight }}
-            className="overflow-y-auto"
+            className="flex-1 overflow-y-auto min-h-0"
           >
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-background">
@@ -470,9 +473,28 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
           </div>
           {totalPages > 1 && (
             <div className="shrink-0 flex items-center justify-between px-4 py-3 border-t">
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">
                 第 {page} / {totalPages} 页，共 {total} 条
               </span>
+              <div className="flex items-center gap-3">
+                {onPageSizeChange && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span className="whitespace-nowrap">每页</span>
+                    <Select value={String(pageSize)} onValueChange={(v) => { onPageSizeChange(Number(v)); onPageChange(1); }}>
+                      <SelectTrigger className="h-8 w-20 shrink-0 text-xs" aria-label="每页条数">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {EMPLOYEE_PAGE_SIZES.map((s) => (
+                            <SelectItem key={s} value={String(s)}>{s}</SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {totalPages > 1 && (
               <Pagination className="w-auto">
                 <PaginationContent>
                   <PaginationItem>
@@ -509,6 +531,8 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>
+                )}
+              </div>
             </div>
           )}
         </>
