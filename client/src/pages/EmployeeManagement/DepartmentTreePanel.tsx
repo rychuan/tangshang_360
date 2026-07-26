@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import DepartmentTreeSelect from '@/components/ui/department-tree-select';
 import {
   Dialog,
   DialogContent,
@@ -69,6 +70,21 @@ function findNode(
     if (n.id === id) return n;
     if (n.children?.length) {
       const found = findNode(n.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+/** 在树中按名称查找节点 */
+function findNodeByName(
+  nodes: DepartmentTreeNode[],
+  name: string,
+): DepartmentTreeNode | null {
+  for (const n of nodes) {
+    if (n.name === name) return n;
+    if (n.children?.length) {
+      const found = findNodeByName(n.children, name);
       if (found) return found;
     }
   }
@@ -387,12 +403,17 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
             <DialogTitle>{editingDept ? '编辑部门' : '新建部门'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
-            {parentName && (
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs">上级部门</Label>
-                <p className="text-sm text-muted-foreground">{parentName}</p>
-              </div>
-            )}
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs">上级部门</Label>
+              <DepartmentTreeSelect
+                value={parentName}
+                onChange={(name) => {
+                  const node = findNodeByName(tree, name);
+                  setForm({ ...form, parentId: node?.id ?? '' });
+                }}
+                placeholder="无（顶级部门）"
+              />
+            </div>
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs">部门名称</Label>
               <Input
