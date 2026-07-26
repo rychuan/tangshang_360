@@ -231,20 +231,36 @@ export class UnlockService {
       `batchUnlock instanceIds=${JSON.stringify(instanceIds)} reason=${reason} userId=${userId}`,
     );
 
-    let successCount = 0;
-    let failedCount = 0;
+    const uniqueIds = [...new Set(instanceIds)];
+    const concurrency = 10;
+    const results: boolean[] = [];
 
-    for (const instanceId of instanceIds) {
-      try {
-        await this.unlockInstanceInTransaction(instanceId, reason, userId);
-        successCount++;
-      } catch (err) {
-        this.logger.warn(
-          `batchUnlock: failed for instance ${instanceId}: ${err}`,
-        );
-        failedCount++;
-      }
+    // 分批并行处理
+    for (let i = 0; i < uniqueIds.length; i += concurrency) {
+      const batch = uniqueIds.slice(i, i + concurrency);
+      results.push(
+        ...(await Promise.all(
+          batch.map(async (instanceId) => {
+            try {
+              await this.unlockInstanceInTransaction(
+                instanceId,
+                reason,
+                userId,
+              );
+              return true;
+            } catch (err) {
+              this.logger.warn(
+                `batchUnlock: failed for instance ${instanceId}: ${err}`,
+              );
+              return false;
+            }
+          }),
+        )),
+      );
     }
+
+    const successCount = results.filter(Boolean).length;
+    const failedCount = results.length - successCount;
 
     return { success: failedCount === 0, successCount, failedCount };
   }
