@@ -104,7 +104,7 @@ const LayoutContent: React.FC = () => {
         homePath={homePath}
         badges={badges}
       />
-      <SidebarInset className="min-w-0 bg-background md:rounded-lg flex flex-col h-screen overflow-hidden">
+      <SidebarInset className="min-w-0 bg-background md:rounded-lg">
         {/* 跳转到内容：键盘无障碍 skip-link */}
         <a
           href="#main-content"
@@ -120,13 +120,13 @@ const LayoutContent: React.FC = () => {
         <div
           ref={scrollRef}
           key={pathname}
-          className="@container/main flex min-w-0 flex-1 flex-col min-h-0 overflow-y-auto px-4 py-5 lg:px-6"
+          className="@container/main flex min-w-0 flex-1 flex-col px-4 py-5 lg:px-6"
         >
           <div
             id="main-content"
             ref={contentRef}
             tabIndex={-1}
-            className="mx-auto w-full max-w-7xl outline-none flex flex-1 flex-col min-h-0"
+            className="mx-auto w-full max-w-7xl outline-none"
           >
             <Suspense
               fallback={

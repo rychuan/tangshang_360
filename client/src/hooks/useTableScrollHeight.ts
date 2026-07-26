@@ -6,30 +6,38 @@ export function useTableScrollHeight(): {
 } {
   const tableRef = React.useRef<HTMLDivElement>(null);
   const [tableMaxHeight, setTableMaxHeight] = React.useState('400px');
+  const retryCount = React.useRef(0);
 
-  React.useLayoutEffect(() => {
-    let ro: ResizeObserver | null = null;
-
-    const calcHeight = () => {
+  React.useEffect(() => {
+    const measure = () => {
       if (!tableRef.current) return;
       const top = tableRef.current.getBoundingClientRect().top;
-      if (top <= 0) return;
-      setTableMaxHeight(`${Math.max(200, window.innerHeight - top - 16)}px`);
+      // 妙搭平台可能有渲染延迟，重试直到拿到有效值
+      if (top <= 0 && retryCount.current < 5) {
+        retryCount.current += 1;
+        const t = window.setTimeout(measure, 200);
+        return () => window.clearTimeout(t);
+      }
+      if (top > 0) {
+        setTableMaxHeight(`${Math.max(200, window.innerHeight - top - 16)}px`);
+      }
+      return undefined;
     };
 
-    // setImmediate-style deferral: layout is guaranteed complete
-    const id = window.setTimeout(() => {
-      calcHeight();
-      ro = new ResizeObserver(() => calcHeight());
-      ro.observe(document.body);
-    }, 0);
+    const cleanup = measure();
 
-    window.addEventListener('resize', calcHeight);
+    const onResize = () => {
+      if (!tableRef.current) return;
+      const top = tableRef.current.getBoundingClientRect().top;
+      if (top > 0) {
+        setTableMaxHeight(`${Math.max(200, window.innerHeight - top - 16)}px`);
+      }
+    };
+    window.addEventListener('resize', onResize);
 
     return () => {
-      window.clearTimeout(id);
-      ro?.disconnect();
-      window.removeEventListener('resize', calcHeight);
+      if (cleanup) cleanup();
+      window.removeEventListener('resize', onResize);
     };
   }, []);
 
