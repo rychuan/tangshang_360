@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth, ROLE_SUBJECT } from '@lark-apaas/client-toolkit/auth';
 import { department as departmentApi } from '@/api';
-import { handleApiError } from '@client/src/utils/api-error';
+import { handleApiError, isApiNotFound } from '@client/src/utils/api-error';
 import type {
   DepartmentItem,
   DepartmentTreeNode,
@@ -181,6 +181,11 @@ const DepartmentManagementTab: React.FC = () => {
       toast.success('部门已删除');
       queryClient.invalidateQueries({ queryKey: ['departments'] });
     } catch (err: unknown) {
+      if (isApiNotFound(err)) {
+        toast.warning('该部门已不存在或已被删除');
+        queryClient.invalidateQueries({ queryKey: ['departments'] });
+        return;
+      }
       handleApiError(err);
     }
   };

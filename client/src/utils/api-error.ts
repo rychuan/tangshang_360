@@ -59,6 +59,11 @@ export function getApiErrorMessage(error: unknown): string | undefined {
     : `成员授权同步失败：${mutationSummary}`;
 }
 
+export function isApiNotFound(error: unknown): boolean {
+  const axiosError = error as AxiosError<ApiErrorResponseData> | undefined;
+  return axiosError?.response?.status === 404;
+}
+
 export function handleApiError(error: unknown): void {
   const axiosError = error as AxiosError<ApiErrorResponseData> | undefined;
   const message = getApiErrorMessage(error);

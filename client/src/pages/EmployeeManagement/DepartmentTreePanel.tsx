@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { UserSelect } from '@/components/business-ui/user-select';
 import { toast } from 'sonner';
-import { handleApiError } from '@client/src/utils/api-error';
+import { handleApiError, isApiNotFound } from '@client/src/utils/api-error';
 import {
   Plus,
   Pencil,
@@ -117,7 +117,11 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
   const toggleExpand = (id: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   };
@@ -204,6 +208,12 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
       queryClient.invalidateQueries({ queryKey: ['departments'] });
       if (selectedId === id) onSelect(null);
     } catch (e) {
+      if (isApiNotFound(e)) {
+        toast.warning('该部门已不存在或已被删除');
+        queryClient.invalidateQueries({ queryKey: ['departments'] });
+        if (selectedId === id) onSelect(null);
+        return;
+      }
       handleApiError(e);
     }
   };
