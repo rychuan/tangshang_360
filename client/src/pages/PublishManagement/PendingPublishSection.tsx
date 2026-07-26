@@ -159,114 +159,114 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
       </div>
 
       <div style={{ maxHeight: tableMaxHeight }} className="overflow-y-auto">
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Spinner />
-        </div>
-      ) : employees.length === 0 ? (
-        <Empty>
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <Award className="size-6" />
-            </EmptyMedia>
-            <EmptyTitle>暂无符合条件的待发布员工</EmptyTitle>
-          </EmptyHeader>
-        </Empty>
-      ) : (
-        <Table>
-          <TableHeader className="sticky top-0 z-10 bg-background">
-            <TableRow className="border-b text-left text-muted-foreground">
-              <TableHead className="w-10 py-3 pr-4 font-medium">
-                <Checkbox
-                  checked={allSelected}
-                  onCheckedChange={(checked: boolean) => onSelectAll(checked)}
-                />
-              </TableHead>
-              <TableHead className="py-3 pr-4 font-medium">员工</TableHead>
-              <TableHead className="py-3 pr-4 font-medium hidden sm:table-cell">
-                部门
-              </TableHead>
-              <TableHead className="py-3 pr-4 font-medium hidden sm:table-cell">
-                岗位
-              </TableHead>
-              <TableHead className="py-3 pr-4 font-medium hidden md:table-cell">
-                绩效模板
-              </TableHead>
-              <TableHead className="py-3 pr-4 font-medium hidden md:table-cell">
-                周期
-              </TableHead>
-              <TableHead className="py-3 pr-4 font-medium hidden md:table-cell">
-                上月绩效
-              </TableHead>
-              <TableHead className="py-3 pr-4 font-medium sticky right-0 bg-background z-20 border-l">
-                操作
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {employees.map((emp: PublishEmployeeItem) => (
-              <TableRow
-                key={emp.employeeId}
-                className="border-b hover:bg-muted/50"
-              >
-                <TableCell className="py-3 pr-4">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Spinner />
+          </div>
+        ) : employees.length === 0 ? (
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Award className="size-6" />
+              </EmptyMedia>
+              <EmptyTitle>暂无符合条件的待发布员工</EmptyTitle>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <Table>
+            <TableHeader className="sticky top-0 z-10 bg-background">
+              <TableRow className="border-b text-left text-muted-foreground">
+                <TableHead className="w-10 py-3 pr-4 font-medium">
                   <Checkbox
-                    checked={selectedIds.has(emp.employeeId)}
-                    onCheckedChange={(checked: boolean) =>
-                      onSelectOne(emp.employeeId, checked)
-                    }
+                    checked={allSelected}
+                    onCheckedChange={(checked: boolean) => onSelectAll(checked)}
                   />
-                </TableCell>
-                <TableCell className="py-3 pr-4">
-                  <UserDisplay value={[emp.employeeId]} size="small" />
-                </TableCell>
-                <TableCell className="py-3 pr-4 hidden sm:table-cell">
-                  {emp.department || '-'}
-                </TableCell>
-                <TableCell className="py-3 pr-4 hidden sm:table-cell">
-                  {emp.position}
-                </TableCell>
-                <TableCell className="py-3 pr-4 hidden md:table-cell">
-                  {emp.templateName}
-                </TableCell>
-                <TableCell className="py-3 pr-4 hidden md:table-cell">
-                  {period}
-                </TableCell>
-                <TableCell className="py-3 pr-4 hidden md:table-cell">
-                  {emp.lastPeriodStatus ? (
-                    <Badge variant="outline">
-                      {LAST_PERIOD_STATUS_LABELS[emp.lastPeriodStatus] ||
-                        emp.lastPeriodStatus}
-                    </Badge>
-                  ) : (
-                    <span className="text-muted-foreground">-</span>
-                  )}
-                </TableCell>
-                <TableCell className="py-3 pr-4 sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
-                  <div className="flex items-center gap-1">
-                    <CanDo resource="publish_management" action="edit">
-                      <ActionBadge
-                        actionType="edit"
-                        icon={<Settings2 className="size-3" />}
-                        label="调整"
-                        onClick={() => onAdjust(emp)}
-                      />
-                    </CanDo>
-                    <CanDo resource="publish_management" action="edit">
-                      <ActionBadge
-                        actionType="delete"
-                        icon={<Trash2 className="size-3" />}
-                        label="删除快照"
-                        onClick={() => onDeleteSnapshot(emp)}
-                      />
-                    </CanDo>
-                  </div>
-                </TableCell>
+                </TableHead>
+                <TableHead className="py-3 pr-4 font-medium">员工</TableHead>
+                <TableHead className="py-3 pr-4 font-medium hidden sm:table-cell">
+                  部门
+                </TableHead>
+                <TableHead className="py-3 pr-4 font-medium hidden sm:table-cell">
+                  岗位
+                </TableHead>
+                <TableHead className="py-3 pr-4 font-medium hidden md:table-cell">
+                  绩效模板
+                </TableHead>
+                <TableHead className="py-3 pr-4 font-medium hidden md:table-cell">
+                  周期
+                </TableHead>
+                <TableHead className="py-3 pr-4 font-medium hidden md:table-cell">
+                  上月绩效
+                </TableHead>
+                <TableHead className="py-3 pr-4 font-medium sticky right-0 bg-background z-20 border-l">
+                  操作
+                </TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+            </TableHeader>
+            <TableBody>
+              {employees.map((emp: PublishEmployeeItem) => (
+                <TableRow
+                  key={emp.employeeId}
+                  className="border-b hover:bg-muted/50"
+                >
+                  <TableCell className="py-3 pr-4">
+                    <Checkbox
+                      checked={selectedIds.has(emp.employeeId)}
+                      onCheckedChange={(checked: boolean) =>
+                        onSelectOne(emp.employeeId, checked)
+                      }
+                    />
+                  </TableCell>
+                  <TableCell className="py-3 pr-4">
+                    <UserDisplay value={[emp.employeeId]} size="small" />
+                  </TableCell>
+                  <TableCell className="py-3 pr-4 hidden sm:table-cell">
+                    {emp.department || '-'}
+                  </TableCell>
+                  <TableCell className="py-3 pr-4 hidden sm:table-cell">
+                    {emp.position}
+                  </TableCell>
+                  <TableCell className="py-3 pr-4 hidden md:table-cell">
+                    {emp.templateName}
+                  </TableCell>
+                  <TableCell className="py-3 pr-4 hidden md:table-cell">
+                    {period}
+                  </TableCell>
+                  <TableCell className="py-3 pr-4 hidden md:table-cell">
+                    {emp.lastPeriodStatus ? (
+                      <Badge variant="outline">
+                        {LAST_PERIOD_STATUS_LABELS[emp.lastPeriodStatus] ||
+                          emp.lastPeriodStatus}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="py-3 pr-4 sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
+                    <div className="flex items-center gap-1">
+                      <CanDo resource="publish_management" action="edit">
+                        <ActionBadge
+                          actionType="edit"
+                          icon={<Settings2 className="size-3" />}
+                          label="调整"
+                          onClick={() => onAdjust(emp)}
+                        />
+                      </CanDo>
+                      <CanDo resource="publish_management" action="edit">
+                        <ActionBadge
+                          actionType="delete"
+                          icon={<Trash2 className="size-3" />}
+                          label="删除快照"
+                          onClick={() => onDeleteSnapshot(emp)}
+                        />
+                      </CanDo>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </div>
     </div>
   );

@@ -14,7 +14,13 @@ import {
 } from '@/components/ui/select';
 import { CanDo, usePermission } from '@/hooks/usePermissions';
 import { UserDisplay } from '@/components/business-ui/user-display';
-import { Unlock, BellRing, Download, Award, Undo2 } from '@/components/ui/hugeicons';
+import {
+  Unlock,
+  BellRing,
+  Download,
+  Award,
+  Undo2,
+} from '@/components/ui/hugeicons';
 import dayjs from 'dayjs';
 import type { AssessmentInstanceItem } from '@shared/api.interface';
 import { StatusBadge } from '@/components/business-ui/status-badge';
@@ -274,179 +280,185 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
         </Empty>
       ) : (
         <>
-          <div style={{ maxHeight: tableMaxHeight }} className="overflow-y-auto">
-          <Table>
-            <TableHeader className="sticky top-0 z-10 bg-background">
-              <TableRow className="border-b text-muted-foreground">
-                {canSelect && (
-                  <TableHead className="w-10 py-3 pr-4 font-medium">
-                    <Checkbox
-                      checked={allSelected}
-                      onCheckedChange={(checked: boolean) =>
-                        handleSelectAll(checked)
-                      }
-                    />
-                  </TableHead>
-                )}
-                <TableHead className="py-3 pr-4 font-medium text-left">
-                  员工
-                </TableHead>
-                <TableHead className="py-3 pr-4 font-medium text-left">
-                  周期
-                </TableHead>
-                <TableHead className="py-3 pr-4 font-medium text-left hidden md:table-cell">
-                  部门
-                </TableHead>
-                <TableHead className="py-3 pr-4 font-medium text-left hidden lg:table-cell">
-                  岗位
-                </TableHead>
-                <TableHead className="py-3 pr-4 font-medium text-left hidden lg:table-cell">
-                  上级
-                </TableHead>
-                <TableHead className="py-3 pr-4 font-medium text-left">
-                  状态
-                </TableHead>
-                <TableHead className="py-3 pr-4 font-medium text-left hidden sm:table-cell">
-                  绩效进度
-                </TableHead>
-                <TableHead className="py-3 pr-4 font-medium text-right">
-                  总分
-                </TableHead>
-                <TableHead className="py-3 pr-4 font-medium text-left hidden sm:table-cell">
-                  等级
-                </TableHead>
-                <TableHead className="py-3 pr-4 font-medium text-left hidden md:table-cell">
-                  发布时间
-                </TableHead>
-                <TableHead className="py-3 pr-4 font-medium text-left hidden md:table-cell">
-                  发布人
-                </TableHead>
-                <TableHead className="py-3 pr-4 font-medium text-left sticky right-0 bg-background z-20 border-l">
-                  操作
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {instances.map((record: AssessmentInstanceItem) => (
-                <TableRow
-                  key={record.id}
-                  className="group border-b hover:bg-muted/50"
-                >
+          <div
+            style={{ maxHeight: tableMaxHeight }}
+            className="overflow-y-auto"
+          >
+            <Table>
+              <TableHeader className="sticky top-0 z-10 bg-background">
+                <TableRow className="border-b text-muted-foreground">
                   {canSelect && (
-                    <TableCell className="py-3 pr-4">
+                    <TableHead className="w-10 py-3 pr-4 font-medium">
                       <Checkbox
-                        checked={selectedInstanceIds.has(record.id)}
+                        checked={allSelected}
                         onCheckedChange={(checked: boolean) =>
-                          handleSelectOne(record.id, checked)
+                          handleSelectAll(checked)
                         }
                       />
-                    </TableCell>
+                    </TableHead>
                   )}
-                  <TableCell className="py-3 pr-4">
-                    <UserDisplay value={[record.employeeId]} size="small" />
-                  </TableCell>
-                  <TableCell className="py-3 pr-4">
-                    <Badge variant="outline" className="text-xs font-mono">
-                      {record.period}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="py-3 pr-4 hidden md:table-cell">
-                    {record.department}
-                  </TableCell>
-                  <TableCell className="py-3 pr-4 hidden lg:table-cell">
-                    {record.position}
-                  </TableCell>
-                  <TableCell className="py-3 pr-4 hidden lg:table-cell">
-                    {record.supervisorId ? (
-                      <UserDisplay value={[record.supervisorId]} size="small" />
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="py-3 pr-4">
-                    <StatusBadge status={record.status} />
-                  </TableCell>
-                  <TableCell className="py-3 pr-4 hidden sm:table-cell">
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant={
-                          record.selfReviewCompleted ? 'default' : 'outline'
-                        }
-                        className="text-xs"
-                      >
-                        自评{record.selfReviewCompleted ? '✓' : '×'}
-                      </Badge>
-                      <Badge
-                        variant={
-                          record.supervisorReviewCompleted
-                            ? 'default'
-                            : 'outline'
-                        }
-                        className="text-xs"
-                      >
-                        上级{record.supervisorReviewCompleted ? '✓' : '×'}
-                      </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell className="py-3 pr-4 text-right">
-                    {record.totalScore != null ? record.totalScore : '-'}
-                  </TableCell>
-                  <TableCell className="py-3 pr-4 hidden sm:table-cell">
-                    {record.grade || '-'}
-                  </TableCell>
-                  <TableCell className="py-3 pr-4 hidden md:table-cell">
-                    {record.publishedAt
-                      ? dayjs(record.publishedAt).format('YYYY-MM-DD HH:mm')
-                      : '-'}
-                  </TableCell>
-                  <TableCell className="py-3 pr-4 hidden md:table-cell">
-                    {record.publishedById ? (
-                      <UserDisplay
-                        value={[record.publishedById]}
-                        size="small"
-                      />
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="py-3 pr-4 sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
-                    <div className="flex items-center gap-1">
-                      {record.status === 'self_review' && (
-                        <CanDo resource="publish_management" action="edit">
-                          <ActionBadge
-                            actionType="toggle"
-                            label="退回"
-                            onClick={() => onReturn(record)}
-                          />
-                        </CanDo>
-                      )}
-                      {[
-                        'completed',
-                        'supervisor_sign',
-                        'pending_sign',
-                        'supervisor_review',
-                      ].includes(record.status) && (
-                        <CanDo resource="publish_management" action="edit">
-                          <ActionBadge
-                            actionType="toggle"
-                            label="解锁"
-                            onClick={() => onUnlock(record)}
-                          />
-                        </CanDo>
-                      )}
-                      <CanDo resource="publish_management" action="view">
-                        <ActionBadge
-                          actionType="history"
-                          label="解锁历史"
-                          onClick={() => onHistory(record)}
-                        />
-                      </CanDo>
-                    </div>
-                  </TableCell>
+                  <TableHead className="py-3 pr-4 font-medium text-left">
+                    员工
+                  </TableHead>
+                  <TableHead className="py-3 pr-4 font-medium text-left">
+                    周期
+                  </TableHead>
+                  <TableHead className="py-3 pr-4 font-medium text-left hidden md:table-cell">
+                    部门
+                  </TableHead>
+                  <TableHead className="py-3 pr-4 font-medium text-left hidden lg:table-cell">
+                    岗位
+                  </TableHead>
+                  <TableHead className="py-3 pr-4 font-medium text-left hidden lg:table-cell">
+                    上级
+                  </TableHead>
+                  <TableHead className="py-3 pr-4 font-medium text-left">
+                    状态
+                  </TableHead>
+                  <TableHead className="py-3 pr-4 font-medium text-left hidden sm:table-cell">
+                    绩效进度
+                  </TableHead>
+                  <TableHead className="py-3 pr-4 font-medium text-right">
+                    总分
+                  </TableHead>
+                  <TableHead className="py-3 pr-4 font-medium text-left hidden sm:table-cell">
+                    等级
+                  </TableHead>
+                  <TableHead className="py-3 pr-4 font-medium text-left hidden md:table-cell">
+                    发布时间
+                  </TableHead>
+                  <TableHead className="py-3 pr-4 font-medium text-left hidden md:table-cell">
+                    发布人
+                  </TableHead>
+                  <TableHead className="py-3 pr-4 font-medium text-left sticky right-0 bg-background z-20 border-l">
+                    操作
+                  </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {instances.map((record: AssessmentInstanceItem) => (
+                  <TableRow
+                    key={record.id}
+                    className="group border-b hover:bg-muted/50"
+                  >
+                    {canSelect && (
+                      <TableCell className="py-3 pr-4">
+                        <Checkbox
+                          checked={selectedInstanceIds.has(record.id)}
+                          onCheckedChange={(checked: boolean) =>
+                            handleSelectOne(record.id, checked)
+                          }
+                        />
+                      </TableCell>
+                    )}
+                    <TableCell className="py-3 pr-4">
+                      <UserDisplay value={[record.employeeId]} size="small" />
+                    </TableCell>
+                    <TableCell className="py-3 pr-4">
+                      <Badge variant="outline" className="text-xs font-mono">
+                        {record.period}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="py-3 pr-4 hidden md:table-cell">
+                      {record.department}
+                    </TableCell>
+                    <TableCell className="py-3 pr-4 hidden lg:table-cell">
+                      {record.position}
+                    </TableCell>
+                    <TableCell className="py-3 pr-4 hidden lg:table-cell">
+                      {record.supervisorId ? (
+                        <UserDisplay
+                          value={[record.supervisorId]}
+                          size="small"
+                        />
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-3 pr-4">
+                      <StatusBadge status={record.status} />
+                    </TableCell>
+                    <TableCell className="py-3 pr-4 hidden sm:table-cell">
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant={
+                            record.selfReviewCompleted ? 'default' : 'outline'
+                          }
+                          className="text-xs"
+                        >
+                          自评{record.selfReviewCompleted ? '✓' : '×'}
+                        </Badge>
+                        <Badge
+                          variant={
+                            record.supervisorReviewCompleted
+                              ? 'default'
+                              : 'outline'
+                          }
+                          className="text-xs"
+                        >
+                          上级{record.supervisorReviewCompleted ? '✓' : '×'}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-3 pr-4 text-right">
+                      {record.totalScore != null ? record.totalScore : '-'}
+                    </TableCell>
+                    <TableCell className="py-3 pr-4 hidden sm:table-cell">
+                      {record.grade || '-'}
+                    </TableCell>
+                    <TableCell className="py-3 pr-4 hidden md:table-cell">
+                      {record.publishedAt
+                        ? dayjs(record.publishedAt).format('YYYY-MM-DD HH:mm')
+                        : '-'}
+                    </TableCell>
+                    <TableCell className="py-3 pr-4 hidden md:table-cell">
+                      {record.publishedById ? (
+                        <UserDisplay
+                          value={[record.publishedById]}
+                          size="small"
+                        />
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-3 pr-4 sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
+                      <div className="flex items-center gap-1">
+                        {record.status === 'self_review' && (
+                          <CanDo resource="publish_management" action="edit">
+                            <ActionBadge
+                              actionType="toggle"
+                              label="退回"
+                              onClick={() => onReturn(record)}
+                            />
+                          </CanDo>
+                        )}
+                        {[
+                          'completed',
+                          'supervisor_sign',
+                          'pending_sign',
+                          'supervisor_review',
+                        ].includes(record.status) && (
+                          <CanDo resource="publish_management" action="edit">
+                            <ActionBadge
+                              actionType="toggle"
+                              label="解锁"
+                              onClick={() => onUnlock(record)}
+                            />
+                          </CanDo>
+                        )}
+                        <CanDo resource="publish_management" action="view">
+                          <ActionBadge
+                            actionType="history"
+                            label="解锁历史"
+                            onClick={() => onHistory(record)}
+                          />
+                        </CanDo>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
           {totalPages > 1 && (
             <div className="shrink-0 flex items-center justify-between px-4 py-3 border-t">

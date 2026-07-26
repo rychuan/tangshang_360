@@ -9,7 +9,7 @@ export function useTableScrollHeight(): {
   tableMaxHeight: string;
 } {
   const tableRef = React.useRef<HTMLDivElement>(null);
-  const [tableMaxHeight, setTableMaxHeight] = React.useState('auto');
+  const [tableMaxHeight, setTableMaxHeight] = React.useState(() => `${Math.max(200, window.innerHeight * 0.6)}px`);
 
   React.useEffect(() => {
     const calcHeight = () => {
@@ -20,9 +20,13 @@ export function useTableScrollHeight(): {
         setTableMaxHeight(`${Math.max(200, available)}px`);
       });
     };
-    calcHeight();
+    // 首次延迟一帧等待 DOM 布局稳定
+    const id = window.setTimeout(calcHeight, 16);
     window.addEventListener('resize', calcHeight);
-    return () => window.removeEventListener('resize', calcHeight);
+    return () => {
+      window.clearTimeout(id);
+      window.removeEventListener('resize', calcHeight);
+    };
   }, []);
 
   return { tableRef, tableMaxHeight };

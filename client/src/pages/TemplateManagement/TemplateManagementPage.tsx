@@ -293,7 +293,8 @@ const TemplateManagementPage: React.FC = () => {
     <div className="flex flex-col gap-4 md:gap-6">
       <PageHeader
         title="绩效模板管理"
-        visuallyHidden        actions={
+        visuallyHidden
+        actions={
           <CanDo resource="template_management" action="edit">
             <Button onClick={handleOpenCreate}>
               <Plus data-icon="inline-start" />
@@ -303,102 +304,106 @@ const TemplateManagementPage: React.FC = () => {
         }
       />
 
-      <div ref={tableRef} style={{ maxHeight: tableMaxHeight }} className="flex flex-col gap-4 overflow-y-auto">
-      <FilterBar data-ai-section-type="card-list">
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs text-muted-foreground">搜索</Label>
-          <Input
-            placeholder="搜索模板名称..."
-            value={keyword}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setKeyword(e.target.value)
-            }
-            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-              if (e.key === 'Enter') handleSearch();
-            }}
-            className="w-56"
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs text-muted-foreground">岗位</Label>
-          {positionsLoading ? (
-            <Skeleton className="w-40 h-10" />
-          ) : (
+      <div
+        ref={tableRef}
+        style={{ maxHeight: tableMaxHeight }}
+        className="flex flex-col gap-4 overflow-y-auto"
+      >
+        <FilterBar data-ai-section-type="card-list">
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-muted-foreground">搜索</Label>
+            <Input
+              placeholder="搜索模板名称..."
+              value={keyword}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setKeyword(e.target.value)
+              }
+              onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                if (e.key === 'Enter') handleSearch();
+              }}
+              className="w-56"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-muted-foreground">岗位</Label>
+            {positionsLoading ? (
+              <Skeleton className="w-40 h-10" />
+            ) : (
+              <Select
+                value={filterPosition}
+                onValueChange={(v: string) => {
+                  setFilterPosition(v === 'all' ? '' : v);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="全部岗位" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="all">全部岗位</SelectItem>
+                    {positions.map((pos: string) => (
+                      <SelectItem key={pos} value={pos}>
+                        {pos}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-muted-foreground">状态</Label>
             <Select
-              value={filterPosition}
+              value={filterStatus}
               onValueChange={(v: string) => {
-                setFilterPosition(v === 'all' ? '' : v);
+                setFilterStatus(v === 'all' ? '' : v);
                 setPage(1);
               }}
             >
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="全部岗位" />
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="全部" />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem value="all">全部岗位</SelectItem>
-                  {positions.map((pos: string) => (
-                    <SelectItem key={pos} value={pos}>
-                      {pos}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="all">全部</SelectItem>
+                  <SelectItem value="active">启用</SelectItem>
+                  <SelectItem value="inactive">停用</SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>
-          )}
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs text-muted-foreground">状态</Label>
-          <Select
-            value={filterStatus}
-            onValueChange={(v: string) => {
-              setFilterStatus(v === 'all' ? '' : v);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="全部" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="all">全部</SelectItem>
-                <SelectItem value="active">启用</SelectItem>
-                <SelectItem value="inactive">停用</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </div>
-        <FilterBarActions>
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground invisible">
-              占位
-            </span>
-            <div className="flex gap-2">
-              <Button variant="secondary" size="sm" onClick={handleSearch}>
-                <Search data-icon="inline-start" />
-                搜索
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleReset}>
-                <RotateCcw data-icon="inline-start" />
-                重置
-              </Button>
-            </div>
           </div>
-        </FilterBarActions>
-      </FilterBar>
+          <FilterBarActions>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground invisible">
+                占位
+              </span>
+              <div className="flex gap-2">
+                <Button variant="secondary" size="sm" onClick={handleSearch}>
+                  <Search data-icon="inline-start" />
+                  搜索
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleReset}>
+                  <RotateCcw data-icon="inline-start" />
+                  重置
+                </Button>
+              </div>
+            </div>
+          </FilterBarActions>
+        </FilterBar>
 
-      <PageTable
-        columns={templateColumns}
-        data={items}
-        loading={loading}
-        rowKey={(item) => item.id}
-        emptyMessage="暂无数据"
-        page={page}
-        totalPages={totalPages}
-        total={total}
-        onPageChange={setPage}
-        className="overflow-hidden"
-      />
+        <PageTable
+          columns={templateColumns}
+          data={items}
+          loading={loading}
+          rowKey={(item) => item.id}
+          emptyMessage="暂无数据"
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          onPageChange={setPage}
+          className="overflow-hidden"
+        />
       </div>
 
       <TemplateFormDialog

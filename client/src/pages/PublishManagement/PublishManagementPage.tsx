@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { handleApiError } from '@/utils/api-error';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import MultiMonthPicker from '@/components/ui/multi-month-picker';
 import dayjs from 'dayjs';
 import {
@@ -56,6 +57,7 @@ const PublishManagementPage: React.FC = () => {
   const [deptFilter, setDeptFilter] = useState<string>('');
   const [gradeFilter, setGradeFilter] = useState<string>('');
 
+  const [activeTab, setActiveTab] = useState<'pending' | 'published'>('pending');
   const effectivePeriod = periods[0] ?? currentMonth();
 
   const statisticsQuery = useQuery({
@@ -521,72 +523,89 @@ const PublishManagementPage: React.FC = () => {
         <MultiMonthPicker value={periods} onChange={handlePeriodChange} />
       </div>
 
-      <>
-        <StatisticsCards statistics={statistics} loading={loadingStatistics} />
+      <StatisticsCards statistics={statistics} loading={loadingStatistics} />
 
-        <PendingPublishSection
-          employees={employees}
-          loading={loadingEmployees}
-          selectedIds={selectedEmployeeIds}
-          onSelectAll={handleSelectAllEmployees}
-          onSelectOne={handleSelectOneEmployee}
-          onPublish={handlePublish}
-          publishing={publishing}
-          departmentFilter={pendingDeptFilter}
-          onDepartmentFilterChange={setPendingDeptFilter}
-          templateFilter={pendingTplFilter}
-          onTemplateFilterChange={setPendingTplFilter}
-          departments={departments}
-          templates={templates}
-          period={effectivePeriod}
-          onAdjust={handleOpenAdjust}
-          onDeleteSnapshot={handleDeleteSnapshot}
-        />
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as 'pending' | 'published')}
+      >
+        <TabsList>
+          <TabsTrigger value="pending" className="text-xs sm:text-sm">
+            待发布员工
+          </TabsTrigger>
+          <TabsTrigger value="published" className="text-xs sm:text-sm">
+            已发布绩效
+          </TabsTrigger>
+        </TabsList>
 
-        <PublishedAssessmentSection
-          instances={instances}
-          loading={loadingInstances}
-          total={instancesTotal}
-          page={instancesPage}
-          pageSize={PAGE_SIZE}
-          onPageChange={(nextPage: number) => {
-            setInstancesPage(nextPage);
-            setSelectedInstanceIds(new Set());
-          }}
-          statusFilter={statusFilter}
-          onStatusFilterChange={(v: string) => {
-            setStatusFilter(v);
-            setInstancesPage(1);
-            setSelectedInstanceIds(new Set());
-          }}
-          departmentFilter={deptFilter}
-          onDepartmentFilterChange={(v: string) => {
-            setDeptFilter(v);
-            setInstancesPage(1);
-            setSelectedInstanceIds(new Set());
-          }}
-          gradeFilter={gradeFilter}
-          onGradeFilterChange={(v: string) => {
-            setGradeFilter(v);
-            setInstancesPage(1);
-            setSelectedInstanceIds(new Set());
-          }}
-          selectedInstanceIds={selectedInstanceIds}
-          onSelectedInstancesChange={setSelectedInstanceIds}
-          onUnlock={handleOpenSingleUnlock}
-          onHistory={handleOpenHistory}
-          onReturn={handleReturn}
-          onBatchUnlock={handleOpenBatchUnlock}
-          onBatchReturn={handleBatchReturn}
-          onRemindUnfinished={handleOpenUnfinishedReminder}
-          onExport={handleExport}
-          batchUnlockLoading={unlockLoading}
-          batchReturnLoading={batchReturnLoading}
-          reminderLoading={reminderPreviewLoading || reminderSending}
-          departments={departments}
-        />
+        <TabsContent value="pending" className="mt-4">
+          <PendingPublishSection
+            employees={employees}
+            loading={loadingEmployees}
+            selectedIds={selectedEmployeeIds}
+            onSelectAll={handleSelectAllEmployees}
+            onSelectOne={handleSelectOneEmployee}
+            onPublish={handlePublish}
+            publishing={publishing}
+            departmentFilter={pendingDeptFilter}
+            onDepartmentFilterChange={setPendingDeptFilter}
+            templateFilter={pendingTplFilter}
+            onTemplateFilterChange={setPendingTplFilter}
+            departments={departments}
+            templates={templates}
+            period={effectivePeriod}
+            onAdjust={handleOpenAdjust}
+            onDeleteSnapshot={handleDeleteSnapshot}
+          />
+        </TabsContent>
 
-        <AdjustIndicatorsDialog
+        <TabsContent value="published" className="mt-4">
+          <PublishedAssessmentSection
+            instances={instances}
+            loading={loadingInstances}
+            total={instancesTotal}
+            page={instancesPage}
+            pageSize={PAGE_SIZE}
+            onPageChange={(nextPage: number) => {
+              setInstancesPage(nextPage);
+              setSelectedInstanceIds(new Set());
+            }}
+            statusFilter={statusFilter}
+            onStatusFilterChange={(v: string) => {
+              setStatusFilter(v);
+              setInstancesPage(1);
+              setSelectedInstanceIds(new Set());
+            }}
+            departmentFilter={deptFilter}
+            onDepartmentFilterChange={(v: string) => {
+              setDeptFilter(v);
+              setInstancesPage(1);
+              setSelectedInstanceIds(new Set());
+            }}
+            gradeFilter={gradeFilter}
+            onGradeFilterChange={(v: string) => {
+              setGradeFilter(v);
+              setInstancesPage(1);
+              setSelectedInstanceIds(new Set());
+            }}
+            selectedInstanceIds={selectedInstanceIds}
+            onSelectedInstancesChange={setSelectedInstanceIds}
+            onUnlock={handleOpenSingleUnlock}
+            onHistory={handleOpenHistory}
+            onReturn={handleReturn}
+            onBatchUnlock={handleOpenBatchUnlock}
+            onBatchReturn={handleBatchReturn}
+            onRemindUnfinished={handleOpenUnfinishedReminder}
+            onExport={handleExport}
+            batchUnlockLoading={unlockLoading}
+            batchReturnLoading={batchReturnLoading}
+            reminderLoading={reminderPreviewLoading || reminderSending}
+            departments={departments}
+          />
+        </TabsContent>
+      </Tabs>
+
+      <AdjustIndicatorsDialog
           open={adjustOpen}
           onOpenChange={setAdjustOpen}
           employee={
@@ -645,7 +664,6 @@ const PublishManagementPage: React.FC = () => {
           sending={reminderSending}
           onConfirm={handleConfirmUnfinishedReminder}
         />
-      </>
     </div>
   );
 };
