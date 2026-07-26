@@ -131,7 +131,7 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
       className="flex flex-col rounded-lg border bg-card p-6"
     >
       <div className="shrink-0 mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">待发布员工</h2>
+        <h2 className="text-lg font-semibold">待发布绩效</h2>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <Label className="shrink-0 text-sm text-muted-foreground">
@@ -202,7 +202,7 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
               <EmptyMedia variant="icon">
                 <Award className="size-6" />
               </EmptyMedia>
-              <EmptyTitle>暂无符合条件的待发布员工</EmptyTitle>
+              <EmptyTitle>暂无符合条件的待发布绩效</EmptyTitle>
             </EmptyHeader>
           </Empty>
         ) : (
@@ -310,14 +310,25 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
             {onPageSizeChange && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span className="whitespace-nowrap">每页</span>
-                <Select value={String(pageSize)} onValueChange={(v) => { onPageSizeChange(Number(v)); onPageChange(1); }}>
-                  <SelectTrigger className="h-8 w-20 shrink-0 text-xs" aria-label="每页条数">
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(v) => {
+                    onPageSizeChange(Number(v));
+                    onPageChange(1);
+                  }}
+                >
+                  <SelectTrigger
+                    className="h-8 w-20 shrink-0 text-xs"
+                    aria-label="每页条数"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
                       {EMPLOYEE_PAGE_SIZES.map((s) => (
-                        <SelectItem key={s} value={String(s)}>{s}</SelectItem>
+                        <SelectItem key={s} value={String(s)}>
+                          {s}
+                        </SelectItem>
                       ))}
                     </SelectGroup>
                   </SelectContent>
@@ -330,13 +341,18 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
                   <PaginationItem>
                     <PaginationPrevious
                       aria-disabled={page <= 1}
-                      className={page <= 1 ? 'pointer-events-none opacity-50' : ''}
+                      className={
+                        page <= 1 ? 'pointer-events-none opacity-50' : ''
+                      }
                       onClick={() => onPageChange(Math.max(1, page - 1))}
                     />
                   </PaginationItem>
                   {visiblePages.map((p) => (
                     <PaginationItem key={p}>
-                      <PaginationLink isActive={p === page} onClick={() => onPageChange(p)}>
+                      <PaginationLink
+                        isActive={p === page}
+                        onClick={() => onPageChange(p)}
+                      >
                         {p}
                       </PaginationLink>
                     </PaginationItem>
@@ -344,8 +360,14 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
                   <PaginationItem>
                     <PaginationNext
                       aria-disabled={page >= totalPages}
-                      className={page >= totalPages ? 'pointer-events-none opacity-50' : ''}
-                      onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+                      className={
+                        page >= totalPages
+                          ? 'pointer-events-none opacity-50'
+                          : ''
+                      }
+                      onClick={() =>
+                        onPageChange(Math.min(totalPages, page + 1))
+                      }
                     />
                   </PaginationItem>
                 </PaginationContent>

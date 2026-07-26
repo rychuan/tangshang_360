@@ -292,9 +292,7 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
         </Empty>
       ) : (
         <>
-          <div
-            className="flex-1 overflow-y-auto min-h-0"
-          >
+          <div className="flex-1 overflow-y-auto min-h-0">
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-background">
                 <TableRow className="border-b text-muted-foreground">
@@ -480,14 +478,25 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
                 {onPageSizeChange && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <span className="whitespace-nowrap">每页</span>
-                    <Select value={String(pageSize)} onValueChange={(v) => { onPageSizeChange(Number(v)); onPageChange(1); }}>
-                      <SelectTrigger className="h-8 w-20 shrink-0 text-xs" aria-label="每页条数">
+                    <Select
+                      value={String(pageSize)}
+                      onValueChange={(v) => {
+                        onPageSizeChange(Number(v));
+                        onPageChange(1);
+                      }}
+                    >
+                      <SelectTrigger
+                        className="h-8 w-20 shrink-0 text-xs"
+                        aria-label="每页条数"
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
                           {EMPLOYEE_PAGE_SIZES.map((s) => (
-                            <SelectItem key={s} value={String(s)}>{s}</SelectItem>
+                            <SelectItem key={s} value={String(s)}>
+                              {s}
+                            </SelectItem>
                           ))}
                         </SelectGroup>
                       </SelectContent>
@@ -495,42 +504,42 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
                   </div>
                 )}
                 {totalPages > 1 && (
-              <Pagination className="w-auto">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      aria-disabled={page <= 1}
-                      className={
-                        page <= 1 ? 'pointer-events-none opacity-50' : ''
-                      }
-                      onClick={() => onPageChange(Math.max(1, page - 1))}
-                    />
-                  </PaginationItem>
-                  {visiblePages.map((p) => (
-                    <PaginationItem key={p}>
-                      <PaginationLink
-                        isActive={p === page}
-                        onClick={() => onPageChange(p)}
-                      >
-                        {p}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ))}
-                  <PaginationItem>
-                    <PaginationNext
-                      aria-disabled={page >= totalPages}
-                      className={
-                        page >= totalPages
-                          ? 'pointer-events-none opacity-50'
-                          : ''
-                      }
-                      onClick={() =>
-                        onPageChange(Math.min(totalPages, page + 1))
-                      }
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
+                  <Pagination className="w-auto">
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          aria-disabled={page <= 1}
+                          className={
+                            page <= 1 ? 'pointer-events-none opacity-50' : ''
+                          }
+                          onClick={() => onPageChange(Math.max(1, page - 1))}
+                        />
+                      </PaginationItem>
+                      {visiblePages.map((p) => (
+                        <PaginationItem key={p}>
+                          <PaginationLink
+                            isActive={p === page}
+                            onClick={() => onPageChange(p)}
+                          >
+                            {p}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ))}
+                      <PaginationItem>
+                        <PaginationNext
+                          aria-disabled={page >= totalPages}
+                          className={
+                            page >= totalPages
+                              ? 'pointer-events-none opacity-50'
+                              : ''
+                          }
+                          onClick={() =>
+                            onPageChange(Math.min(totalPages, page + 1))
+                          }
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
                 )}
               </div>
             </div>

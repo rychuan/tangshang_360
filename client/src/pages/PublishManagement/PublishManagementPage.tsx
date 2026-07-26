@@ -519,13 +519,6 @@ const PublishManagementPage: React.FC = () => {
         <PageHeader title="绩效发布管理" visuallyHidden />
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label className="text-xs text-muted-foreground h-4 leading-4">
-          绩效周期
-        </Label>
-        <MultiMonthPicker value={periods} onChange={handlePeriodChange} />
-      </div>
-
       <StatisticsCards statistics={statistics} loading={loadingStatistics} />
 
       <Tabs
@@ -533,14 +526,17 @@ const PublishManagementPage: React.FC = () => {
         onValueChange={(v) => setActiveTab(v as 'pending' | 'published')}
         className="flex flex-1 flex-col min-h-0"
       >
-        <TabsList>
-          <TabsTrigger value="pending" className="text-xs sm:text-sm">
-            待发布员工
-          </TabsTrigger>
-          <TabsTrigger value="published" className="text-xs sm:text-sm">
-            已发布绩效
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between gap-4">
+          <TabsList>
+            <TabsTrigger value="pending" className="text-xs sm:text-sm">
+              待发布绩效
+            </TabsTrigger>
+            <TabsTrigger value="published" className="text-xs sm:text-sm">
+              已发布绩效
+            </TabsTrigger>
+          </TabsList>
+          <MultiMonthPicker value={periods} onChange={handlePeriodChange} />
+        </div>
 
         <TabsContent value="pending" className="flex-1 flex-col min-h-0 mt-4">
           <PendingPublishSection
