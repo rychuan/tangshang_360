@@ -10,10 +10,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { hasPermission } from '@/components/permission-policy';
 
 /** 在部门树中递归查找节点名称 */
-function findDeptName(
-  nodes: DepartmentTreeNode[],
-  id: string,
-): string | null {
+function findDeptName(nodes: DepartmentTreeNode[], id: string): string | null {
   for (const node of nodes) {
     if (node.id === id) return node.name;
     if (node.children?.length) {

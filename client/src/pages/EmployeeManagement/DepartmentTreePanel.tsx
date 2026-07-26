@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { department as departmentApi } from '@/api';
 import type { DepartmentTreeNode } from '@shared/api.interface';
@@ -24,6 +24,9 @@ import {
   ChevronDown,
   Building2,
   Search,
+  X,
+  Minus,
+  FolderPlus,
 } from '@/components/ui/hugeicons';
 
 interface DepartmentTreePanelProps {
@@ -38,8 +41,7 @@ function buildTree(
   if (!filter) return nodes;
   const lower = filter.toLowerCase();
   const match = (n: DepartmentTreeNode): boolean =>
-    n.name.toLowerCase().includes(lower) ||
-    (n.children?.some(match) ?? false);
+    n.name.toLowerCase().includes(lower) || (n.children?.some(match) ?? false);
   return nodes
     .filter(match)
     .map((n) => ({ ...n, children: buildTree(n.children, filter) }));
@@ -51,6 +53,43 @@ function countEmployees(node: DepartmentTreeNode): number {
   return (node.memberCount ?? 0) + childCount;
 }
 
+/** 获取所有子孙节点 ID */
+function getAllDescendantIds(node: DepartmentTreeNode): string[] {
+  const ids = [node.id];
+  node.children?.forEach((c) => ids.push(...getAllDescendantIds(c)));
+  return ids;
+}
+
+/** 在树中查找节点 */
+function findNode(
+  nodes: DepartmentTreeNode[],
+  id: string,
+): DepartmentTreeNode | null {
+  for (const n of nodes) {
+    if (n.id === id) return n;
+    if (n.children?.length) {
+      const found = findNode(n.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+/** 在树中查找节点的父级名称 */
+function findParentName(
+  nodes: DepartmentTreeNode[],
+  parentId: string,
+): string {
+  for (const n of nodes) {
+    if (n.id === parentId) return n.name;
+    if (n.children?.length) {
+      const found = findParentName(n.children, parentId);
+      if (found) return found;
+    }
+  }
+  return '';
+}
+
 export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
   selectedId,
   onSelect,
@@ -59,9 +98,7 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [formOpen, setFormOpen] = useState(false);
-  const [editingDept, setEditingDept] = useState<DepartmentTreeNode | null>(
-    null,
-  );
+  const [editingDept, setEditingDept] = useState<DepartmentTreeNode | null>(null);
   const [form, setForm] = useState({
     name: '',
     parentId: '',
@@ -76,12 +113,43 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
   const tree = deptData?.tree ?? [];
   const filtered = buildTree(tree, search);
 
+  const parentName = form.parentId ? findParentName(tree, form.parentId) : '';
+
   const toggleExpand = (id: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+  };
+
+  /** 全部展开 */
+  const expandAll = () => {
+    const ids = new Set<string>();
+    const collect = (nodes: DepartmentTreeNode[]) => {
+      nodes.forEach((n) => {
+        if (n.children?.length) {
+          ids.add(n.id);
+          collect(n.children);
+        }
+      });
+    };
+    collect(filtered);
+    setExpanded(ids);
+  };
+
+  /** 全部折叠 */
+  const collapseAll = () => {
+    setExpanded(new Set());
+  };
+
+  /** 选中部门时自动展开子级 */
+  const handleSelect = (id: string) => {
+    onSelect(id);
+    const node = findNode(tree, id);
+    if (node?.children?.length && !expanded.has(id)) {
+      setExpanded((prev) => new Set(prev).add(id));
+    }
   };
 
   const openCreate = (parentId: string) => {
@@ -158,7 +226,7 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
                 : 'hover:bg-muted/50'
             }`}
             style={{ paddingLeft: `${8 + depth * 16}px` }}
-            onClick={() => onSelect(node.id)}
+            onClick={() => handleSelect(node.id)}
           >
             {hasChildren ? (
               <button
@@ -227,17 +295,48 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="shrink-0 p-3 border-b">
+      {/* 搜索栏 + 展开/折叠按钮 */}
+      <div className="shrink-0 p-3 border-b space-y-2">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
           <Input
-            className="pl-8 h-8 text-xs"
+            className="pl-8 pr-8 h-8 text-xs"
             placeholder="搜索部门..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          {search && (
+            <button
+              className="absolute right-2 top-1/2 -translate-y-1/2 size-4 flex items-center justify-center rounded text-muted-foreground hover:text-foreground"
+              onClick={() => setSearch('')}
+            >
+              <X className="size-3" />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={expandAll}
+            title="全部展开"
+          >
+            <Plus className="size-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={collapseAll}
+            title="全部折叠"
+          >
+            <Minus className="size-3.5" />
+          </Button>
         </div>
       </div>
+
+      {/* 部门树 */}
       <div className="flex-1 overflow-y-auto p-2">
         <div
           className={`flex items-center gap-1 py-1.5 px-2 rounded cursor-pointer text-sm ${
@@ -258,6 +357,8 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
           renderTree(filtered, 0)
         )}
       </div>
+
+      {/* 新建部门按钮 */}
       <div className="shrink-0 p-2 border-t">
         <Button
           variant="outline"
@@ -269,6 +370,7 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
         </Button>
       </div>
 
+      {/* 新建/编辑弹窗 */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
@@ -277,6 +379,12 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
+            {parentName && (
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs">上级部门</Label>
+                <p className="text-sm text-muted-foreground">{parentName}</p>
+              </div>
+            )}
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs">部门名称</Label>
               <Input
