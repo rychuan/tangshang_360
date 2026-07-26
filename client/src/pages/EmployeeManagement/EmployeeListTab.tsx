@@ -40,6 +40,8 @@ import {
 import { toast } from 'sonner';
 import { handleApiError } from '@client/src/utils/api-error';
 import { importFromBitable, exportToBitable } from '@/api/bitable-sync';
+import BitableConnectionTab from './BitableConnectionTab';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -83,6 +85,7 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({ departmentName }) => 
   const [syncLoading, setSyncLoading] = React.useState<
     '' | 'import' | 'export'
   >('');
+  const [bitableOpen, setBitableOpen] = React.useState(false);
 
   const [filters, setters] = useEmployeeFilters();
   const { permissions } = usePermissions();
@@ -194,6 +197,12 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({ departmentName }) => 
             <Button size="sm" onClick={dialogs.openCreateDialog}>
               <Plus data-icon="inline-start" />
               新建员工
+            </Button>
+          </CanDo>
+          <CanDo {...COMMAND_PERMISSIONS.employeeSync}>
+            <Button variant="outline" size="sm" onClick={() => setBitableOpen(true)}>
+              <ArrowDownToLine data-icon="inline-start" />
+              多维表格连接
             </Button>
           </CanDo>
         </div>
@@ -472,6 +481,12 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({ departmentName }) => 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={bitableOpen} onOpenChange={setBitableOpen}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <BitableConnectionTab />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
