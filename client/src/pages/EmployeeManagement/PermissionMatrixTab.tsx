@@ -163,7 +163,9 @@ const PermissionMatrixTab: React.FC<PermissionMatrixTabProps> = ({ role }) => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[200px]">资源 / 页面</TableHead>
+                <TableHead className="sticky left-0 z-20 bg-background w-[200px]">
+                  资源 / 页面
+                </TableHead>
                 {ALL_ACTIONS.map((a) => (
                   <TableHead key={a} className="w-[90px] text-center">
                     {ACTION_LABELS[a]}
@@ -176,7 +178,7 @@ const PermissionMatrixTab: React.FC<PermissionMatrixTabProps> = ({ role }) => {
                 const validActions = PERMISSION_MATRIX[resource];
                 return (
                   <TableRow key={resource}>
-                    <TableCell className="font-medium">
+                    <TableCell className="sticky left-0 z-10 bg-background font-medium">
                       {RESOURCE_LABELS[resource]}
                     </TableCell>
                     {ALL_ACTIONS.map((action) => {

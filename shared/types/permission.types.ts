@@ -229,9 +229,10 @@ export function normalizePermissionConfig(
     }
 
     if (resource === '*') {
-      for (const res of Object.keys(PERMISSION_MATRIX) as PermissionResource[]) {
-        const set =
-          merged.get(res) ?? new Set<PermissionAction>();
+      for (const res of Object.keys(
+        PERMISSION_MATRIX,
+      ) as PermissionResource[]) {
+        const set = merged.get(res) ?? new Set<PermissionAction>();
         for (const act of PERMISSION_MATRIX[res]) {
           set.add(act);
         }

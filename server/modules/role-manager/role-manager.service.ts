@@ -62,6 +62,9 @@ export class RoleManagerService {
     { roles: string[]; expiresAt: number }
   >();
   private readonly ROLE_CACHE_TTL_MS = 60_000;
+  private readonly PERM_CONFIG_CACHE_TTL_MS = 300_000; // 5 分钟
+  private permissionConfigCache: Map<string, PermissionItem[]> | null = null;
+  private permissionConfigCacheExpiresAt = 0;
 
   constructor(
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
@@ -84,7 +87,9 @@ export class RoleManagerService {
       this.logger.error(
         `Failed to get user roles: ${err instanceof Error ? err.message : String(err)}`,
       );
-      throw new Error(`无法获取用户角色（AuthorizationSDK 不可用）: ${err instanceof Error ? err.message : String(err)}`);
+      throw new Error(
+        `无法获取用户角色（AuthorizationSDK 不可用）: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
   }
 
@@ -92,157 +97,6 @@ export class RoleManagerService {
     const roles = await this.fetchUserRoles(userId, true);
     this.cacheUserRoles(userId, roles);
     return roles;
-  }
-
-  /**
-   * 将用户添加到 'employee' 角色（新建员工时自动调用）
-   * @deprecated 直接操作 SDK 角色，绕过 durable authorization staging。请使用 reconciliation 路径（AuthorizationSyncService.stageAuthorizationChange + processEmployeeAuthorization）。
-   */
-  async addUserToEmployeeRole(userId: string): Promise<void> {
-    try {
-      const roles = await this.getUserRoles(userId);
-      if (roles.includes('employee')) {
-        this.logger.log(`User ${userId} already in 'employee' role, skipping`);
-        return;
-      }
-      await this.authzSDK.members.add('employee', {
-        members: { userList: [{ userID: userId }] },
-      });
-      // 角色变更后清除缓存，确保后续查询获取最新角色列表
-      this.invalidateUserRoleCache(userId);
-      this.logger.log(`Added user ${userId} to 'employee' role`);
-    } catch (err) {
-      this.logger.error(
-        `Failed to add user ${userId} to 'employee' role: ${err instanceof Error ? err.message : String(err)}`,
-      );
-      // 不向上抛出，调用方已自行处理日志和流程
-    }
-  }
-
-  /**
-   * 确保用户拥有指定角色（幂等）
-   * @deprecated 直接操作 SDK 角色，绕过 durable authorization staging。请使用 reconciliation 路径或 ensureUserRoleStrict。
-   */
-  async ensureUserRole(userId: string, roleBizId: string): Promise<void> {
-    try {
-      const roles = await this.getUserRoles(userId);
-      if (roles.includes(roleBizId)) {
-        return;
-      }
-      await this.authzSDK.members.add(roleBizId, {
-        members: { userList: [{ userID: userId }] },
-      });
-      this.invalidateUserRoleCache(userId);
-      this.logger.log(`Added user ${userId} to role '${roleBizId}'`);
-    } catch (err) {
-      this.logger.error(
-        `Failed to ensure user ${userId} in role '${roleBizId}': ${err instanceof Error ? err.message : String(err)}`,
-      );
-    }
-  }
-
-  /**
-   * 移除用户的指定角色（幂等）
-   * @deprecated 直接操作 SDK 角色，绕过 durable authorization staging。请使用 reconciliation 路径或 removeUserRoleStrict。
-   */
-  async removeUserRole(userId: string, roleBizId: string): Promise<void> {
-    try {
-      const roles = await this.getUserRoles(userId);
-      if (!roles.includes(roleBizId)) {
-        return;
-      }
-      await this.authzSDK.members.remove(roleBizId, {
-        members: { userList: [{ userID: userId }] },
-      });
-      this.invalidateUserRoleCache(userId);
-      this.logger.log(`Removed user ${userId} from role '${roleBizId}'`);
-    } catch (err) {
-      this.logger.error(
-        `Failed to remove user ${userId} from role '${roleBizId}': ${err instanceof Error ? err.message : String(err)}`,
-      );
-    }
-  }
-
-  async ensureUserRoleStrict(userId: string, roleBizId: string): Promise<void> {
-    try {
-      const roles = await this.getUserRolesStrict(userId);
-      if (roles.includes(roleBizId)) {
-        return;
-      }
-      await this.authzSDK.members.add(roleBizId, {
-        members: { userList: [{ userID: userId }] },
-      });
-      this.logger.log(`Added user ${userId} to role '${roleBizId}'`);
-    } finally {
-      this.invalidateUserRoleCache(userId);
-    }
-  }
-
-  async removeUserRoleStrict(userId: string, roleBizId: string): Promise<void> {
-    try {
-      const roles = await this.getUserRolesStrict(userId);
-      if (!roles.includes(roleBizId)) {
-        return;
-      }
-      await this.authzSDK.members.remove(roleBizId, {
-        members: { userList: [{ userID: userId }] },
-      });
-      this.logger.log(`Removed user ${userId} from role '${roleBizId}'`);
-    } finally {
-      this.invalidateUserRoleCache(userId);
-    }
-  }
-
-  /**
-   * 同步用户角色：对比新旧角色列表，add 新增的，remove 移除的
-   * @deprecated 直接操作 SDK 角色，绕过 durable authorization staging。请使用 reconciliation 路径或 syncUserRolesStrict。
-   */
-  async syncUserRoles(userId: string, newRoles: string[]): Promise<void> {
-    try {
-      const current = await this.getUserRoles(userId);
-      const toAdd = newRoles.filter((r: string) => !current.includes(r));
-      const toRemove = current.filter((r: string) => !newRoles.includes(r));
-
-      for (const role of toAdd) {
-        try {
-          await this.ensureUserRole(userId, role);
-        } catch {
-          // 单个角色添加失败不中断
-        }
-      }
-      for (const role of toRemove) {
-        try {
-          await this.removeUserRole(userId, role);
-        } catch {
-          // 单个角色移除失败不中断
-        }
-      }
-    } catch (err) {
-      this.logger.error(
-        `Failed to sync roles for user ${userId}: ${err instanceof Error ? err.message : String(err)}`,
-      );
-    }
-  }
-
-  async syncUserRolesStrict(userId: string, newRoles: string[]): Promise<void> {
-    try {
-      const current = await this.getUserRolesStrict(userId);
-      const toAdd = newRoles.filter((role) => !current.includes(role));
-      const toRemove = current.filter((role) => !newRoles.includes(role));
-
-      for (const role of toAdd) {
-        await this.authzSDK.members.add(role, {
-          members: { userList: [{ userID: userId }] },
-        });
-      }
-      for (const role of toRemove) {
-        await this.authzSDK.members.remove(role, {
-          members: { userList: [{ userID: userId }] },
-        });
-      }
-    } finally {
-      this.invalidateUserRoleCache(userId);
-    }
   }
 
   async reconcileUserRoles(
@@ -345,6 +199,7 @@ export class RoleManagerService {
         .values({ roleBizId, permissions: normalizedPermissions });
     }
 
+    this.invalidatePermissionConfigCache();
     this.logger.log(`Permission config updated for role: ${roleBizId}`);
   }
 
@@ -497,6 +352,7 @@ export class RoleManagerService {
       await tx
         .delete(rolePermissionConfig)
         .where(eq(rolePermissionConfig.roleBizId, roleBizId));
+      this.invalidatePermissionConfigCache();
       return sdkResult;
     });
   }
@@ -515,6 +371,31 @@ export class RoleManagerService {
     }));
   }
 
+  /** 获取所有权限配置（5 分钟缓存），减少重复 DB 查询 */
+  private async getCachedPermissionConfigMap(): Promise<
+    Map<string, PermissionItem[]>
+  > {
+    const now = Date.now();
+    if (
+      this.permissionConfigCache &&
+      now < this.permissionConfigCacheExpiresAt
+    ) {
+      return this.permissionConfigCache;
+    }
+    const configs = await this.getAllPermissionConfigs();
+    this.permissionConfigCache = new Map(
+      configs.map((c) => [c.roleBizId, c.permissions]),
+    );
+    this.permissionConfigCacheExpiresAt = now + this.PERM_CONFIG_CACHE_TTL_MS;
+    return this.permissionConfigCache;
+  }
+
+  /** 清除权限配置缓存（upsert/delete 时调用） */
+  invalidatePermissionConfigCache(): void {
+    this.permissionConfigCache = null;
+    this.permissionConfigCacheExpiresAt = 0;
+  }
+
   /**
    * 检查用户是否拥有某个资源的操作权限
    * 用户拥有多个角色时取权限并集
@@ -529,24 +410,8 @@ export class RoleManagerService {
     const userRoles = await this.getUserRoles(userId);
     if (userRoles.length === 0) return false;
 
-    // 一次查询获取所有角色的自定义权限配置
-    const configs = await this.db
-      .select({
-        roleBizId: rolePermissionConfig.roleBizId,
-        permissions: rolePermissionConfig.permissions,
-      })
-      .from(rolePermissionConfig)
-      .where(inArray(rolePermissionConfig.roleBizId, userRoles));
+    const configMap = await this.getCachedPermissionConfigMap();
 
-    const configMap = new Map<string, PermissionItem[]>();
-    for (const config of configs) {
-      configMap.set(
-        config.roleBizId,
-        (config.permissions as PermissionItem[]) || [],
-      );
-    }
-
-    // 对每个角色，取自定义配置，无则回退 DEFAULT_PERMISSIONS
     for (const role of userRoles) {
       const permissions =
         configMap.get(role) ||
@@ -572,22 +437,7 @@ export class RoleManagerService {
     const userRoles = await this.getUserRoles(userId);
     if (userRoles.length === 0) return [];
 
-    // 一次查询获取所有角色的自定义权限配置
-    const configs = await this.db
-      .select({
-        roleBizId: rolePermissionConfig.roleBizId,
-        permissions: rolePermissionConfig.permissions,
-      })
-      .from(rolePermissionConfig)
-      .where(inArray(rolePermissionConfig.roleBizId, userRoles));
-
-    const configMap = new Map<string, PermissionItem[]>();
-    for (const config of configs) {
-      configMap.set(
-        config.roleBizId,
-        (config.permissions as PermissionItem[]) || [],
-      );
-    }
+    const configMap = await this.getCachedPermissionConfigMap();
 
     // 合并所有角色的权限（资源级别合并，action 取并集）
     const mergedMap = new Map<PermissionResource, Set<PermissionAction>>();
@@ -623,7 +473,6 @@ export class RoleManagerService {
           sql`(${employee.employeeId}).user_id = ${userId}`,
           isNull(employee.deletedAt),
           eq(employee.status, true),
-          
         ),
       )
       .limit(1);
@@ -667,9 +516,7 @@ export class RoleManagerService {
       .filter((bizID: string) => Boolean(bizID));
 
     const checks = await Promise.all(
-      bizIDs.map((bizID: string) =>
-        this.isUserInRole(userId, bizID, strict),
-      ),
+      bizIDs.map((bizID: string) => this.isUserInRole(userId, bizID, strict)),
     );
 
     return bizIDs.filter((_: string, i: number) => checks[i]);
