@@ -246,7 +246,7 @@ export class RoleManagerController {
   }
 
   @NeedLogin()
-  @CanRole('admin')
+  @CanRole(['admin'])
   @RequirePermission('permission_management', 'edit')
   @Post('authorization/:employeeId/retry')
   async retryAuthorization(

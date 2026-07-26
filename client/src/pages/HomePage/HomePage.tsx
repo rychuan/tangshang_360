@@ -10,7 +10,6 @@ import { AssessmentProgressPanel } from './AssessmentProgressPanel';
 import { DashboardCharts } from './DashboardCharts';
 import { DashboardHero } from './DashboardHero';
 import { DashboardQuickActions } from './DashboardQuickActions';
-import { DashboardSummary } from './DashboardSummary';
 import { buildQuickActions, buildVisiblePaths } from './dashboard-utils';
 
 const HomePage: React.FC = () => {
@@ -42,6 +41,7 @@ const HomePage: React.FC = () => {
     <div className="flex min-w-0 flex-col gap-4 md:gap-6">
       <PageHeader title="绩效工作台" visuallyHidden />
       <DashboardHero userName={userInfo?.name} canPublish={canPublish} />
+      <DashboardCharts {...overviewState} />
       <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(340px,.9fr)_minmax(520px,1.5fr)]">
         <AssessmentProgressPanel {...overviewState} />
         <DashboardQuickActions
@@ -51,8 +51,6 @@ const HomePage: React.FC = () => {
           onRetry={() => overviewQuery.refetch()}
         />
       </div>
-      <DashboardSummary {...overviewState} />
-      <DashboardCharts {...overviewState} />
     </div>
   );
 };

@@ -124,21 +124,26 @@ Key schema conventions:
 
 ## Permission Model
 
-Five built-in roles with `@CanRole` decorator: `admin`, `hrd`, `dept_head`, `supervisor`, `employee`. Permission matrices are defined in `shared/api.interface.ts` (`DEFAULT_PERMISSIONS`). The `role-manager` module manages custom roles via the platform AuthorizationSDK.
+Five built-in roles: `admin`, `hrd`, `dept_head`, `supervisor`, `employee`. Permission matrices are defined in `shared/types/permission.types.ts` (`DEFAULT_PERMISSIONS`). The `role-manager` module manages custom roles via the platform AuthorizationSDK.
 
-### Two-Layer Permission Control
+### Permission Control (Single Layer with Identity Gate for Sensitive Ops)
 
-Every endpoint should configure both layers:
+**Standard pattern** — `@RequirePermission` on all endpoints:
 
 ```typescript
-@CanRole(['admin', 'hrd', 'dept_head', 'supervisor', 'employee'])  // role gate
-@RequirePermission('my_assessments', 'edit')                         // permission gate
+@RequirePermission('my_assessments', 'edit')  // permission gate
+@NeedLogin()
 @Post(':id/self-rating')
 ```
 
-1. **`@CanRole([...])`** — Role-level guard. Must include ALL roles that need access; incomplete role list causes 403.
-2. **`@RequirePermission(resource, action)`** — Fine-grained permission via AuthorizationSDK. Resources/actions defined in `shared/api.interface.ts`.
-3. **`@NeedLogin()`** — Implicit when `@CanRole` is present; explicit otherwise.
+1. **`@RequirePermission(resource, action)`** — Primary permission gate. Validated by global `PermissionsGuard` via `RoleManagerService.checkUserPermission()` → AuthorizationSDK. Resources/actions defined in `shared/types/permission.types.ts`.
+2. **`@NeedLogin()`** — Required on all endpoints that need user identity. Add explicitly even when guard would deny unauthenticated users.
+3. **`@CanRole([...])`** — Platform role-level identity gate. **Only used in `role-manager.controller.ts`** for elevation-of-privilege operations (role CRUD, permission config changes). Do NOT add to general business endpoints; use `@RequirePermission` instead.
+
+**Frontend permission control:**
+- Route-level: `ProtectedRoute` with `resources` (checks view permission) + optional `identityRoles`
+- Component-level: `usePermission(resource, action)` hook or `<CanDo resource={...} action={...}>` wrapper
+- Navigation: `filterVisibleNavGroups()` filters sidebar items by permissions + identity roles
 
 ## Assessment Workflow State Machine
 

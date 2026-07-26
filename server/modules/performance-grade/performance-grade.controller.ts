@@ -30,6 +30,7 @@ export class PerformanceGradeController {
     return this.service.list();
   }
 
+  @RequirePermission('grade_config', 'view')
   @NeedLogin()
   @Get('active')
   async listActive(): Promise<ActiveGradeListResponse> {

@@ -73,7 +73,7 @@ export const DEFAULT_PERMISSIONS: Record<string, PermissionItem[]> = {
       actions: ['view', 'edit', 'export', 'publish'],
     },
     { resource: 'statistics', actions: ['view', 'export'] },
-    { resource: 'team_performance', actions: ['view'] },
+    { resource: 'team_performance', actions: ['view', 'edit'] },
     { resource: 'organization', actions: ['view', 'edit', 'delete'] },
     { resource: 'permission_management', actions: ['view', 'edit'] },
     { resource: 'grade_config', actions: ['view', 'edit'] },
