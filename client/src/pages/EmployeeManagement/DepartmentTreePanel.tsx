@@ -181,6 +181,7 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
       if (editingDept) {
         await departmentApi.update(editingDept.id, {
           name: form.name.trim(),
+          parentId: form.parentId || undefined,
           headId: form.headId || undefined,
         });
         toast.success('已更新');
