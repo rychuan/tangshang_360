@@ -44,7 +44,7 @@ const EmployeeManagementPage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4 md:gap-6">
-      <PageHeader title="员工管理" icon={UserCog} />
+      <PageHeader title="员工管理" icon={UserCog} visuallyHidden />
       <Tabs
         value={activeTab}
         onValueChange={(value) => setActiveTab(value as EmployeeManagementTab)}

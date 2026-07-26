@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTableScrollHeight } from '@/hooks/useTableScrollHeight';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -128,13 +129,15 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
   const handleGradeChange = (v: string): void => {
     onGradeFilterChange(v === '__all__' ? '' : v);
   };
+  const { tableRef, tableMaxHeight } = useTableScrollHeight();
 
   return (
     <div
+      ref={tableRef}
       data-ai-section-type="card-list"
       className="rounded-lg border bg-card p-6"
     >
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="shrink-0 mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-lg font-semibold">已发布绩效</h2>
           <CanDo resource="publish_management" action="edit">
@@ -221,7 +224,7 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
       </div>
 
       {selectedInstanceIds.size > 0 && (
-        <div className="mb-3 flex flex-wrap items-center gap-3 rounded-md bg-accent px-4 py-2">
+        <div className="shrink-0 mb-3 flex flex-wrap items-center gap-3 rounded-md bg-accent px-4 py-2">
           <span className="text-sm font-medium">
             已选择 {selectedInstanceIds.size} 项
           </span>
@@ -271,8 +274,9 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
         </Empty>
       ) : (
         <>
+          <div style={{ maxHeight: tableMaxHeight }} className="overflow-y-auto">
           <Table>
-            <TableHeader>
+            <TableHeader className="sticky top-0 z-10 bg-background">
               <TableRow className="border-b text-muted-foreground">
                 {canSelect && (
                   <TableHead className="w-10 py-3 pr-4 font-medium">
@@ -443,8 +447,9 @@ const PublishedAssessmentSection: React.FC<PublishedAssessmentSectionProps> = ({
               ))}
             </TableBody>
           </Table>
+          </div>
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t">
+            <div className="shrink-0 flex items-center justify-between px-4 py-3 border-t">
               <span className="text-sm text-muted-foreground">
                 共 {total} 条
               </span>

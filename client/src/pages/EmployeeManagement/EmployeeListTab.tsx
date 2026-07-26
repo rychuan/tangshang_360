@@ -61,6 +61,7 @@ import {
   hasPermission,
 } from '@/components/permission-policy';
 import { getEmployeeListCapabilities } from './employee-management-permissions';
+import { useTableScrollHeight } from '@/hooks/useTableScrollHeight';
 import {
   EMPLOYEE_PAGE_SIZES,
   getEmployeeTotalPages,
@@ -68,26 +69,11 @@ import {
 } from '@shared/employee-pagination';
 
 const EmployeeListTab: React.FC = () => {
-  const tableCardRef = React.useRef<HTMLDivElement>(null);
-  const [tableMaxHeight, setTableMaxHeight] = React.useState('auto');
+  const { tableRef, tableMaxHeight } = useTableScrollHeight();
   const [syncLoading, setSyncLoading] = React.useState<
     '' | 'import' | 'export'
   >('');
 
-  // 动态计算表格可用高度：视口剩余高度，确保筛选栏和分页固定
-  React.useEffect(() => {
-    const calcHeight = () => {
-      requestAnimationFrame(() => {
-        if (!tableCardRef.current) return;
-        const top = tableCardRef.current.getBoundingClientRect().top;
-        const available = window.innerHeight - top - 16;
-        setTableMaxHeight(`${Math.max(200, available)}px`);
-      });
-    };
-    calcHeight();
-    window.addEventListener('resize', calcHeight);
-    return () => window.removeEventListener('resize', calcHeight);
-  }, []);
   const [filters, setters] = useEmployeeFilters();
   const { permissions } = usePermissions();
   const { ability } = useAuth();
@@ -307,8 +293,11 @@ const EmployeeListTab: React.FC = () => {
       </Card>
 
       {/* 员工表格 */}
-      <Card ref={tableCardRef}>
-        <CardContent className="p-0 overflow-y-auto" style={{ maxHeight: tableMaxHeight }}>
+      <Card ref={tableRef}>
+        <CardContent
+          className="p-0 overflow-y-auto"
+          style={{ maxHeight: tableMaxHeight }}
+        >
           <EmployeeTable
             employees={employees}
             loading={loading}

@@ -96,6 +96,7 @@ const PermissionPage: React.FC = () => {
         <PageHeader
           title="权限管理"
           icon={Shield}
+          visuallyHidden
           description="基于角色配置功能权限与成员归属。"
         />
       </div>

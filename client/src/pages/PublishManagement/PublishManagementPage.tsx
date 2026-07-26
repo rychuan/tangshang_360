@@ -511,7 +511,7 @@ const PublishManagementPage: React.FC = () => {
   return (
     <div className="flex flex-col gap-4 md:gap-6">
       <div className="flex items-center gap-4">
-        <PageHeader title="绩效发布管理" />
+        <PageHeader title="绩效发布管理" visuallyHidden />
       </div>
 
       <div className="flex flex-col gap-1.5">

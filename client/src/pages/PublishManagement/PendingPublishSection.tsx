@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTableScrollHeight } from '@/hooks/useTableScrollHeight';
 import { Button } from '@/components/ui/button';
 import { ActionBadge } from '@/components/business-ui/action-badge';
 import { CanDo } from '@/hooks/usePermissions';
@@ -88,13 +89,15 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
   const handleTplChange = (v: string): void => {
     onTemplateFilterChange(v === '__all__' ? '' : v);
   };
+  const { tableRef, tableMaxHeight } = useTableScrollHeight();
 
   return (
     <div
+      ref={tableRef}
       data-ai-section-type="card-list"
       className="rounded-lg border bg-card p-6"
     >
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="shrink-0 mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">待发布员工</h2>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
@@ -155,6 +158,7 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
         </div>
       </div>
 
+      <div style={{ maxHeight: tableMaxHeight }} className="overflow-y-auto">
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <Spinner />
@@ -170,7 +174,7 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
         </Empty>
       ) : (
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 z-10 bg-background">
             <TableRow className="border-b text-left text-muted-foreground">
               <TableHead className="w-10 py-3 pr-4 font-medium">
                 <Checkbox
@@ -263,6 +267,7 @@ const PendingPublishSection: React.FC<PendingPublishSectionProps> = ({
           </TableBody>
         </Table>
       )}
+      </div>
     </div>
   );
 };

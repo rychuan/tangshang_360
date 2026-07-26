@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTableScrollHeight } from '@/hooks/useTableScrollHeight';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/api/queryKeys';
 import { toast } from 'sonner';
@@ -81,6 +82,7 @@ const TemplateManagementPage: React.FC = () => {
 
   const queryClient = useQueryClient();
   const canEdit = usePermission('template_management', 'edit');
+  const { tableRef, tableMaxHeight } = useTableScrollHeight();
 
   const listQuery = useQuery({
     queryKey: [
@@ -291,7 +293,7 @@ const TemplateManagementPage: React.FC = () => {
     <div className="flex flex-col gap-4 md:gap-6">
       <PageHeader
         title="绩效模板管理"
-        actions={
+        visuallyHidden        actions={
           <CanDo resource="template_management" action="edit">
             <Button onClick={handleOpenCreate}>
               <Plus data-icon="inline-start" />
@@ -301,6 +303,7 @@ const TemplateManagementPage: React.FC = () => {
         }
       />
 
+      <div ref={tableRef} style={{ maxHeight: tableMaxHeight }} className="flex flex-col gap-4 overflow-y-auto">
       <FilterBar data-ai-section-type="card-list">
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">搜索</Label>
@@ -394,7 +397,9 @@ const TemplateManagementPage: React.FC = () => {
         totalPages={totalPages}
         total={total}
         onPageChange={setPage}
+        className="overflow-hidden"
       />
+      </div>
 
       <TemplateFormDialog
         open={formOpen}
