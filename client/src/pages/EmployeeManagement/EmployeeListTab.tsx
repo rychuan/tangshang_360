@@ -198,7 +198,7 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
       </div>
 
       {/* 员工表格 + 分页 */}
-      <Card className="flex flex-col overflow-hidden" style={{ maxHeight: 'calc(100dvh - 160px)' }}>
+      <Card className="flex flex-1 flex-col min-h-0 overflow-hidden">
         <CardContent className="flex-1 overflow-y-auto min-h-0 p-0">
           <EmployeeTable
             employees={employees}

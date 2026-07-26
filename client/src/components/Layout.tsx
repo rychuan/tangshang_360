@@ -104,7 +104,7 @@ const LayoutContent: React.FC = () => {
         homePath={homePath}
         badges={badges}
       />
-      <SidebarInset className="min-w-0 bg-background md:rounded-lg">
+      <SidebarInset className="min-w-0 bg-background md:rounded-lg flex flex-col h-screen overflow-hidden">
         {/* 跳转到内容：键盘无障碍 skip-link */}
         <a
           href="#main-content"
