@@ -11,27 +11,18 @@ export function DashboardHero({
   canPublish: boolean;
 }) {
   return (
-    <section className="flex flex-wrap items-end justify-between gap-4">
-      <div className="min-w-0">
-        <h1 className="text-[clamp(28px,3vw,34px)] font-semibold leading-tight">
-          {getGreeting(new Date())}，
-          <span className="font-serif font-medium">{userName || '同事'}</span>
-        </h1>
-        <p className="mt-2 text-[14px] text-muted-foreground">
-          掌握考核进度，及时完成评分，让每一次反馈都有价值。
-        </p>
-      </div>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <h1 className="text-lg font-semibold">
+        {getGreeting(new Date())}，{userName || '同事'}
+      </h1>
       {canPublish && (
-        <Button
-          asChild
-          className="h-10 rounded-lg bg-foreground px-4 text-background hover:bg-foreground/90"
-        >
+        <Button asChild size="sm">
           <Link to="/publish-management">
-            <Plus className="size-4" />
+            <Plus data-icon="inline-start" />
             发布考核
           </Link>
         </Button>
       )}
-    </section>
+    </div>
   );
 }
