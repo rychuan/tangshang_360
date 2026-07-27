@@ -1,14 +1,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { axiosForBackend } from '@lark-apaas/client-toolkit/utils/getAxiosForBackend';
 import { logger } from '@lark-apaas/client-toolkit/logger';
-import type { DepartmentTreeNode, DepartmentListResponse } from '@shared/api.interface';
+import type {
+  DepartmentTreeNode,
+  DepartmentListResponse,
+} from '@shared/api.interface';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Building2, ChevronRight, ChevronDown, Check } from '@/components/ui/hugeicons';
+import {
+  Building2,
+  ChevronRight,
+  ChevronDown,
+  Check,
+} from '@/components/ui/hugeicons';
 
 export interface DepartmentTreeSelectProps {
   value: string;
@@ -62,7 +70,10 @@ const DepartmentTreeSelect: React.FC<DepartmentTreeSelectProps> = ({
     setOpen(false);
   };
 
-  const renderNode = (node: DepartmentTreeNode, depth: number): React.ReactNode => {
+  const renderNode = (
+    node: DepartmentTreeNode,
+    depth: number,
+  ): React.ReactNode => {
     const isOpen = expanded.has(node.id);
     const hasChildren = node.children && node.children.length > 0;
     const isSelected = node.name === value;
@@ -117,7 +128,7 @@ const DepartmentTreeSelect: React.FC<DepartmentTreeSelectProps> = ({
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[260px] p-2" align="start">
+      <PopoverContent className="w-[260px] p-2 overflow-hidden" align="start">
         {loading ? (
           <p className="py-4 text-center text-sm text-muted-foreground">
             加载中...

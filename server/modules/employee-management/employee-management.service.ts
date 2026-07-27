@@ -245,21 +245,15 @@ export class EmployeeManagementService {
     return { items: mappedWithBindings, total };
   }
 
-  async getPositions(userId: string): Promise<{ positions: string[] }> {
-    const conditions: SQL[] = [isNull(employee.deletedAt)];
-    const scopeCondition =
-      await this.accessScopeService.buildEmployeeScopeCondition(userId, {
-        includeSelf: true,
-      });
-    if (scopeCondition) {
-      conditions.push(scopeCondition);
-    }
+  async getPositions(_userId: string): Promise<{ positions: string[] }> {
     const rows = await this.db
-      .select({ position: employee.position })
-      .from(employee)
-      .where(and(...conditions))
-      .orderBy(employee.position);
-    const positions = [...new Set(rows.map((r) => r.position))];
+      .select({ name: systemDict.name })
+      .from(systemDict)
+      .where(
+        and(eq(systemDict.dictType, 'position'), eq(systemDict.isActive, true)),
+      )
+      .orderBy(systemDict.sortOrder, systemDict.name);
+    const positions = rows.map((r) => r.name);
     return { positions };
   }
 
