@@ -128,7 +128,7 @@ const DepartmentTreeSelect: React.FC<DepartmentTreeSelectProps> = ({
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[260px] p-2 overflow-hidden" align="start">
+      <PopoverContent className="w-[260px] p-2 max-h-80 overflow-y-auto" align="start">
         {loading ? (
           <p className="py-4 text-center text-sm text-muted-foreground">
             加载中...
@@ -138,7 +138,7 @@ const DepartmentTreeSelect: React.FC<DepartmentTreeSelectProps> = ({
             暂无部门数据
           </p>
         ) : (
-          <div className="max-h-64 overflow-y-auto">
+          <div>
             <div
               className={`flex items-center gap-1.5 rounded-sm px-2 py-1.5 text-sm hover:bg-muted/60 cursor-pointer ${!value ? 'bg-primary/10 text-primary font-medium' : ''}`}
               onClick={() => handleSelect('')}
