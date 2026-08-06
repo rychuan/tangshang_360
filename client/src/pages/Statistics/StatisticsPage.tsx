@@ -377,22 +377,22 @@ const StatisticsPage: React.FC = () => {
     {
       key: 'department',
       header: '部门',
-      className: 'hidden sm:table-cell text-muted-foreground',
-      headerClassName: 'hidden sm:table-cell',
+      className: 'hidden @sm:table-cell text-muted-foreground',
+      headerClassName: 'hidden @sm:table-cell',
       render: (r) => r.department,
     },
     {
       key: 'position',
       header: '岗位',
-      className: 'hidden md:table-cell text-muted-foreground',
-      headerClassName: 'hidden md:table-cell',
+      className: 'hidden @lg:table-cell text-muted-foreground',
+      headerClassName: 'hidden @lg:table-cell',
       render: (r) => r.position,
     },
     {
       key: 'supervisorName',
       header: '上级',
-      className: 'hidden md:table-cell text-muted-foreground',
-      headerClassName: 'hidden md:table-cell',
+      className: 'hidden @lg:table-cell text-muted-foreground',
+      headerClassName: 'hidden @lg:table-cell',
       render: (r) => r.supervisorName,
     },
     {
@@ -404,8 +404,8 @@ const StatisticsPage: React.FC = () => {
     {
       key: 'grade',
       header: '等级',
-      className: 'hidden sm:table-cell',
-      headerClassName: 'hidden sm:table-cell',
+      className: 'hidden @sm:table-cell',
+      headerClassName: 'hidden @sm:table-cell',
       render: (r) => <GradeBadge grade={r.grade} />,
     },
     {
@@ -416,8 +416,8 @@ const StatisticsPage: React.FC = () => {
     {
       key: 'completedAt',
       header: '完成时间',
-      className: 'hidden lg:table-cell text-muted-foreground',
-      headerClassName: 'hidden lg:table-cell',
+      className: 'hidden @lg:table-cell text-muted-foreground',
+      headerClassName: 'hidden @lg:table-cell',
       render: (r) =>
         r.completedAt
           ? new Date(r.completedAt).toLocaleDateString('zh-CN')
@@ -553,7 +553,7 @@ const StatisticsPage: React.FC = () => {
       </Card>
 
       {/* Charts Section */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 @lg:grid-cols-3">
         {/* Grade Distribution - Pie Chart */}
         <Card className="rounded-xl">
           <CardHeader className="flex flex-row items-center justify-between">

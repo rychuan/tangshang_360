@@ -249,7 +249,7 @@ const TeamPerformancePage: React.FC = () => {
       </div>
 
       {/* Stats row — 3 columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 @lg:grid-cols-3 gap-4">
         {/* Left — 3 stacked stat cards */}
         <div className="flex flex-col gap-4">
           {/* 团队人数 */}

@@ -74,7 +74,7 @@ export function DashboardCharts({
       </div>
 
       {status === 'loading' && (
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,.85fr)]">
+        <div className="grid grid-cols-1 gap-4 @min-[820px]:grid-cols-[minmax(0,1.35fr)_minmax(0,.85fr)]">
           {Array.from({ length: 2 }).map((_, index) => (
             <Card key={index} className="rounded-lg">
               <CardHeader className="p-5 pb-3">
@@ -128,7 +128,7 @@ function ChartsContent({
   const gradeData = mapGradeDistribution(stats.gradeDistribution);
 
   return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,.85fr)]">
+    <div className="grid grid-cols-1 gap-4 @min-[820px]:grid-cols-[minmax(0,1.35fr)_minmax(0,.85fr)]">
       <Card className="min-w-0 rounded-lg">
         <CardHeader className="gap-1 p-5 pb-3">
           <div className="flex items-center gap-2">

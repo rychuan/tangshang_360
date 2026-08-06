@@ -144,8 +144,8 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
         id: 'department',
         header: '部门',
         meta: {
-          headerClass: 'hidden lg:table-cell',
-          cellClass: 'hidden lg:table-cell',
+          headerClass: 'hidden @lg:table-cell',
+          cellClass: 'hidden @lg:table-cell',
         },
         cell: ({ row }) => (
           <span className="text-muted-foreground truncate">
@@ -157,8 +157,8 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
         id: 'supervisor',
         header: '上级',
         meta: {
-          headerClass: 'hidden lg:table-cell',
-          cellClass: 'hidden lg:table-cell',
+          headerClass: 'hidden @lg:table-cell',
+          cellClass: 'hidden @lg:table-cell',
         },
         cell: ({ row }) =>
           row.original.supervisorId ? (
@@ -203,8 +203,8 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
               id: 'binding',
               header: '模板',
               meta: {
-                headerClass: 'hidden lg:table-cell',
-                cellClass: 'hidden lg:table-cell',
+                headerClass: 'hidden @lg:table-cell',
+                cellClass: 'hidden @lg:table-cell',
               },
               cell: ({ row }) =>
                 row.original.currentBinding ? (
