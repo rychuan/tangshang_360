@@ -6,12 +6,14 @@ import { toast } from 'sonner';
 import {
   Plus,
   Eye,
+  Pencil,
   Ban,
   Trash2,
   Search,
   RotateCcw,
 } from '@/components/ui/hugeicons';
 import { logger } from '@lark-apaas/client-toolkit/logger';
+import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo, usePermission } from '@/hooks/usePermissions';
 import { Button } from '@client/src/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -264,6 +266,16 @@ const TemplateManagementPage: React.FC = () => {
             label="查看"
             onClick={() => handleEdit(item.id)}
           />
+          <CanRole roles={['admin', 'hrd']}>
+            <CanDo resource="template_management" action="edit">
+              <ActionBadge
+                actionType="edit"
+                icon={<Pencil className="size-3" />}
+                label="编辑"
+                onClick={() => handleEdit(item.id)}
+              />
+            </CanDo>
+          </CanRole>
           {item.isActive && (
             <CanDo resource="template_management" action="edit">
               <ActionBadge
