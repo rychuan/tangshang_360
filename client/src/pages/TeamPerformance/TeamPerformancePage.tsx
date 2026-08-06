@@ -230,7 +230,7 @@ const TeamPerformancePage: React.FC = () => {
   }
 
   return (
-    <div className="@container/main flex flex-1 flex-col gap-4 md:gap-6">
+    <div className="@container/main flex flex-1 flex-col min-h-0 overflow-hidden gap-4 md:gap-6">
       {/* Header + Period Filter */}
       <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
         <PageHeader title="团队绩效" visuallyHidden />
@@ -397,12 +397,8 @@ const TeamPerformancePage: React.FC = () => {
       </div>
 
       {/* Team Performance List */}
-      <Card
-        ref={tableRef}
-        className="rounded-xl flex flex-col overflow-hidden"
-        style={{ maxHeight: tableMaxHeight }}
-      >
-        <CardHeader className="shrink-0 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <Card className="rounded-xl">
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-base">团队绩效列表</CardTitle>
           <Select
             value={statusFilter || '__all'}
@@ -426,24 +422,27 @@ const TeamPerformancePage: React.FC = () => {
             </SelectContent>
           </Select>
         </CardHeader>
-        <CardContent className="flex-1 min-h-0 p-0">
-          <div className="hidden md:block h-full">
-            <PageTable
-              columns={teamColumns}
-              data={subordinates}
-              loading={loadingList}
-              scrollable
-              rowKey={(item) => item.id}
-              emptyMessage={
-                statusFilter
-                  ? '暂无符合筛选条件的绩效记录'
-                  : '暂无非您负责的下属团队数据'
-              }
-              page={page}
-              totalPages={totalPages}
-              total={total}
-              onPageChange={setPage}
-            />
+        <CardContent className="p-0">
+          <div className="hidden md:block">
+            <div ref={tableRef} style={{ maxHeight: tableMaxHeight }}>
+              <PageTable
+                columns={teamColumns}
+                data={subordinates}
+                loading={loadingList}
+                scrollable
+                maxHeight={tableMaxHeight}
+                rowKey={(item) => item.id}
+                emptyMessage={
+                  statusFilter
+                    ? '暂无符合筛选条件的绩效记录'
+                    : '暂无非您负责的下属团队数据'
+                }
+                page={page}
+                totalPages={totalPages}
+                total={total}
+                onPageChange={setPage}
+              />
+            </div>
           </div>
           <div className="md:hidden">
             {loadingList ? (
