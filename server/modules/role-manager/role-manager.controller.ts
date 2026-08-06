@@ -49,6 +49,14 @@ export class RoleManagerController {
   }
 
   @NeedLogin()
+  @Post('bootstrap')
+  async bootstrap(@Req() req: Request) {
+    const userId = req.userContext?.userId || '';
+    const status = await this.roleManagerService.bootstrapAdmin(userId);
+    return { data: { status } };
+  }
+
+  @NeedLogin()
   @Get('my-permissions')
   async getMyPermissions(@Req() req: Request) {
     const userId = req.userContext?.userId || '';

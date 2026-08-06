@@ -43,6 +43,17 @@ export class AccessScopeService {
   ) {}
 
   async getScope(userId: string): Promise<AccessScope> {
+    const roles = await this.roleManagerService.getUserRoles(userId);
+
+    if (roles.includes('admin') || roles.includes('hrd')) {
+      return {
+        kind: 'global',
+        roles,
+        departmentIds: [],
+        subordinateIds: [],
+      };
+    }
+
     // Verify employee exists and is active (no longer requires synced authorization)
     const callerRows = await this.db
       .select({ id: employee.employeeId })
@@ -64,7 +75,6 @@ export class AccessScopeService {
       };
     }
 
-    const roles = await this.roleManagerService.getUserRoles(userId);
     const isDeptHead = roles.includes('dept_head');
     const isSupervisor = roles.includes('supervisor');
 

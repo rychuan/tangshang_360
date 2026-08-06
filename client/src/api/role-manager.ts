@@ -147,3 +147,11 @@ export async function retryAuthorization(
   });
   return data.data;
 }
+
+export async function bootstrapAdmin(): Promise<{ status: string }> {
+  const { data } = await axiosForBackend({
+    url: '/api/role_manager/bootstrap',
+    method: 'POST',
+  });
+  return data.data;
+}

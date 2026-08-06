@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   Inject,
@@ -420,10 +421,12 @@ export class RoleManagerService {
     resource: PermissionResource,
     action: PermissionAction,
   ): Promise<boolean> {
-    if (!(await this.hasActiveEmployee(userId))) return false;
-
     const userRoles = await this.getUserRoles(userId);
     if (userRoles.length === 0) return false;
+
+    if (!userRoles.includes('admin')) {
+      if (!(await this.hasActiveEmployee(userId))) return false;
+    }
 
     const configMap = await this.getCachedPermissionConfigMap();
 
@@ -447,10 +450,12 @@ export class RoleManagerService {
    * 获取当前用户所有角色的有效权限（取并集）
    */
   async getUserEffectivePermissions(userId: string): Promise<PermissionItem[]> {
-    if (!(await this.hasActiveEmployee(userId))) return [];
-
     const userRoles = await this.getUserRoles(userId);
     if (userRoles.length === 0) return [];
+
+    if (!userRoles.includes('admin')) {
+      if (!(await this.hasActiveEmployee(userId))) return [];
+    }
 
     const configMap = await this.getCachedPermissionConfigMap();
 
@@ -477,6 +482,45 @@ export class RoleManagerService {
       resource,
       actions: Array.from(actions),
     }));
+  }
+
+  async bootstrapAdmin(
+    userId: string,
+  ): Promise<'already_admin' | 'bootstrapped'> {
+    const roles = await this.getUserRoles(userId);
+    if (roles.includes('admin')) {
+      return 'already_admin';
+    }
+
+    if (process.env.NODE_ENV === 'production') {
+      const allRoles = await this.authzSDK.roles.list({ needMember: true });
+      const rolePayload = this.unwrapSdkData(allRoles);
+      const roleList = Array.isArray(rolePayload)
+        ? rolePayload
+        : (rolePayload as Record<string, unknown>)?.items as unknown[] ||
+          (rolePayload as Record<string, unknown>)?.roles as unknown[] ||
+          [];
+
+      const adminRole = (roleList as Array<Record<string, unknown>>).find(
+        (r) => r?.bizID === 'admin',
+      );
+      const adminMembers = (adminRole?.roleMembers ?? {}) as Record<string, unknown>;
+      const hasAdmin =
+        Boolean(adminMembers.allEmployees) ||
+        (Array.isArray(adminMembers.userList) &&
+          (adminMembers.userList as unknown[]).length > 0);
+
+      if (hasAdmin) {
+        throw new ForbiddenException('已存在管理员，请联系管理员添加');
+      }
+    }
+
+    await this.authzSDK.members.add('admin', {
+      members: { userList: [{ userID: userId }] },
+    });
+
+    this.invalidateUserRoleCache(userId);
+    return 'bootstrapped';
   }
 
   async hasActiveEmployee(userId: string): Promise<boolean> {
