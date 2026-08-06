@@ -2,11 +2,13 @@ import { TeamPerformanceService } from '../../server/modules/team-performance/te
 
 describe('team performance reminder scope', () => {
   it('checks object scope before returning a distinguishable instance status', async () => {
+    // 新实现：批量查询实例（where 直接 resolve 数组，无 limit），
+    // 范围判定一次调用 canAccessEmployees（返回 Map）
     const instanceQuery = {
       from: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockResolvedValue([
+      where: jest.fn().mockResolvedValue([
         {
+          id: 'instance-1',
           period: '2026-07',
           status: 'completed',
           employeeUserId: 'employee-2',
@@ -21,7 +23,9 @@ describe('team performance reminder scope', () => {
       load: jest.fn(),
     };
     const accessScopeService = {
-      canAccessEmployee: jest.fn().mockResolvedValue(false),
+      canAccessEmployees: jest
+        .fn()
+        .mockResolvedValue(new Map([['employee-2', false]])),
     };
     const service = new (TeamPerformanceService as any)(
       db,
@@ -33,9 +37,9 @@ describe('team performance reminder scope', () => {
       instanceIds: ['instance-1'],
     });
 
-    expect(accessScopeService.canAccessEmployee).toHaveBeenCalledWith(
+    expect(accessScopeService.canAccessEmployees).toHaveBeenCalledWith(
       'manager-1',
-      'employee-2',
+      ['employee-2'],
       { includeSelf: false },
     );
     expect(result.results).toEqual([

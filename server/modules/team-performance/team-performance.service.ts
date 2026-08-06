@@ -205,19 +205,40 @@ export class TeamPerformanceService {
     assertBatchSize(body.instanceIds, '实例');
     const results: RemindResult[] = [];
 
-    for (const instanceId of body.instanceIds) {
-      const rows = await this.db
-        .select({
-          period: assessmentInstance.period,
-          status: assessmentInstance.status,
-          employeeUserId: sql<string>`(${assessmentInstance.employeeId}).user_id`,
-          employeeName: sql<string>`COALESCE((SELECT name FROM employee e WHERE (e.employee_id).user_id = (${assessmentInstance.employeeId}).user_id AND e.deleted_at IS NULL LIMIT 1), '')`,
-        })
-        .from(assessmentInstance)
-        .where(eq(assessmentInstance.id, instanceId))
-        .limit(1);
+    if (body.instanceIds.length === 0) {
+      return { success: true, results };
+    }
 
-      if (rows.length === 0) {
+    // 批量查询实例（状态 + 员工信息），避免逐条 SELECT
+    const instances = await this.db
+      .select({
+        id: assessmentInstance.id,
+        period: assessmentInstance.period,
+        status: assessmentInstance.status,
+        employeeUserId: sql<string>`(${assessmentInstance.employeeId}).user_id`,
+        employeeName: sql<string>`COALESCE((SELECT name FROM employee e WHERE (e.employee_id).user_id = (${assessmentInstance.employeeId}).user_id AND e.deleted_at IS NULL LIMIT 1), '')`,
+      })
+      .from(assessmentInstance)
+      .where(inArray(assessmentInstance.id, body.instanceIds));
+
+    const instanceMap = new Map(instances.map((inst) => [inst.id, inst]));
+
+    // 一次完成全部实例的范围判定（内部仅一次 getScope + 一次员工查询）
+    const employeeUserIds = [
+      ...new Set(instances.map((inst) => inst.employeeUserId)),
+    ];
+    const accessMap =
+      employeeUserIds.length > 0
+        ? await this.accessScopeService.canAccessEmployees(
+            userId,
+            employeeUserIds,
+            { includeSelf: false },
+          )
+        : new Map<string, boolean>();
+
+    for (const instanceId of body.instanceIds) {
+      const inst = instanceMap.get(instanceId);
+      if (!inst) {
         this.logger.warn(`Instance ${instanceId} not found`);
         results.push({
           instanceId,
@@ -227,15 +248,7 @@ export class TeamPerformanceService {
         continue;
       }
 
-      const row = rows[0];
-      const employeeUserId: string = row.employeeUserId;
-
-      const canAccess = await this.accessScopeService.canAccessEmployee(
-        userId,
-        employeeUserId,
-        { includeSelf: false },
-      );
-      if (!canAccess) {
+      if (!(accessMap.get(inst.employeeUserId) ?? false)) {
         this.logger.warn(
           `Instance ${instanceId} not authorized for user ${userId}`,
         );
@@ -248,7 +261,7 @@ export class TeamPerformanceService {
       }
 
       // P0: 状态校验 — 仅 self_review 状态允许催办
-      if (row.status !== 'self_review') {
+      if (inst.status !== 'self_review') {
         results.push({
           instanceId,
           status: 'failed',
@@ -257,8 +270,8 @@ export class TeamPerformanceService {
         continue;
       }
 
-      const employeeName: string = row.employeeName || '';
-      const period: string = row.period;
+      const employeeName: string = inst.employeeName || '';
+      const period: string = inst.period;
 
       const message = `**考核催办提醒**\n\n[${period}] ${employeeName} 您好，您的考核尚未完成自评，请及时登录系统处理。`;
 
@@ -266,17 +279,17 @@ export class TeamPerformanceService {
         await this.capabilityService
           .load('assessment_reminder_feishu_send_1')
           .call('send_feishu_message', {
-            receiverUserList: [employeeUserId],
+            receiverUserList: [inst.employeeUserId],
             cardContentMarkdown: message,
           });
 
         this.logger.log(
-          `Reminder sent to ${employeeName} (${employeeUserId}) for instance ${instanceId}`,
+          `Reminder sent to ${employeeName} (${inst.employeeUserId}) for instance ${instanceId}`,
         );
         results.push({ instanceId, status: 'sent' });
       } catch (err) {
         this.logger.warn(
-          `Failed to send reminder to ${employeeName} (${employeeUserId}): ${err}`,
+          `Failed to send reminder to ${employeeName} (${inst.employeeUserId}): ${err}`,
         );
         results.push({
           instanceId,

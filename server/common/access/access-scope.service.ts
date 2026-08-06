@@ -3,7 +3,7 @@ import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { and, eq, isNull, sql, type SQL } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 import { department, employee } from '@server/database/schema';
 import { RoleManagerService } from '@server/modules/role-manager/role-manager.service';
 
@@ -185,28 +185,74 @@ export class AccessScopeService {
     employeeId: string,
     options: { includeSelf?: boolean } = { includeSelf: true },
   ): Promise<boolean> {
+    const map = await this.canAccessEmployees(userId, [employeeId], options);
+    return map.get(employeeId) ?? false;
+  }
+
+  /**
+   * 批量数据范围判定：一次 getScope + 一次员工查询完成全部判定，
+   * 避免逐员工调用 canAccessEmployee 时重复 getScope（N+1）。
+   * 语义与 canAccessEmployee 完全一致。
+   */
+  async canAccessEmployees(
+    userId: string,
+    employeeIds: string[],
+    options: { includeSelf?: boolean } = { includeSelf: true },
+  ): Promise<Map<string, boolean>> {
     const scope = await this.getScope(userId);
-    if (scope.kind === 'global') return true;
-    const rows = await this.db
-      .select({
-        departmentId: employee.departmentId,
-        userId: sql<string>`(${employee.employeeId}).user_id`,
-      })
-      .from(employee)
-      .where(
-        and(
-          sql`(${employee.employeeId}).user_id = ${employeeId}`,
-          isNull(employee.deletedAt),
-          eq(employee.status, true),
-        ),
-      )
-      .limit(1);
-    if (rows.length === 0) return false;
-    if (employeeId === userId) {
-      return Boolean(options.includeSelf);
+    const uniqueIds = [...new Set(employeeIds)];
+    const result = new Map<string, boolean>();
+
+    if (scope.kind === 'global') {
+      for (const id of uniqueIds) {
+        result.set(id, true);
+      }
+      return result;
     }
-    if (scope.subordinateIds.includes(employeeId)) return true;
-    if (scope.departmentIds.length === 0) return false;
-    return scope.departmentIds.includes(rows[0].departmentId);
+
+    const rows =
+      uniqueIds.length > 0
+        ? await this.db
+            .select({
+              departmentId: employee.departmentId,
+              userId: sql<string>`(${employee.employeeId}).user_id`,
+            })
+            .from(employee)
+            .where(
+              and(
+                inArray(sql`(${employee.employeeId}).user_id`, uniqueIds),
+                isNull(employee.deletedAt),
+                eq(employee.status, true),
+              ),
+            )
+        : [];
+    const employeeDeptMap = new Map(
+      rows.map((row) => [row.userId, row.departmentId]),
+    );
+    const subordinateSet = new Set(scope.subordinateIds);
+    const departmentSet = new Set(scope.departmentIds);
+
+    for (const id of uniqueIds) {
+      const deptId = employeeDeptMap.get(id);
+      // 员工不存在/停用/删除 → 无权
+      if (deptId === undefined) {
+        result.set(id, false);
+        continue;
+      }
+      if (id === userId) {
+        result.set(id, Boolean(options.includeSelf));
+        continue;
+      }
+      if (subordinateSet.has(id)) {
+        result.set(id, true);
+        continue;
+      }
+      if (departmentSet.size === 0) {
+        result.set(id, false);
+        continue;
+      }
+      result.set(id, deptId != null && departmentSet.has(deptId));
+    }
+    return result;
   }
 }

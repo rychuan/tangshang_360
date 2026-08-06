@@ -326,9 +326,18 @@ function createSdk(initialRoles: Record<string, string[]>) {
 
   const sdk = {
     roles: {
+      // 新 contract：一次调用返回每个角色的 roleMembers.userList，
+      // 服务端据此判定成员身份（不再逐角色调 members.list）
       list: jest.fn(async () => {
         events.push('roles.list');
-        return [...knownRoles].map((bizID) => ({ bizID }));
+        return [...knownRoles].map((bizID) => ({
+          bizID,
+          roleMembers: {
+            userList: [...rolesByUser.entries()]
+              .filter(([, roles]) => roles.has(bizID))
+              .map(([userID]) => ({ userID })),
+          },
+        }));
       }),
     },
     members: {
@@ -428,7 +437,8 @@ describe('durable authorization reconciliation', () => {
       version: 2,
     });
     expect([...rolesByUser.get('employee-1')!]).toEqual(['employee']);
-    expect(events.filter((event) => event.startsWith('list:'))).toHaveLength(4);
+    // 新实现：reconcile 前读取一次 + 变更后验证读一次（共 2 次 roles.list）
+    expect(events.filter((event) => event === 'roles.list')).toHaveLength(2);
     expect(db.employees[0].authorizationStatus).toBe('synced');
     expect(db.jobs[0].status).toBe('succeeded');
     expect(db.jobs[0].claimToken).toMatch(/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i);
