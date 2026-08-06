@@ -6,11 +6,12 @@
     "paths": {
       "@server/*": ["server/*"],
       "@shared/*": ["shared/*"],
-    }
+    },
+    "types": ["node", "jest"]
   },
   "watchOptions": {
     "excludeDirectories": ["node_modules/**"]
   },
   "include": ["server/**/*", "shared/**/*.ts"],
-  "exclude": ["node_modules", "dist", "client", "**/*.spec.ts", "**/*.e2e-spec.ts"],
+  "exclude": ["node_modules", "dist", "client",  "**/*.e2e-spec.ts"],
 }
