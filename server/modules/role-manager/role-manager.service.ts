@@ -124,13 +124,28 @@ export class RoleManagerService {
         });
       }
 
-      const verified = normalizeAuthorizationRoles(
+      let verified = normalizeAuthorizationRoles(
         await this.getUserRolesStrict(userId),
       );
-      if (
-        verified.length !== desired.length ||
-        verified.some((role, index) => role !== desired[index])
-      ) {
+      let attempt = 0;
+      const isMatched = (): boolean =>
+        verified.length === desired.length &&
+        verified.every((role, index) => role === desired[index]);
+      while (!isMatched() && attempt < 3) {
+        attempt++;
+        this.logger.warn(
+          `reconcile ${userId}: verified=${JSON.stringify(verified)} != desired=${JSON.stringify(desired)}, retry ${attempt}/3`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+        this.invalidateUserRoleCache(userId);
+        verified = normalizeAuthorizationRoles(
+          await this.getUserRolesStrict(userId),
+        );
+      }
+      this.logger.log(
+        `reconcile ${userId}: current=${JSON.stringify(current)} desired=${JSON.stringify(desired)} verified=${JSON.stringify(verified)} toRemove=${JSON.stringify(toRemove)} toAdd=${JSON.stringify(toAdd)} retries=${attempt}`,
+      );
+      if (!isMatched()) {
         throw new Error(
           `Authorization role reconciliation mismatch for user ${userId}`,
         );
