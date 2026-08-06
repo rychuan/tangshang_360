@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import { handleApiError } from '@client/src/utils/api-error';
 import { UserPlus, UserX, Building2, Users } from '@/components/ui/hugeicons';
 import { i18nText } from './role-utils';
+import { isBuiltinRole } from '@shared/types/permission.types';
 import AddMemberDialog from './AddMemberDialog';
 
 interface RoleMembersTabProps {
@@ -75,6 +76,7 @@ interface MemberRowProps {
   onToggle: () => void;
   onRemove: () => void;
   removing: boolean;
+  removable?: boolean;
   content: React.ReactNode;
 }
 
@@ -83,6 +85,7 @@ const MemberRow: React.FC<MemberRowProps> = ({
   onToggle,
   onRemove,
   removing,
+  removable = true,
   content,
 }) => (
   <div
@@ -94,20 +97,22 @@ const MemberRow: React.FC<MemberRowProps> = ({
   >
     <Checkbox checked={selected} onCheckedChange={onToggle} />
     {content}
-    <CanRole roles={['admin']}>
-      <CanDo resource="permission_management" action="edit">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-7 shrink-0"
-          title="移除成员"
-          disabled={removing}
-          onClick={onRemove}
-        >
-          <UserX className="h-3.5 w-3.5" />
-        </Button>
-      </CanDo>
-    </CanRole>
+    {removable && (
+      <CanRole roles={['admin']}>
+        <CanDo resource="permission_management" action="edit">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7 shrink-0"
+            title="移除成员"
+            disabled={removing}
+            onClick={onRemove}
+          >
+            <UserX className="h-3.5 w-3.5" />
+          </Button>
+        </CanDo>
+      </CanRole>
+    )}
   </div>
 );
 
@@ -129,6 +134,7 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [addOpen, setAddOpen] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const builtin = isBuiltinRole(role.bizID ?? '');
 
   const toggleSelect = (key: string) => {
     setSelected((prev) => {
@@ -182,29 +188,34 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
           <Badge variant="secondary">{total}</Badge>
           {memberData?.allEmployees && <Badge>企业全员</Badge>}
           {memberData?.public && <Badge variant="outline">互联网公开</Badge>}
+          {builtin && (
+            <Badge variant="outline">内置角色，成员通过员工管理调整</Badge>
+          )}
         </div>
-        <div className="flex gap-2">
-          <CanRole roles={['admin']}>
-            <CanDo resource="permission_management" action="edit">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={selected.size === 0 || removing}
-                onClick={() => handleRemove(selected)}
-              >
-                <UserX className="mr-1 size-4" /> 批量移除
-                {selected.size > 0 ? ` (${selected.size})` : ''}
-              </Button>
-            </CanDo>
-          </CanRole>
-          <CanRole roles={['admin']}>
-            <CanDo resource="permission_management" action="edit">
-              <Button size="sm" onClick={() => setAddOpen(true)}>
-                <UserPlus className="mr-1 size-4" /> 添加成员
-              </Button>
-            </CanDo>
-          </CanRole>
-        </div>
+        {!builtin && (
+          <div className="flex gap-2">
+            <CanRole roles={['admin']}>
+              <CanDo resource="permission_management" action="edit">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={selected.size === 0 || removing}
+                  onClick={() => handleRemove(selected)}
+                >
+                  <UserX className="mr-1 size-4" /> 批量移除
+                  {selected.size > 0 ? ` (${selected.size})` : ''}
+                </Button>
+              </CanDo>
+            </CanRole>
+            <CanRole roles={['admin']}>
+              <CanDo resource="permission_management" action="edit">
+                <Button size="sm" onClick={() => setAddOpen(true)}>
+                  <UserPlus className="mr-1 size-4" /> 添加成员
+                </Button>
+              </CanDo>
+            </CanRole>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-auto">
@@ -240,6 +251,7 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
                       onToggle={() => toggleSelect(key)}
                       onRemove={() => handleRemove(new Set([key]))}
                       removing={removing}
+                      removable={!builtin}
                       content={
                         <div className="flex flex-1 items-center gap-3">
                           {id ? (
@@ -283,6 +295,7 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
                       onToggle={() => toggleSelect(key)}
                       onRemove={() => handleRemove(new Set([key]))}
                       removing={removing}
+                      removable={!builtin}
                       content={
                         <div className="flex flex-1 items-center gap-2">
                           <Building2 className="size-4 text-muted-foreground" />
@@ -312,6 +325,7 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
                       onToggle={() => toggleSelect(key)}
                       onRemove={() => handleRemove(new Set([key]))}
                       removing={removing}
+                      removable={!builtin}
                       content={
                         <div className="flex flex-1 items-center gap-2">
                           <Users className="size-4 text-muted-foreground" />
@@ -329,10 +343,11 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
         )}
       </div>
 
-      <AddMemberDialog
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        bizID={role.bizID ?? ''}
+      {!builtin && (
+        <AddMemberDialog
+          open={addOpen}
+          onOpenChange={setAddOpen}
+          bizID={role.bizID ?? ''}
         existingUserIds={users.map((u) => u.userID ?? '')}
         existingDeptIds={depts.map((d) => String(d.id ?? ''))}
         existingChatIds={chats.map((c) => String(c.chatID ?? ''))}
@@ -344,6 +359,7 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
           onMembersChange?.();
         }}
       />
+      )}
     </div>
   );
 };
