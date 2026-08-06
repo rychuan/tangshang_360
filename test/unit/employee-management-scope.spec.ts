@@ -1,9 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { eq, or, sql } from 'drizzle-orm';
-import { employee } from '../../server/database/schema';
+import { sql } from 'drizzle-orm';
 import { EmployeeManagementService } from '../../server/modules/employee-management/employee-management.service';
-import { QueryBackedDb, type FakeEmployeeRow } from './query-fakes';
 
 describe('employee management access scope', () => {
   const createService = (items: Record<string, unknown>[] = []) => {
@@ -79,127 +77,35 @@ describe('employee management access scope', () => {
     );
   });
 
-  it.each([
-    {
-      label: 'global',
-      userId: 'global-1',
-      condition: null,
-      expected: ['产品经理', '工程师', '销售'],
-    },
-    {
-      label: 'self',
-      userId: 'self-1',
-      condition: eq(employee.employeeId, 'self-1'),
-      expected: ['工程师'],
-    },
-    {
-      label: 'managed',
-      userId: 'manager-1',
-      condition: or(
-        eq(employee.employeeId, 'manager-1'),
-        eq(employee.supervisorId, 'manager-1'),
-        eq(employee.departmentId, 'dept-managed'),
-      ),
-      expected: ['产品经理', '工程师'],
-    },
-    {
-      label: 'empty',
-      userId: '',
-      condition: sql`FALSE`,
-      expected: [],
-    },
-  ])(
-    'filters and sorts $label position options from the caller employee scope',
-    async ({ userId, condition, expected }) => {
-      const rows: FakeEmployeeRow[] = [
-        {
-          employeeId: 'self-1',
-          position: '工程师',
-          status: true,
-          deletedAt: null,
-          authorizationStatus: 'synced',
-          authorizationRoles: ['employee'],
-          authorizationVersion: 1,
-          supervisorId: null,
-          departmentId: 'dept-self',
-        },
-        {
-          employeeId: 'manager-1',
-          position: '产品经理',
-          status: true,
-          deletedAt: null,
-          authorizationStatus: 'synced',
-          authorizationRoles: ['supervisor'],
-          authorizationVersion: 1,
-          supervisorId: null,
-          departmentId: 'dept-managed',
-        },
-        {
-          employeeId: 'managed-1',
-          position: '工程师',
-          status: true,
-          deletedAt: null,
-          authorizationStatus: 'synced',
-          authorizationRoles: ['employee'],
-          authorizationVersion: 1,
-          supervisorId: 'manager-1',
-          departmentId: 'dept-other',
-        },
-        {
-          employeeId: 'managed-2',
-          position: '产品经理',
-          status: true,
-          deletedAt: null,
-          authorizationStatus: 'synced',
-          authorizationRoles: ['employee'],
-          authorizationVersion: 1,
-          supervisorId: null,
-          departmentId: 'dept-managed',
-        },
-        {
-          employeeId: 'global-only',
-          position: '销售',
-          status: true,
-          deletedAt: null,
-          authorizationStatus: 'synced',
-          authorizationRoles: ['employee'],
-          authorizationVersion: 1,
-          supervisorId: null,
-          departmentId: 'dept-global',
-        },
-        {
-          employeeId: 'deleted-1',
-          position: '已删除岗位',
-          status: true,
-          deletedAt: new Date('2026-07-01'),
-          authorizationStatus: 'synced',
-          authorizationRoles: ['employee'],
-          authorizationVersion: 1,
-          supervisorId: null,
-          departmentId: 'dept-managed',
-        },
-      ];
-      const db = new QueryBackedDb({ employees: rows });
-      const accessScopeService = {
-        buildEmployeeScopeCondition: jest.fn().mockResolvedValue(condition),
-      };
-      const service = new (EmployeeManagementService as any)(
-        db,
-        {},
-        {},
-        accessScopeService,
-        {},
-      ) as EmployeeManagementService;
+  it('reads active position options from the dictionary in sort order', async () => {
+    // 岗位选项实现已改为字典表（dictType=position + 启用），不再按员工范围过滤
+    const positionQuery = {
+      from: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      orderBy: jest
+        .fn()
+        .mockResolvedValue([
+          { name: '工程师' },
+          { name: '销售' },
+          { name: '产品经理' },
+        ]),
+    };
+    const db = { select: jest.fn().mockReturnValue(positionQuery) };
+    const service = new (EmployeeManagementService as any)(
+      db,
+      {},
+      {},
+      {},
+      {},
+    ) as EmployeeManagementService;
 
-      await expect(service.getPositions(userId)).resolves.toEqual({
-        positions: expected,
-      });
+    await expect(service.getPositions('user-1')).resolves.toEqual({
+      positions: ['工程师', '销售', '产品经理'],
+    });
 
-      expect(
-        accessScopeService.buildEmployeeScopeCondition,
-      ).toHaveBeenCalledWith(userId, { includeSelf: true });
-    },
-  );
+    expect(positionQuery.where).toHaveBeenCalledTimes(1);
+    expect(positionQuery.orderBy).toHaveBeenCalledTimes(1);
+  });
 
   it('passes the caller user ID from the positions endpoint to the service', () => {
     const controllerSource = fs.readFileSync(
@@ -238,6 +144,7 @@ describe('employee management access scope', () => {
         { resource: 'employees' as const, actions: ['view' as const] },
       ];
       const roleManagerService = {
+        getUserRoles: jest.fn().mockResolvedValue([]),
         getUserEffectivePermissions: jest.fn().mockResolvedValue(permissions),
       };
       const accessScopeService = {

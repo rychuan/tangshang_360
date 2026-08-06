@@ -183,18 +183,28 @@ describe('assessment publish access scope', () => {
   });
 
   it('rejects out-of-scope batch returns before side effects', async () => {
+    // 批量实现：select().from().where() 直接 resolve 实例数组（无 limit 链）
     const instanceQuery = {
       from: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockResolvedValue([{ employeeId: 'employee-2' }]),
+      where: jest.fn().mockResolvedValue([
+        {
+          id: INSTANCE_ID,
+          employeeId: 'employee-2',
+          period: '2026-07',
+          status: 'self_review',
+        },
+      ]),
     };
     const { service, db, accessScopeService } = createService();
     db.select.mockReturnValue(instanceQuery);
 
-    await expect(
-      (service.batchReturn as any)([INSTANCE_ID], 'manager-1'),
-    ).rejects.toThrow('无权操作该考核实例');
+    // 批量实现语义：越权实例标记失败计数，不抛错、不产生任何副作用
+    const result = await (service.batchReturn as any)(
+      [INSTANCE_ID],
+      'manager-1',
+    );
 
+    expect(result).toEqual({ success: false, successCount: 0, failedCount: 1 });
     expect(accessScopeService.canAccessEmployee).toHaveBeenCalledWith(
       'manager-1',
       'employee-2',

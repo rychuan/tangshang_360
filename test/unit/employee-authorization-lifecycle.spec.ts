@@ -73,7 +73,8 @@ function transactionWithAudit() {
     values: jest.fn().mockResolvedValue(undefined),
   };
   const tx = {
-    execute: jest.fn().mockResolvedValue(undefined),
+    // acquireAdminAdvisoryLock 解构 [0]?.got_lock（pg_try_advisory_xact_lock AS got_lock）
+    execute: jest.fn().mockResolvedValue([{ got_lock: true }]),
     select: jest.fn().mockReturnValue(
       limitedQuery([
         {
@@ -954,7 +955,8 @@ describe('employee authorization lifecycle', () => {
         .mockReturnValueOnce(countQuery(1)),
       transaction: jest.fn(async (callback: (value: unknown) => unknown) =>
         callback({
-          execute: jest.fn().mockResolvedValue(undefined),
+          // acquireAdminAdvisoryLock 解构 [0]?.got_lock（pg_try_advisory_xact_lock AS got_lock）
+          execute: jest.fn().mockResolvedValue([{ got_lock: true }]),
           select: jest.fn().mockReturnValue(
             limitedQuery([
               {
@@ -1033,7 +1035,8 @@ describe('employee authorization lifecycle', () => {
     const batchAuditValues = jest.fn().mockResolvedValue(undefined);
     let transactionCallbackActive = false;
     const tx = {
-      execute: jest.fn().mockResolvedValue(undefined),
+      // acquireAdminAdvisoryLock 解构 [0]?.got_lock（pg_try_advisory_xact_lock AS got_lock）
+      execute: jest.fn().mockResolvedValue([{ got_lock: true }]),
       select: jest.fn().mockReturnValue({
         from: jest.fn().mockReturnThis(),
         where: jest.fn().mockResolvedValue([
@@ -1123,7 +1126,8 @@ describe('employee authorization lifecycle', () => {
 
   it('prevents the legacy batch path from deactivating the last active admin', async () => {
     const tx = {
-      execute: jest.fn().mockResolvedValue(undefined),
+      // acquireAdminAdvisoryLock 解构 [0]?.got_lock（pg_try_advisory_xact_lock AS got_lock）
+      execute: jest.fn().mockResolvedValue([{ got_lock: true }]),
       select: jest
         .fn()
         .mockReturnValueOnce({
@@ -1190,7 +1194,8 @@ describe('employee authorization lifecycle', () => {
 
   it('counts and revokes only active employees actually handled by the legacy batch path', async () => {
     const tx = {
-      execute: jest.fn().mockResolvedValue(undefined),
+      // acquireAdminAdvisoryLock 解构 [0]?.got_lock（pg_try_advisory_xact_lock AS got_lock）
+      execute: jest.fn().mockResolvedValue([{ got_lock: true }]),
       select: jest.fn().mockReturnValue({
         from: jest.fn().mockReturnThis(),
         where: jest.fn().mockResolvedValue([
