@@ -504,15 +504,10 @@ export const assessmentTemplate = pgTable("assessment_template", {
   updatedBy: userProfile("_updated_by"),
 });
 
-// Synced table: data is auto-synced from external source. Do not rename or delete this table.
 export const employee = pgTable("employee", {
-  // Synced field: auto-synced, do not modify or delete
   employeeId: userProfile("employee_id").notNull(),
-  // Synced field: auto-synced, do not modify or delete
   name: varchar("name", { length: 255 }),
-  // Synced field: auto-synced, do not modify or delete
   position: varchar("position", { length: 255 }).notNull(),
-  // Synced field: auto-synced, do not modify or delete
   department: varchar("department", { length: 255 }).notNull(),
   supervisorId: userProfile("supervisor_id"),
   status: boolean("status").notNull().default(true),
@@ -526,7 +521,6 @@ export const employee = pgTable("employee", {
   deletedAt: customTimestamptz("deleted_at", { precision: 6 }),
   bitableConnectionId: uuid("bitable_connection_id"),
   id: uuid("id").primaryKey().defaultRandom(),
-  // Synced field: auto-synced, do not modify or delete
   baseRecordId: varchar("base_record_id").unique(),
   positionCode: varchar("position_code", { length: 100 }),
   departmentId: uuid("department_id"),

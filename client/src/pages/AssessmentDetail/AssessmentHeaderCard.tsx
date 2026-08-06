@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { UserDisplay } from '@/components/business-ui/user-display';
 import type { AssessmentInstanceDetail } from '@shared/api.interface';
+import { Image } from '@client/src/components/ui/image';
 
 const STATUS_LABELS: Record<string, string> = {
   self_review: '员工评分中',
@@ -147,7 +148,7 @@ const AssessmentHeaderCard: React.FC<AssessmentHeaderCardProps> = ({
                 {detail.selfSignName ? (
                   <span className="font-medium">
                     {detail.selfSignImage && (
-                      <img
+                      <Image
                         src={detail.selfSignImage}
                         alt="本人签名"
                         className="inline-block max-h-10 align-middle"
@@ -167,7 +168,7 @@ const AssessmentHeaderCard: React.FC<AssessmentHeaderCardProps> = ({
                 {detail.supervisorSignName ? (
                   <span className="font-medium">
                     {detail.supervisorSignImage && (
-                      <img
+                      <Image
                         src={detail.supervisorSignImage}
                         alt="上级签名"
                         className="inline-block max-h-10 align-middle"

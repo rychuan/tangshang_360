@@ -22,6 +22,7 @@ import {
   BreadcrumbProvider,
 } from '@/components/business-ui/breadcrumb-context';
 import { Spinner } from '@/components/ui/spinner';
+import { UniversalLink } from '@lark-apaas/client-toolkit/components/UniversalLink';
 
 const LayoutContent: React.FC = () => {
   const { pathname } = useLocation();
@@ -106,12 +107,12 @@ const LayoutContent: React.FC = () => {
       />
       <SidebarInset className="min-w-0 bg-background md:rounded-lg">
         {/* 跳转到内容：键盘无障碍 skip-link */}
-        <a
-          href="#main-content"
+        <UniversalLink
+          to="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-50 focus:rounded focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:text-primary-foreground"
         >
           跳到内容
-        </a>
+        </UniversalLink>
         <AppTopbar
           currentLabel={currentLabel}
           items={allItems}

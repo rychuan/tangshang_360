@@ -22,6 +22,7 @@ import { UserDisplay } from '@/components/business-ui/user-display';
 import { useAssessmentDetail } from './useAssessmentDetail';
 import IndicatorTable from './IndicatorTable';
 import SignDialog from './SignDialog';
+import { Image } from '@client/src/components/ui/image';
 
 function getGradeStyle(
   grade: string | undefined | null,
@@ -379,7 +380,7 @@ const AssessmentDetailPage: React.FC = () => {
                       />
                       <div className="flex min-w-0 flex-1 items-center justify-center overflow-hidden">
                         {step.signImage ? (
-                          <img
+                          <Image
                             src={step.signImage}
                             alt={`${step.label}签名`}
                             className="max-h-12 sm:max-h-16 max-w-full object-scale-down"
