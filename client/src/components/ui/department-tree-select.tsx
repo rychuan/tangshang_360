@@ -42,7 +42,8 @@ function filterTree(
     if (nameMatch || filteredChildren.length > 0) {
       result.push({
         ...node,
-        children: filteredChildren.length > 0 ? filteredChildren : node.children,
+        children:
+          filteredChildren.length > 0 ? filteredChildren : node.children,
       });
     }
   }
@@ -225,9 +226,7 @@ const DepartmentTreeSelect: React.FC<DepartmentTreeSelectProps> = ({
                   <span className="w-[18px]" />
                   <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                   <span className="truncate">全部部门</span>
-                  {!value && (
-                    <Check className="ml-auto h-3.5 w-3.5 shrink-0" />
-                  )}
+                  {!value && <Check className="ml-auto h-3.5 w-3.5 shrink-0" />}
                 </div>
               )}
               {filteredTree.map((node) => renderNode(node, 0))}

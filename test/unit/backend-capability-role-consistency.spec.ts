@@ -8,7 +8,6 @@ const intentionalBootstrapHandlers = [
   'assessment-operation/assessment-operation.controller.ts#signSession',
   'assessment-operation/assessment-operation.controller.ts#signStatus',
   'employee-management/employee-management.controller.ts#getMyPermissions',
-  'performance-grade/performance-grade.controller.ts#listActive',
   'role-manager/role-manager.controller.ts#getMyPermissions',
   'role-manager/role-manager.controller.ts#getMyRoles',
   'view/view.controller.ts#render',
@@ -34,7 +33,11 @@ function findUnprotectedHandlers(
   const routeDecorators = new Set(['Get', 'Post', 'Put', 'Patch', 'Delete']);
 
   const visit = (node: ts.Node) => {
-    if (ts.isMethodDeclaration(node) && node.name && ts.isIdentifier(node.name)) {
+    if (
+      ts.isMethodDeclaration(node) &&
+      node.name &&
+      ts.isIdentifier(node.name)
+    ) {
       const decorators = ts.canHaveDecorators(node)
         ? ts.getDecorators(node) || []
         : [];
@@ -124,7 +127,10 @@ describe('backend capability role consistency', () => {
         const source = fs.readFileSync(path.join(modulePath, fileName), 'utf8');
         for (const handler of findUnprotectedHandlers(source)) {
           const key = `${moduleName}/${fileName}#${handler.methodName}`;
-          if (key !== 'view/view.controller.ts#render' && !handler.hasNeedLogin) {
+          if (
+            key !== 'view/view.controller.ts#render' &&
+            !handler.hasNeedLogin
+          ) {
             missingLogin.push(key);
           }
         }

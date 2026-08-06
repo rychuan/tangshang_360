@@ -1,12 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth, ROLE_SUBJECT } from '@lark-apaas/client-toolkit/auth';
 import { department as departmentApi } from '@/api';
 import type { DepartmentTreeNode } from '@shared/api.interface';
+import { BUILTIN_ROLE_CODES } from '@shared/api.interface';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import DepartmentTreeSelect from '@/components/ui/department-tree-select';
+import { usePermissions } from '@/hooks/usePermissions';
+import {
+  canCreateDepartment,
+  canManageDepartmentHead,
+  getDepartmentCommandCapabilities,
+} from './employee-management-permissions';
 import {
   Dialog,
   DialogContent,
@@ -109,6 +117,19 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
   onSelect,
 }) => {
   const queryClient = useQueryClient();
+  const { permissions } = usePermissions();
+  const { ability } = useAuth();
+  const identityRoles = useMemo(
+    () =>
+      ability
+        ? BUILTIN_ROLE_CODES.filter((role) => ability.can(role, ROLE_SUBJECT))
+        : [],
+    [ability],
+  );
+  // 部门 CRUD 与负责人设置均需权限门槛（与 DepartmentManagementTab 旧语义一致）
+  const { canEdit, canDelete } = getDepartmentCommandCapabilities(permissions);
+  const canCreate = canCreateDepartment(permissions, identityRoles);
+  const canManageHead = canManageDepartmentHead(permissions, identityRoles);
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [formOpen, setFormOpen] = useState(false);
@@ -212,18 +233,20 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
     }
     setSaving(true);
     try {
+      // 无负责人管理权限时不提交 headId（服务端保留原值）
+      const headId = canManageHead ? form.headId || undefined : undefined;
       if (editingDept) {
         await departmentApi.update(editingDept.id, {
           name: form.name.trim(),
           parentId: form.parentId || undefined,
-          headId: form.headId || undefined,
+          headId,
         });
         toast.success('已更新');
       } else {
         await departmentApi.create({
           name: form.name.trim(),
           parentId: form.parentId || undefined,
-          headId: form.headId || undefined,
+          headId,
         });
         toast.success('已创建');
       }
@@ -312,36 +335,42 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
               </span>
             )}
             <div className="hidden group-hover:flex items-center gap-0.5 shrink-0 ml-1">
-              <button
-                className="size-5 flex items-center justify-center rounded hover:bg-muted"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openCreate(node.id);
-                }}
-                title="添加子部门"
-              >
-                <Plus className="size-3" />
-              </button>
-              <button
-                className="size-5 flex items-center justify-center rounded hover:bg-muted"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openEdit(node);
-                }}
-                title="编辑"
-              >
-                <Pencil className="size-3" />
-              </button>
-              <button
-                className="size-5 flex items-center justify-center rounded hover:bg-destructive/10 hover:text-destructive"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete(node);
-                }}
-                title="删除"
-              >
-                <Trash2 className="size-3" />
-              </button>
+              {canCreate && (
+                <button
+                  className="size-5 flex items-center justify-center rounded hover:bg-muted"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openCreate(node.id);
+                  }}
+                  title="添加子部门"
+                >
+                  <Plus className="size-3" />
+                </button>
+              )}
+              {canEdit && (
+                <button
+                  className="size-5 flex items-center justify-center rounded hover:bg-muted"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEdit(node);
+                  }}
+                  title="编辑"
+                >
+                  <Pencil className="size-3" />
+                </button>
+              )}
+              {canDelete && (
+                <button
+                  className="size-5 flex items-center justify-center rounded hover:bg-destructive/10 hover:text-destructive"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(node);
+                  }}
+                  title="删除"
+                >
+                  <Trash2 className="size-3" />
+                </button>
+              )}
             </div>
           </div>
           {hasChildren && isExpanded && (
@@ -417,17 +446,19 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
         )}
       </div>
 
-      {/* 新建部门按钮 */}
-      <div className="shrink-0 p-2 border-t">
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full justify-start text-xs"
-          onClick={() => openCreate('')}
-        >
-          <Plus className="size-3.5" /> 新建部门
-        </Button>
-      </div>
+      {/* 新建部门按钮（仅 admin/hrd + organization edit） */}
+      {canCreate && (
+        <div className="shrink-0 p-2 border-t">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start text-xs"
+            onClick={() => openCreate('')}
+          >
+            <Plus className="size-3.5" /> 新建部门
+          </Button>
+        </div>
+      )}
 
       {/* 新建/编辑弹窗 */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
@@ -455,14 +486,16 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
                 placeholder="请输入部门名称"
               />
             </div>
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">部门负责人</Label>
-              <UserSelect
-                value={form.headId}
-                onChange={(v) => setForm({ ...form, headId: v || '' })}
-                placeholder="选择负责人"
-              />
-            </div>
+            {canManageHead && (
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs">部门负责人</Label>
+                <UserSelect
+                  value={form.headId}
+                  onChange={(v) => setForm({ ...form, headId: v || '' })}
+                  placeholder="选择负责人"
+                />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button

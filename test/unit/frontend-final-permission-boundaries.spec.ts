@@ -50,9 +50,7 @@ describe('frontend final permission boundaries', () => {
     expect(statisticsSource).toMatch(
       /<CanDo \{\.\.\.COMMAND_PERMISSIONS\.assessmentView\}>[\s\S]*navigate\(`\.\.\/assessment\/\$\{r\.id\}`\)/,
     );
-    expect(teamSource).toContain(
-      'COMMAND_PERMISSIONS.assessmentView',
-    );
+    expect(teamSource).toContain('COMMAND_PERMISSIONS.assessmentView');
     expect(assessmentDetailSource).toContain(
       "usePermission('my_assessments', 'edit')",
     );
@@ -95,9 +93,7 @@ describe('frontend final permission boundaries', () => {
     );
 
     expect(policySource).toContain('canCreateDepartment');
-    expect(source).toMatch(
-      /canCreateDepartment\(permissions, identityRoles\)/,
-    );
+    expect(source).toMatch(/canCreateDepartment\(permissions, identityRoles\)/);
     expect(source).toMatch(
       /canCreateDepartment\(permissions, identityRoles\)[\s\S]*新建部门/,
     );
@@ -129,15 +125,13 @@ describe('frontend final permission boundaries', () => {
   it('hides the statistics action column when no row action is available', () => {
     const source = readClient('pages/Statistics/StatisticsPage.tsx');
 
-    expect(source).toContain(
-      "usePermission('my_assessments', 'view')",
-    );
+    expect(source).toContain("usePermission('my_assessments', 'view')");
     expect(source).toContain("usePermission('statistics', 'export')");
     expect(source).toMatch(
-      /canShowRecordActions\s*&&\s*\([\s\S]*<TableHead[\s\S]*操作/,
+      /\.\.\.\(canShowRecordActions\s*\?[\s\S]*header:\s*'操作'/,
     );
     expect(source).toMatch(
-      /canShowRecordActions\s*&&\s*\([\s\S]*<TableCell[\s\S]*COMMAND_PERMISSIONS\.assessmentView/,
+      /\.\.\.\(canShowRecordActions[\s\S]*<CanDo \{\.\.\.COMMAND_PERMISSIONS\.assessmentView\}/,
     );
   });
 });

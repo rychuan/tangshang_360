@@ -29,21 +29,18 @@ jest.mock('@lark-apaas/fullstack-nestjs-core', () => {
 
 import { RoleManagerController } from '../../server/modules/role-manager/role-manager.controller';
 import { RoleManagerService } from '../../server/modules/role-manager/role-manager.service';
-import {
-  QueryBackedDb,
-  type FakeEmployeeRow,
-} from './query-fakes';
+import { QueryBackedDb, type FakeEmployeeRow } from './query-fakes';
 
 function createAuthzSdk(userId = 'employee-1') {
+  // 新 contract：roles.list({ needMember, userID }) 一次返回 roleMembers
   return {
     roles: {
-      list: jest.fn().mockResolvedValue([{ bizID: 'admin' }]),
-    },
-    members: {
-      list: jest.fn().mockResolvedValue({
-        members: { userList: [{ userID: userId }] },
-        hasMore: false,
-      }),
+      list: jest.fn().mockResolvedValue([
+        {
+          bizID: 'admin',
+          roleMembers: { userList: [{ userID: userId }] },
+        },
+      ]),
     },
   };
 }
@@ -74,60 +71,40 @@ function createEmployeeRow(
 describe('strict role manager operations', () => {
   it('propagates fresh SDK role-list failures', async () => {
     const sdkFailure = new Error('sdk role list failed');
-    const service = createRoleManagerService(
-      new QueryBackedDb(),
-      {
-        roles: {
-          list: jest.fn().mockRejectedValue(sdkFailure),
-        },
-        members: {
-          list: jest.fn(),
-        },
+    const service = createRoleManagerService(new QueryBackedDb(), {
+      roles: {
+        list: jest.fn().mockRejectedValue(sdkFailure),
       },
-    );
+      members: {
+        list: jest.fn(),
+      },
+    });
 
     await expect(
       (service as any).getUserRolesStrict('employee-1'),
     ).rejects.toBe(sdkFailure);
   });
 
-  it('unwraps SDK envelopes and paginates custom-role members', async () => {
-    const membersList = jest
-      .fn()
-      .mockResolvedValueOnce({
-        data: {
-          members: { userList: [] },
-          hasMore: true,
+  it('unwraps SDK envelopes and reads custom-role membership from roleMembers', async () => {
+    const rolesList = jest.fn().mockResolvedValue({
+      data: [
+        {
+          bizID: 'custom-reviewer',
+          roleMembers: { userList: [{ userID: 'employee-1' }] },
         },
-      })
-      .mockResolvedValueOnce({
-        data: {
-          members: { userList: [{ userID: 'employee-1' }] },
-          hasMore: false,
-        },
-      });
+      ],
+    });
     const service = createRoleManagerService(new QueryBackedDb(), {
-      roles: {
-        list: jest.fn().mockResolvedValue({
-          data: [{ bizID: 'custom-reviewer' }],
-        }),
-      },
-      members: {
-        list: membersList,
-      },
+      roles: { list: rolesList },
     });
 
     await expect(
       (service as any).getUserRolesStrict('employee-1'),
     ).resolves.toEqual(['custom-reviewer']);
 
-    expect(membersList).toHaveBeenNthCalledWith(1, 'custom-reviewer', {
-      page: 1,
-      pageSize: 999,
-    });
-    expect(membersList).toHaveBeenNthCalledWith(2, 'custom-reviewer', {
-      page: 2,
-      pageSize: 999,
+    expect(rolesList).toHaveBeenCalledWith({
+      needMember: true,
+      userID: 'employee-1',
     });
   });
 
@@ -135,13 +112,14 @@ describe('strict role manager operations', () => {
     const revokeFailure = new Error('sdk revoke failed');
     const service = createRoleManagerService(new QueryBackedDb(), {
       roles: {
-        list: jest.fn().mockResolvedValue([{ bizID: 'custom-reviewer' }]),
+        list: jest.fn().mockResolvedValue([
+          {
+            bizID: 'custom-reviewer',
+            roleMembers: { userList: [{ userID: 'employee-1' }] },
+          },
+        ]),
       },
       members: {
-        list: jest.fn().mockResolvedValue({
-          userList: [{ userID: 'employee-1' }],
-        }),
-        add: jest.fn(),
         remove: jest.fn().mockRejectedValue(revokeFailure),
       },
     });
@@ -151,7 +129,7 @@ describe('strict role manager operations', () => {
     });
 
     await expect(
-      (service as any).syncUserRolesStrict('employee-1', []),
+      (service as any).reconcileUserRoles('employee-1', []),
     ).rejects.toBe(revokeFailure);
 
     expect((service as any).roleCache.has('employee-1')).toBe(false);
@@ -168,31 +146,26 @@ describe('strict role manager operations', () => {
         deletedAt: new Date('2026-07-18T00:00:00Z'),
       }),
     },
-  ] as const)(
-    'fails closed for %s employees',
-    async ({ employee }) => {
-      const db = new QueryBackedDb({
-        employees: [employee],
-        rolePermissionConfigs: [
-          {
-            roleBizId: 'admin',
-            permissions: [
-              { resource: 'employees', actions: ['view'] },
-            ],
-          },
-        ],
-      });
-      const authzSDK = createAuthzSdk(employee.employeeId);
-      const service = createRoleManagerService(db, authzSDK);
+  ] as const)('fails closed for %s employees', async ({ employee }) => {
+    const db = new QueryBackedDb({
+      employees: [employee],
+      rolePermissionConfigs: [
+        {
+          roleBizId: 'admin',
+          permissions: [{ resource: 'employees', actions: ['view'] }],
+        },
+      ],
+    });
+    const authzSDK = createAuthzSdk(employee.employeeId);
+    const service = createRoleManagerService(db, authzSDK);
 
-      await expect(
-        service.checkUserPermission(employee.employeeId, 'employees', 'view'),
-      ).resolves.toBe(false);
-      await expect(
-        service.getUserEffectivePermissions(employee.employeeId),
-      ).resolves.toEqual([]);
-    },
-  );
+    await expect(
+      service.checkUserPermission(employee.employeeId, 'employees', 'view'),
+    ).resolves.toBe(false);
+    await expect(
+      service.getUserEffectivePermissions(employee.employeeId),
+    ).resolves.toEqual([]);
+  });
 
   it('grants permissions to active employees', async () => {
     const employee = createEmployeeRow();

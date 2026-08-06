@@ -521,67 +521,45 @@ export class RoleManagerService {
     userId: string,
     strict: boolean,
   ): Promise<string[]> {
-    const allRoles = await this.authzSDK.roles.list();
+    // roles.list({ userID }) 让平台按用户返回每个角色的成员名单（roleMembers），
+    // 一次外部调用完成全部角色判定，避免对每个角色单独调 members.list 造成 N+1
+    const allRoles = await this.authzSDK.roles.list({
+      needMember: true,
+      userID: userId,
+    });
     const rolePayload = this.unwrapSdkData(allRoles);
     const roleList = Array.isArray(rolePayload)
       ? rolePayload
       : (rolePayload as any)?.items || (rolePayload as any)?.roles || [];
-    const bizIDs: string[] = roleList
-      .map((role: any) => role.bizID)
-      .filter((bizID: string) => Boolean(bizID));
 
-    const checks = await Promise.all(
-      bizIDs.map((bizID: string) => this.isUserInRole(userId, bizID, strict)),
-    );
-
-    return bizIDs.filter((_: string, i: number) => checks[i]);
+    const roles: string[] = [];
+    for (const role of roleList) {
+      const bizID = (role as any)?.bizID;
+      if (!bizID) continue;
+      if (
+        this.isUserInRoleMembers(userId, (role as any)?.roleMembers, strict)
+      ) {
+        roles.push(bizID);
+      }
+    }
+    return roles;
   }
 
-  private async isUserInRole(
+  private isUserInRoleMembers(
     userId: string,
-    roleBizId: string,
+    roleMembers: unknown,
     strict: boolean,
-  ): Promise<boolean> {
-    let page = 1;
-    while (true) {
-      let membersResult: unknown;
-      try {
-        membersResult = await this.authzSDK.members.list(roleBizId, {
-          page,
-          pageSize: 999,
-        });
-      } catch (err) {
-        if (strict) {
-          throw err;
-        }
-        this.logger.warn(
-          `Failed to list members for role ${roleBizId}: ${err instanceof Error ? err.message : String(err)}`,
-        );
-        return false;
-      }
-
-      const memberPayload = this.unwrapSdkData(membersResult);
-      const members = (memberPayload as any)?.members || memberPayload || {};
-      const allEmployees = Boolean((members as any).allEmployees);
-      const isContainsAdmin = Boolean(
-        (members as any).presetGroup?.isContainsAdmin,
+  ): boolean {
+    const members = (roleMembers ?? {}) as Record<string, unknown>;
+    const allEmployees = Boolean(members.allEmployees);
+    // 注意：presetGroup.isContainsAdmin 表示成员来源为"管理员预设组"（应用开发者，
+    // 少数人的集合），不能据此判定所有用户均为成员 —— 该角色只属于显式名单/展开成员
+    const userListMatch =
+      Array.isArray(members.userList) &&
+      (members.userList as Array<{ userID?: string; user_id?: string }>).some(
+        (user) => user.userID === userId || user.user_id === userId,
       );
-      const userListMatch =
-        Array.isArray((members as any).userList) &&
-        (members as any).userList.some(
-          (user: any) => user.userID === userId || user.user_id === userId,
-        );
-      const isMember = strict
-        ? userListMatch
-        : allEmployees || isContainsAdmin || userListMatch;
-      if (isMember) {
-        return true;
-      }
-      if (!(memberPayload as any)?.hasMore) {
-        return false;
-      }
-      page += 1;
-    }
+    return strict ? userListMatch : allEmployees || userListMatch;
   }
 
   private unwrapSdkData(value: unknown): unknown {

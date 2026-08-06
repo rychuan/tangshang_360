@@ -49,7 +49,8 @@ function createAdminMutationTransaction(
   const updateSet = jest.fn().mockReturnValue({ where: updateWhere });
   const auditValues = jest.fn().mockResolvedValue(undefined);
   const tx = {
-    execute: jest.fn().mockResolvedValue(undefined),
+    // acquireAdminAdvisoryLock 解构 [0]?.got_lock（pg_try_advisory_xact_lock AS got_lock）
+    execute: jest.fn().mockResolvedValue([{ got_lock: true }]),
     select: jest.fn().mockReturnValue(targetOrCountQuery(target, adminCount)),
     update: jest.fn().mockReturnValue({
       set: updateSet,
@@ -108,7 +109,8 @@ function expectLockBeforeCountAndMutation(
   expect(lockSql.queryChunks?.[0]).toEqual(
     expect.objectContaining({
       value: expect.arrayContaining([
-        expect.stringContaining('pg_advisory_xact_lock'),
+        // 同时匹配阻塞式 pg_advisory_xact_lock 与 try 版本 pg_try_advisory_xact_lock
+        expect.stringContaining('advisory_xact_lock'),
       ]),
     }),
   );

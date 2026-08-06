@@ -137,7 +137,7 @@ describe('employee management tab permissions', () => {
     expect(canManageDepartmentHead([], ['admin'])).toBe(false);
   });
 
-  it('uses permission-first tab visibility while retaining the admin-only head selector', () => {
+  it('uses permission-first visibility while retaining the admin-only head selector', () => {
     const pageSource = fs.readFileSync(
       path.resolve(
         __dirname,
@@ -145,10 +145,10 @@ describe('employee management tab permissions', () => {
       ),
       'utf8',
     );
-    const departmentSource = fs.readFileSync(
+    const treePanelSource = fs.readFileSync(
       path.resolve(
         __dirname,
-        '../../client/src/pages/EmployeeManagement/DepartmentManagementTab.tsx',
+        '../../client/src/pages/EmployeeManagement/DepartmentTreePanel.tsx',
       ),
       'utf8',
     );
@@ -161,8 +161,12 @@ describe('employee management tab permissions', () => {
       'utf8',
     );
 
-    expect(pageSource).toMatch(
-      /getVisibleEmployeeManagementTabs\([\s\S]*permissions,[\s\S]*canManageGlobalConnections[\s\S]*\)/,
+    // 页面按权限决定渲染：员工列表（employees view）+ 部门树（organization view）
+    expect(pageSource).toContain(
+      "p.resource === 'employees' && p.actions.includes('view')",
+    );
+    expect(pageSource).toContain(
+      "hasPermission(permissions, 'organization', 'view')",
     );
     expect(pageSource).toContain('canManageGlobalConnections');
     expect(pageSource).not.toContain('identityRoles');
@@ -174,11 +178,18 @@ describe('employee management tab permissions', () => {
       /employeeManagement\s*\.getMyPermissions\(\)/,
     );
     expect(employeeApiSource).toContain("url: '/api/employees/my/permissions'");
-    expect(departmentSource).toContain(
+    // 部门 CRUD 与负责人设置集中在部门树面板，且保留身份+权限双重门槛
+    expect(treePanelSource).toContain(
+      'canCreateDepartment(permissions, identityRoles)',
+    );
+    expect(treePanelSource).toContain(
       'canManageDepartmentHead(permissions, identityRoles)',
     );
-    expect(departmentSource).toMatch(
-      /\{canManageHead && \(\s*<div>\s*<Label>部门负责人<\/Label>/,
+    expect(treePanelSource).toContain(
+      'getDepartmentCommandCapabilities(permissions)',
+    );
+    expect(treePanelSource).toMatch(
+      /\{canManageHead && \(\s*<div[\s\S]*<Label className="text-xs">部门负责人<\/Label>/,
     );
   });
 });

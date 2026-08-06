@@ -32,19 +32,14 @@ jest.mock('react-router-dom', () => ({
     React.createElement('span', { 'data-navigate': to }),
 }));
 
-jest.mock('@/components/ui/tabs', () => ({
-  Tabs: ({ children }: { children: React.ReactNode }) =>
-    React.createElement('div', null, children),
-  TabsList: ({ children }: { children: React.ReactNode }) =>
-    React.createElement('div', null, children),
-  TabsTrigger: ({ children }: { children: React.ReactNode }) =>
-    React.createElement('button', null, children),
-  TabsContent: ({ children }: { children: React.ReactNode }) =>
-    React.createElement('section', null, children),
+// @/api barrel 会拉入 @lark-apaas/client-toolkit ESM（jest 无法转换 node_modules ESM），整体 mock
+jest.mock('@/api', () => ({
+  department: { list: jest.fn() },
 }));
 
-jest.mock('@/components/business-ui/page-header', () => ({
-  PageHeader: () => React.createElement('header', null, '员工管理'),
+jest.mock('@tanstack/react-query', () => ({
+  useQuery: () => ({ data: { tree: [] }, isLoading: false }),
+  useQueryClient: () => ({ invalidateQueries: jest.fn() }),
 }));
 
 jest.mock('../../client/src/pages/EmployeeManagement/EmployeeListTab', () => ({
@@ -52,10 +47,10 @@ jest.mock('../../client/src/pages/EmployeeManagement/EmployeeListTab', () => ({
   default: () => React.createElement('div', { 'data-tab': 'employees' }),
 }));
 jest.mock(
-  '../../client/src/pages/EmployeeManagement/DepartmentManagementTab',
+  '../../client/src/pages/EmployeeManagement/DepartmentTreePanel',
   () => ({
-    __esModule: true,
-    default: () => React.createElement('div', { 'data-tab': 'departments' }),
+    DepartmentTreePanel: () =>
+      React.createElement('div', { 'data-tab': 'departments' }),
   }),
 );
 jest.mock(
@@ -174,7 +169,7 @@ describe('client permission component wiring', () => {
     expect(html).not.toContain('data-tab="bitable"');
   });
 
-  it('mounts employee, department, and Bitable tabs for a global viewer', () => {
+  it('mounts employee and department surfaces with the Bitable entry for a global viewer', () => {
     mockRoles = ['hrd'];
     mockPermissions = DEFAULT_PERMISSIONS.hrd;
     mockCanManageGlobalConnections = true;
@@ -185,10 +180,12 @@ describe('client permission component wiring', () => {
 
     expect(html).toContain('data-tab="employees"');
     expect(html).toContain('data-tab="departments"');
-    expect(html).toContain('data-tab="bitable"');
+    // Bitable 为点击切换视图，静态渲染下只验证入口按钮存在
+    expect(html).toContain('Bitable 连接');
+    expect(html).not.toContain('data-tab="bitable"');
   });
 
-  it('mounts only the organization tab when employees view is absent', () => {
+  it('mounts only the organization tree when employees view is absent', () => {
     mockRoles = ['dept_head'];
     mockPermissions = [{ resource: 'organization', actions: ['view'] }];
 
@@ -198,7 +195,7 @@ describe('client permission component wiring', () => {
 
     expect(html).not.toContain('data-tab="employees"');
     expect(html).toContain('data-tab="departments"');
-    expect(html).not.toContain('data-tab="bitable"');
+    expect(html).not.toContain('Bitable 连接');
   });
 
   it('does not mount Bitable for a self-scoped custom employee viewer', () => {
@@ -211,6 +208,7 @@ describe('client permission component wiring', () => {
     );
 
     expect(html).toContain('data-tab="employees"');
-    expect(html).not.toContain('data-tab="bitable"');
+    expect(html).not.toContain('data-tab="departments"');
+    expect(html).not.toContain('Bitable 连接');
   });
 });

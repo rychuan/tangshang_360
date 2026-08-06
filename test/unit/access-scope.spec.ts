@@ -23,17 +23,20 @@ function createEmployeeRow(
 
 function createAuthzSdk(rolesByUser: Record<string, string[]>) {
   const knownRoles = new Set(Object.values(rolesByUser).flat());
+  // 新 contract：roles.list({ needMember, userID }) 一次调用返回每个角色的
+  // roleMembers.userList，服务端据此判定成员身份（不再逐角色调 members.list）
   return {
     roles: {
-      list: jest.fn().mockResolvedValue([...knownRoles].map((bizID) => ({ bizID }))),
-    },
-    members: {
-      list: jest.fn(async (roleBizId: string) => {
-        const userList = Object.entries(rolesByUser)
-          .filter(([, roles]) => roles.includes(roleBizId))
-          .map(([userID]) => ({ userID }));
-        return { members: { userList }, hasMore: false };
-      }),
+      list: jest.fn().mockResolvedValue(
+        [...knownRoles].map((bizID) => ({
+          bizID,
+          roleMembers: {
+            userList: Object.entries(rolesByUser)
+              .filter(([, roles]) => roles.includes(bizID))
+              .map(([userID]) => ({ userID })),
+          },
+        })),
+      ),
     },
   };
 }
@@ -99,17 +102,16 @@ describe('AccessScopeService', () => {
       },
     });
 
-    await expect(accessScopeService.getScope(employee.employeeId)).resolves.toEqual(
-      {
-        kind: 'self',
-        roles: [],
-        departmentIds: [],
-        subordinateIds: [],
-      },
-    );
+    await expect(
+      accessScopeService.getScope(employee.employeeId),
+    ).resolves.toEqual({
+      kind: 'self',
+      roles: [],
+      departmentIds: [],
+      subordinateIds: [],
+    });
 
     expect(authzSDK.roles.list).not.toHaveBeenCalled();
-    expect(authzSDK.members.list).not.toHaveBeenCalled();
   });
 
   it('excludes pending subordinates from a synced supervisor scope and managed collections', async () => {
@@ -186,9 +188,7 @@ describe('AccessScopeService', () => {
 
     const { accessScopeService } = createServices({
       employees: [deptHead, syncedEmployee, failedEmployee],
-      departments: [
-        { id: 'dept-a', headId: 'head-1', isActive: true },
-      ],
+      departments: [{ id: 'dept-a', headId: 'head-1', isActive: true }],
       rolesByUser: {
         'head-1': ['dept_head', 'employee'],
         'dept-synced': ['employee'],
