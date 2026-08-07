@@ -121,7 +121,7 @@ const LayoutContent: React.FC = () => {
         <div
           ref={scrollRef}
           key={pathname}
-          className="@container/main flex min-w-0 flex-1 flex-col px-4 py-5 lg:px-6"
+          className="@container/main flex min-w-0 flex-1 flex-col px-4 py-5 lg:px-6 overflow-y-auto"
         >
           <div
             id="main-content"
