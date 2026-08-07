@@ -8,6 +8,7 @@ const intentionalBootstrapHandlers = [
   'assessment-operation/assessment-operation.controller.ts#signSession',
   'assessment-operation/assessment-operation.controller.ts#signStatus',
   'employee-management/employee-management.controller.ts#getMyPermissions',
+  'role-manager/role-manager.controller.ts#bootstrap',
   'role-manager/role-manager.controller.ts#getMyPermissions',
   'role-manager/role-manager.controller.ts#getMyRoles',
   'view/view.controller.ts#render',

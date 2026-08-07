@@ -147,16 +147,26 @@ describe('strict role manager operations', () => {
       }),
     },
   ] as const)('fails closed for %s employees', async ({ employee }) => {
+    // 非 admin 角色：员工记录无效 → 无权限（fails closed）
     const db = new QueryBackedDb({
       employees: [employee],
       rolePermissionConfigs: [
         {
-          roleBizId: 'admin',
+          roleBizId: 'employee',
           permissions: [{ resource: 'employees', actions: ['view'] }],
         },
       ],
     });
-    const authzSDK = createAuthzSdk(employee.employeeId);
+    const authzSDK = {
+      roles: {
+        list: jest.fn().mockResolvedValue([
+          {
+            bizID: 'employee',
+            roleMembers: { userList: [{ userID: employee.employeeId }] },
+          },
+        ]),
+      },
+    };
     const service = createRoleManagerService(db, authzSDK);
 
     await expect(
@@ -166,6 +176,43 @@ describe('strict role manager operations', () => {
       service.getUserEffectivePermissions(employee.employeeId),
     ).resolves.toEqual([]);
   });
+
+  it.each([
+    {
+      label: 'inactive',
+      employee: createEmployeeRow({ status: false }),
+    },
+    {
+      label: 'deleted',
+      employee: createEmployeeRow({
+        deletedAt: new Date('2026-07-18T00:00:00Z'),
+      }),
+    },
+  ] as const)(
+    'keeps admin bypass for %s employees with admin role',
+    async ({ employee }) => {
+      // 51c2e9a 有意设计：admin 豁免员工有效性检查（修复全站403），
+      // 即使员工 inactive/deleted 仍拥有权限
+      const db = new QueryBackedDb({
+        employees: [employee],
+        rolePermissionConfigs: [
+          {
+            roleBizId: 'admin',
+            permissions: [{ resource: 'employees', actions: ['view'] }],
+          },
+        ],
+      });
+      const authzSDK = createAuthzSdk(employee.employeeId);
+      const service = createRoleManagerService(db, authzSDK);
+
+      await expect(
+        service.checkUserPermission(employee.employeeId, 'employees', 'view'),
+      ).resolves.toBe(true);
+      await expect(
+        service.getUserEffectivePermissions(employee.employeeId),
+      ).resolves.toEqual([{ resource: 'employees', actions: ['view'] }]);
+    },
+  );
 
   it('grants permissions to active employees', async () => {
     const employee = createEmployeeRow();

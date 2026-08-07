@@ -95,10 +95,11 @@ describe('AccessScopeService', () => {
       }),
     },
   ] as const)('fails closed for %s target employees', async ({ employee }) => {
+    // 非 admin/hrd 角色：员工记录无效 → self（fails closed）
     const { accessScopeService, authzSDK } = createServices({
       employees: [employee],
       rolesByUser: {
-        [employee.employeeId]: ['admin'],
+        [employee.employeeId]: ['employee'],
       },
     });
 
@@ -111,8 +112,48 @@ describe('AccessScopeService', () => {
       subordinateIds: [],
     });
 
-    expect(authzSDK.roles.list).not.toHaveBeenCalled();
+    // 角色仍需查询（判定非 admin/hrd 后才能走员工有效性分支）
+    expect(authzSDK.roles.list).toHaveBeenCalled();
   });
+
+  it.each([
+    {
+      label: 'inactive',
+      employee: createEmployeeRow({ status: false }),
+    },
+    {
+      label: 'deleted',
+      employee: createEmployeeRow({
+        deletedAt: new Date('2026-07-18T00:00:00Z'),
+      }),
+    },
+  ] as const)(
+    'keeps admin bypass for %s employees with admin role',
+    async ({ employee }) => {
+      // 51c2e9a 有意设计：admin/hrd 旁路员工记录有效性（修复全站403），
+      // 即使员工 inactive/deleted 仍为 global scope
+      const { accessScopeService, authzSDK } = createServices({
+        employees: [employee],
+        rolesByUser: {
+          [employee.employeeId]: ['admin'],
+        },
+      });
+
+      await expect(
+        accessScopeService.getScope(employee.employeeId),
+      ).resolves.toEqual({
+        kind: 'global',
+        roles: ['admin'],
+        departmentIds: [],
+        subordinateIds: [],
+      });
+
+      expect(authzSDK.roles.list).toHaveBeenCalledWith({
+        needMember: true,
+        userID: employee.employeeId,
+      });
+    },
+  );
 
   it('excludes pending subordinates from a synced supervisor scope and managed collections', async () => {
     const manager = createEmployeeRow({
