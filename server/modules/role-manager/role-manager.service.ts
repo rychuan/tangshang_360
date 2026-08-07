@@ -27,6 +27,7 @@ import {
 import {
   isBuiltinRole,
   normalizePermissionConfig,
+  sanitizePermissionConfig,
 } from '@shared/types/permission.types';
 import {
   isStringArray,
@@ -177,7 +178,7 @@ export class RoleManagerService {
     try {
       permissions = normalizePermissionConfig(roleBizId, raw);
     } catch {
-      // If stored data is invalid, return as-is; will be fixed on next save
+      permissions = sanitizePermissionConfig(raw);
     }
     return {
       roleBizId: rows[0].roleBizId,
@@ -189,9 +190,10 @@ export class RoleManagerService {
     roleBizId: string,
     permissions: PermissionItem[],
   ): Promise<void> {
+    const sanitized = sanitizePermissionConfig(permissions);
     let normalizedPermissions: PermissionItem[];
     try {
-      normalizedPermissions = normalizePermissionConfig(roleBizId, permissions);
+      normalizedPermissions = normalizePermissionConfig(roleBizId, sanitized);
     } catch (error) {
       throw new BadRequestException(
         error instanceof Error ? error.message : '权限配置无效',
@@ -389,7 +391,10 @@ export class RoleManagerService {
           permissions: normalizePermissionConfig(row.roleBizId, raw),
         };
       } catch {
-        return { roleBizId: row.roleBizId, permissions: raw };
+        return {
+          roleBizId: row.roleBizId,
+          permissions: sanitizePermissionConfig(raw),
+        };
       }
     });
   }

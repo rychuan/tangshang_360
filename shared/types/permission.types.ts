@@ -61,6 +61,16 @@ export const PERMISSION_MATRIX: Record<
   dictionary_config: ['view', 'edit'],
 };
 
+const LEGACY_ACTION_ALIASES: Record<string, PermissionAction> = {
+  read: 'view',
+  create: 'edit',
+  update: 'edit',
+};
+
+const LEGACY_RESOURCE_ALIASES: Record<string, PermissionResource> = {
+  departments: 'organization',
+};
+
 export const DEFAULT_PERMISSIONS: Record<string, PermissionItem[]> = {
   admin: [
     { resource: 'dashboard', actions: ['view'] },
@@ -222,13 +232,13 @@ export function normalizePermissionConfig(
       throw new Error('权限配置项格式无效');
     }
 
-    const resource = (item as { resource?: unknown }).resource;
+    const rawResource = (item as { resource?: unknown }).resource;
     const actions = (item as { actions?: unknown }).actions;
-    if (typeof resource !== 'string') {
-      throw new Error(`未知权限资源: ${String(resource)}`);
+    if (typeof rawResource !== 'string') {
+      throw new Error(`未知权限资源: ${String(rawResource)}`);
     }
 
-    if (resource === '*') {
+    if (rawResource === '*') {
       for (const res of Object.keys(
         PERMISSION_MATRIX,
       ) as PermissionResource[]) {
@@ -241,8 +251,11 @@ export function normalizePermissionConfig(
       continue;
     }
 
+    const resource =
+      (LEGACY_RESOURCE_ALIASES as Record<string, string>)[rawResource] ??
+      rawResource;
     if (!knownResources.has(resource)) {
-      throw new Error(`未知权限资源: ${String(resource)}`);
+      throw new Error(`未知权限资源: ${String(rawResource)}`);
     }
     if (!Array.isArray(actions)) {
       throw new Error(`权限资源 ${resource} 的操作必须是数组`);
@@ -259,7 +272,9 @@ export function normalizePermissionConfig(
         continue;
       }
       const effectiveAction =
-        action === 'read' ? 'view' : action;
+        typeof action === 'string' && action in LEGACY_ACTION_ALIASES
+          ? LEGACY_ACTION_ALIASES[action]
+          : action;
       if (
         typeof effectiveAction !== 'string' ||
         !allowedActions.includes(effectiveAction as PermissionAction)
@@ -279,6 +294,77 @@ export function normalizePermissionConfig(
     ) {
       throw new Error('系统管理员必须保留权限管理的查看和编辑权限');
     }
+  }
+
+  return Array.from(merged.entries())
+    .filter(([, actions]) => actions.size > 0)
+    .map(([resource, actions]) => {
+      if (
+        Array.from(actions).some((action) => action !== 'view') &&
+        !actions.has('view')
+      ) {
+        actions.add('view');
+      }
+      return {
+        resource,
+        actions: PERMISSION_ACTIONS.filter((action) => actions.has(action)),
+      };
+    });
+}
+
+export function sanitizePermissionConfig(
+  permissions: unknown,
+): PermissionItem[] {
+  if (!Array.isArray(permissions)) return [];
+
+  const knownResources = Object.keys(
+    PERMISSION_MATRIX,
+  ) as PermissionResource[];
+  const merged = new Map<PermissionResource, Set<PermissionAction>>();
+
+  for (const item of permissions) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+
+    const rawResource = (item as { resource?: unknown }).resource;
+    const rawActions = (item as { actions?: unknown }).actions;
+    if (typeof rawResource !== 'string') continue;
+
+    if (rawResource === '*') {
+      for (const res of knownResources) {
+        const set = merged.get(res) ?? new Set<PermissionAction>();
+        for (const act of PERMISSION_MATRIX[res]) set.add(act);
+        merged.set(res, set);
+      }
+      continue;
+    }
+
+    const resource =
+      (LEGACY_RESOURCE_ALIASES as Record<string, string>)[rawResource] ??
+      rawResource;
+    if (!knownResources.includes(resource as PermissionResource)) continue;
+    if (!Array.isArray(rawActions)) continue;
+
+    const allowedActions = PERMISSION_MATRIX[resource as PermissionResource];
+    const actionSet =
+      merged.get(resource as PermissionResource) ?? new Set<PermissionAction>();
+
+    for (const action of rawActions) {
+      if (action === '*') {
+        for (const act of allowedActions) actionSet.add(act);
+        continue;
+      }
+      const effectiveAction =
+        typeof action === 'string' && action in LEGACY_ACTION_ALIASES
+          ? LEGACY_ACTION_ALIASES[action]
+          : action;
+      if (
+        typeof effectiveAction !== 'string' ||
+        !allowedActions.includes(effectiveAction as PermissionAction)
+      )
+        continue;
+      actionSet.add(effectiveAction as PermissionAction);
+    }
+    merged.set(resource as PermissionResource, actionSet);
   }
 
   return Array.from(merged.entries())
