@@ -120,11 +120,14 @@ export class RoleManagerController {
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ) {
-    return this.authzSDK.members.list(bizID, {
-      type: type as any,
-      page: page ? parseInt(page, 10) : undefined,
-      pageSize: pageSize ? parseInt(pageSize, 10) : undefined,
-    });
+    if (page || pageSize) {
+      return this.authzSDK.members.list(bizID, {
+        type: type as any,
+        page: page ? parseInt(page, 10) : undefined,
+        pageSize: pageSize ? parseInt(pageSize, 10) : undefined,
+      });
+    }
+    return this.roleManagerService.listAllMembers(bizID, type);
   }
 
   @CanRole(['admin'])

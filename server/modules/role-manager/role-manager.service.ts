@@ -598,6 +598,27 @@ export class RoleManagerService {
         roles.push(bizID);
       }
     }
+
+    if (roles.length === 0 && !strict) {
+      const rows: { role: string | null }[] = await this.db
+        .select({ role: employee.role })
+        .from(employee)
+        .where(
+          and(
+            sql`(${employee.employeeId}).user_id = ${userId}`,
+            eq(employee.status, true),
+            isNull(employee.deletedAt),
+          ),
+        )
+        .limit(1);
+      if (rows.length > 0 && rows[0].role) {
+        return rows[0].role
+          .split(',')
+          .map((r: string) => r.trim())
+          .filter(Boolean);
+      }
+    }
+
     return roles;
   }
 
@@ -616,6 +637,57 @@ export class RoleManagerService {
         (user) => user.userID === userId || user.user_id === userId,
       );
     return strict ? userListMatch : allEmployees || userListMatch;
+  }
+
+  async listAllMembers(
+    bizID: string,
+    type?: string,
+  ): Promise<unknown> {
+    const PAGE_SIZE = 50;
+    let page = 1;
+    let hasMore = true;
+    const allUserList: Array<Record<string, unknown>> = [];
+    const allDeptList: Array<Record<string, unknown>> = [];
+    const allChatList: Array<Record<string, unknown>> = [];
+    let lastMeta: Record<string, unknown> = {};
+
+    while (hasMore) {
+      const res = await this.authzSDK.members.list(bizID, {
+        type: type as any,
+        page,
+        pageSize: PAGE_SIZE,
+      });
+      const data = this.unwrapSdkData(res) as {
+        members?: Record<string, unknown>;
+        hasMore?: boolean;
+      };
+      const members = data?.members ?? (data as Record<string, unknown>);
+      const userList = (members?.userList ?? []) as Array<Record<string, unknown>>;
+      const deptList = (members?.departmentList ?? []) as Array<Record<string, unknown>>;
+      const chatList = (members?.groupChatList ?? []) as Array<Record<string, unknown>>;
+      allUserList.push(...userList);
+      allDeptList.push(...deptList);
+      allChatList.push(...chatList);
+      lastMeta = {
+        allEmployees: members?.allEmployees ?? false,
+        public: members?.public ?? false,
+        presetGroup: members?.presetGroup ?? { isContainsAdmin: false },
+      };
+      hasMore = data?.hasMore ?? false;
+      page++;
+    }
+
+    const total = allUserList.length + allDeptList.length + allChatList.length;
+    return {
+      members: {
+        userList: allUserList,
+        departmentList: allDeptList,
+        groupChatList: allChatList,
+        ...lastMeta,
+      },
+      total,
+      hasMore: false,
+    };
   }
 
   private unwrapSdkData(value: unknown): unknown {
