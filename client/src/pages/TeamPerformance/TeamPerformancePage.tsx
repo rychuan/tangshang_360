@@ -69,14 +69,8 @@ import { useTableScrollHeight } from '@/hooks/useTableScrollHeight';
 
 const PAGE_SIZE = 10;
 
-// 可解锁的状态（与 unlock.service.ts UNLOCK_RULES 全部规则一致）
-const UNLOCKABLE_STATUSES = new Set([
-  'completed',
-  'supervisor_sign',
-  'supervisor_review',
-  'pending_sign',
-  'self_review',
-]);
+// 可解锁的状态：仅员工已完成、上级未完成评分时（员工评分中/完成评分后冻结）
+const UNLOCKABLE_STATUSES = new Set(['pending_sign', 'supervisor_review']);
 
 const GRADE_COLORS = ['S', 'A', 'B', 'C', 'D'];
 
@@ -220,17 +214,18 @@ const TeamPerformancePage: React.FC = () => {
                 />
               </CanDo>
             )}
-            {UNLOCKABLE_STATUSES.has(item.status) && (
-              <CanDo resource="team_performance" action="edit">
-                <ActionBadge
-                  actionType="edit"
-                  icon={<Unlock className="size-3" />}
-                  label="解锁"
-                  disabled={unlockingIds.has(item.id)}
-                  onClick={() => handleUnlock(item)}
-                />
-              </CanDo>
-            )}
+            <CanDo resource="team_performance" action="edit">
+              <ActionBadge
+                actionType="edit"
+                icon={<Unlock className="size-3" />}
+                label="解锁"
+                disabled={
+                  !UNLOCKABLE_STATUSES.has(item.status) ||
+                  unlockingIds.has(item.id)
+                }
+                onClick={() => handleUnlock(item)}
+              />
+            </CanDo>
             <CanDo {...COMMAND_PERMISSIONS.assessmentView}>
               <ActionBadge
                 actionType="view"
@@ -541,17 +536,18 @@ const TeamPerformancePage: React.FC = () => {
                           />
                         </CanDo>
                       )}
-                      {UNLOCKABLE_STATUSES.has(item.status) && (
-                        <CanDo resource="team_performance" action="edit">
-                          <ActionBadge
-                            actionType="edit"
-                            icon={<Unlock className="size-3" />}
-                            label="解锁"
-                            disabled={unlockingIds.has(item.id)}
-                            onClick={() => handleUnlock(item)}
-                          />
-                        </CanDo>
-                      )}
+                      <CanDo resource="team_performance" action="edit">
+                        <ActionBadge
+                          actionType="edit"
+                          icon={<Unlock className="size-3" />}
+                          label="解锁"
+                          disabled={
+                            !UNLOCKABLE_STATUSES.has(item.status) ||
+                            unlockingIds.has(item.id)
+                          }
+                          onClick={() => handleUnlock(item)}
+                        />
+                      </CanDo>
                       <CanDo {...COMMAND_PERMISSIONS.assessmentView}>
                         <ActionBadge
                           actionType="view"

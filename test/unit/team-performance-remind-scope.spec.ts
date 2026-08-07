@@ -1,8 +1,17 @@
 import { TeamPerformanceService } from '../../server/modules/team-performance/team-performance.service';
 
 describe('team performance reminder scope', () => {
-  it('delegates unlock to UnlockService', async () => {
-    const db = { select: jest.fn() };
+  function createUnlockDb(status: string) {
+    const query = {
+      from: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockResolvedValue([{ status }]),
+    };
+    return { select: jest.fn().mockReturnValue(query) };
+  }
+
+  it('delegates unlock to UnlockService when status is supervisor_review', async () => {
+    const db = createUnlockDb('supervisor_review');
     const capabilityService = { load: jest.fn() };
     const accessScopeService = { canAccessEmployees: jest.fn() };
     const unlockService = {
@@ -28,6 +37,25 @@ describe('team performance reminder scope', () => {
     );
     expect(result).toEqual({ success: true });
   });
+
+  it.each(['self_review', 'completed'] as const)(
+    'rejects unlock for frozen status %s without touching UnlockService',
+    async (status) => {
+      const db = createUnlockDb(status);
+      const unlockService = { unlock: jest.fn() };
+      const service = new (TeamPerformanceService as any)(
+        db,
+        { load: jest.fn() },
+        { canAccessEmployees: jest.fn() },
+        unlockService,
+      ) as TeamPerformanceService;
+
+      await expect(
+        service.unlock('instance-1', { reason: '重新评分' }, 'manager-1'),
+      ).rejects.toThrow('当前考核状态不允许解锁');
+      expect(unlockService.unlock).not.toHaveBeenCalled();
+    },
+  );
 
   it('checks object scope before returning a distinguishable instance status', async () => {
     // 新实现：批量查询实例（where 直接 resolve 数组，无 limit），

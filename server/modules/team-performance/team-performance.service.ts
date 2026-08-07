@@ -1,4 +1,10 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
@@ -305,15 +311,38 @@ export class TeamPerformanceService {
     return { success: true, results };
   }
 
+  // 团队绩效解锁仅限员工已完成、上级未完成评分时：
+  // pending_sign（员工已提交待签字）/ supervisor_review（上级评分中），
+  // 员工评分中（self_review）与评分完成后（supervisor_sign/completed）冻结
+  private readonly UNLOCKABLE_STATUSES = new Set([
+    'pending_sign',
+    'supervisor_review',
+  ]);
+
   /**
    * 部门负责人/上级解锁考核实例（回退到可修改状态）
-   * 复用 UnlockService 的完整规则：状态回退、评分/签名重置、审计日志
+   * 先校验状态，再复用 UnlockService 的完整规则：状态回退、评分/签名重置、审计日志
    */
   async unlock(
     instanceId: string,
     body: UnlockRequest,
     userId: string,
   ): Promise<{ success: boolean }> {
+    const [instance] = await this.db
+      .select({ status: assessmentInstance.status })
+      .from(assessmentInstance)
+      .where(eq(assessmentInstance.id, instanceId))
+      .limit(1);
+
+    if (!instance) {
+      throw new NotFoundException('考核实例不存在');
+    }
+    if (!this.UNLOCKABLE_STATUSES.has(instance.status)) {
+      throw new BadRequestException(
+        '当前考核状态不允许解锁：仅员工已完成、上级未完成时可解锁',
+      );
+    }
+
     return this.unlockService.unlock(instanceId, body, userId);
   }
 }

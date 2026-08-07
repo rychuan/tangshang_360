@@ -18,11 +18,16 @@ function createDbMock(instances: InstanceRow[]) {
   const db = {
     select: jest.fn(() => ({
       from: jest.fn((table: unknown) => ({
+        // where 返回 Promise 数组（remind 直接 await），
+        // 同时挂 .limit 链（unlock 用 .limit(1) 取首行）
         where: jest.fn(() => {
-          if (table === assessmentInstance) {
-            return Promise.resolve(instances);
-          }
-          return Promise.resolve([]);
+          const result =
+            table === assessmentInstance
+              ? Promise.resolve(instances)
+              : Promise.resolve([]);
+          return Object.assign(result, {
+            limit: jest.fn(() => Promise.resolve(instances.slice(0, 1))),
+          });
         }),
       })),
     })),
@@ -213,5 +218,88 @@ describe('TeamPerformanceService.remind', () => {
     await expect(
       service.remind(callerUserId, { instanceIds: [] }),
     ).rejects.toThrow('实例不能为空');
+  });
+});
+
+describe('TeamPerformanceService.unlock', () => {
+  const callerUserId = 'u_supervisor';
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('supervisor_review → 委托 UnlockService', async () => {
+    const db = createDbMock([
+      {
+        id: 'inst-1',
+        period: '2026-07',
+        status: 'supervisor_review',
+        employeeUserId: 'u_a',
+        employeeName: '甲',
+      },
+    ]);
+    const service = createService(db, createCapabilityMock());
+    unlockService.unlock.mockResolvedValue({ success: true });
+
+    const res = await service.unlock(
+      'inst-1',
+      { reason: '重新评分' },
+      callerUserId,
+    );
+
+    expect(unlockService.unlock).toHaveBeenCalledWith(
+      'inst-1',
+      { reason: '重新评分' },
+      callerUserId,
+    );
+    expect(res).toEqual({ success: true });
+  });
+
+  test('pending_sign → 委托 UnlockService', async () => {
+    const db = createDbMock([
+      {
+        id: 'inst-1',
+        period: '2026-07',
+        status: 'pending_sign',
+        employeeUserId: 'u_a',
+        employeeName: '甲',
+      },
+    ]);
+    const service = createService(db, createCapabilityMock());
+
+    await service.unlock('inst-1', { reason: '重新评分' }, callerUserId);
+
+    expect(unlockService.unlock).toHaveBeenCalledTimes(1);
+  });
+
+  test.each(['self_review', 'supervisor_sign', 'completed'] as const)(
+    '冻结状态 %s → 拒绝且不委托 UnlockService',
+    async (status) => {
+      const db = createDbMock([
+        {
+          id: 'inst-1',
+          period: '2026-07',
+          status,
+          employeeUserId: 'u_a',
+          employeeName: '甲',
+        },
+      ]);
+      const service = createService(db, createCapabilityMock());
+
+      await expect(
+        service.unlock('inst-1', { reason: '重新评分' }, callerUserId),
+      ).rejects.toThrow('当前考核状态不允许解锁');
+      expect(unlockService.unlock).not.toHaveBeenCalled();
+    },
+  );
+
+  test('实例不存在 → 抛"考核实例不存在"', async () => {
+    const db = createDbMock([]);
+    const service = createService(db, createCapabilityMock());
+
+    await expect(
+      service.unlock('inst-missing', { reason: '重新评分' }, callerUserId),
+    ).rejects.toThrow('考核实例不存在');
+    expect(unlockService.unlock).not.toHaveBeenCalled();
   });
 });
