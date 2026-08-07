@@ -9,6 +9,6 @@ import { AccessScopeModule } from '@server/common/access/access-scope.module';
   imports: [EmployeeSnapshotModule, AccessScopeModule],
   controllers: [AssessmentPublishController],
   providers: [AssessmentPublishService, UnlockService],
-  exports: [AssessmentPublishService],
+  exports: [AssessmentPublishService, UnlockService],
 })
 export class AssessmentPublishModule {}

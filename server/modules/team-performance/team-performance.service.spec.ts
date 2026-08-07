@@ -34,6 +34,10 @@ const accessScopeService = {
   canAccessEmployees: jest.fn(),
 };
 
+const unlockService = {
+  unlock: jest.fn(),
+};
+
 function createCapabilityMock() {
   return {
     load: jest.fn(() => ({
@@ -47,6 +51,7 @@ function createService(db: unknown, capability: unknown) {
     db as never,
     capability as never,
     accessScopeService as never,
+    unlockService as never,
   );
 }
 

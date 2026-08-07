@@ -46,3 +46,15 @@ export async function sendRemind(
   });
   return unwrapApiData<SuccessResponse>(res.data);
 }
+
+export async function unlockInstance(
+  instanceId: string,
+  reason: string,
+): Promise<SuccessResponse> {
+  const res = await axiosForBackend<SuccessResponse>({
+    url: `/api/team-performance/instances/${instanceId}/unlock`,
+    method: 'POST',
+    data: { reason },
+  });
+  return unwrapApiData<SuccessResponse>(res.data);
+}

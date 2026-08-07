@@ -1,10 +1,14 @@
-import { Controller, Get, Post, Query, Body, Req } from '@nestjs/common';
+import { Controller, Get, Post, Query, Body, Req, Param } from '@nestjs/common';
 import type { Request } from 'express';
 import { NeedLogin } from '@lark-apaas/fullstack-nestjs-core';
 import { RequirePermission } from '@server/common/decorators/require-permission.decorator';
 import { TeamPerformanceService } from './team-performance.service';
 import { parsePeriodsQuery } from './periods-query';
-import type { RemindRequest, RemindResponse } from '@shared/api.interface';
+import type {
+  RemindRequest,
+  RemindResponse,
+  UnlockRequest,
+} from '@shared/api.interface';
 
 @Controller('api/team-performance')
 export class TeamPerformanceController {
@@ -55,5 +59,17 @@ export class TeamPerformanceController {
   ): Promise<RemindResponse> {
     const { userId } = req.userContext;
     return this.teamPerformanceService.remind(userId, body);
+  }
+
+  @RequirePermission('team_performance', 'edit')
+  @NeedLogin()
+  @Post('instances/:id/unlock')
+  async unlock(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Body() body: UnlockRequest,
+  ): Promise<{ success: boolean }> {
+    const { userId } = req.userContext;
+    return this.teamPerformanceService.unlock(id, body, userId);
   }
 }

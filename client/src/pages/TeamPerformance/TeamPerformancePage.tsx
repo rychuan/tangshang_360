@@ -45,7 +45,10 @@ import {
   AlertCircle,
   Bell,
   Eye,
+  Unlock,
 } from '@/components/ui/hugeicons';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { logger } from '@lark-apaas/client-toolkit/logger';
@@ -65,6 +68,15 @@ import { COMMAND_PERMISSIONS } from '@/components/permission-policy';
 import { useTableScrollHeight } from '@/hooks/useTableScrollHeight';
 
 const PAGE_SIZE = 10;
+
+// 可解锁的状态（与 unlock.service.ts UNLOCK_RULES 全部规则一致）
+const UNLOCKABLE_STATUSES = new Set([
+  'completed',
+  'supervisor_sign',
+  'supervisor_review',
+  'pending_sign',
+  'self_review',
+]);
 
 const GRADE_COLORS = ['S', 'A', 'B', 'C', 'D'];
 
@@ -101,6 +113,12 @@ const TeamPerformancePage: React.FC = () => {
     null,
   );
   const [remindingIds, setRemindingIds] = useState<Set<string>>(new Set());
+  const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
+  const [unlockTarget, setUnlockTarget] = useState<SubordinateRecord | null>(
+    null,
+  );
+  const [unlockReason, setUnlockReason] = useState('');
+  const [unlockingIds, setUnlockingIds] = useState<Set<string>>(new Set());
   const [total, setTotal] = useState(0);
   const pageSize = PAGE_SIZE;
   const { tableRef, tableMaxHeight } = useTableScrollHeight();
@@ -202,6 +220,17 @@ const TeamPerformancePage: React.FC = () => {
                 />
               </CanDo>
             )}
+            {UNLOCKABLE_STATUSES.has(item.status) && (
+              <CanDo resource="team_performance" action="edit">
+                <ActionBadge
+                  actionType="edit"
+                  icon={<Unlock className="size-3" />}
+                  label="解锁"
+                  disabled={unlockingIds.has(item.id)}
+                  onClick={() => handleUnlock(item)}
+                />
+              </CanDo>
+            )}
             <CanDo {...COMMAND_PERMISSIONS.assessmentView}>
               <ActionBadge
                 actionType="view"
@@ -216,7 +245,7 @@ const TeamPerformancePage: React.FC = () => {
         ),
       },
     ],
-    [navigate, remindingIds],
+    [navigate, remindingIds, unlockingIds],
   );
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -512,6 +541,17 @@ const TeamPerformancePage: React.FC = () => {
                           />
                         </CanDo>
                       )}
+                      {UNLOCKABLE_STATUSES.has(item.status) && (
+                        <CanDo resource="team_performance" action="edit">
+                          <ActionBadge
+                            actionType="edit"
+                            icon={<Unlock className="size-3" />}
+                            label="解锁"
+                            disabled={unlockingIds.has(item.id)}
+                            onClick={() => handleUnlock(item)}
+                          />
+                        </CanDo>
+                      )}
                       <CanDo {...COMMAND_PERMISSIONS.assessmentView}>
                         <ActionBadge
                           actionType="view"
@@ -581,12 +621,83 @@ const TeamPerformancePage: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={unlockDialogOpen} onOpenChange={setUnlockDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>解锁考核</DialogTitle>
+            <DialogDescription>
+              确认解锁 {unlockTarget?.employeeName ?? ''} 的考核？绩效周期：
+              {unlockTarget?.period ?? ''}
+              。解锁后考核将回退到可修改状态，原评分与签名将被清空。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <Label htmlFor="unlock-reason">解锁理由（必填）</Label>
+            <Textarea
+              id="unlock-reason"
+              value={unlockReason}
+              onChange={(e) => setUnlockReason(e.target.value)}
+              placeholder="请输入解锁理由"
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setUnlockDialogOpen(false)}
+            >
+              取消
+            </Button>
+            <Button
+              disabled={
+                !unlockReason.trim() ||
+                (unlockTarget ? unlockingIds.has(unlockTarget.id) : false)
+              }
+              onClick={confirmUnlock}
+            >
+              确认解锁
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 
   function handleRemind(record: SubordinateRecord) {
     setRemindTarget(record);
     setRemindDialogOpen(true);
+  }
+
+  function handleUnlock(record: SubordinateRecord) {
+    setUnlockTarget(record);
+    setUnlockReason('');
+    setUnlockDialogOpen(true);
+  }
+
+  async function confirmUnlock() {
+    if (!unlockTarget) return;
+    const targetId = unlockTarget.id;
+    const reason = unlockReason.trim();
+    if (!reason) return;
+    setUnlockingIds((prev) => new Set(prev).add(targetId));
+    try {
+      await teamPerformanceApi.unlockInstance(targetId, reason);
+      toast.success(`已解锁 ${unlockTarget.employeeName} 的考核`);
+      setUnlockDialogOpen(false);
+      setUnlockTarget(null);
+      setUnlockReason('');
+      queryClient.invalidateQueries({ queryKey: ['team-performance'] });
+    } catch (err: unknown) {
+      logger.error(`Failed to unlock instance: ${JSON.stringify(err)}`);
+      handleApiError(err);
+    } finally {
+      setUnlockingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(targetId);
+        return next;
+      });
+    }
   }
 
   async function confirmRemind() {

@@ -9,6 +9,7 @@ import { employee, assessmentInstance } from '../../database/schema';
 import { AccessScopeService } from '@server/common/access/access-scope.service';
 import { assertBatchSize } from '@server/common/utils/batch';
 import { buildEmployeeIdInCondition } from './employee-scope-condition';
+import { UnlockService } from '../assessment-publish/unlock.service';
 import type {
   TeamOverviewResponse,
   SubordinateRecord,
@@ -16,6 +17,7 @@ import type {
   RemindRequest,
   RemindResponse,
   RemindResult,
+  UnlockRequest,
 } from '@shared/api.interface';
 
 @Injectable()
@@ -27,6 +29,7 @@ export class TeamPerformanceService {
     @Inject(CapabilityService)
     private readonly capabilityService: CapabilityService,
     private readonly accessScopeService: AccessScopeService,
+    private readonly unlockService: UnlockService,
   ) {}
 
   async getOverview(
@@ -300,5 +303,17 @@ export class TeamPerformanceService {
     }
 
     return { success: true, results };
+  }
+
+  /**
+   * 部门负责人/上级解锁考核实例（回退到可修改状态）
+   * 复用 UnlockService 的完整规则：状态回退、评分/签名重置、审计日志
+   */
+  async unlock(
+    instanceId: string,
+    body: UnlockRequest,
+    userId: string,
+  ): Promise<{ success: boolean }> {
+    return this.unlockService.unlock(instanceId, body, userId);
   }
 }

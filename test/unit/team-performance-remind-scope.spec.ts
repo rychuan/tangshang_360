@@ -1,6 +1,34 @@
 import { TeamPerformanceService } from '../../server/modules/team-performance/team-performance.service';
 
 describe('team performance reminder scope', () => {
+  it('delegates unlock to UnlockService', async () => {
+    const db = { select: jest.fn() };
+    const capabilityService = { load: jest.fn() };
+    const accessScopeService = { canAccessEmployees: jest.fn() };
+    const unlockService = {
+      unlock: jest.fn().mockResolvedValue({ success: true }),
+    };
+    const service = new (TeamPerformanceService as any)(
+      db,
+      capabilityService,
+      accessScopeService,
+      unlockService,
+    ) as TeamPerformanceService;
+
+    const result = await service.unlock(
+      'instance-1',
+      { reason: '重新评分' },
+      'manager-1',
+    );
+
+    expect(unlockService.unlock).toHaveBeenCalledWith(
+      'instance-1',
+      { reason: '重新评分' },
+      'manager-1',
+    );
+    expect(result).toEqual({ success: true });
+  });
+
   it('checks object scope before returning a distinguishable instance status', async () => {
     // 新实现：批量查询实例（where 直接 resolve 数组，无 limit），
     // 范围判定一次调用 canAccessEmployees（返回 Map）
@@ -27,10 +55,12 @@ describe('team performance reminder scope', () => {
         .fn()
         .mockResolvedValue(new Map([['employee-2', false]])),
     };
+    const unlockService = { unlock: jest.fn() };
     const service = new (TeamPerformanceService as any)(
       db,
       capabilityService,
       accessScopeService,
+      unlockService,
     ) as TeamPerformanceService;
 
     const result = await service.remind('manager-1', {
