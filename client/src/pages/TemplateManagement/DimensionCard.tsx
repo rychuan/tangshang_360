@@ -39,6 +39,8 @@ const DimensionCard: React.FC<DimensionCardProps> = ({
     name: `dimensions.${dimIdx}.indicators`,
   });
 
+  const { errors } = form.formState;
+
   const indSum: number =
     dimData?.indicators?.reduce(
       (s: number, i: { weight: number }) => s + (i.weight || 0),
@@ -55,19 +57,24 @@ const DimensionCard: React.FC<DimensionCardProps> = ({
           </span>
           <Input
             placeholder="维度名称"
-            className="flex-1 text-sm font-semibold h-8"
+            className={`flex-1 text-sm font-semibold h-8 ${errors.dimensions?.[dimIdx]?.name ? 'border-destructive' : ''}`}
             value={dimData?.name || ''}
             onChange={(e) =>
               form.setValue(`dimensions.${dimIdx}.name`, e.target.value)
             }
           />
+          {errors.dimensions?.[dimIdx]?.name?.message && (
+            <span className="text-xs text-destructive shrink-0">
+              {errors.dimensions[dimIdx].name?.message}
+            </span>
+          )}
           <span className="text-xs text-muted-foreground shrink-0">权重分</span>
           <Input
             type="number"
             min="0"
             max="100"
             placeholder="0"
-            className="w-20 h-8 text-center text-sm"
+            className={`w-20 h-8 text-center text-sm ${errors.dimensions?.[dimIdx]?.weight ? 'border-destructive' : ''}`}
             value={dimData?.weight || ''}
             onChange={(e) =>
               form.setValue(
@@ -76,6 +83,11 @@ const DimensionCard: React.FC<DimensionCardProps> = ({
               )
             }
           />
+          {errors.dimensions?.[dimIdx]?.weight?.message && (
+            <span className="text-xs text-destructive shrink-0">
+              {errors.dimensions[dimIdx].weight?.message}
+            </span>
+          )}
           <span className="text-xs text-muted-foreground">%</span>
           {canRemove && (
             <Button
@@ -117,7 +129,7 @@ const DimensionCard: React.FC<DimensionCardProps> = ({
               <TableRow key={indField.id}>
                 <TableCell className="p-1">
                   <Textarea
-                    className="text-xs min-h-[32px] resize-none"
+                    className={`text-xs min-h-[32px] resize-none ${errors.dimensions?.[dimIdx]?.indicators?.[indIdx]?.content ? 'border-destructive' : ''}`}
                     rows={2}
                     placeholder="指标名称"
                     value={
@@ -132,6 +144,15 @@ const DimensionCard: React.FC<DimensionCardProps> = ({
                       )
                     }
                   />
+                  {errors.dimensions?.[dimIdx]?.indicators?.[indIdx]?.content
+                    ?.message && (
+                    <p className="text-[10px] text-destructive mt-0.5">
+                      {
+                        errors.dimensions[dimIdx]?.indicators?.[indIdx]?.content
+                          ?.message
+                      }
+                    </p>
+                  )}
                 </TableCell>
                 <TableCell className="p-1 hidden md:table-cell">
                   <Textarea
@@ -190,7 +211,7 @@ const DimensionCard: React.FC<DimensionCardProps> = ({
                   <Input
                     type="number"
                     min="0"
-                    className="h-8 w-20 text-xs text-center mx-auto"
+                    className={`h-8 w-20 text-xs text-center mx-auto ${errors.dimensions?.[dimIdx]?.indicators?.[indIdx]?.weight ? 'border-destructive' : ''}`}
                     placeholder="0"
                     value={
                       form.watch(
@@ -204,6 +225,15 @@ const DimensionCard: React.FC<DimensionCardProps> = ({
                       )
                     }
                   />
+                  {errors.dimensions?.[dimIdx]?.indicators?.[indIdx]?.weight
+                    ?.message && (
+                    <p className="text-[10px] text-destructive text-center mt-0.5">
+                      {
+                        errors.dimensions[dimIdx]?.indicators?.[indIdx]?.weight
+                          ?.message
+                      }
+                    </p>
+                  )}
                 </TableCell>
                 <TableCell className="p-1">
                   {indFields.length > 1 && (

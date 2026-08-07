@@ -116,6 +116,8 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
     remove: removeDim,
   } = useFieldArray({ control: form.control, name: 'dimensions' });
 
+  const { errors } = form.formState;
+
   useEffect(() => {
     if (open) {
       form.reset(buildDefault());
@@ -176,16 +178,6 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
   const totalDimWeight: number =
     watchedDims?.reduce((sum: number, d) => sum + (d?.weight || 0), 0) || 0;
   const dimWeightValid: boolean = Math.abs(totalDimWeight - 100) < 0.01;
-  const indicatorWeightsValid: boolean =
-    watchedDims?.every((dim) => {
-      const indSum: number =
-        dim?.indicators?.reduce(
-          (sum: number, ind) => sum + (ind?.weight || 0),
-          0,
-        ) || 0;
-      return Math.abs(indSum - (dim?.weight || 0)) < 0.01;
-    }) ?? false;
-  const canSubmit: boolean = dimWeightValid && indicatorWeightsValid;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -212,7 +204,13 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                 value={watchedName}
                 onChange={(e) => form.setValue('name', e.target.value)}
                 disabled={previewMode}
+                className={errors.name ? 'border-destructive' : ''}
               />
+              {errors.name?.message && (
+                <p className="text-xs text-destructive mt-1">
+                  {errors.name.message}
+                </p>
+              )}
             </div>
             <div className="w-[180px]">
               <label className="text-xs text-muted-foreground block mb-1">
@@ -234,6 +232,11 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                   ))}
                 </SelectContent>
               </Select>
+              {errors.position?.message && (
+                <p className="text-xs text-destructive mt-1">
+                  {errors.position.message}
+                </p>
+              )}
             </div>
             <div className="w-[150px]">
               <label className="text-xs text-muted-foreground block mb-1">
@@ -412,7 +415,7 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
               {canEdit && !previewMode && (
                 <Button
                   onClick={form.handleSubmit(handleSubmit)}
-                  disabled={submitting || !canSubmit}
+                  disabled={submitting}
                 >
                   {submitting && <Spinner className="mr-2 size-4" />}
                   保存
