@@ -290,7 +290,7 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
     return nodes.map((node) => {
       const isExpanded = expanded.has(node.id);
       const hasChildren = node.children?.length > 0;
-      const total = countEmployees(node);
+      const directCount = node.memberCount ?? 0;
       return (
         <div key={node.id}>
           <div
@@ -329,11 +329,9 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
                 className="shrink-0 ml-1"
               />
             )}
-            {total > 0 && (
-              <span className="text-xs text-muted-foreground shrink-0">
-                {total}
-              </span>
-            )}
+            <span className="text-xs text-muted-foreground shrink-0 ml-0.5">
+              {directCount}
+            </span>
             <div className="hidden group-hover:flex items-center gap-0.5 shrink-0 ml-1">
               {canCreate && (
                 <button
