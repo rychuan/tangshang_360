@@ -258,13 +258,15 @@ export function normalizePermissionConfig(
         }
         continue;
       }
+      const effectiveAction =
+        action === 'read' ? 'view' : action;
       if (
-        typeof action !== 'string' ||
-        !allowedActions.includes(action as PermissionAction)
+        typeof effectiveAction !== 'string' ||
+        !allowedActions.includes(effectiveAction as PermissionAction)
       ) {
         throw new Error(`权限资源 ${resource} 不支持操作: ${String(action)}`);
       }
-      actionSet.add(action as PermissionAction);
+      actionSet.add(effectiveAction as PermissionAction);
     }
     merged.set(resource as PermissionResource, actionSet);
   }

@@ -381,10 +381,17 @@ export class RoleManagerService {
       })
       .from(rolePermissionConfig);
 
-    return rows.map((row) => ({
-      roleBizId: row.roleBizId,
-      permissions: row.permissions as PermissionItem[],
-    }));
+    return rows.map((row) => {
+      const raw = row.permissions as PermissionItem[];
+      try {
+        return {
+          roleBizId: row.roleBizId,
+          permissions: normalizePermissionConfig(row.roleBizId, raw),
+        };
+      } catch {
+        return { roleBizId: row.roleBizId, permissions: raw };
+      }
+    });
   }
 
   /** 获取所有权限配置（5 分钟缓存），减少重复 DB 查询 */
