@@ -18,6 +18,8 @@ export type FakeEmployeeRow = {
   authorizationVersion: number;
   supervisorId: string | null;
   departmentId: string | null;
+  /** 本地业务角色（逗号分隔，fetchUserRoles 回退读取） */
+  role?: string;
 };
 
 export type FakeDepartmentRow = {

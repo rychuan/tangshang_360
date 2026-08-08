@@ -279,3 +279,252 @@ describe('strict role manager operations', () => {
     },
   );
 });
+
+describe('role fallback from local employee.role', () => {
+  function createEmptyRolesService(employee: FakeEmployeeRow) {
+    const db = new QueryBackedDb({ employees: [employee] });
+    const authzSDK = {
+      roles: { list: jest.fn().mockResolvedValue([]) },
+    };
+    return createRoleManagerService(db, authzSDK);
+  }
+
+  it('falls back to local roles only for synced employees', async () => {
+    const employee = createEmployeeRow({
+      role: 'admin,hrd',
+      authorizationStatus: 'synced',
+    });
+    const service = createEmptyRolesService(employee);
+
+    await expect(service.getUserRoles(employee.employeeId)).resolves.toEqual([
+      'admin',
+      'hrd',
+    ]);
+  });
+
+  it.each(['pending', 'failed'] as const)(
+    'keeps fails-closed for %s employees even with local roles',
+    async (authorizationStatus) => {
+      const employee = createEmployeeRow({
+        role: 'admin',
+        authorizationStatus,
+      });
+      const service = createEmptyRolesService(employee);
+
+      await expect(service.getUserRoles(employee.employeeId)).resolves.toEqual(
+        [],
+      );
+    },
+  );
+
+  it('never falls back on the strict path', async () => {
+    const employee = createEmployeeRow({
+      role: 'admin',
+      authorizationStatus: 'synced',
+    });
+    const service = createEmptyRolesService(employee);
+
+    await expect(
+      service.getUserRolesStrict(employee.employeeId),
+    ).resolves.toEqual([]);
+  });
+
+  it('does not fall back when the employee record is missing', async () => {
+    const service = createEmptyRolesService(createEmployeeRow());
+
+    await expect(service.getUserRoles('missing-user')).resolves.toEqual([]);
+  });
+});
+
+describe('listAllMembers pagination hardening', () => {
+  function createServiceWithMembers(membersList: jest.Mock) {
+    const db = new QueryBackedDb();
+    const authzSDK = { members: { list: membersList } };
+    return new (RoleManagerService as any)(db, authzSDK) as RoleManagerService;
+  }
+
+  it('merges all pages and keeps first-page meta', async () => {
+    const membersList = jest
+      .fn()
+      .mockImplementation((_bizID: string, params: { page?: number }) => {
+        if (params.page === 1) {
+          return Promise.resolve({
+            members: {
+              userList: [{ userID: 'u1' }, { userID: 'u2' }],
+              departmentList: [{ id: 'd1' }],
+              allEmployees: true,
+              presetGroup: { isContainsAdmin: true },
+            },
+            hasMore: true,
+          });
+        }
+        return Promise.resolve({
+          members: { userList: [{ userID: 'u3' }] },
+          hasMore: false,
+        });
+      });
+    const service = createServiceWithMembers(membersList);
+
+    const result = (await service.listAllMembers('admin', 'user')) as {
+      members: {
+        userList: Array<{ userID: string }>;
+        departmentList: Array<{ id: string }>;
+        allEmployees?: boolean;
+        presetGroup?: { isContainsAdmin?: boolean };
+      };
+      total: number;
+      hasMore: boolean;
+    };
+
+    expect(result.members.userList).toEqual([
+      { userID: 'u1' },
+      { userID: 'u2' },
+      { userID: 'u3' },
+    ]);
+    expect(result.members.departmentList).toEqual([{ id: 'd1' }]);
+    // meta 取第一页，而非最后一页覆盖
+    expect(result.members.allEmployees).toBe(true);
+    expect(result.members.presetGroup).toEqual({ isContainsAdmin: true });
+    expect(result.total).toBe(4);
+    expect(result.hasMore).toBe(false);
+    expect(membersList).toHaveBeenCalledTimes(2);
+  });
+
+  it('dedupes users repeated across pages', async () => {
+    const membersList = jest
+      .fn()
+      .mockImplementation((_bizID: string, params: { page?: number }) => {
+        if (params.page === 1) {
+          return Promise.resolve({
+            members: { userList: [{ userID: 'u1' }, { userID: 'u2' }] },
+            hasMore: true,
+          });
+        }
+        return Promise.resolve({
+          members: { userList: [{ userID: 'u2' }, { userID: 'u3' }] },
+          hasMore: false,
+        });
+      });
+    const service = createServiceWithMembers(membersList);
+
+    const result = (await service.listAllMembers('admin')) as {
+      members: { userList: Array<{ userID: string }> };
+      total: number;
+    };
+
+    expect(result.members.userList.map((u) => u.userID)).toEqual([
+      'u1',
+      'u2',
+      'u3',
+    ]);
+    expect(result.total).toBe(3);
+  });
+
+  it('stops when a page yields no new members despite hasMore', async () => {
+    const membersList = jest.fn().mockResolvedValue({
+      members: { userList: [{ userID: 'u1' }] },
+      hasMore: true,
+    });
+    const service = createServiceWithMembers(membersList);
+
+    const result = (await service.listAllMembers('admin')) as {
+      members: { userList: Array<{ userID: string }> };
+      total: number;
+    };
+
+    // 同页重复 → 第 2 页无新增即终止，不无限循环
+    expect(membersList).toHaveBeenCalledTimes(2);
+    expect(result.members.userList).toEqual([{ userID: 'u1' }]);
+    expect(result.total).toBe(1);
+  });
+
+  it('stops at the page limit when hasMore never ends', async () => {
+    let page = 0;
+    const membersList = jest.fn().mockImplementation(() => {
+      page += 1;
+      return Promise.resolve({
+        members: { userList: [{ userID: `u${page}` }] },
+        hasMore: true,
+      });
+    });
+    const service = createServiceWithMembers(membersList);
+
+    const result = (await service.listAllMembers('admin')) as {
+      members: { userList: Array<{ userID: string }> };
+      total: number;
+      hasMore: boolean;
+    };
+
+    // 每页都有新用户 → 不触发无进展终止，由 100 页上限兜底
+    expect(membersList).toHaveBeenCalledTimes(100);
+    expect(result.members.userList).toHaveLength(100);
+    expect(result.total).toBe(100);
+    expect(result.hasMore).toBe(false);
+  });
+});
+
+describe('listMembers pagination param validation', () => {
+  it('routes dirty pagination params to listAllMembers instead of SDK', async () => {
+    const authzSDK = { members: { list: jest.fn() } };
+    const roleManagerService = {
+      listAllMembers: jest.fn().mockResolvedValue({}),
+    };
+    const controller = new (RoleManagerController as any)(
+      authzSDK as any,
+      roleManagerService as any,
+      {},
+    ) as RoleManagerController;
+
+    await (controller as any).listMembers('admin', undefined, '0', 'abc');
+
+    expect(roleManagerService.listAllMembers).toHaveBeenCalledWith(
+      'admin',
+      undefined,
+    );
+    expect(authzSDK.members.list).not.toHaveBeenCalled();
+  });
+
+  it('passes valid pagination numbers through to SDK', async () => {
+    const authzSDK = { members: { list: jest.fn().mockResolvedValue({}) } };
+    const roleManagerService = { listAllMembers: jest.fn() };
+    const controller = new (RoleManagerController as any)(
+      authzSDK as any,
+      roleManagerService as any,
+      {},
+    ) as RoleManagerController;
+
+    await (controller as any).listMembers('admin', 'user', '2', '50');
+
+    expect(authzSDK.members.list).toHaveBeenCalledWith('admin', {
+      type: 'user',
+      page: 2,
+      pageSize: 50,
+    });
+    expect(roleManagerService.listAllMembers).not.toHaveBeenCalled();
+  });
+
+  it('routes missing pagination to listAllMembers', async () => {
+    const authzSDK = { members: { list: jest.fn() } };
+    const roleManagerService = {
+      listAllMembers: jest.fn().mockResolvedValue({}),
+    };
+    const controller = new (RoleManagerController as any)(
+      authzSDK as any,
+      roleManagerService as any,
+      {},
+    ) as RoleManagerController;
+
+    await (controller as any).listMembers(
+      'admin',
+      undefined,
+      undefined,
+      undefined,
+    );
+
+    expect(roleManagerService.listAllMembers).toHaveBeenCalledWith(
+      'admin',
+      undefined,
+    );
+    expect(authzSDK.members.list).not.toHaveBeenCalled();
+  });
+});

@@ -120,11 +120,15 @@ export class RoleManagerController {
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ) {
-    if (page || pageSize) {
+    const parsedPage = page ? parseInt(page, 10) : NaN;
+    const parsedPageSize = pageSize ? parseInt(pageSize, 10) : NaN;
+    // 仅合法分页数字（>=1）透传 SDK 分页；0/NaN/负值等脏参数不传平台，
+    // 直接拉全量，避免平台参数校验失败导致 403
+    if (parsedPage >= 1 || parsedPageSize >= 1) {
       return this.authzSDK.members.list(bizID, {
         type: type as any,
-        page: page ? parseInt(page, 10) : undefined,
-        pageSize: pageSize ? parseInt(pageSize, 10) : undefined,
+        page: parsedPage >= 1 ? parsedPage : undefined,
+        pageSize: parsedPageSize >= 1 ? parsedPageSize : undefined,
       });
     }
     return this.roleManagerService.listAllMembers(bizID, type);

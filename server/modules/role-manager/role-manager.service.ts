@@ -509,14 +509,17 @@ export class RoleManagerService {
       const rolePayload = this.unwrapSdkData(allRoles);
       const roleList = Array.isArray(rolePayload)
         ? rolePayload
-        : (rolePayload as Record<string, unknown>)?.items as unknown[] ||
-          (rolePayload as Record<string, unknown>)?.roles as unknown[] ||
+        : ((rolePayload as Record<string, unknown>)?.items as unknown[]) ||
+          ((rolePayload as Record<string, unknown>)?.roles as unknown[]) ||
           [];
 
       const adminRole = (roleList as Array<Record<string, unknown>>).find(
         (r) => r?.bizID === 'admin',
       );
-      const adminMembers = (adminRole?.roleMembers ?? {}) as Record<string, unknown>;
+      const adminMembers = (adminRole?.roleMembers ?? {}) as Record<
+        string,
+        unknown
+      >;
       const hasAdmin =
         Boolean(adminMembers.allEmployees) ||
         (Array.isArray(adminMembers.userList) &&
@@ -600,6 +603,9 @@ export class RoleManagerService {
     }
 
     if (roles.length === 0 && !strict) {
+      // 降级容错：SDK 判定用户不属于任何角色时，回退读取本地同步源 employee.role。
+      // 仅授权已同步（synced）的有效员工可回退——同步中（pending/failed）不授予，
+      // 避免 SDK 角色回收后本地残留被误授（fails closed）
       const rows: { role: string | null }[] = await this.db
         .select({ role: employee.role })
         .from(employee)
@@ -608,14 +614,19 @@ export class RoleManagerService {
             sql`(${employee.employeeId}).user_id = ${userId}`,
             eq(employee.status, true),
             isNull(employee.deletedAt),
+            eq(employee.authorizationStatus, 'synced'),
           ),
         )
         .limit(1);
       if (rows.length > 0 && rows[0].role) {
-        return rows[0].role
+        const fallbackRoles = rows[0].role
           .split(',')
           .map((r: string) => r.trim())
           .filter(Boolean);
+        this.logger.warn(
+          `User ${userId} has no SDK roles, falling back to local roles: [${fallbackRoles.join(', ')}]`,
+        );
+        return fallbackRoles;
       }
     }
 
@@ -639,19 +650,19 @@ export class RoleManagerService {
     return strict ? userListMatch : allEmployees || userListMatch;
   }
 
-  async listAllMembers(
-    bizID: string,
-    type?: string,
-  ): Promise<unknown> {
+  async listAllMembers(bizID: string, type?: string): Promise<unknown> {
+    // 平台默认每页约 50 条；100 页上限（5000 成员）防 SDK 分页异常导致无限循环
     const PAGE_SIZE = 50;
+    const MAX_PAGES = 100;
     let page = 1;
     let hasMore = true;
     const allUserList: Array<Record<string, unknown>> = [];
     const allDeptList: Array<Record<string, unknown>> = [];
     const allChatList: Array<Record<string, unknown>> = [];
-    let lastMeta: Record<string, unknown> = {};
+    const seenUserKeys = new Set<string>();
+    let meta: Record<string, unknown> = {};
 
-    while (hasMore) {
+    while (hasMore && page <= MAX_PAGES) {
       const res = await this.authzSDK.members.list(bizID, {
         type: type as any,
         page,
@@ -662,19 +673,61 @@ export class RoleManagerService {
         hasMore?: boolean;
       };
       const members = data?.members ?? (data as Record<string, unknown>);
-      const userList = (members?.userList ?? []) as Array<Record<string, unknown>>;
-      const deptList = (members?.departmentList ?? []) as Array<Record<string, unknown>>;
-      const chatList = (members?.groupChatList ?? []) as Array<Record<string, unknown>>;
-      allUserList.push(...userList);
+      const userList = (members?.userList ?? []) as Array<
+        Record<string, unknown>
+      >;
+      const deptList = (members?.departmentList ?? []) as Array<
+        Record<string, unknown>
+      >;
+      const chatList = (members?.groupChatList ?? []) as Array<
+        Record<string, unknown>
+      >;
+
+      // 角色级 meta（allEmployees/public/presetGroup）取第一页，避免逐页覆盖翻转语义
+      if (page === 1) {
+        meta = {
+          allEmployees: members?.allEmployees ?? false,
+          public: members?.public ?? false,
+          presetGroup: members?.presetGroup ?? { isContainsAdmin: false },
+        };
+      }
+
+      // 按 userID 去重，防御 SDK 分页重复页导致列表重复/total 虚高
+      const freshUsers = userList.filter((user) => {
+        const key = String(
+          (user as { userID?: string })?.userID ??
+            (user as { user_id?: string })?.user_id ??
+            '',
+        );
+        if (!key || seenUserKeys.has(key)) return false;
+        seenUserKeys.add(key);
+        return true;
+      });
+      allUserList.push(...freshUsers);
       allDeptList.push(...deptList);
       allChatList.push(...chatList);
-      lastMeta = {
-        allEmployees: members?.allEmployees ?? false,
-        public: members?.public ?? false,
-        presetGroup: members?.presetGroup ?? { isContainsAdmin: false },
-      };
+
       hasMore = data?.hasMore ?? false;
+
+      // 无进展防御：SDK 分页失效（page 被忽略）时重复拉取同页，无新增即终止
+      if (
+        hasMore &&
+        freshUsers.length === 0 &&
+        deptList.length === 0 &&
+        chatList.length === 0
+      ) {
+        this.logger.warn(
+          `listAllMembers(${bizID}) page ${page}: no new members but hasMore=true, stopping`,
+        );
+        break;
+      }
       page++;
+    }
+
+    if (hasMore) {
+      this.logger.warn(
+        `listAllMembers(${bizID}) hit ${MAX_PAGES}-page limit; result may be incomplete`,
+      );
     }
 
     const total = allUserList.length + allDeptList.length + allChatList.length;
@@ -683,7 +736,7 @@ export class RoleManagerService {
         userList: allUserList,
         departmentList: allDeptList,
         groupChatList: allChatList,
-        ...lastMeta,
+        ...meta,
       },
       total,
       hasMore: false,
