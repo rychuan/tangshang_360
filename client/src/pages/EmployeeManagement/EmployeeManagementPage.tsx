@@ -85,7 +85,7 @@ const EmployeeManagementPage: React.FC = () => {
           ) : undefined
         }
       />
-      <div className="flex flex-1 min-h-0 gap-4">
+      <div className="flex flex-1 min-h-0 gap-4 overflow-hidden">
         {/* 左侧部门树（Bitable 视图下隐藏） */}
         {showDepartmentTree && view === 'employees' && (
           <aside className="w-[260px] shrink-0 min-h-0 overflow-hidden rounded-lg border bg-card">
@@ -97,7 +97,7 @@ const EmployeeManagementPage: React.FC = () => {
         )}
 
         {/* 右侧：员工列表 / Bitable 连接管理（员工列表仅对 employees view 可见） */}
-        <section className="flex-1 min-w-0">
+        <section className="flex-1 min-w-0 overflow-y-auto">
           {view === 'bitable' ? (
             <BitableConnectionTab />
           ) : canViewEmployees ? (
