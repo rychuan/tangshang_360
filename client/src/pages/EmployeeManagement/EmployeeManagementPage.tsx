@@ -65,7 +65,10 @@ const EmployeeManagementPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-1 flex-col min-h-0 gap-4 md:gap-6">
+    <div
+      className="flex flex-col gap-4 md:gap-6"
+      style={{ height: 'calc(100svh - 4rem - 2.5rem)' }}
+    >
       <PageHeader
         title="员工管理"
         icon={UserCog}
