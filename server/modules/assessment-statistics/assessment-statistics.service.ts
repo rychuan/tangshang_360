@@ -154,7 +154,7 @@ export class AssessmentStatisticsService {
       )
       .leftJoin(department, eq(employee.departmentId, department.id))
       .where(and(baseWhere || sql`TRUE`, isNull(employee.deletedAt)))
-      .groupBy(employee.departmentId);
+      .groupBy(employee.departmentId, department.name);
 
     const departmentAvg: ChartsResponse['departmentAvg'] = deptRows.map(
       (r) => ({

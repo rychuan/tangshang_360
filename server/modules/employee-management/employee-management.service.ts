@@ -557,6 +557,7 @@ export class EmployeeManagementService {
           .values({
             employeeId: body.id,
             ...profileValues,
+            department: '',
           })
           .returning({ id: employee.employeeId });
       }
