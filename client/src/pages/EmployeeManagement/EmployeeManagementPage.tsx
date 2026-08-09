@@ -1,25 +1,13 @@
 import React, { useCallback, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { department as departmentApi } from '@/api';
-import type { DepartmentTreeNode } from '@shared/api.interface';
+import { findNodeName } from './department-tree-utils';
 import { PageHeader } from '@/components/business-ui/page-header';
 import EmployeeListTab from './EmployeeListTab';
 import { DepartmentTreePanel } from './DepartmentTreePanel';
 import { UserCog } from '@/components/ui/hugeicons';
 import { usePermissions } from '@/hooks/usePermissions';
 import { hasPermission } from '@/components/permission-policy';
-
-/** 在部门树中递归查找节点名称 */
-function findDeptName(nodes: DepartmentTreeNode[], id: string): string | null {
-  for (const node of nodes) {
-    if (node.id === id) return node.name;
-    if (node.children?.length) {
-      const found = findDeptName(node.children, id);
-      if (found !== null) return found;
-    }
-  }
-  return null;
-}
 
 const EmployeeManagementPage: React.FC = () => {
   const { permissions } = usePermissions();
@@ -39,7 +27,7 @@ const EmployeeManagementPage: React.FC = () => {
   // 从部门树数据中解析选中节点的名称
   const selectedDeptName: string | null =
     selectedDeptId && deptData?.tree
-      ? findDeptName(deptData.tree, selectedDeptId)
+      ? findNodeName(deptData.tree, selectedDeptId)
       : null;
 
   const handleDeptSelect = useCallback((id: string | null) => {
@@ -60,10 +48,7 @@ const EmployeeManagementPage: React.FC = () => {
   }
 
   return (
-    <div
-      className="flex flex-col gap-4 md:gap-6"
-      style={{ height: 'calc(100svh - 4rem - 2.5rem)' }}
-    >
+    <div className="flex h-[calc(100svh-4rem-2.5rem)] flex-col gap-4 md:gap-6">
       <PageHeader title="员工管理" icon={UserCog} visuallyHidden />
       <div className="flex flex-1 min-h-0 gap-4 overflow-hidden">
         {/* 左侧部门树 */}
@@ -81,7 +66,7 @@ const EmployeeManagementPage: React.FC = () => {
           {canViewEmployees ? (
             <EmployeeListTab departmentName={selectedDeptName} />
           ) : (
-            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+            <div className="flex min-h-[200px] items-center justify-center text-sm text-muted-foreground">
               请选择左侧部门查看组织架构
             </div>
           )}

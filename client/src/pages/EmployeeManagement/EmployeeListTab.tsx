@@ -114,7 +114,7 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
   const isLastPage = filters.page === totalPages;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 min-h-full">
       {/* 筛选条件 + 操作按钮 */}
       <div className="flex items-center gap-3 flex-wrap">
         <InputGroup className="w-40">

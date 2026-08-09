@@ -4,6 +4,13 @@ import { useAuth, ROLE_SUBJECT } from '@lark-apaas/client-toolkit/auth';
 import { department as departmentApi } from '@/api';
 import type { DepartmentTreeNode } from '@shared/api.interface';
 import { BUILTIN_ROLE_CODES } from '@shared/api.interface';
+import {
+  buildTree,
+  countEmployees,
+  findNode,
+  findNodeByName,
+  findParentName,
+} from './department-tree-utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -42,74 +49,6 @@ import {
 interface DepartmentTreePanelProps {
   selectedId: string | null;
   onSelect: (id: string | null) => void;
-}
-
-function buildTree(
-  nodes: DepartmentTreeNode[],
-  filter: string,
-): DepartmentTreeNode[] {
-  if (!filter) return nodes;
-  const lower = filter.toLowerCase();
-  const match = (n: DepartmentTreeNode): boolean =>
-    n.name.toLowerCase().includes(lower) || (n.children?.some(match) ?? false);
-  return nodes
-    .filter(match)
-    .map((n) => ({ ...n, children: buildTree(n.children, filter) }));
-}
-
-function countEmployees(node: DepartmentTreeNode): number {
-  const childCount =
-    node.children?.reduce((sum, c) => sum + countEmployees(c), 0) ?? 0;
-  return (node.memberCount ?? 0) + childCount;
-}
-
-/** 获取所有子孙节点 ID */
-function getAllDescendantIds(node: DepartmentTreeNode): string[] {
-  const ids = [node.id];
-  node.children?.forEach((c) => ids.push(...getAllDescendantIds(c)));
-  return ids;
-}
-
-/** 在树中查找节点 */
-function findNode(
-  nodes: DepartmentTreeNode[],
-  id: string,
-): DepartmentTreeNode | null {
-  for (const n of nodes) {
-    if (n.id === id) return n;
-    if (n.children?.length) {
-      const found = findNode(n.children, id);
-      if (found) return found;
-    }
-  }
-  return null;
-}
-
-/** 在树中按名称查找节点 */
-function findNodeByName(
-  nodes: DepartmentTreeNode[],
-  name: string,
-): DepartmentTreeNode | null {
-  for (const n of nodes) {
-    if (n.name === name) return n;
-    if (n.children?.length) {
-      const found = findNodeByName(n.children, name);
-      if (found) return found;
-    }
-  }
-  return null;
-}
-
-/** 在树中查找节点的父级名称 */
-function findParentName(nodes: DepartmentTreeNode[], parentId: string): string {
-  for (const n of nodes) {
-    if (n.id === parentId) return n.name;
-    if (n.children?.length) {
-      const found = findParentName(n.children, parentId);
-      if (found) return found;
-    }
-  }
-  return '';
 }
 
 export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({

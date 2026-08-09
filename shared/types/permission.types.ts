@@ -316,9 +316,7 @@ export function sanitizePermissionConfig(
 ): PermissionItem[] {
   if (!Array.isArray(permissions)) return [];
 
-  const knownResources = Object.keys(
-    PERMISSION_MATRIX,
-  ) as PermissionResource[];
+  const knownResources = Object.keys(PERMISSION_MATRIX) as PermissionResource[];
   const merged = new Map<PermissionResource, Set<PermissionAction>>();
 
   for (const item of permissions) {

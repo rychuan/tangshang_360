@@ -172,5 +172,4 @@ describe('client permission component wiring', () => {
     expect(html).not.toContain('data-tab="employees"');
     expect(html).toContain('data-tab="departments"');
   });
-
 });
