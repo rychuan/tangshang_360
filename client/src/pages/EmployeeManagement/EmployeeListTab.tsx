@@ -66,11 +66,13 @@ interface EmployeeListTabProps {
 const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
   departmentName,
 }) => {
-  const { tableRef, tableMaxHeight } = useTableScrollHeight();
   const [filters, setters] = useEmployeeFilters();
   const { permissions } = usePermissions();
   const { ability } = useAuth();
   const capabilities = getEmployeeListCapabilities(permissions);
+  const { tableRef, tableMaxHeight } = useTableScrollHeight([
+    capabilities.showBindings,
+  ]);
   const canManageRoles =
     ability.can('admin', ROLE_SUBJECT) &&
     hasPermission(permissions, 'permission_management', 'edit');
@@ -374,7 +376,7 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
                           setters.setPage(filters.page - 1);
                         }
                       }}
-                      className={`h-7 text-xs ${isFirstPage ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
+                      className={`h-7 min-h-0 px-2 text-xs ${isFirstPage ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
                     />
                   </PaginationItem>
                   {visiblePages.map((page) => (
@@ -401,7 +403,7 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
                           setters.setPage(filters.page + 1);
                         }
                       }}
-                      className={`h-7 text-xs ${isLastPage ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
+                      className={`h-7 min-h-0 px-2 text-xs ${isLastPage ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
                     />
                   </PaginationItem>
                 </PaginationContent>

@@ -1,6 +1,15 @@
 import React from 'react';
 
-export function useTableScrollHeight(): {
+/**
+ * 计算表格/滚动面板的最大高度：使组件底部恰好落在视口底部（留 16px 边距），
+ * 内部滚动容器成为唯一滚动者，避免出现整页多余滚动。
+ *
+ * @param measureDeps 布局可能变化的依赖（如筛选栏因权限加载而换行增高），
+ *   变化时会重新测量，防止卡片高度过期导致底部内容（如分页栏）被挤到折叠线以下。
+ */
+export function useTableScrollHeight(
+  measureDeps: React.DependencyList = [],
+): {
   tableRef: React.RefObject<HTMLDivElement | null>;
   tableMaxHeight: string;
 } {
@@ -9,6 +18,7 @@ export function useTableScrollHeight(): {
   const retryCount = React.useRef(0);
 
   React.useEffect(() => {
+    retryCount.current = 0;
     const measure = () => {
       if (!tableRef.current) return;
       const top = tableRef.current.getBoundingClientRect().top;
@@ -39,7 +49,8 @@ export function useTableScrollHeight(): {
       if (cleanup) cleanup();
       window.removeEventListener('resize', onResize);
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [...measureDeps]);
 
   return { tableRef, tableMaxHeight };
 }
