@@ -33,6 +33,7 @@ import { UserSelect } from '@/components/business-ui/user-select';
 import { UserDisplay } from '@/components/business-ui/user-display';
 import { toast } from 'sonner';
 import { handleApiError, isApiNotFound } from '@client/src/utils/api-error';
+import { useTableScrollHeight } from '@/hooks/useTableScrollHeight';
 import {
   Plus,
   Pencil,
@@ -43,7 +44,6 @@ import {
   Search,
   X,
   Minus,
-  FolderPlus,
 } from '@/components/ui/hugeicons';
 
 interface DepartmentTreePanelProps {
@@ -58,6 +58,8 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
   const queryClient = useQueryClient();
   const { permissions } = usePermissions();
   const { ability } = useAuth();
+  // 部门树滚动区域与员工列表表格使用同一高度计算（底部对齐）
+  const { tableRef, tableMaxHeight } = useTableScrollHeight();
   const identityRoles = useMemo(
     () =>
       ability
@@ -319,10 +321,10 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
   };
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
-      {/* 搜索栏 + 展开/折叠按钮 */}
-      <div className="shrink-0 p-3 border-b space-y-2">
-        <div className="relative">
+    <div className="flex flex-col min-h-0">
+      {/* 搜索栏 + 展开/折叠/新建部门（同一行） */}
+      <div className="shrink-0 p-3 border-b">
+        <div className="relative mb-2">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
           <Input
             className="pl-8 pr-8 h-8 text-xs"
@@ -358,11 +360,27 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
           >
             <Minus className="size-3.5" />
           </Button>
+          <div className="flex-1" />
+          {canCreate && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => openCreate('')}
+            >
+              <Plus data-icon="inline-start" />
+              新建部门
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* 部门树 */}
-      <div className="flex-1 overflow-y-auto p-2">
+      {/* 部门树（高度与员工列表表格一致） */}
+      <div
+        ref={tableRef}
+        className="overflow-y-auto p-2"
+        style={{ height: tableMaxHeight }}
+      >
         <div
           className={`flex items-center gap-1 py-1.5 px-2 rounded cursor-pointer text-sm ${
             selectedId === null
@@ -382,20 +400,6 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
           renderTree(filtered, 0)
         )}
       </div>
-
-      {/* 新建部门按钮（仅 admin/hrd + organization edit） */}
-      {canCreate && (
-        <div className="shrink-0 p-2 border-t">
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full justify-start text-xs"
-            onClick={() => openCreate('')}
-          >
-            <Plus className="size-3.5" /> 新建部门
-          </Button>
-        </div>
-      )}
 
       {/* 新建/编辑弹窗 */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
