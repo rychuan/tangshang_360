@@ -127,19 +127,16 @@ describe('employee management access scope', () => {
   it.each([
     {
       scopeKind: 'self',
-      canManageGlobalConnections: false,
     },
     {
       scopeKind: 'managed',
-      canManageGlobalConnections: false,
     },
     {
       scopeKind: 'global',
-      canManageGlobalConnections: true,
     },
   ] as const)(
-    'derives the current-user global connection capability from $scopeKind DB scope',
-    async ({ scopeKind, canManageGlobalConnections }) => {
+    'derives the current-user access scope from $scopeKind DB scope',
+    async ({ scopeKind }) => {
       const permissions = [
         { resource: 'employees' as const, actions: ['view' as const] },
       ];
@@ -170,7 +167,6 @@ describe('employee management access scope', () => {
       await expect(service.getMyPermissions('user-1')).resolves.toEqual({
         permissions,
         accessScopeKind: scopeKind,
-        canManageGlobalConnections,
       });
       expect(
         roleManagerService.getUserEffectivePermissions,

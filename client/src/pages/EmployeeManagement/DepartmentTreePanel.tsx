@@ -319,7 +319,7 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* 搜索栏 + 展开/折叠按钮 */}
       <div className="shrink-0 p-3 border-b space-y-2">
         <div className="relative">

@@ -161,12 +161,10 @@ describe('employee management tab permissions', () => {
     expect(pageSource).toContain(
       "hasPermission(permissions, 'organization', 'view')",
     );
-    expect(pageSource).toContain('canManageGlobalConnections');
     expect(pageSource).not.toContain('identityRoles');
     expect(pageSource).not.toContain('BUILTIN_ROLE_CODES');
     expect(pageSource).not.toContain('ROLE_SUBJECT');
     expect(pageSource).not.toContain('useAuth');
-    expect(permissionsHookSource).toContain('canManageGlobalConnections');
     expect(permissionsHookSource).toMatch(
       /employeeManagement\s*\.getMyPermissions\(\)/,
     );
