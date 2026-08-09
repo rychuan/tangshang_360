@@ -48,7 +48,7 @@ export interface EmployeeTableProps {
 }
 
 const EmployeeTable: React.FC<EmployeeTableProps> = ({
-  employees,
+  employees = [],
   loading,
   selectedRowKeys,
   onToggleAll,
@@ -69,7 +69,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
 
   const allChecked =
     employees.length > 0 &&
-    employees.every((e) => selectedRowKeys.includes(e.id));
+    employees.every((e: EmployeeItem) => selectedRowKeys.includes(e.id));
   const someChecked =
     employees.some((e) => selectedRowKeys.includes(e.id)) && !allChecked;
 

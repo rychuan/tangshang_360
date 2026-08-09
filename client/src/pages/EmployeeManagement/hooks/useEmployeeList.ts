@@ -68,7 +68,7 @@ export function useEmployeeList(
         options.onPageOutOfRange(totalPages);
         return;
       }
-      setEmployees(res.items);
+      setEmployees(res.items ?? []);
     } catch (error: unknown) {
       handleApiError(error);
     } finally {
