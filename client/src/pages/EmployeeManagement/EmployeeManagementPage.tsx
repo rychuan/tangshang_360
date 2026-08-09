@@ -52,6 +52,7 @@ const EmployeeManagementPage: React.FC = () => {
     <PageShell
       header={<PageHeader title="员工管理" icon={UserCog} visuallyHidden />}
       contentClassName="overflow-hidden"
+      className="overflow-hidden"
     >
       {/* 左侧部门树（高度与员工列表一致：内容自适应 + 树区域同高计算） */}
       {showDepartmentTree && (
@@ -63,8 +64,8 @@ const EmployeeManagementPage: React.FC = () => {
         </aside>
       )}
 
-      {/* 右侧：员工列表 */}
-      <section className="flex-1 min-w-0 overflow-y-auto">
+      {/* 右侧：员工列表（内部滚动，页面整体固定） */}
+      <section className="flex-1 min-w-0 overflow-y-auto min-h-0">
         {canViewEmployees ? (
           <EmployeeListTab departmentName={selectedDeptName} />
         ) : (

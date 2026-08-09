@@ -73,6 +73,7 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
   const canManageHead = canManageDepartmentHead(permissions, identityRoles);
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [showMoreHint, setShowMoreHint] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingDept, setEditingDept] = useState<DepartmentTreeNode | null>(
     null,
@@ -141,6 +142,19 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
   const collapseAll = () => {
     setExpanded(new Set());
   };
+
+  /** 树区域滚动：底部还有内容时显示滚动提示 */
+  const handleTreeScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    setShowMoreHint(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+  };
+
+  // 树数据加载后检查初始是否可继续滚动
+  React.useEffect(() => {
+    const el = tableRef.current;
+    if (!el) return;
+    setShowMoreHint(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+  }, [tableMaxHeight, tree.length, search]);
 
   /** 选中部门时自动展开子级 */
   const handleSelect = (id: string) => {
@@ -363,7 +377,7 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
           <div className="flex-1" />
           {canCreate && (
             <Button
-              variant="outline"
+              variant="default"
               size="sm"
               className="h-7 text-xs"
               onClick={() => openCreate('')}
@@ -375,12 +389,13 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
         </div>
       </div>
 
-      {/* 部门树（高度与员工列表表格一致） */}
-      <div
-        ref={tableRef}
-        className="overflow-y-auto p-2"
-        style={{ height: tableMaxHeight }}
-      >
+      {/* 部门树（高度与员工列表表格一致；底部渐变提示可继续滚动） */}
+      <div className="relative" style={{ height: tableMaxHeight }}>
+        <div
+          ref={tableRef}
+          onScroll={handleTreeScroll}
+          className="h-full overflow-y-auto p-2"
+        >
         <div
           className={`flex items-center gap-1 py-1.5 px-2 rounded cursor-pointer text-sm ${
             selectedId === null
@@ -398,6 +413,13 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
           </div>
         ) : (
           renderTree(filtered, 0)
+        )}
+        </div>
+        {/* 底部滚动提示：仅当仍有内容可滚动时显示 */}
+        {showMoreHint && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-10 items-end justify-center bg-gradient-to-t from-card via-card/60 to-transparent">
+            <ChevronDown className="mb-0.5 size-4 animate-bounce text-muted-foreground" />
+          </div>
         )}
       </div>
 
