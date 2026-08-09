@@ -48,13 +48,16 @@ describe('operation DTO runtime validation', () => {
       );
     });
 
-    it('rejects negative score', async () => {
+    it('accepts negative score at DTO level (bonus dimension support)', async () => {
+      // 加减分维度支持负分：DTO 结构层不拦截负数（无法区分指标类型），
+      // 负分业务规则（普通指标拒负、加减分放行）由 service 层
+      // validateRatingsAgainstSnapshots 按快照 is_bonus 校验。
       const dto = plainToInstance(RatingSubmitDto, {
         isDraft: false,
-        ratings: [{ indicatorSnapshotId: 's1', score: -1 }],
+        ratings: [{ indicatorSnapshotId: 's1', score: -5 }],
       });
       const errors = await validate(dto);
-      expect(errors.some((e) => e.property === 'ratings')).toBe(true);
+      expect(errors).toEqual([]);
     });
   });
 

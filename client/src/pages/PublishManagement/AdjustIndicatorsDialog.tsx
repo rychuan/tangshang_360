@@ -38,8 +38,6 @@ import {
   Plus,
   AlertTriangle,
   FolderPlus,
-  X,
-  Check,
 } from '@/components/ui/hugeicons';
 import { getEmployeeSnapshot } from '@/api/assessment-publish';
 import {
@@ -92,9 +90,6 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
   loading,
 }) => {
   const [previewMode, setPreviewMode] = useState<boolean>(false);
-  const [addingDimension, setAddingDimension] = useState<boolean>(false);
-  const [newDimName, setNewDimName] = useState<string>('');
-  const [newDimWeight, setNewDimWeight] = useState<string>('');
 
   const queryClient = useQueryClient();
   const { data: indicators = [], isLoading: loadingIndicators } = useQuery({
@@ -120,8 +115,12 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
   const dimensionGroups: DimensionGroup[] = useMemo(() => {
     const groups: Record<string, DimensionGroup> = {};
     indicators.forEach((ind: AdjustIndicatorInput, i: number) => {
-      // 加减分行按行索引分组（名称可重复），普通指标按维度名分组
-      const key = ind.isBonus ? `__bonus__${i}` : ind.dimensionName || '未分组';
+      // 加减分行按行索引分组（名称可重复）；空名称维度行按索引独立成组（新增维度内联编辑）
+      const key = ind.isBonus
+        ? `__bonus__${i}`
+        : ind.dimensionName?.trim()
+          ? ind.dimensionName
+          : `__unnamed__${i}`;
       if (!groups[key]) {
         groups[key] = {
           dimensionName: ind.dimensionName,
@@ -243,38 +242,18 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
     );
   };
 
-  const handleConfirmAddDimension = (): void => {
-    const name: string = newDimName.trim();
-    const weight: number = Number(newDimWeight);
-    if (!name) {
-      toast.error('请输入维度名称');
-      return;
-    }
-    if (isNaN(weight) || weight < 0) {
-      toast.error('请输入有效的维度权重分');
-      return;
-    }
+  /**
+   * 添加维度：直接追加一个空维度（含一个空指标行），内联编辑（与模板编辑交互一致）。
+   * 空名称行按索引独立成组，用户可重命名/填权重/编辑指标。
+   */
+  const handleAddDimension = (): void => {
     queryClient.setQueryData(
       ['publish', 'snapshot', employee?.employeeId],
       (prev: AdjustIndicatorInput[]) => [
         ...prev,
-        {
-          ...EMPTY_INDICATOR,
-          weight,
-          dimensionName: name,
-          dimensionWeight: weight,
-        },
+        { ...EMPTY_INDICATOR, dimensionName: '', dimensionWeight: 0 },
       ],
     );
-    setAddingDimension(false);
-    setNewDimName('');
-    setNewDimWeight('');
-  };
-
-  const handleCancelAddDimension = (): void => {
-    setAddingDimension(false);
-    setNewDimName('');
-    setNewDimWeight('');
   };
 
   /**
@@ -747,57 +726,6 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
     );
   };
 
-  const renderAddDimensionForm = (): React.ReactNode => (
-    <Card className="border-dashed">
-      <CardContent className="pt-6">
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <FolderPlus className="size-4 text-muted-foreground" />
-            <span className="text-sm font-medium">新增维度</span>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-2">
-              <label className="text-xs text-muted-foreground">维度名称</label>
-              <Input
-                value={newDimName}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setNewDimName(e.target.value)
-                }
-                placeholder="请输入维度名称"
-                autoFocus
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-xs text-muted-foreground">权重分</label>
-              <Input
-                type="number"
-                value={newDimWeight}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setNewDimWeight(e.target.value)
-                }
-                placeholder="0"
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCancelAddDimension}
-            >
-              <X className="size-3.5 mr-1" />
-              取消
-            </Button>
-            <Button size="sm" onClick={handleConfirmAddDimension}>
-              <Check className="size-3.5 mr-1" />
-              确认
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] max-w-7xl max-h-[85vh] overflow-y-auto">
@@ -863,7 +791,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
                 </Alert>
               )}
 
-            {dimensionGroups.length === 0 && !addingDimension ? (
+            {dimensionGroups.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 gap-4">
                 <Empty>
                   <EmptyHeader>
@@ -874,10 +802,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
                   </EmptyHeader>
                 </Empty>
                 {!previewMode && (
-                  <Button
-                    variant="outline"
-                    onClick={() => setAddingDimension(true)}
-                  >
+                  <Button variant="outline" onClick={handleAddDimension}>
                     <FolderPlus className="size-4 mr-2" />
                     添加维度
                   </Button>
@@ -892,19 +817,16 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
                       : renderEditGroup(group, groupIdx),
                 )}
 
-                {!previewMode &&
-                  (addingDimension ? (
-                    renderAddDimensionForm()
-                  ) : (
-                    <Button
-                      variant="outline"
-                      className="w-full border-dashed"
-                      onClick={() => setAddingDimension(true)}
-                    >
-                      <FolderPlus className="size-4 mr-2" />
-                      添加维度
-                    </Button>
-                  ))}
+                {!previewMode && (
+                  <Button
+                    variant="outline"
+                    className="w-full border-dashed"
+                    onClick={handleAddDimension}
+                  >
+                    <FolderPlus className="size-4 mr-2" />
+                    添加维度
+                  </Button>
+                )}
               </>
             )}
 
