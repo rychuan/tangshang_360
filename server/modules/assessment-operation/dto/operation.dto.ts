@@ -7,7 +7,6 @@ import {
   IsOptional,
   IsString,
   MaxLength,
-  Min,
   MinLength,
   ValidateNested,
 } from 'class-validator';
@@ -31,7 +30,6 @@ export class RatingItemDto {
 
   @IsOptional()
   @IsNumber({ allowNaN: false, allowInfinity: false })
-  @Min(0)
   score?: number;
 
   @IsOptional()
