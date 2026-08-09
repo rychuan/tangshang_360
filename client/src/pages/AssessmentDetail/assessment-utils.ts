@@ -14,6 +14,8 @@ export interface RatingsState {
 export interface DimensionGroup {
   dimensionName: string;
   dimensionWeight: number;
+  /** 加减分维度（无指标、整体评分、支持负分） */
+  isBonus: boolean;
   indicators: AssessmentIndicatorDetail[];
 }
 
@@ -31,6 +33,8 @@ export function getScoreCoefficientWarnings(
 ): string[] {
   const warnings: string[] = [];
   for (const group of groups) {
+    // 加减分维度无权重系数概念，跳过系数警告
+    if (group.isBonus) continue;
     for (const ind of group.indicators) {
       const score = ratings[ind.id]?.score;
       if (exceedsScoreCoefficient(score, ind.weight)) {

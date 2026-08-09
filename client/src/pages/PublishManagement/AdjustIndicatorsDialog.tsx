@@ -68,6 +68,7 @@ interface DimensionGroup {
   dimensionWeight: number;
   indicators: AdjustIndicatorInput[];
   flatIndices: number[];
+  isBonus: boolean;
 }
 
 const EMPTY_INDICATOR: AdjustIndicatorInput = {
@@ -78,6 +79,7 @@ const EMPTY_INDICATOR: AdjustIndicatorInput = {
   weight: 0,
   dimensionName: '',
   dimensionWeight: 0,
+  isBonus: false,
 };
 
 const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
@@ -92,6 +94,8 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
   const [addingDimension, setAddingDimension] = useState<boolean>(false);
   const [newDimName, setNewDimName] = useState<string>('');
   const [newDimWeight, setNewDimWeight] = useState<string>('');
+  const [addingBonus, setAddingBonus] = useState<boolean>(false);
+  const [newBonusDescription, setNewBonusDescription] = useState<string>('');
 
   const queryClient = useQueryClient();
   const { data: indicators = [], isLoading: loadingIndicators } = useQuery({
@@ -107,6 +111,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
               weight: ind.weight,
               dimensionName: ind.dimensionName,
               dimensionWeight: ind.dimensionWeight,
+              isBonus: ind.isBonus ?? false,
             }))
           : [],
       ),
@@ -123,18 +128,25 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
           dimensionWeight: ind.dimensionWeight,
           indicators: [],
           flatIndices: [],
+          isBonus: ind.isBonus ?? false,
         };
       }
       groups[key].indicators.push(ind);
       groups[key].flatIndices.push(i);
     });
-    return Object.values(groups);
+    // 加减分维度固定排在所有普通维度之后
+    return Object.values(groups).sort(
+      (a, b) => Number(a.isBonus) - Number(b.isBonus),
+    );
   }, [indicators]);
 
   const dimensionWeightValidation = useMemo(
     () =>
       validateTotalWeight(
-        dimensionGroups.map((g) => ({ weight: g.dimensionWeight })),
+        dimensionGroups.map((g) => ({
+          weight: g.dimensionWeight,
+          isBonus: g.isBonus,
+        })),
       ),
     [dimensionGroups],
   );
@@ -145,6 +157,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
         dimensionGroups.map((g) => ({
           name: g.dimensionName,
           weight: g.dimensionWeight,
+          isBonus: g.isBonus,
           indicators: g.indicators.map((i) => ({ weight: i.weight ?? 0 })),
         })),
       ),
@@ -264,6 +277,58 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
     setNewDimWeight('');
   };
 
+  /** 加减分维度行编辑：维度名同步 content（notNull 兜底），说明独立 */
+  const handleBonusChange = (
+    flatIndex: number,
+    field: 'dimensionName' | 'description',
+    value: string,
+  ): void => {
+    queryClient.setQueryData(
+      ['publish', 'snapshot', employee?.employeeId],
+      (prev: AdjustIndicatorInput[]) => {
+        const next: AdjustIndicatorInput[] = [...prev];
+        next[flatIndex] = { ...next[flatIndex], [field]: value };
+        if (field === 'dimensionName') {
+          next[flatIndex] = { ...next[flatIndex], content: value };
+        }
+        return next;
+      },
+    );
+  };
+
+  const handleConfirmAddBonus = (): void => {
+    const name: string = newDimName.trim();
+    if (!name) {
+      toast.error('请输入加减分项名称');
+      return;
+    }
+    queryClient.setQueryData(
+      ['publish', 'snapshot', employee?.employeeId],
+      (prev: AdjustIndicatorInput[]) => [
+        ...prev,
+        {
+          content: name,
+          description: newBonusDescription.trim(),
+          algorithm: '',
+          dataSource: '',
+          weight: 0,
+          dimensionName: name,
+          dimensionWeight: 0,
+          isBonus: true,
+        },
+      ],
+    );
+    setAddingBonus(false);
+    setNewDimName('');
+    setNewBonusDescription('');
+  };
+
+  const handleCancelAddBonus = (): void => {
+    setAddingBonus(false);
+    setNewDimName('');
+    setNewBonusDescription('');
+  };
+
   const handleCopyTemplate = (): void => {
     if (!employee) return;
     queryClient.invalidateQueries({
@@ -285,7 +350,12 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
       );
       return;
     }
-    onSubmit(indicators);
+    // 加减分维度固定排在所有普通维度之后
+    const sorted: AdjustIndicatorInput[] = [...indicators].sort(
+      (a, b) =>
+        Number(a.isBonus ?? false) - Number(b.isBonus ?? false),
+    );
+    onSubmit(sorted);
   };
 
   const handleDeleteSnapshot = (): void => {
@@ -302,59 +372,74 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
           <h3 className="text-base font-semibold">
             {group.dimensionName || '未分组'}
           </h3>
-          <Badge
-            variant="outline"
-            className="bg-primary/10 text-primary border-primary/20 text-xs font-bold"
-          >
-            权重分 {group.dimensionWeight}%
-          </Badge>
+          {group.isBonus ? (
+            <Badge
+              variant="outline"
+              className="bg-warning/10 text-warning border-warning/20 text-xs font-bold"
+            >
+              加减分
+            </Badge>
+          ) : (
+            <Badge
+              variant="outline"
+              className="bg-primary/10 text-primary border-primary/20 text-xs font-bold"
+            >
+              权重分 {group.dimensionWeight}%
+            </Badge>
+          )}
         </div>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
-          <Table className="table-fixed w-full">
-            <TableHeader>
-              <TableRow className="bg-muted/30">
-                <TableHead className="w-[20%] text-xs">指标</TableHead>
-                <TableHead className="w-[30%] text-xs hidden md:table-cell">
-                  说明
-                </TableHead>
-                <TableHead className="w-[20%] text-xs hidden lg:table-cell">
-                  算法/描述
-                </TableHead>
-                <TableHead className="w-[18%] text-xs hidden lg:table-cell">
-                  数据来源
-                </TableHead>
-                <TableHead className="text-center w-[12%] text-xs">
-                  权重分
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {group.indicators.map(
-                (ind: AdjustIndicatorInput, idx: number) => (
-                  <TableRow key={idx}>
-                    <TableCell className="text-xs whitespace-pre-wrap break-words">
-                      {ind.content || '-'}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground hidden md:table-cell whitespace-pre-wrap break-words">
-                      {ind.description || '-'}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground hidden lg:table-cell whitespace-pre-wrap break-words">
-                      {ind.algorithm || '-'}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground hidden lg:table-cell whitespace-pre-wrap break-words">
-                      {ind.dataSource || '-'}
-                    </TableCell>
-                    <TableCell className="text-xs text-center">
-                      {ind.weight}
-                    </TableCell>
-                  </TableRow>
-                ),
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        {group.isBonus ? (
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
+            {group.indicators[0]?.description || '（未填写说明）'}
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table className="table-fixed w-full">
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="w-[20%] text-xs">指标</TableHead>
+                  <TableHead className="w-[30%] text-xs hidden md:table-cell">
+                    说明
+                  </TableHead>
+                  <TableHead className="w-[20%] text-xs hidden lg:table-cell">
+                    算法/描述
+                  </TableHead>
+                  <TableHead className="w-[18%] text-xs hidden lg:table-cell">
+                    数据来源
+                  </TableHead>
+                  <TableHead className="text-center w-[12%] text-xs">
+                    权重分
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {group.indicators.map(
+                  (ind: AdjustIndicatorInput, idx: number) => (
+                    <TableRow key={idx}>
+                      <TableCell className="text-xs whitespace-pre-wrap break-words">
+                        {ind.content || '-'}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground hidden md:table-cell whitespace-pre-wrap break-words">
+                        {ind.description || '-'}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground hidden lg:table-cell whitespace-pre-wrap break-words">
+                        {ind.algorithm || '-'}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground hidden lg:table-cell whitespace-pre-wrap break-words">
+                        {ind.dataSource || '-'}
+                      </TableCell>
+                      <TableCell className="text-xs text-center">
+                        {ind.weight}
+                      </TableCell>
+                    </TableRow>
+                  ),
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -363,6 +448,72 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
     group: DimensionGroup,
     groupIdx: number,
   ): React.ReactNode => {
+    if (group.isBonus) {
+      const bonusFlatIndex: number = group.flatIndices[0];
+      const bonusRow: AdjustIndicatorInput | undefined = group.indicators[0];
+      return (
+        <Card key={groupIdx}>
+          <CardHeader className="pb-2 bg-muted">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground shrink-0">
+                加减分项：
+              </span>
+              <Input
+                value={group.dimensionName}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  handleBonusChange(
+                    bonusFlatIndex,
+                    'dimensionName',
+                    e.target.value,
+                  )
+                }
+                className="flex-1 text-sm font-semibold h-8"
+                placeholder="加减分项名称"
+              />
+              <Badge
+                variant="outline"
+                className="bg-warning/10 text-warning border-warning/20 text-xs font-bold shrink-0"
+              >
+                加减分
+              </Badge>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-destructive"
+                onClick={() => handleRemoveDimension(group)}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">
+                  维度说明
+                </label>
+                <Textarea
+                  className="min-h-[64px] resize-y text-xs"
+                  placeholder="说明加减分的适用场景、规则等"
+                  value={bonusRow?.description || ''}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                    handleBonusChange(
+                      bonusFlatIndex,
+                      'description',
+                      e.target.value,
+                    )
+                  }
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                加减分维度不占用权重比例，评分时支持填写正分或负分，直接计入绩效总分。
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
     const indicatorSum: number = group.indicators.reduce(
       (sum: number, ind: AdjustIndicatorInput) => sum + (ind.weight ?? 0),
       0,
@@ -621,6 +772,63 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
     </Card>
   );
 
+  const renderAddBonusForm = (): React.ReactNode => (
+    <Card className="border-dashed">
+      <CardContent className="pt-6">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <Plus className="size-4 text-muted-foreground" />
+            <span className="text-sm font-medium">新增加减分项</span>
+            <Badge
+              variant="outline"
+              className="bg-warning/10 text-warning border-warning/20 text-xs font-bold"
+            >
+              加减分
+            </Badge>
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs text-muted-foreground">
+              加减分项名称
+            </label>
+            <Input
+              value={newDimName}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setNewDimName(e.target.value)
+              }
+              placeholder="如：重大贡献加分 / 违规扣分"
+              autoFocus
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs text-muted-foreground">说明</label>
+            <Textarea
+              value={newBonusDescription}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                setNewBonusDescription(e.target.value)
+              }
+              placeholder="说明加减分的适用场景、规则等"
+              className="min-h-[64px] resize-y text-xs"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCancelAddBonus}
+            >
+              <X className="size-3.5 mr-1" />
+              取消
+            </Button>
+            <Button size="sm" onClick={handleConfirmAddBonus}>
+              <Check className="size-3.5 mr-1" />
+              确认
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] max-w-7xl max-h-[85vh] overflow-y-auto">
@@ -719,15 +927,30 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
                   (addingDimension ? (
                     renderAddDimensionForm()
                   ) : (
-                    <Button
-                      variant="outline"
-                      className="w-full border-dashed"
-                      onClick={() => setAddingDimension(true)}
-                    >
-                      <FolderPlus className="size-4 mr-2" />
-                      添加维度
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1 border-dashed"
+                        onClick={() => setAddingDimension(true)}
+                      >
+                        <FolderPlus className="size-4 mr-2" />
+                        添加维度
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1 border-dashed"
+                        onClick={() => {
+                          setNewDimName('');
+                          setNewBonusDescription('');
+                          setAddingBonus(true);
+                        }}
+                      >
+                        <Plus className="size-4 mr-2" />
+                        添加加减分项
+                      </Button>
+                    </div>
                   ))}
+                {!previewMode && addingBonus && renderAddBonusForm()}
               </>
             )}
 

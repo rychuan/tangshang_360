@@ -242,6 +242,7 @@ export const employeeIndicatorSnapshot = pgTable("employee_indicator_snapshot", 
   adjustedBy: userProfile("adjusted_by"),
   adjustedAt: customTimestamptz("adjusted_at", { precision: 6 }),
   sortOrder: integer("sort_order").notNull().default(0),
+  isBonus: boolean("is_bonus").notNull().default(false),
   // System field: Creation time (auto-filled, do not modify)
   createdAt: customTimestamptz("_created_at", { precision: 3 }).notNull().default(sql`CURRENT_TIMESTAMP`),
   // System field: Creator (auto-filled, do not modify)
@@ -357,6 +358,7 @@ export const assessmentIndicatorSnapshot = pgTable("assessment_indicator_snapsho
   adjustedBy: userProfile("adjusted_by"),
   adjustedAt: customTimestamptz("adjusted_at", { precision: 6 }),
   sortOrder: integer("sort_order").notNull().default(0),
+  isBonus: boolean("is_bonus").notNull().default(false),
   // System field: Creation time (auto-filled, do not modify)
   createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
   // System field: Creator (auto-filled, do not modify)
@@ -475,6 +477,8 @@ export const assessmentDimension = pgTable("assessment_dimension", {
   name: varchar("name", { length: 255 }).notNull(),
   weight: numeric("weight").notNull().default('0'),
   sortOrder: integer("sort_order").notNull().default(0),
+  isBonus: boolean("is_bonus").notNull().default(false),
+  description: text("description"),
   // System field: Creation time (auto-filled, do not modify)
   createdAt: customTimestamptz("_created_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),
   // System field: Creator (auto-filled, do not modify)

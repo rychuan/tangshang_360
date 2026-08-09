@@ -60,6 +60,8 @@ export type SnapshotValidationInput = {
   id: string;
   weight: string | number;
   content: string;
+  /** 加减分维度快照行：允许负分、非必填、无完成情况要求 */
+  isBonus?: boolean;
 };
 
 export function validateRatingsAgainstSnapshots(
@@ -84,7 +86,11 @@ export function validateRatingsAgainstSnapshots(
     if (rating.score == null) {
       continue;
     }
-    if (rating.score < 0 || !Number.isFinite(rating.score)) {
+    if (!Number.isFinite(rating.score)) {
+      throw new BadRequestException('评分必须为有效数值');
+    }
+    // 普通指标不允许负分；加减分维度支持负分（加减分）
+    if (!snapshot.isBonus && rating.score < 0) {
       throw new BadRequestException('评分不能为负数或非法数值');
     }
   }
@@ -93,7 +99,10 @@ export function validateRatingsAgainstSnapshots(
     const submittedIds = new Set(
       ratings.filter((r) => r.score != null).map((r) => r.indicatorSnapshotId),
     );
-    const missing = snapshots.filter((s) => !submittedIds.has(s.id));
+    // 加减分项可选（不评分=不加不减），不强制必填
+    const missing = snapshots.filter(
+      (s) => !submittedIds.has(s.id) && !s.isBonus,
+    );
     if (missing.length > 0) {
       throw new BadRequestException(
         `以下指标未评分: ${missing.map((s) => s.content).join('、')}`,
@@ -102,6 +111,7 @@ export function validateRatingsAgainstSnapshots(
 
     if (options.requireCompletionStatus) {
       const missingCompletion = snapshots.filter((s) => {
+        if (s.isBonus) return false;
         const rating = ratings.find((r) => r.indicatorSnapshotId === s.id);
         return !rating?.completionStatus?.trim();
       });
@@ -263,6 +273,7 @@ export class AssessmentOperationService {
       return {
         id: snap.id,
         ...fields,
+        isBonus: snap.isBonus ?? false,
         selfScore: selfRating?.score,
         selfCompletionStatus: selfRating?.completionStatus || undefined,
         selfComment: selfRating?.comment || undefined,

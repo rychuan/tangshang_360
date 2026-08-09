@@ -9,7 +9,7 @@ import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { eq, and, like, count, desc, sql, inArray, isNull } from 'drizzle-orm';
+import { eq, and, like, count, desc, sql, inArray, isNull, asc } from 'drizzle-orm';
 import {
   assessmentTemplate,
   assessmentDimension,
@@ -130,7 +130,10 @@ export class AssessmentTemplateService {
       .select()
       .from(assessmentDimension)
       .where(eq(assessmentDimension.templateId, id))
-      .orderBy(assessmentDimension.sortOrder);
+      .orderBy(
+        asc(assessmentDimension.isBonus),
+        assessmentDimension.sortOrder,
+      );
 
     const dimensionIds: string[] = dimensions.map(
       (d: (typeof dimensions)[number]) => d.id,
@@ -166,6 +169,8 @@ export class AssessmentTemplateService {
         id: dim.id,
         name: dim.name,
         weight: Number(dim.weight),
+        isBonus: dim.isBonus ?? false,
+        description: dim.description || '',
         indicators: (indicatorsByDim[dim.id] || []).map(
           (ind: typeof assessmentIndicator.$inferSelect) => ({
             id: ind.id,
@@ -205,6 +210,8 @@ export class AssessmentTemplateService {
             templateId,
             name: dim.name,
             weight: String(dim.weight),
+            isBonus: dim.isBonus ?? false,
+            description: dim.description ?? null,
             sortOrder: i,
           })
           .returning({ id: assessmentDimension.id });
@@ -280,6 +287,8 @@ export class AssessmentTemplateService {
             templateId: id,
             name: dim.name,
             weight: String(dim.weight),
+            isBonus: dim.isBonus ?? false,
+            description: dim.description ?? null,
             sortOrder: i,
           })
           .returning({ id: assessmentDimension.id });
@@ -372,7 +381,9 @@ export class AssessmentTemplateService {
   private validateWeights(
     dimensions: CreateTemplateRequest['dimensions'],
   ): void {
-    const weightSum: number = dimensions.reduce(
+    // 加减分维度不参与权重 100 校验（无指标、权重固定 0）
+    const normalDimensions = dimensions.filter((d) => !d.isBonus);
+    const weightSum: number = normalDimensions.reduce(
       (sum: number, d) => sum + d.weight,
       0,
     );
@@ -383,7 +394,7 @@ export class AssessmentTemplateService {
       );
     }
 
-    for (const dim of dimensions) {
+    for (const dim of normalDimensions) {
       const indicatorWeightSum: number = dim.indicators.reduce(
         (sum: number, ind) => sum + ind.weight,
         0,

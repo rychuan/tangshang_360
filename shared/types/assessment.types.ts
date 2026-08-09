@@ -27,6 +27,8 @@ export interface AssessmentDimensionDef {
   id: string;
   name: string;
   weight: number;
+  isBonus: boolean;
+  description: string;
   indicators: AssessmentIndicatorDef[];
 }
 
@@ -46,6 +48,9 @@ export interface CreateTemplateRequest {
   dimensions: Array<{
     name: string;
     weight: number;
+    /** 加减分维度：不参与权重100校验，无指标，评分支持负分直接加入总分 */
+    isBonus?: boolean;
+    description?: string;
     indicators: Array<{
       content: string;
       description: string;
@@ -165,6 +170,8 @@ export interface AssessmentIndicatorDetail {
   algorithm: string;
   dataSource: string;
   weight: number;
+  /** 加减分维度快照行（无指标、支持负分、非必填） */
+  isBonus?: boolean;
   selfScore?: number;
   selfCompletionStatus?: string;
   selfComment?: string;
@@ -279,6 +286,8 @@ export interface AdjustIndicatorInput {
   weight: number;
   dimensionName: string;
   dimensionWeight: number;
+  /** 加减分维度快照行：不参与权重校验，评分支持负分 */
+  isBonus?: boolean;
 }
 
 export interface AdjustRequest {
@@ -355,6 +364,7 @@ export interface InstanceIndicatorItem {
   weight: number;
   dimensionName?: string;
   dimensionWeight?: number;
+  isBonus?: boolean;
 }
 
 export interface InstanceIndicatorsResponse {

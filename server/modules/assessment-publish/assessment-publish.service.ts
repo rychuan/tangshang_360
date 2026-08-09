@@ -355,20 +355,25 @@ export class AssessmentPublishService {
       .where(inArray(assessmentTemplate.id, templateIds));
     const templateMap = new Map(templates.map((t) => [t.id, t.isActive]));
 
+    // 模板必须有普通指标或加减分维度才能发布（加减分维度无指标，单独统计）
     const indicatorCounts = await this.db
       .select({
         templateId: assessmentDimension.templateId,
         cnt: sql<number>`count(${assessmentIndicator.id})::int`,
+        bonusCnt: sql<number>`count(*) FILTER (WHERE ${assessmentDimension.isBonus})::int`,
       })
       .from(assessmentDimension)
-      .innerJoin(
+      .leftJoin(
         assessmentIndicator,
         eq(assessmentIndicator.dimensionId, assessmentDimension.id),
       )
       .where(inArray(assessmentDimension.templateId, templateIds))
       .groupBy(assessmentDimension.templateId);
     const indicatorCountMap = new Map(
-      indicatorCounts.map((r) => [r.templateId, r.cnt]),
+      indicatorCounts.map((r) => [
+        r.templateId,
+        Number(r.cnt) + Number(r.bonusCnt),
+      ]),
     );
 
     const employees = await this.db
@@ -790,6 +795,7 @@ export class AssessmentPublishService {
         weight: assessmentIndicatorSnapshot.weight,
         dimensionName: assessmentIndicatorSnapshot.dimensionName,
         dimensionWeight: assessmentIndicatorSnapshot.dimensionWeight,
+        isBonus: assessmentIndicatorSnapshot.isBonus,
         sortOrder: assessmentIndicatorSnapshot.sortOrder,
       })
       .from(assessmentIndicatorSnapshot)
@@ -805,6 +811,7 @@ export class AssessmentPublishService {
         weight: Number(row.weight),
         dimensionName: row.dimensionName,
         dimensionWeight: Number(row.dimensionWeight),
+        isBonus: row.isBonus ?? false,
       }),
     );
 

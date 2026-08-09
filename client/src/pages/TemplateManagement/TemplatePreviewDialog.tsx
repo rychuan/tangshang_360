@@ -57,57 +57,72 @@ const TemplatePreviewDialog: React.FC<TemplatePreviewDialogProps> = ({
                 <CardHeader className="pb-2 bg-muted">
                   <div className="flex items-center gap-2">
                     <h3 className="text-base font-semibold">{dim.name}</h3>
-                    <Badge
-                      variant="outline"
-                      className="bg-primary/10 text-primary border-primary/20 text-xs font-bold"
-                    >
-                      权重分 {dim.weight}%
-                    </Badge>
+                    {dim.isBonus ? (
+                      <Badge
+                        variant="outline"
+                        className="bg-warning/10 text-warning border-warning/20 text-xs font-bold"
+                      >
+                        加减分
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="bg-primary/10 text-primary border-primary/20 text-xs font-bold"
+                      >
+                        权重分 {dim.weight}%
+                      </Badge>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <Table className="table-fixed w-full">
-                    <TableHeader>
-                      <TableRow className="bg-muted/30">
-                        <TableHead className="w-[20%] text-xs">指标</TableHead>
-                        <TableHead className="w-[30%] text-xs hidden md:table-cell">
-                          说明
-                        </TableHead>
-                        <TableHead className="w-[20%] text-xs hidden lg:table-cell">
-                          算法/描述
-                        </TableHead>
-                        <TableHead className="w-[18%] text-xs hidden lg:table-cell">
-                          数据来源
-                        </TableHead>
-                        <TableHead className="text-center w-[12%] text-xs">
-                          权重分
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {dim.indicators.map(
-                        (ind: AssessmentIndicatorDef, indIdx: number) => (
-                          <TableRow key={ind.id || indIdx}>
-                            <TableCell className="text-xs whitespace-pre-wrap break-words">
-                              {ind.content}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-xs whitespace-pre-wrap break-words hidden md:table-cell">
-                              {ind.description || '-'}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-xs whitespace-pre-wrap break-words hidden lg:table-cell">
-                              {ind.algorithm || '-'}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-xs whitespace-pre-wrap break-words hidden lg:table-cell">
-                              {ind.dataSource || '-'}
-                            </TableCell>
-                            <TableCell className="text-center text-xs">
-                              {ind.weight}
-                            </TableCell>
-                          </TableRow>
-                        ),
-                      )}
-                    </TableBody>
-                  </Table>
+                  {dim.isBonus ? (
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
+                      {dim.description || '（未填写说明）'}
+                    </p>
+                  ) : (
+                    <Table className="table-fixed w-full">
+                      <TableHeader>
+                        <TableRow className="bg-muted/30">
+                          <TableHead className="w-[20%] text-xs">指标</TableHead>
+                          <TableHead className="w-[30%] text-xs hidden md:table-cell">
+                            说明
+                          </TableHead>
+                          <TableHead className="w-[20%] text-xs hidden lg:table-cell">
+                            算法/描述
+                          </TableHead>
+                          <TableHead className="w-[18%] text-xs hidden lg:table-cell">
+                            数据来源
+                          </TableHead>
+                          <TableHead className="text-center w-[12%] text-xs">
+                            权重分
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {dim.indicators.map(
+                          (ind: AssessmentIndicatorDef, indIdx: number) => (
+                            <TableRow key={ind.id || indIdx}>
+                              <TableCell className="text-xs whitespace-pre-wrap break-words">
+                                {ind.content}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-xs whitespace-pre-wrap break-words hidden md:table-cell">
+                                {ind.description || '-'}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-xs whitespace-pre-wrap break-words hidden lg:table-cell">
+                                {ind.algorithm || '-'}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-xs whitespace-pre-wrap break-words hidden lg:table-cell">
+                                {ind.dataSource || '-'}
+                              </TableCell>
+                              <TableCell className="text-center text-xs">
+                                {ind.weight}
+                              </TableCell>
+                            </TableRow>
+                          ),
+                        )}
+                      </TableBody>
+                    </Table>
+                  )}
                 </CardContent>
               </Card>
             ),

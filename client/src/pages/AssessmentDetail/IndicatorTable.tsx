@@ -100,6 +100,96 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     );
   };
 
+  /** 加减分维度卡片：维度名称+说明+员工/上级说明（两个长文本）+评分（可为负分） */
+  const renderBonusCard = (group: DimensionGroup): React.ReactNode => {
+    const indicator = group.indicators[0];
+    const canEdit = canEditSelf || canEditSupervisor;
+    return (
+      <Card>
+        <CardHeader className="pb-4 bg-muted/60">
+          <div className="flex items-center gap-3">
+            <h3 className="text-base font-semibold">
+              {group.dimensionName}
+            </h3>
+            <Badge
+              variant="outline"
+              className="bg-warning/10 text-warning border-warning/20 text-xs font-bold"
+            >
+              加减分
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-4">
+            {indicator?.description && (
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
+                {indicator.description}
+              </p>
+            )}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <p className="mb-1 text-xs text-muted-foreground">员工说明</p>
+                {canEditSelf && indicator ? (
+                  <Textarea
+                    className="min-h-20 w-full resize-y text-xs"
+                    placeholder="填写员工说明"
+                    value={ratings[indicator.id]?.comment ?? ''}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                      updateRating(indicator.id, 'comment', e.target.value)
+                    }
+                  />
+                ) : (
+                  <p className="whitespace-pre-wrap break-words text-xs text-muted-foreground">
+                    {indicator?.selfComment || '-'}
+                  </p>
+                )}
+              </div>
+              <div>
+                <p className="mb-1 text-xs text-muted-foreground">上级说明</p>
+                {canEditSupervisor && indicator ? (
+                  <Textarea
+                    className="min-h-20 w-full resize-y text-xs"
+                    placeholder="填写上级说明"
+                    value={ratings[indicator.id]?.comment ?? ''}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                      updateRating(indicator.id, 'comment', e.target.value)
+                    }
+                  />
+                ) : (
+                  <p className="whitespace-pre-wrap break-words text-xs text-muted-foreground">
+                    {indicator?.supervisorComment || '-'}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <p className="text-xs text-muted-foreground shrink-0">
+                评分{canEdit ? '（可为负分）' : ''}
+              </p>
+              {indicator && canEdit ? (
+                <Input
+                  type="number"
+                  step="0.1"
+                  placeholder="0"
+                  className="w-28 text-center"
+                  value={ratings[indicator.id]?.score ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    updateRating(indicator.id, 'score', e.target.value)
+                  }
+                />
+              ) : (
+                <span className="text-sm font-medium tabular-nums">
+                  自评 {indicator?.selfScore ?? '-'} 分 · 上级{' '}
+                  {indicator?.supervisorScore ?? '-'} 分
+                </span>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   if (groups.length === 0) {
     return (
       <div className="py-12">
@@ -126,6 +216,9 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             </div>
           )}
 
+          {group.isBonus ? (
+            renderBonusCard(group)
+          ) : (
           <Card>
             <CardHeader className="pb-4 bg-muted/60">
               <div className="flex items-center gap-3">
@@ -371,6 +464,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               </div>
             </CardContent>
           </Card>
+          )}
         </React.Fragment>
       ))}
     </div>

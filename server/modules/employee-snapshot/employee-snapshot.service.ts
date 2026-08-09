@@ -67,9 +67,10 @@ export class EmployeeSnapshotService {
         asc(assessmentIndicator.sortOrder),
       );
 
-    if (indicators.length > 0) {
-      const snapshotValues = indicators.map(
-        (ind: (typeof indicators)[number], i: number) => {
+    if (indicators.length > 0 || dimensionRows.some((d) => d.isBonus)) {
+      const snapshotValues = [
+        // 普通维度：每个指标一行快照
+        ...indicators.map((ind: (typeof indicators)[number], i: number) => {
           const dim = dimensionMap.get(ind.assessment_indicator.dimensionId);
           return {
             employeeId,
@@ -81,13 +82,33 @@ export class EmployeeSnapshotService {
             algorithm: ind.assessment_indicator.algorithm,
             dataSource: ind.assessment_indicator.dataSource,
             weight: ind.assessment_indicator.weight,
+            isBonus: false,
             isAdjusted: false,
             sortOrder: i,
             createdBy: userId,
             updatedBy: userId,
           };
-        },
-      );
+        }),
+        // 加减分维度：每个维度一行维度级快照（无指标，整体评分）
+        ...dimensionRows
+          .filter((d) => d.isBonus)
+          .map((dim, j) => ({
+            employeeId,
+            templateId,
+            dimensionName: dim.name,
+            dimensionWeight: '0',
+            content: dim.name,
+            description: dim.description,
+            algorithm: null,
+            dataSource: null,
+            weight: '0',
+            isBonus: true,
+            isAdjusted: false,
+            sortOrder: indicators.length + j,
+            createdBy: userId,
+            updatedBy: userId,
+          })),
+      ];
       await db.insert(employeeIndicatorSnapshot).values(snapshotValues);
     }
   }
@@ -132,6 +153,7 @@ export class EmployeeSnapshotService {
           weight: Number(row.weight),
           dimensionName: row.dimensionName,
           dimensionWeight: Number(row.dimensionWeight),
+          isBonus: row.isBonus ?? false,
         }),
       );
       return { indicators, hasSnapshot: true, templateId, templateName };
@@ -171,20 +193,37 @@ export class EmployeeSnapshotService {
         asc(assessmentIndicator.sortOrder),
       );
 
-    const indicators: InstanceIndicatorItem[] = indicatorsForTemplate.map(
-      (ind: (typeof indicatorsForTemplate)[number]) => {
-        const dim = dimensionMap.get(ind.assessment_indicator.dimensionId);
-        return {
-          content: ind.assessment_indicator.content,
-          description: ind.assessment_indicator.description ?? '',
-          algorithm: ind.assessment_indicator.algorithm ?? '',
-          dataSource: ind.assessment_indicator.dataSource ?? '',
-          weight: Number(ind.assessment_indicator.weight),
-          dimensionName: dim?.name ?? '',
-          dimensionWeight: dim?.weight ?? 0,
-        };
-      },
-    );
+    const indicators: InstanceIndicatorItem[] = [
+      // 普通维度：每个指标一行
+      ...indicatorsForTemplate.map(
+        (ind: (typeof indicatorsForTemplate)[number]) => {
+          const dim = dimensionMap.get(ind.assessment_indicator.dimensionId);
+          return {
+            content: ind.assessment_indicator.content,
+            description: ind.assessment_indicator.description ?? '',
+            algorithm: ind.assessment_indicator.algorithm ?? '',
+            dataSource: ind.assessment_indicator.dataSource ?? '',
+            weight: Number(ind.assessment_indicator.weight),
+            dimensionName: dim?.name ?? '',
+            dimensionWeight: dim?.weight ?? 0,
+            isBonus: false,
+          };
+        },
+      ),
+      // 加减分维度：每个维度一行（整体评分）
+      ...dimensionRows
+        .filter((d) => d.isBonus)
+        .map((dim) => ({
+          content: dim.name,
+          description: dim.description ?? '',
+          algorithm: '',
+          dataSource: '',
+          weight: 0,
+          dimensionName: dim.name,
+          dimensionWeight: 0,
+          isBonus: true,
+        })),
+    ];
 
     return { indicators, hasSnapshot: false, templateId, templateName };
   }
@@ -223,6 +262,7 @@ export class EmployeeSnapshotService {
 
     const dimWeightMap: Map<string, number> = new Map();
     for (const ind of indicators) {
+      if (ind.isBonus) continue;
       const key: string = ind.dimensionName || '未分组';
       if (!dimWeightMap.has(key)) {
         dimWeightMap.set(key, ind.dimensionWeight ?? 0);
@@ -238,9 +278,10 @@ export class EmployeeSnapshotService {
       );
     }
 
-    // 校验每个维度内指标权重之和等于该维度权重
+    // 校验每个维度内指标权重之和等于该维度权重（加减分维度除外）
     const dimIndicatorSum: Map<string, number> = new Map();
     for (const ind of indicators) {
+      if (ind.isBonus) continue;
       const dimKey = ind.dimensionName || '未分组';
       dimIndicatorSum.set(
         dimKey,
@@ -284,6 +325,7 @@ export class EmployeeSnapshotService {
         algorithm: ind.algorithm,
         dataSource: ind.dataSource,
         weight: String(ind.weight),
+        isBonus: ind.isBonus ?? false,
         isAdjusted: true,
         adjustedBy: userId,
         adjustedAt: now,
@@ -337,6 +379,7 @@ export class EmployeeSnapshotService {
           algorithm: row.algorithm,
           dataSource: row.dataSource,
           weight: row.weight,
+          isBonus: row.isBonus ?? false,
           isAdjusted: row.isAdjusted,
           adjustedBy: row.adjustedBy,
           adjustedAt: row.adjustedAt,

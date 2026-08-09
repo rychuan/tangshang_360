@@ -43,6 +43,27 @@ describe('template form save feedback', () => {
       'pages/TemplateManagement/TemplateFormDialog.tsx',
     );
     expect(source).toContain('权重分总和必须等于 100');
-    expect(source).toContain('validateTotalWeight(data.dimensions)');
+    // 提交前对加减分维度置底后再校验
+    expect(source).toContain('validateTotalWeight(sortedDimensions)');
+  });
+
+  it('excludes bonus dimensions from 100% weight validation', () => {
+    const typesSource = readClient(
+      'pages/TemplateManagement/TemplateFormDialog.types.ts',
+    );
+    // 加减分维度允许无指标（普通维度仍要求至少一个指标）
+    expect(typesSource).toContain('isBonus: z.boolean().default(false)');
+    expect(typesSource).toMatch(/!val\.isBonus && val\.indicators\.length === 0/);
+
+    const weightSource = readClient('utils/weight-validation.ts');
+    expect(weightSource).toContain('dimensions.filter((d) => !d.isBonus)');
+    expect(weightSource).toContain('if (dim.isBonus) continue;');
+  });
+
+  it('sorts bonus dimensions to the end on submit', () => {
+    const source = readClient(
+      'pages/TemplateManagement/TemplateFormDialog.tsx',
+    );
+    expect(source).toMatch(/Number\(a\.isBonus \?\? false\) - Number\(b\.isBonus \?\? false\)/);
   });
 });

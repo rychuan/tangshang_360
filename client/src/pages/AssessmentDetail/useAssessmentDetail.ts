@@ -141,12 +141,16 @@ export function useAssessmentDetail(
         groups[ind.dimensionName] = {
           dimensionName: ind.dimensionName,
           dimensionWeight: ind.dimensionWeight,
+          isBonus: ind.isBonus ?? false,
           indicators: [],
         };
       }
       groups[ind.dimensionName].indicators.push(ind);
     }
-    return Object.values(groups);
+    // 加减分维度固定排在所有普通维度之后（后端已按 sortOrder 置底，此处兜底）
+    return Object.values(groups).sort(
+      (a, b) => Number(a.isBonus) - Number(b.isBonus),
+    );
   }, [detail]);
 
   const preview = useMemo(() => {
@@ -170,10 +174,9 @@ export function useAssessmentDetail(
       field: 'score' | 'completionStatus' | 'comment',
       value: string,
     ) => {
+      // 允许负数：加减分维度支持负分（普通指标由后端校验拒绝负分）
       const nextValue =
-        field === 'score' && value !== ''
-          ? Math.max(0, Number(value) || 0)
-          : value;
+        field === 'score' && value !== '' ? Number(value) || 0 : value;
       setRatings((prev) => ({
         ...prev,
         [indicatorId]: {
@@ -221,9 +224,10 @@ export function useAssessmentDetail(
       return { readyToSign: true, signType: 'supervisor' as const };
     }
 
-    // 提交前校验：所有指标必须已填写分数
+    // 提交前校验：所有指标必须已填写分数（加减分项可选，不强制）
     const emptyIndicators: string[] = [];
     for (const group of groupedIndicators) {
+      if (group.isBonus) continue;
       for (const ind of group.indicators) {
         const s = ratings[ind.id]?.score;
         if (s == null) {
@@ -247,6 +251,7 @@ export function useAssessmentDetail(
     if (detail.status === 'self_review') {
       const emptyCompletionIndicators: string[] = [];
       for (const group of groupedIndicators) {
+        if (group.isBonus) continue;
         for (const ind of group.indicators) {
           const completionStatus = ratings[ind.id]?.completionStatus;
           if (!completionStatus?.trim()) {

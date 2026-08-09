@@ -73,6 +73,8 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
         dimensions: template.dimensions.map((dim) => ({
           name: dim.name,
           weight: dim.weight,
+          isBonus: dim.isBonus,
+          description: dim.description,
           indicators: dim.indicators.map((ind) => ({
             content: ind.content,
             description: ind.description,
@@ -91,6 +93,8 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
         {
           name: '',
           weight: 0,
+          isBonus: false,
+          description: '',
           indicators: [
             {
               content: '',
@@ -127,14 +131,19 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
 
   const handleSubmit = async (data: FormData) => {
     if (!canEdit) return;
-    const totalWeightResult = validateTotalWeight(data.dimensions);
+    // 加减分维度固定排在所有普通维度之后
+    const sortedDimensions = [...data.dimensions].sort(
+      (a, b) =>
+        Number(a.isBonus ?? false) - Number(b.isBonus ?? false),
+    );
+    const totalWeightResult = validateTotalWeight(sortedDimensions);
     if (!totalWeightResult.isValid) {
       toast.error(
         `权重分总和必须等于 100，当前为 ${totalWeightResult.totalWeight}`,
       );
       return;
     }
-    const indicatorResult = validateIndicatorWeights(data.dimensions);
+    const indicatorResult = validateIndicatorWeights(sortedDimensions);
     if (!indicatorResult.isValid) {
       const err = indicatorResult.errors[0];
       toast.error(
@@ -148,9 +157,11 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
         name: data.name,
         position: data.position,
         type: data.type,
-        dimensions: data.dimensions.map((dim) => ({
+        dimensions: sortedDimensions.map((dim) => ({
           name: dim.name,
           weight: dim.weight,
+          isBonus: dim.isBonus ?? false,
+          description: dim.description ?? '',
           indicators: dim.indicators.map((ind) => ({
             content: ind.content,
             description: ind.description,
@@ -281,93 +292,118 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
             </div>
           )}
 
-          {dimFields.map((dimField, dimIdx: number) => {
-            const dimData = watchedDims?.[dimIdx];
-            if (previewMode) {
-              return (
-                <Card key={dimField.id}>
-                  <CardHeader className="pb-2 bg-muted">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-base font-semibold">
-                        {dimData?.name || '未命名维度'}
-                      </h3>
-                      <Badge
-                        variant="outline"
-                        className="bg-primary/10 text-primary border-primary/20 text-xs font-bold"
-                      >
-                        权重分 {dimData?.weight || 0}%
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <Table className="table-fixed w-full">
-                      <TableHeader>
-                        <TableRow className="bg-muted/30">
-                          <TableHead className="w-[20%] text-xs">
-                            指标
-                          </TableHead>
-                          <TableHead className="w-[30%] text-xs hidden md:table-cell">
-                            说明
-                          </TableHead>
-                          <TableHead className="w-[20%] text-xs hidden lg:table-cell">
-                            算法/描述
-                          </TableHead>
-                          <TableHead className="w-[18%] text-xs hidden lg:table-cell">
-                            数据来源
-                          </TableHead>
-                          <TableHead className="text-center w-[12%] text-xs">
-                            权重分
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {dimData?.indicators?.map(
-                          (
-                            ind: {
-                              content: string;
-                              description: string;
-                              algorithm: string;
-                              dataSource: string;
-                              weight: number;
-                            },
-                            i: number,
-                          ) => (
-                            <TableRow key={i}>
-                              <TableCell className="text-xs whitespace-pre-wrap break-words">
-                                {ind.content || '-'}
-                              </TableCell>
-                              <TableCell className="text-xs text-muted-foreground whitespace-pre-wrap break-words hidden md:table-cell">
-                                {ind.description || '-'}
-                              </TableCell>
-                              <TableCell className="text-xs text-muted-foreground whitespace-pre-wrap break-words hidden lg:table-cell">
-                                {ind.algorithm || '-'}
-                              </TableCell>
-                              <TableCell className="text-xs text-muted-foreground whitespace-pre-wrap break-words hidden lg:table-cell">
-                                {ind.dataSource || '-'}
-                              </TableCell>
-                              <TableCell className="text-xs text-center">
-                                {ind.weight}
-                              </TableCell>
-                            </TableRow>
-                          ),
+          {[...dimFields]
+            .map((dimField, dimIdx: number) => ({
+              dimField,
+              dimIdx,
+              dimData: watchedDims?.[dimIdx],
+            }))
+            .sort(
+              (a, b) =>
+                Number(a.dimData?.isBonus ?? false) -
+                Number(b.dimData?.isBonus ?? false),
+            )
+            .map(({ dimField, dimIdx, dimData }) => {
+              if (previewMode) {
+                return (
+                  <Card key={dimField.id}>
+                    <CardHeader className="pb-2 bg-muted">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-base font-semibold">
+                          {dimData?.name || '未命名维度'}
+                        </h3>
+                        {dimData?.isBonus ? (
+                          <Badge
+                            variant="outline"
+                            className="bg-warning/10 text-warning border-warning/20 text-xs font-bold"
+                          >
+                            加减分
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="bg-primary/10 text-primary border-primary/20 text-xs font-bold"
+                          >
+                            权重分 {dimData?.weight || 0}%
+                          </Badge>
                         )}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {dimData?.isBonus ? (
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
+                          {dimData.description || '（未填写说明）'}
+                        </p>
+                      ) : (
+                        <Table className="table-fixed w-full">
+                          <TableHeader>
+                            <TableRow className="bg-muted/30">
+                              <TableHead className="w-[20%] text-xs">
+                                指标
+                              </TableHead>
+                              <TableHead className="w-[30%] text-xs hidden md:table-cell">
+                                说明
+                              </TableHead>
+                              <TableHead className="w-[20%] text-xs hidden lg:table-cell">
+                                算法/描述
+                              </TableHead>
+                              <TableHead className="w-[18%] text-xs hidden lg:table-cell">
+                                数据来源
+                              </TableHead>
+                              <TableHead className="text-center w-[12%] text-xs">
+                                权重分
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {dimData?.indicators?.map(
+                              (
+                                ind: {
+                                  content: string;
+                                  description: string;
+                                  algorithm: string;
+                                  dataSource: string;
+                                  weight: number;
+                                },
+                                i: number,
+                              ) => (
+                                <TableRow key={i}>
+                                  <TableCell className="text-xs whitespace-pre-wrap break-words">
+                                    {ind.content || '-'}
+                                  </TableCell>
+                                  <TableCell className="text-xs text-muted-foreground whitespace-pre-wrap break-words hidden md:table-cell">
+                                    {ind.description || '-'}
+                                  </TableCell>
+                                  <TableCell className="text-xs text-muted-foreground whitespace-pre-wrap break-words hidden lg:table-cell">
+                                    {ind.algorithm || '-'}
+                                  </TableCell>
+                                  <TableCell className="text-xs text-muted-foreground whitespace-pre-wrap break-words hidden lg:table-cell">
+                                    {ind.dataSource || '-'}
+                                  </TableCell>
+                                  <TableCell className="text-xs text-center">
+                                    {ind.weight}
+                                  </TableCell>
+                                </TableRow>
+                              ),
+                            )}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              }
+              return (
+                <DimensionCard
+                  key={dimField.id}
+                  form={form}
+                  dimIdx={dimIdx}
+                  dimData={dimData}
+                  onRemove={() => removeDim(dimIdx)}
+                  canRemove={dimFields.length > 1}
+                />
               );
-            }
-            return (
-              <DimensionCard
-                key={dimField.id}
-                form={form}
-                dimIdx={dimIdx}
-                dimData={dimData}
-                onRemove={() => removeDim(dimIdx)}
-                canRemove={dimFields.length > 1}
-              />
-            );
-          })}
+            })}
 
           <div className="flex items-center justify-between pt-2 border-t">
             <div className="flex items-center gap-3">
@@ -379,6 +415,8 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
                     appendDim({
                       name: '',
                       weight: 0,
+                      isBonus: false,
+                      description: '',
                       indicators: [
                         {
                           content: '',

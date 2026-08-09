@@ -21,6 +21,7 @@
 | `020_drop_employee_department_name.sql` | 删除 employee.department 名称列 | 依赖 019 先回填；执行前校验无依赖对象 |
 | `021_cleanup_stale_authorization_jobs.sql` | 清理孤儿授权同步任务（旧版本残留的 pending/processing） | 独立；BEGIN/COMMIT 包裹，幂等 |
 | `022_employee_department_index.sql` | 为 employee.department_id 补索引（dept_head 数据范围过滤） | 独立；幂等（IF NOT EXISTS） |
+| `023_bonus_dimension.sql` | 绩效加减分维度：assessment_dimension 增加 is_bonus/description；两张指标快照表增加 is_bonus | 独立；幂等（IF NOT EXISTS） |
 
 ## 执行后验证
 
