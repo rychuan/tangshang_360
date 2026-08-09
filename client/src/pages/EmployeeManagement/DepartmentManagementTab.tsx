@@ -9,8 +9,8 @@ import type {
   CreateDepartmentRequest,
 } from '@shared/api.interface';
 import { Button } from '@/components/ui/button';
-import { ActionBadge } from '@/components/business-ui/action-badge';
 import { Spinner } from '@/components/ui/spinner';
+import { UserDisplay } from '@/components/business-ui/user-display';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { UserSelect } from '@/components/business-ui/user-select';
@@ -205,75 +205,84 @@ const DepartmentManagementTab: React.FC = () => {
   ): React.ReactNode => {
     const isOpen = expanded.has(node.id);
     const hasChildren = node.children && node.children.length > 0;
+    const score =
+      typeof node.avgScore === 'number' ? node.avgScore.toFixed(1) : null;
+    const hasRowActions = canEdit || canDelete || canCreate;
     return (
       <React.Fragment key={node.id}>
-        <TableRow className="group">
-          <TableCell>
+        <TableRow className="group relative">
+          <TableCell className="py-2 px-3">
             <div
-              className="flex items-center gap-2"
-              style={{ paddingLeft: depth * 20 }}
+              className="flex items-center gap-1.5"
+              style={{ paddingLeft: depth * 18 }}
             >
               {hasChildren ? (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-6"
+                  className="size-5 shrink-0"
                   onClick={() => toggleExpand(node.id)}
                 >
                   {isOpen ? (
-                    <ChevronDown className="size-4" />
+                    <ChevronDown className="size-3.5" />
                   ) : (
-                    <ChevronRight className="size-4" />
+                    <ChevronRight className="size-3.5" />
                   )}
                 </Button>
               ) : (
-                <span className="w-5" />
+                <span className="w-5 shrink-0" />
               )}
-              <Building2 className="size-4 text-muted-foreground" />
+              <Building2 className="size-3.5 shrink-0 text-muted-foreground" />
               <span className="font-medium">{node.name}</span>
             </div>
           </TableCell>
-          <TableCell className="text-muted-foreground">
+          <TableCell className="py-2 px-3 text-muted-foreground">
             {node.parentName || '-'}
           </TableCell>
-          <TableCell className="text-muted-foreground">
-            {node.headName || '-'}
-          </TableCell>
-          <TableCell>
+          <TableCell className="py-2 px-3">
             {canViewEmployees ? (
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-primary p-0 h-auto"
+                className="text-primary p-0 h-auto text-xs"
                 onClick={() => {
                   setMembersDeptName(node.name);
                   setMembersDialogOpen(true);
                 }}
               >
-                <Users className="size-3.5" />
+                <Users className="size-3" />
                 {node.memberCount}
               </Button>
             ) : (
               <span className="text-muted-foreground">{node.memberCount}</span>
             )}
           </TableCell>
-          <TableCell>{node.sortOrder}</TableCell>
-          {(canEdit || canDelete) && (
-            <TableCell className="sticky right-0 bg-background group-hover:bg-muted/50 z-10 border-l">
-              <div className="flex items-center gap-1.5">
+          <TableCell className="py-2 px-3 text-right">
+            <span
+              className="inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums"
+              title="部门平均分（已完成考核）"
+            >
+              {score ?? '—'}
+            </span>
+            {/* 悬浮菜单：覆盖右侧一半区域 */}
+            {hasRowActions && (
+              <div className="pointer-events-none absolute inset-y-0 right-0 z-20 flex w-1/2 items-center justify-end gap-1 border-l border-border/60 bg-background/95 px-4 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
                 <CanDo {...COMMAND_PERMISSIONS.departmentEdit}>
-                  <ActionBadge
-                    actionType="edit"
-                    icon={<Pencil className="size-3" />}
-                    label=""
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 gap-1 px-2 text-xs"
                     onClick={() => handleEdit(node)}
-                  />
+                  >
+                    <Pencil className="size-3.5" />
+                    编辑
+                  </Button>
                 </CanDo>
                 {canCreate && (
-                  <ActionBadge
-                    actionType="bind"
-                    icon={<Plus className="size-3" />}
-                    label=""
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 gap-1 px-2 text-xs"
                     onClick={() => {
                       setEditingDept(null);
                       setFormData({
@@ -284,19 +293,36 @@ const DepartmentManagementTab: React.FC = () => {
                       });
                       setDialogOpen(true);
                     }}
-                  />
+                  >
+                    <Plus className="size-3.5" />
+                    添加子部门
+                  </Button>
                 )}
                 <CanDo {...COMMAND_PERMISSIONS.departmentDelete}>
-                  <ActionBadge
-                    actionType="delete"
-                    icon={<Trash2 className="size-3" />}
-                    label=""
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 gap-1 px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
                     onClick={() => handleDelete(node)}
-                  />
+                  >
+                    <Trash2 className="size-3.5" />
+                    删除
+                  </Button>
                 </CanDo>
               </div>
-            </TableCell>
-          )}
+            )}
+          </TableCell>
+          <TableCell className="py-2 px-3 text-right">
+            {node.headId ? (
+              <UserDisplay
+                value={{ user_id: node.headId, name: node.headName }}
+                size="small"
+                showLabel={false}
+              />
+            ) : (
+              <span className="text-xs text-muted-foreground">—</span>
+            )}
+          </TableCell>
         </TableRow>
         {isOpen &&
           hasChildren &&
@@ -433,19 +459,18 @@ const DepartmentManagementTab: React.FC = () => {
             </div>
           ) : (
             <div className="overflow-hidden rounded-lg border">
-              <Table>
+              <Table className="text-xs">
                 <TableHeader>
                   <TableRow className="bg-muted/30">
-                    <TableHead>部门名称</TableHead>
-                    <TableHead>上级部门</TableHead>
-                    <TableHead>负责人</TableHead>
-                    <TableHead>成员</TableHead>
-                    <TableHead>排序</TableHead>
-                    {(canEdit || canDelete) && (
-                      <TableHead className="w-[100px] sticky right-0 bg-background z-20 border-l">
-                        操作
-                      </TableHead>
-                    )}
+                    <TableHead className="h-8 px-3 text-xs">部门名称</TableHead>
+                    <TableHead className="h-8 px-3 text-xs">上级部门</TableHead>
+                    <TableHead className="h-8 px-3 text-xs">成员</TableHead>
+                    <TableHead className="h-8 px-3 text-right text-xs">
+                      当前分数
+                    </TableHead>
+                    <TableHead className="h-8 px-3 text-right text-xs">
+                      负责人
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
