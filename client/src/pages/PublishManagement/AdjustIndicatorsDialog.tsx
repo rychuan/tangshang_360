@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Spinner } from '@/components/ui/spinner';
@@ -94,8 +95,6 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
   const [addingDimension, setAddingDimension] = useState<boolean>(false);
   const [newDimName, setNewDimName] = useState<string>('');
   const [newDimWeight, setNewDimWeight] = useState<string>('');
-  const [addingBonus, setAddingBonus] = useState<boolean>(false);
-  const [newBonusDescription, setNewBonusDescription] = useState<string>('');
 
   const queryClient = useQueryClient();
   const { data: indicators = [], isLoading: loadingIndicators } = useQuery({
@@ -278,6 +277,47 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
     setNewDimWeight('');
   };
 
+  /**
+   * 加减分项开关（与模板编辑交互一致）：
+   * - 普通维度勾选 → 整组指标行替换为一行加减分维度行
+   * - 加减分维度取消勾选 → 转换为普通维度（权重/指标需管理员填写）
+   */
+  const handleToggleBonus = (group: DimensionGroup, checked: boolean): void => {
+    queryClient.setQueryData(
+      ['publish', 'snapshot', employee?.employeeId],
+      (prev: AdjustIndicatorInput[]) => {
+        const next: AdjustIndicatorInput[] = [...prev];
+        const firstIdx: number = group.flatIndices[0];
+        if (checked) {
+          // 普通维度 → 加减分维度：保留第一个指标的说明作为加减分说明
+          const description: string = next[firstIdx]?.description || '';
+          next.splice(firstIdx, group.flatIndices.length, {
+            content: group.dimensionName || '',
+            description,
+            algorithm: '',
+            dataSource: '',
+            weight: 0,
+            dimensionName: group.dimensionName || '',
+            dimensionWeight: 0,
+            isBonus: true,
+          });
+        } else {
+          // 加减分维度 → 普通维度：变为一个普通指标行（权重待填写）
+          const row = next[firstIdx];
+          if (row) {
+            next[firstIdx] = {
+              ...row,
+              weight: 0,
+              dimensionWeight: 0,
+              isBonus: false,
+            };
+          }
+        }
+        return next;
+      },
+    );
+  };
+
   /** 加减分维度行编辑：维度名同步 content（notNull 兜底），说明独立 */
   const handleBonusChange = (
     flatIndex: number,
@@ -295,39 +335,6 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
         return next;
       },
     );
-  };
-
-  const handleConfirmAddBonus = (): void => {
-    const name: string = newDimName.trim();
-    if (!name) {
-      toast.error('请输入加减分项名称');
-      return;
-    }
-    queryClient.setQueryData(
-      ['publish', 'snapshot', employee?.employeeId],
-      (prev: AdjustIndicatorInput[]) => [
-        ...prev,
-        {
-          content: name,
-          description: newBonusDescription.trim(),
-          algorithm: '',
-          dataSource: '',
-          weight: 0,
-          dimensionName: name,
-          dimensionWeight: 0,
-          isBonus: true,
-        },
-      ],
-    );
-    setAddingBonus(false);
-    setNewDimName('');
-    setNewBonusDescription('');
-  };
-
-  const handleCancelAddBonus = (): void => {
-    setAddingBonus(false);
-    setNewDimName('');
-    setNewBonusDescription('');
   };
 
   const handleCopyTemplate = (): void => {
@@ -457,7 +464,7 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
           <CardHeader className="pb-2 bg-muted">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-muted-foreground shrink-0">
-                加减分项：
+                维度 {groupIdx + 1}：
               </span>
               <Input
                 value={group.dimensionName}
@@ -477,6 +484,15 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
               >
                 加减分
               </Badge>
+              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground shrink-0 select-none">
+                <Checkbox
+                  checked={true}
+                  onCheckedChange={(checked) =>
+                    handleToggleBonus(group, checked === true)
+                  }
+                />
+                加减分项
+              </label>
               <Button
                 variant="ghost"
                 size="icon"
@@ -553,6 +569,15 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
               className="w-20 h-8 text-center text-sm"
             />
             <span className="text-xs text-muted-foreground">%</span>
+            <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground shrink-0 select-none">
+              <Checkbox
+                checked={false}
+                onCheckedChange={(checked) =>
+                  handleToggleBonus(group, checked === true)
+                }
+              />
+              加减分项
+            </label>
             <Button
               variant="ghost"
               size="icon"
@@ -773,63 +798,6 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
     </Card>
   );
 
-  const renderAddBonusForm = (): React.ReactNode => (
-    <Card className="border-dashed">
-      <CardContent className="pt-6">
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <Plus className="size-4 text-muted-foreground" />
-            <span className="text-sm font-medium">新增加减分项</span>
-            <Badge
-              variant="outline"
-              className="bg-warning/10 text-warning border-warning/20 text-xs font-bold"
-            >
-              加减分
-            </Badge>
-          </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-xs text-muted-foreground">
-              加减分项名称
-            </label>
-            <Input
-              value={newDimName}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setNewDimName(e.target.value)
-              }
-              placeholder="如：重大贡献加分 / 违规扣分"
-              autoFocus
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-xs text-muted-foreground">说明</label>
-            <Textarea
-              value={newBonusDescription}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                setNewBonusDescription(e.target.value)
-              }
-              placeholder="说明加减分的适用场景、规则等"
-              className="min-h-[64px] resize-y text-xs"
-            />
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCancelAddBonus}
-            >
-              <X className="size-3.5 mr-1" />
-              取消
-            </Button>
-            <Button size="sm" onClick={handleConfirmAddBonus}>
-              <Check className="size-3.5 mr-1" />
-              确认
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] max-w-7xl max-h-[85vh] overflow-y-auto">
@@ -928,30 +896,15 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
                   (addingDimension ? (
                     renderAddDimensionForm()
                   ) : (
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        className="flex-1 border-dashed"
-                        onClick={() => setAddingDimension(true)}
-                      >
-                        <FolderPlus className="size-4 mr-2" />
-                        添加维度
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="flex-1 border-dashed"
-                        onClick={() => {
-                          setNewDimName('');
-                          setNewBonusDescription('');
-                          setAddingBonus(true);
-                        }}
-                      >
-                        <Plus className="size-4 mr-2" />
-                        添加加减分项
-                      </Button>
-                    </div>
+                    <Button
+                      variant="outline"
+                      className="w-full border-dashed"
+                      onClick={() => setAddingDimension(true)}
+                    >
+                      <FolderPlus className="size-4 mr-2" />
+                      添加维度
+                    </Button>
                   ))}
-                {!previewMode && addingBonus && renderAddBonusForm()}
               </>
             )}
 
