@@ -7,7 +7,6 @@ import type {
   AssessmentInstanceDetail,
   ActiveGradeRule,
 } from '@shared/api.interface';
-import { BONUS_SCORE_LIMIT } from '@shared/types/assessment.types';
 import {
   type RatingsState,
   type DimensionGroup,
@@ -273,30 +272,6 @@ export function useAssessmentDetail(
       const suffix = negativeIndicators.length > 3 ? '等' : '';
       toast.warning(
         `以下 ${negativeIndicators.length} 项指标评分为负数（普通指标不允许负分）：${names}${suffix}`,
-      );
-      return;
-    }
-
-    // 提交前校验：加减分项评分幅度不超过 ±BONUS_SCORE_LIMIT
-    const overLimitBonus: string[] = [];
-    for (const group of groupedIndicators) {
-      if (!group.isBonus) continue;
-      for (const ind of group.indicators) {
-        const s = ratings[ind.id]?.score;
-        if (s != null && Math.abs(s) > BONUS_SCORE_LIMIT) {
-          overLimitBonus.push(
-            ind.content.length > 12
-              ? ind.content.slice(0, 12) + '…'
-              : ind.content,
-          );
-        }
-      }
-    }
-    if (overLimitBonus.length > 0) {
-      const names = overLimitBonus.slice(0, 3).join('、');
-      const suffix = overLimitBonus.length > 3 ? '等' : '';
-      toast.warning(
-        `以下 ${overLimitBonus.length} 个加减分项评分绝对值不能超过 ${BONUS_SCORE_LIMIT}：${names}${suffix}`,
       );
       return;
     }

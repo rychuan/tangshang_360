@@ -19,7 +19,6 @@ import {
 } from '@/components/ui/empty';
 import { ChevronDown, BarChart3 } from '@/components/ui/hugeicons';
 import type { AssessmentIndicatorDetail } from '@shared/api.interface';
-import { BONUS_SCORE_LIMIT } from '@shared/types/assessment.types';
 import {
   type RatingsState,
   type DimensionGroup,
@@ -169,14 +168,12 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <p className="text-xs text-muted-foreground shrink-0">
-                评分{canEdit ? `（可为负分，±${BONUS_SCORE_LIMIT} 以内）` : ''}
+                评分{canEdit ? '（可为负分）' : ''}
               </p>
               {indicator && canEdit ? (
                 <Input
                   type="number"
                   step="0.1"
-                  min={-BONUS_SCORE_LIMIT}
-                  max={BONUS_SCORE_LIMIT}
                   placeholder="0"
                   className="w-28 text-center"
                   value={ratings[indicator.id]?.score ?? ''}

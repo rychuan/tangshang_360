@@ -48,7 +48,6 @@ import type {
   SignStatusResponse,
   SignSubmissionResponse,
 } from '@shared/api.interface';
-import { BONUS_SCORE_LIMIT } from '@shared/types/assessment.types';
 import { validateSignImage } from './sign-session.utils';
 
 export type RatingValidationInput = {
@@ -90,15 +89,9 @@ export function validateRatingsAgainstSnapshots(
     if (!Number.isFinite(rating.score)) {
       throw new BadRequestException('评分必须为有效数值');
     }
-    // 普通指标不允许负分；加减分维度支持负分（加减分）
+    // 普通指标不允许负分；加减分维度支持负分（加减分，不设上限）
     if (!snapshot.isBonus && rating.score < 0) {
       throw new BadRequestException('评分不能为负数');
-    }
-    // 加减分维度：允许负分，但限制单次加减幅度
-    if (snapshot.isBonus && Math.abs(rating.score) > BONUS_SCORE_LIMIT) {
-      throw new BadRequestException(
-        `加减分项单次评分绝对值不能超过 ${BONUS_SCORE_LIMIT}`,
-      );
     }
   }
 
