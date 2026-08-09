@@ -23,7 +23,6 @@ import { useAssessmentDetail } from './useAssessmentDetail';
 import IndicatorTable from './IndicatorTable';
 import SignDialog from './SignDialog';
 import { Image } from '@client/src/components/ui/image';
-import { PAGE_VIEWPORT_HEIGHT_CLASS } from '@/components/business-ui/page-shell';
 
 function getGradeStyle(
   grade: string | undefined | null,
@@ -172,11 +171,9 @@ const AssessmentDetailPage: React.FC = () => {
     detail.totalScore ?? sumScores(detail.indicators, 'supervisor');
 
   return (
-    <div
-      className={`${PAGE_VIEWPORT_HEIGHT_CLASS} flex min-h-0 flex-col gap-4 md:gap-6`}
-    >
-      {/* Top bar: back + period + status + score — 固定不滚动 */}
-      <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex min-h-full flex-col gap-4 md:gap-6">
+      {/* Top bar: back + period + status + score — sticky 固定在可视区顶部 */}
+      <div className="sticky top-0 z-20 -mx-4 flex flex-col gap-3 border-b bg-background/95 px-4 py-3 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between lg:-mx-6 lg:px-6">
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Button
             variant="outline"
@@ -251,8 +248,8 @@ const AssessmentDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Process stepper card — 评分状态固定不滚动 */}
-      <Card className="shrink-0">
+      {/* Process stepper card — 评分/签名状态跟随滚动 */}
+      <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex flex-wrap items-center gap-2 text-base">
             <UserDisplay
@@ -410,16 +407,14 @@ const AssessmentDetailPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Indicator tables — 唯一可滚动区域 */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <IndicatorTable
-          groups={groupedIndicators}
-          ratings={ratings}
-          canEditSelf={canEditSelf}
-          canEditSupervisor={canEditSupervisor}
-          updateRating={updateRating}
-        />
-      </div>
+      {/* Indicator tables — 跟随滚动 */}
+      <IndicatorTable
+        groups={groupedIndicators}
+        ratings={ratings}
+        canEditSelf={canEditSelf}
+        canEditSupervisor={canEditSupervisor}
+        updateRating={updateRating}
+      />
 
       {/* Actions — always visible at bottom */}
       {(canEditSelf ||
@@ -428,7 +423,7 @@ const AssessmentDetailPage: React.FC = () => {
         canSignSupervisor ||
         isCompleted) && (
         <div
-          className="-mx-4 -mb-5 shrink-0 border-t bg-background/95 px-4 py-3.5 backdrop-blur-sm lg:-mx-6"
+          className="sticky bottom-0 z-20 -mx-4 border-t bg-background/95 px-4 py-3.5 backdrop-blur-sm lg:-mx-6"
           style={{ boxShadow: 'var(--shadow-up-sm)' }}
         >
           <div className="flex items-center justify-center gap-3 max-sm:flex-col max-sm:[&>*]:w-full">

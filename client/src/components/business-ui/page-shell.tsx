@@ -5,14 +5,15 @@ import { cn } from '@/lib/utils';
  * 页面外壳：统一承载「视口高度级联 + 页头 + 内容区」的标准页面骨架。
  *
  * 背景：页面内容容器由 Layout 提供滚动（overflow-y-auto），若子页面想让自己
- * 的面板独立滚动，必须显式约束高度。历史实现中每个页面手写
- * `h-[calc(100svh-4rem-2.5rem)]` 之类的魔法数字（顶栏 4rem + 垂直内边距 2.5rem），
- * 顶部栏高度一变就要逐页修改。这里将视口约束收敛为单一常量。
+ * 的面板独立滚动，必须显式约束高度。历史实现使用 `h-[calc(100svh-…)]` 魔法数字
+ * （顶栏 4rem + 垂直内边距 2.5rem 等），顶部栏高度、inset 侧边栏外边距一变就
+ * 会产生多余滚动空间或高度漂移。
  *
- * ⚠️ 若修改 AppTopbar 高度或 Layout 的垂直内边距，请同步更新
- * `PAGE_VIEWPORT_HEIGHT_CLASS`。
+ * 现改为 `h-full`：页面根节点精确填满 Layout 的 main-content（即滚动容器内容盒），
+ * 自动包含顶栏高度、垂直内边距与 inset 外边距，桌面/移动端均无需手算，
+ * 也不会产生多余的整页滚动空间。
  */
-export const PAGE_VIEWPORT_HEIGHT_CLASS = 'h-[calc(100svh-6.5rem)]';
+export const PAGE_VIEWPORT_HEIGHT_CLASS = 'h-full';
 
 export interface PageShellProps {
   /** 页头插槽（通常为 PageHeader 组件），不传则省略 */
