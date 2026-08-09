@@ -27,6 +27,7 @@ import {
 import EmployeeTable from './EmployeeTable';
 import EmployeeFormDialog from './EmployeeFormDialog';
 import { BindDialog, UnbindDialog, HistoryDialog } from './EmployeeDialogs';
+import { department as departmentApi } from '@/api';
 import { Plus, Search, Link2 } from '@/components/ui/hugeicons';
 import {
   AlertDialog,
@@ -64,11 +65,6 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
   departmentName,
 }) => {
   const { tableRef, tableMaxHeight } = useTableScrollHeight();
-  React.useEffect(() => {
-    if (departmentName !== undefined) {
-      setters.setDepartment(departmentName ?? '');
-    }
-  }, [departmentName]);
   const [filters, setters] = useEmployeeFilters();
   const { permissions } = usePermissions();
   const { ability } = useAuth();
@@ -90,6 +86,30 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
     onPageOutOfRange: setters.setPage,
   });
   const dialogs = useEmployeeDialogs(refetch);
+
+  // 部门树面板点击部门 → 联动列表筛选
+  React.useEffect(() => {
+    if (departmentName !== undefined) {
+      setters.setDepartment(departmentName ?? '');
+    }
+  }, [departmentName]);
+
+  // 部门筛选数据（下拉选项，与部门树/后端名称解析一致）
+  const [departments, setDepartments] = React.useState<string[]>([]);
+  React.useEffect(() => {
+    let cancelled = false;
+    departmentApi
+      .list()
+      .then((res) => {
+        if (!cancelled) setDepartments(res.items.map((d) => d.name));
+      })
+      .catch(() => {
+        /* 筛选器降级为无部门选项，不影响列表 */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const toggleAll = (): void => {
     if (
@@ -117,6 +137,9 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
     <div className="flex flex-col gap-4 min-h-full">
       {/* 筛选条件 + 操作按钮 */}
       <div className="flex items-center gap-3 flex-wrap">
+        <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+          筛选条件
+        </span>
         <InputGroup className="w-40">
           <InputGroupAddon>
             <Search className="size-3.5" />
@@ -128,6 +151,44 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
             onChange={(e) => setters.setKeyword(e.target.value)}
           />
         </InputGroup>
+        <Select
+          value={filters.department || 'all'}
+          onValueChange={(v) => setters.setDepartment(v === 'all' ? '' : v)}
+        >
+          <SelectTrigger className="h-8 w-32 text-xs">
+            <SelectValue placeholder="部门" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value="all">全部部门</SelectItem>
+              {departments.map((dept) => (
+                <SelectItem key={dept} value={dept}>
+                  {dept}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        <Select
+          value={filters.positions[0] || 'all'}
+          onValueChange={(v) =>
+            setters.setPositions(v === 'all' ? [] : [v])
+          }
+        >
+          <SelectTrigger className="h-8 w-32 text-xs">
+            <SelectValue placeholder="岗位" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value="all">全部岗位</SelectItem>
+              {positions.map((pos) => (
+                <SelectItem key={pos} value={pos}>
+                  {pos}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         <Select
           value={filters.role || 'all'}
           onValueChange={(v) => setters.setRole(v === 'all' ? '' : v)}
