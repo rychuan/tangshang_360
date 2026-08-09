@@ -30,7 +30,7 @@ import EmployeeTable from './EmployeeTable';
 import EmployeeFormDialog from './EmployeeFormDialog';
 import { BindDialog, UnbindDialog, HistoryDialog } from './EmployeeDialogs';
 import { department as departmentApi } from '@/api';
-import { Plus, Search, Link2, RotateCcw } from '@/components/ui/hugeicons';
+import { Plus, Search, Link2, RefreshCw } from '@/components/ui/hugeicons';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -268,7 +268,7 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
               title="重置筛选"
               onClick={setters.resetFilters}
             >
-              <RotateCcw className="size-4" />
+              <RefreshCw className="size-4" />
             </Button>
           </div>
         </FilterBarActions>
