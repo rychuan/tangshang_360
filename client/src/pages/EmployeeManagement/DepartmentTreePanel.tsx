@@ -301,7 +301,7 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
                       icon={<Pencil className="size-3" />}
                       label=""
                       onClick={() => openEdit(node)}
-                      className="h-6 w-6 p-0"
+                      className="h-6 w-6 p-0 justify-center"
                     />
                   </span>
                 )}
@@ -315,7 +315,7 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
                       icon={<Plus className="size-3" />}
                       label=""
                       onClick={() => openCreate(node.id)}
-                      className="h-6 w-6 p-0"
+                      className="h-6 w-6 p-0 justify-center"
                     />
                   </span>
                 )}
@@ -326,7 +326,7 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
                       icon={<Trash2 className="size-3" />}
                       label=""
                       onClick={() => handleDelete(node)}
-                      className="h-6 w-6 p-0"
+                      className="h-6 w-6 p-0 justify-center"
                     />
                   </span>
                 )}

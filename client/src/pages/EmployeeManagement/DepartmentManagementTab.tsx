@@ -276,7 +276,7 @@ const DepartmentManagementTab: React.FC = () => {
                       icon={<Pencil className="size-3" />}
                       label=""
                       onClick={() => handleEdit(node)}
-                      className="h-6 w-6 p-0"
+                      className="h-6 w-6 p-0 justify-center"
                     />
                   </span>
                 </CanDo>
@@ -299,7 +299,7 @@ const DepartmentManagementTab: React.FC = () => {
                         });
                         setDialogOpen(true);
                       }}
-                      className="h-6 w-6 p-0"
+                      className="h-6 w-6 p-0 justify-center"
                     />
                   </span>
                 )}
@@ -310,7 +310,7 @@ const DepartmentManagementTab: React.FC = () => {
                       icon={<Trash2 className="size-3" />}
                       label=""
                       onClick={() => handleDelete(node)}
-                      className="h-6 w-6 p-0"
+                      className="h-6 w-6 p-0 justify-center"
                     />
                   </span>
                 </CanDo>

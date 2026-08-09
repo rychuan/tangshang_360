@@ -60,7 +60,7 @@ export function ActionBadge({
       )}
       onClick={disabled ? undefined : onClick}
     >
-      {icon && <span className="mr-1 inline-flex">{icon}</span>}
+      {icon && <span className={cn('inline-flex', label && 'mr-1')}>{icon}</span>}
       {label}
     </Badge>
   );
