@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { department as departmentApi } from '@/api';
 import { findNodeName } from './department-tree-utils';
 import { PageHeader } from '@/components/business-ui/page-header';
+import { PageShell } from '@/components/business-ui/page-shell';
 import EmployeeListTab from './EmployeeListTab';
 import { DepartmentTreePanel } from './DepartmentTreePanel';
 import { UserCog } from '@/components/ui/hugeicons';
@@ -48,31 +49,31 @@ const EmployeeManagementPage: React.FC = () => {
   }
 
   return (
-    <div className="flex h-[calc(100svh-4rem-2.5rem)] flex-col gap-4 md:gap-6">
-      <PageHeader title="员工管理" icon={UserCog} visuallyHidden />
-      <div className="flex flex-1 min-h-0 gap-4 overflow-hidden">
-        {/* 左侧部门树 */}
-        {showDepartmentTree && (
-          <aside className="w-[260px] shrink-0 self-stretch overflow-hidden rounded-lg border bg-card flex flex-col">
-            <DepartmentTreePanel
-              selectedId={selectedDeptId}
-              onSelect={handleDeptSelect}
-            />
-          </aside>
-        )}
+    <PageShell
+      header={<PageHeader title="员工管理" icon={UserCog} visuallyHidden />}
+      contentClassName="overflow-hidden"
+    >
+      {/* 左侧部门树 */}
+      {showDepartmentTree && (
+        <aside className="w-[260px] shrink-0 self-stretch overflow-hidden rounded-lg border bg-card flex flex-col">
+          <DepartmentTreePanel
+            selectedId={selectedDeptId}
+            onSelect={handleDeptSelect}
+          />
+        </aside>
+      )}
 
-        {/* 右侧：员工列表 */}
-        <section className="flex-1 min-w-0 overflow-y-auto">
-          {canViewEmployees ? (
-            <EmployeeListTab departmentName={selectedDeptName} />
-          ) : (
-            <div className="flex min-h-[200px] items-center justify-center text-sm text-muted-foreground">
-              请选择左侧部门查看组织架构
-            </div>
-          )}
-        </section>
-      </div>
-    </div>
+      {/* 右侧：员工列表 */}
+      <section className="flex-1 min-w-0 overflow-y-auto">
+        {canViewEmployees ? (
+          <EmployeeListTab departmentName={selectedDeptName} />
+        ) : (
+          <div className="flex min-h-[200px] items-center justify-center text-sm text-muted-foreground">
+            请选择左侧部门查看组织架构
+          </div>
+        )}
+      </section>
+    </PageShell>
   );
 };
 

@@ -20,6 +20,7 @@ import {
   EmptyDescription,
 } from '@/components/ui/empty';
 import { PageHeader } from '@/components/business-ui/page-header';
+import { PageShell } from '@/components/business-ui/page-shell';
 import { toast } from 'sonner';
 import { handleApiError } from '@client/src/utils/api-error';
 import { Shield, Lock, Users, ShieldCheck } from '@/components/ui/hugeicons';
@@ -91,32 +92,33 @@ const PermissionPage: React.FC = () => {
   };
 
   return (
-    <div className="flex h-[calc(100svh-6.5rem)] min-h-0 flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <PageHeader
-          title="权限管理"
-          icon={Shield}
-          visuallyHidden
-          description="基于角色配置功能权限与成员归属。"
-        />
-      </div>
-
-      <div className="flex min-h-0 flex-1 gap-4">
-        <aside className="w-[30%] min-w-[260px] overflow-hidden rounded-lg border">
-          <RoleListPanel
-            roles={roles}
-            loading={rolesLoading}
-            selectedBizID={selectedRole?.bizID ?? null}
-            onSelectRole={handleSelectRole}
-            onOpenMembers={handleOpenMembers}
-            onCreateClick={handleCreateClick}
-            onEditClick={handleEditClick}
-            onDeleteClick={(r) => setDeleteTarget(r)}
+    <PageShell
+      header={
+        <div className="flex items-center justify-between">
+          <PageHeader
+            title="权限管理"
+            icon={Shield}
+            visuallyHidden
+            description="基于角色配置功能权限与成员归属。"
           />
-        </aside>
+        </div>
+      }
+    >
+      <aside className="w-[30%] min-w-[260px] overflow-hidden rounded-lg border">
+        <RoleListPanel
+          roles={roles}
+          loading={rolesLoading}
+          selectedBizID={selectedRole?.bizID ?? null}
+          onSelectRole={handleSelectRole}
+          onOpenMembers={handleOpenMembers}
+          onCreateClick={handleCreateClick}
+          onEditClick={handleEditClick}
+          onDeleteClick={(r) => setDeleteTarget(r)}
+        />
+      </aside>
 
-        <section className="min-w-0 flex-1 overflow-hidden rounded-lg border">
-          {selectedRole ? (
+      <section className="min-w-0 flex-1 overflow-hidden rounded-lg border">
+        {selectedRole ? (
             <Tabs
               value={activeTab}
               onValueChange={setActiveTab}
@@ -169,7 +171,6 @@ const PermissionPage: React.FC = () => {
             </div>
           )}
         </section>
-      </div>
 
       <RoleFormDialog
         open={formOpen}
@@ -211,7 +212,7 @@ const PermissionPage: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   );
 };
 
