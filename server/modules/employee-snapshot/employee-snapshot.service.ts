@@ -315,17 +315,19 @@ export class EmployeeSnapshotService {
       const dimWeight: number =
         ind.dimensionWeight ??
         (dimRows.length > 0 ? Number(dimRows[0].weight) : 0);
+      // 加减分维度快照行：权重固定 0（不参与权重校验与计算），防异常入参
+      const isBonus = ind.isBonus ?? false;
       await db.insert(employeeIndicatorSnapshot).values({
         employeeId,
         templateId,
         dimensionName: dimName,
-        dimensionWeight: String(dimWeight),
+        dimensionWeight: String(isBonus ? 0 : dimWeight),
         content: ind.content,
         description: ind.description,
         algorithm: ind.algorithm,
         dataSource: ind.dataSource,
-        weight: String(ind.weight),
-        isBonus: ind.isBonus ?? false,
+        weight: String(isBonus ? 0 : ind.weight),
+        isBonus,
         isAdjusted: true,
         adjustedBy: userId,
         adjustedAt: now,

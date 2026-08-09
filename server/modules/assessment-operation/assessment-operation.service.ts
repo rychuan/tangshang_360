@@ -89,9 +89,9 @@ export function validateRatingsAgainstSnapshots(
     if (!Number.isFinite(rating.score)) {
       throw new BadRequestException('评分必须为有效数值');
     }
-    // 普通指标不允许负分；加减分维度支持负分（加减分）
+    // 普通指标不允许负分；加减分维度支持负分（加减分，不设上限）
     if (!snapshot.isBonus && rating.score < 0) {
-      throw new BadRequestException('评分不能为负数或非法数值');
+      throw new BadRequestException('评分不能为负数');
     }
   }
 

@@ -103,7 +103,7 @@ describe('validateRatingsAgainstSnapshots', () => {
 
     expect(() =>
       validateRatingsAgainstSnapshots(ratings, bonusSnapshots, false),
-    ).toThrow('评分不能为负数或非法数值');
+    ).toThrow('评分不能为负数');
   });
 
   it('does not require bonus snapshots on final submit', () => {
