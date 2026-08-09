@@ -94,7 +94,7 @@ try {
   await someApiCall();
 } catch (err: unknown) {
   logger.error('Operation failed:', err);
-  handleApiError(err);  // 403 → toast "无权限", 401 → silent, other → server message or default
+  handleApiError(err); // 403 → toast "无权限", 401 → silent, other → server message or default
 }
 ```
 
@@ -102,12 +102,12 @@ User notifications use `toast` from `sonner` (success/warning/error).
 
 ### Path Aliases
 
-| Alias | Resolves to |
-|-------|-------------|
-| `@/` | `client/src/` |
-| `@client/` | `client/` |
-| `@server/` | `server/` |
-| `@shared/` | `shared/` |
+| Alias      | Resolves to   |
+| ---------- | ------------- |
+| `@/`       | `client/src/` |
+| `@client/` | `client/`     |
+| `@server/` | `server/`     |
+| `@shared/` | `shared/`     |
 
 ### View Rendering
 
@@ -118,6 +118,7 @@ The `ViewModule` (registered last in `AppModule`) catches all `GET` routes and r
 PostgreSQL accessed through Drizzle ORM. The schema at `server/database/schema.ts` is **auto-generated** from the database via `npm run gen:db-schema`. Never edit it manually.
 
 Key schema conventions:
+
 - `employee.id` is a `user_profile` custom type (not UUID), with unique index on `((id).user_id)`
 - `customTimestamptz` is used for all timestamp columns
 - Audit trail via `audit_log` table
@@ -141,6 +142,7 @@ Five built-in roles: `admin`, `hrd`, `dept_head`, `supervisor`, `employee`. Perm
 3. **`@CanRole([...])`** — Platform role-level identity gate. **Only used in `role-manager.controller.ts`** for elevation-of-privilege operations (role CRUD, permission config changes). Do NOT add to general business endpoints; use `@RequirePermission` instead.
 
 **Frontend permission control:**
+
 - Route-level: `ProtectedRoute` with `resources` (checks view permission) + optional `identityRoles`
 - Component-level: `usePermission(resource, action)` hook or `<CanDo resource={...} action={...}>` wrapper
 - Navigation: `filterVisibleNavGroups()` filters sidebar items by permissions + identity roles
@@ -148,17 +150,28 @@ Five built-in roles: `admin`, `hrd`, `dept_head`, `supervisor`, `employee`. Perm
 ## Assessment Workflow State Machine
 
 ```
-bound → published → self_review → supervisor_review → pending_sign → completed
+bound → published → self_review ──(with-sign)──▶ supervisor_review ──(with-sign)──▶ completed
+                ▲              │                          │
+                │              └─(rating only)──▶ pending_sign ──sign──┘
+                │                                 supervisor_sign ◀──(rating only)──┘
+                └──────────── 解锁/退回可回退到更早状态 ─────────────┘
 ```
 
 - **bound**: Template bound to employee, employee-level indicator snapshots created
 - **published**: Assessment published, instance-level indicator snapshots created from employee snapshots
-- **self_review**: Self-rating phase — employee fills scores, submits (status → `supervisor_review`)
-- **supervisor_review**: Supervisor rating phase — supervisor/dept_head/admin fills scores, submits (status → `pending_sign`, totalScore + grade calculated)
-- **pending_sign**: Signing phase — self and supervisor sign via CAS (both signed → `completed`)
-- **completed**: Both signatures collected, final state
+- **self_review**: Self-rating phase — employee fills scores
+- **pending_sign**: 仅分离流程进入 — 本人评分后待本人签名（CAS），签名后 → `supervisor_review`
+- **supervisor_review**: Supervisor rating phase — supervisor/dept_head/admin fills scores（评分后 totalScore + grade 计算）
+- **supervisor_sign**: 仅分离流程进入 — 上级评分后待上级签名（CAS），签名后 → `completed`
+- **completed**: 终态
+
+**两种提交模式**（控制器提供两套评分端点）：
+
+1. **一步到位（`*-rating-with-sign`）**：评分与签名同时提交，跳过中间签名态 — `self_review → supervisor_review`、`supervisor_review → completed`。适用于网页端手写签名场景。
+2. **分离流程（`*-rating` + 签名）**：先提交评分进入 `pending_sign` / `supervisor_sign`，再通过手机签名完成 — 生成签名 token（`POST :id/sign-token`）→ 飞书消息通知 → `GET sign-session` 查询 / `POST sign-session` 凭 token 签名（CAS：`WHERE signName IS NULL` 防覆盖）。`POST :id/sign` 为旧版单独签名入口，兼容历史 `pending_sign` / `supervisor_sign` 状态实例。
 
 Key rules:
+
 - Employee-level indicator snapshots are created on binding, adjusted before publish, then copied to instance-level snapshots on publish
 - Rating writes must use `db.transaction()` + `SELECT ... FOR UPDATE` for concurrent safety (prevents double-submit race conditions)
 - Unlock operations move status backward (logged in `audit_log`)
@@ -195,6 +208,7 @@ await this.db.transaction(async (tx) => {
 ```
 
 Key points:
+
 - Pre-validate outside transaction for fast-fail on obvious errors (invalid UUID, missing records, identity checks)
 - Re-validate critical state (status, sign name) inside the transaction after acquiring the lock
 - Use `inArray()` for batch queries instead of N+1 per-indicator SELECTs
@@ -217,13 +231,13 @@ await this.db.transaction(async (tx) => {
 
 `employee` table uses text fields + logical FK columns instead of DB-level FK constraints (because data comes from external sync):
 
-| Field | Type | References | Notes |
-|-------|------|-----------|-------|
-| `department` | varchar | legacy text | Display only, backward compat |
-| `departmentId` | uuid | `department.id` | **Use this for queries** |
-| `position` | varchar | legacy text | Display only |
-| `positionCode` | varchar(100) | `system_dict.code` (dictType='position') | **Use this for queries** |
-| `role` | text | comma-separated | `employee,supervisor,dept_head,hrd,admin` |
+| Field          | Type         | References                               | Notes                                     |
+| -------------- | ------------ | ---------------------------------------- | ----------------------------------------- |
+| `department`   | varchar      | legacy text                              | Display only, backward compat             |
+| `departmentId` | uuid         | `department.id`                          | **Use this for queries**                  |
+| `position`     | varchar      | legacy text                              | Display only                              |
+| `positionCode` | varchar(100) | `system_dict.code` (dictType='position') | **Use this for queries**                  |
+| `role`         | text         | comma-separated                          | `employee,supervisor,dept_head,hrd,admin` |
 
 **Always resolve new columns on create/update** — if frontend only sends text values, backend must auto-resolve `departmentId` from `department.name` and `positionCode` from `system_dict.name`.
 
@@ -243,12 +257,14 @@ Key methods in `server/modules/role-manager/role-manager.service.ts`:
 ## Department Head Auto-Role
 
 When department headId changes (create/update), `department.service.ts` automatically:
+
 - Adds `dept_head` role to new head via `ensureUserRole(..., 'dept_head')`
 - Removes `dept_head` from old head if they no longer head any department
 
 ## Frontend Table Conventions
 
 All tables across the application follow these standards:
+
 - **Left alignment**: All columns `text-left` except `totalScore` (financial convention: `text-right`)
 - **Sticky action column**: `sticky right-0 bg-background z-20 border-l` (header) / `z-10` (cell) with `group-hover:bg-muted/50`
 - **Badge action buttons**: Use `ActionBadge` component (`@/components/business-ui/action-badge`) — auto-maps actionType to variant

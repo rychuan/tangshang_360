@@ -77,12 +77,21 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     } else {
       // 未知异常
       httpStatus = HttpStatus.INTERNAL_SERVER_ERROR;
+      const isDev = process.env.NODE_ENV !== 'production';
+      const err = exception as Error | undefined;
+      const rawCause =
+        typeof err?.cause === 'string'
+          ? err.cause
+          : err?.cause instanceof Error
+            ? err.cause.message
+            : undefined;
       errorResponse = {
         error: {
           code: ResponseCode.INTERNAL_ERROR,
           message: '服务器内部错误',
-          stack: (exception as Error).stack,
-          cause: (exception as Error).cause as string,
+          // 堆栈与原因仅开发环境返回，避免向客户端泄露内部实现细节
+          ...(isDev && err?.stack ? { stack: err.stack } : {}),
+          ...(isDev && rawCause ? { cause: rawCause } : {}),
           timestamp: Date.now(),
         },
       };

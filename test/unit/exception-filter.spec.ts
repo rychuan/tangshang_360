@@ -98,4 +98,51 @@ describe('GlobalExceptionFilter', () => {
       }),
     });
   });
+
+  it('omits stack and cause for unknown errors in production', () => {
+    const { host, response } = createHttpHost();
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+
+    try {
+      new GlobalExceptionFilter().catch(new Error('内部细节'), host as any);
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+
+    expect(response.status).toHaveBeenCalledWith(
+      HttpStatus.INTERNAL_SERVER_ERROR,
+    );
+    expect(response.json).toHaveBeenCalledWith({
+      error: expect.objectContaining({
+        code: ResponseCode.INTERNAL_ERROR,
+        message: '服务器内部错误',
+      }),
+    });
+    const payload = response.json.mock.calls[0][0] as {
+      error: Record<string, unknown>;
+    };
+    expect(payload.error.stack).toBeUndefined();
+    expect(payload.error.cause).toBeUndefined();
+  });
+
+  it('exposes stack and cause for unknown errors in development', () => {
+    const { host, response } = createHttpHost();
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development';
+
+    try {
+      const err = new Error('内部细节');
+      err.cause = new Error('根因');
+      new GlobalExceptionFilter().catch(err, host as any);
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+
+    const payload = response.json.mock.calls[0][0] as {
+      error: { stack?: string; cause?: string };
+    };
+    expect(payload.error.stack).toContain('内部细节');
+    expect(payload.error.cause).toBe('根因');
+  });
 });
