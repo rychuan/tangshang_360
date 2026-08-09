@@ -11,8 +11,8 @@ import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { eq, and, asc, count, sql, isNull, inArray, avg } from 'drizzle-orm';
-import { department, employee, auditLog, assessmentInstance } from '@server/database/schema';
+import { eq, and, asc, count, sql, isNull, inArray } from 'drizzle-orm';
+import { department, employee, auditLog } from '@server/database/schema';
 import { EmployeeRepository } from '../employee-management/employee.repository';
 import { RoleManagerService } from '../role-manager/role-manager.service';
 import { AuthorizationSyncService } from '../role-manager/authorization-sync.service';
@@ -87,7 +87,6 @@ export class DepartmentService {
       .orderBy(asc(department.sortOrder), asc(department.name));
 
     const memberCountMap = await this.employeeRepo.getDepartmentMemberCounts();
-    const scoreMap = await this.getDepartmentScoreMap();
 
     const items: DepartmentItem[] = rows.map((r) => ({
       id: r.id,
@@ -103,7 +102,6 @@ export class DepartmentService {
         r.createdAt instanceof Date
           ? r.createdAt.toISOString()
           : String(r.createdAt),
-      avgScore: scoreMap.get(r.id),
     }));
 
     const tree = this.buildTree(items);
@@ -136,7 +134,6 @@ export class DepartmentService {
     }
 
     const memberCountMap = await this.employeeRepo.getDepartmentMemberCounts();
-    const scoreMap = await this.getDepartmentScoreMap();
 
     const r = rows[0];
     const item: DepartmentItem = {
@@ -153,7 +150,6 @@ export class DepartmentService {
         r.createdAt instanceof Date
           ? r.createdAt.toISOString()
           : String(r.createdAt),
-      avgScore: scoreMap.get(r.id),
     };
 
     const childCondition =
@@ -193,7 +189,6 @@ export class DepartmentService {
         c.createdAt instanceof Date
           ? c.createdAt.toISOString()
           : String(c.createdAt),
-      avgScore: scoreMap.get(c.id),
     }));
 
     return {
@@ -416,7 +411,6 @@ export class DepartmentService {
       .orderBy(asc(department.sortOrder), asc(department.name));
 
     const memberCountMap = await this.employeeRepo.getDepartmentMemberCounts();
-    const scoreMap = await this.getDepartmentScoreMap();
 
     return rows.map((r) => ({
       id: r.id,
@@ -432,40 +426,7 @@ export class DepartmentService {
         r.createdAt instanceof Date
           ? r.createdAt.toISOString()
           : String(r.createdAt),
-      avgScore: scoreMap.get(r.id),
     }));
-  }
-
-  /**
-   * 各部门平均分：已完成考核实例（status = completed）的 totalScore 均值。
-   * 按员工归属部门聚合，只统计未删除员工。
-   */
-  private async getDepartmentScoreMap(): Promise<Map<string, number>> {
-    const rows = await this.db
-      .select({
-        departmentId: employee.departmentId,
-        avgVal: avg(assessmentInstance.totalScore),
-      })
-      .from(assessmentInstance)
-      .innerJoin(
-        employee,
-        sql`(${assessmentInstance.employeeId}).user_id = (${employee.employeeId}).user_id`,
-      )
-      .where(
-        and(
-          eq(assessmentInstance.status, 'completed'),
-          isNull(employee.deletedAt),
-        ),
-      )
-      .groupBy(employee.departmentId);
-
-    const map = new Map<string, number>();
-    for (const r of rows) {
-      if (r.departmentId && r.avgVal !== null) {
-        map.set(String(r.departmentId), Math.round(Number(r.avgVal) * 100) / 100);
-      }
-    }
-    return map;
   }
 
   private async getReadableScope(userId: string): Promise<AccessScope> {

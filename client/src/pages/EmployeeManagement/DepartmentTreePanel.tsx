@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/dialog';
 import { UserSelect } from '@/components/business-ui/user-select';
 import { UserDisplay } from '@/components/business-ui/user-display';
+import { ActionBadge } from '@/components/business-ui/action-badge';
 import { toast } from 'sonner';
 import { handleApiError, isApiNotFound } from '@client/src/utils/api-error';
 import { useTableScrollHeight } from '@/hooks/useTableScrollHeight';
@@ -246,8 +247,6 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
       const isExpanded = expanded.has(node.id);
       const hasChildren = node.children?.length > 0;
       const directCount = node.memberCount ?? 0;
-      const score =
-        typeof node.avgScore === 'number' ? node.avgScore.toFixed(1) : null;
       const hasRowActions = canCreate || canEdit || canDelete;
       return (
         <div key={node.id}>
@@ -282,14 +281,6 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
             <span className="shrink-0 text-[10px] text-muted-foreground tabular-nums">
               {directCount}
             </span>
-            {score !== null && (
-              <span
-                className="shrink-0 rounded bg-muted px-1 py-px text-[10px] font-medium tabular-nums"
-                title="部门平均分（已完成考核）"
-              >
-                {score}
-              </span>
-            )}
             {node.headId ? (
               <UserDisplay
                 value={{ user_id: node.headId, name: node.headName }}
@@ -300,47 +291,44 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
             ) : (
               <span className="size-4 shrink-0" />
             )}
-            {/* 悬浮菜单：覆盖右侧区域 */}
+            {/* 悬浮菜单：覆盖右侧一半区域（图标徽章） */}
             {hasRowActions && (
-              <div className="pointer-events-none absolute inset-y-0 right-0 z-20 flex w-3/5 items-center justify-end gap-0.5 border-l border-border/60 bg-background/95 pl-1.5 pr-1 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
+              <div className="pointer-events-none absolute inset-y-0 right-0 z-20 flex w-1/2 items-center justify-end gap-1 border-l border-border/60 bg-background/95 pl-2 pr-1.5 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
                 {canEdit && (
-                  <button
-                    className="flex h-6 items-center gap-0.5 rounded px-1 text-[11px] hover:bg-muted"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openEdit(node);
-                    }}
-                    title="编辑"
-                  >
-                    <Pencil className="size-3" />
-                    编辑
-                  </button>
+                  <span title="编辑" onClick={(e) => e.stopPropagation()}>
+                    <ActionBadge
+                      actionType="edit"
+                      icon={<Pencil className="size-3" />}
+                      label=""
+                      onClick={() => openEdit(node)}
+                      className="h-6 w-6 p-0"
+                    />
+                  </span>
                 )}
                 {canCreate && (
-                  <button
-                    className="flex h-6 items-center gap-0.5 rounded px-1 text-[11px] hover:bg-muted"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openCreate(node.id);
-                    }}
+                  <span
                     title="添加子部门"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <Plus className="size-3" />
-                    子部门
-                  </button>
+                    <ActionBadge
+                      actionType="bind"
+                      icon={<Plus className="size-3" />}
+                      label=""
+                      onClick={() => openCreate(node.id)}
+                      className="h-6 w-6 p-0"
+                    />
+                  </span>
                 )}
                 {canDelete && (
-                  <button
-                    className="flex h-6 items-center gap-0.5 rounded px-1 text-[11px] text-destructive hover:bg-destructive/10"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(node);
-                    }}
-                    title="删除"
-                  >
-                    <Trash2 className="size-3" />
-                    删除
-                  </button>
+                  <span title="删除" onClick={(e) => e.stopPropagation()}>
+                    <ActionBadge
+                      actionType="delete"
+                      icon={<Trash2 className="size-3" />}
+                      label=""
+                      onClick={() => handleDelete(node)}
+                      className="h-6 w-6 p-0"
+                    />
+                  </span>
                 )}
               </div>
             )}

@@ -198,8 +198,6 @@ export interface DepartmentItem {
   sortOrder: number;
   isActive: boolean;
   createdAt: string;
-  /** 部门平均分（已完成考核实例 totalScore 均值，四舍五入到两位小数） */
-  avgScore?: number;
 }
 
 export interface DepartmentTreeNode extends DepartmentItem {

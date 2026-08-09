@@ -139,27 +139,27 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
     <div className="flex flex-col gap-4 min-h-full">
       {/* 筛选条件（参考模板管理布局：每项控件带 Label，无标题文字） */}
       <FilterBar data-ai-section-type="card-list" className="gap-2">
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs text-muted-foreground">搜索</Label>
-          <InputGroup className="w-28">
+        <div className="flex flex-col gap-0.5">
+          <Label className="text-[11px] text-muted-foreground">搜索</Label>
+          <InputGroup className="w-24">
             <InputGroupAddon>
-              <Search className="size-3.5" />
+              <Search className="size-3" />
             </InputGroupAddon>
             <InputGroupInput
-              className="h-8 text-xs"
+              className="h-7 text-xs"
               placeholder="姓名/编号"
               value={filters.keyword}
               onChange={(e) => setters.setKeyword(e.target.value)}
             />
           </InputGroup>
         </div>
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs text-muted-foreground">部门</Label>
+        <div className="flex flex-col gap-0.5">
+          <Label className="text-[11px] text-muted-foreground">部门</Label>
           <Select
             value={filters.department || 'all'}
             onValueChange={(v) => setters.setDepartment(v === 'all' ? '' : v)}
           >
-            <SelectTrigger className="h-8 w-28 text-xs">
+            <SelectTrigger className="h-7 w-24 text-xs">
               <SelectValue placeholder="全部部门" />
             </SelectTrigger>
             <SelectContent>
@@ -174,15 +174,15 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs text-muted-foreground">岗位</Label>
+        <div className="flex flex-col gap-0.5">
+          <Label className="text-[11px] text-muted-foreground">岗位</Label>
           <Select
             value={filters.positions[0] || 'all'}
             onValueChange={(v) =>
               setters.setPositions(v === 'all' ? [] : [v])
             }
           >
-            <SelectTrigger className="h-8 w-28 text-xs">
+            <SelectTrigger className="h-7 w-24 text-xs">
               <SelectValue placeholder="全部岗位" />
             </SelectTrigger>
             <SelectContent>
@@ -197,13 +197,13 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs text-muted-foreground">角色</Label>
+        <div className="flex flex-col gap-0.5">
+          <Label className="text-[11px] text-muted-foreground">角色</Label>
           <Select
             value={filters.role || 'all'}
             onValueChange={(v) => setters.setRole(v === 'all' ? '' : v)}
           >
-            <SelectTrigger className="h-8 w-24 text-xs">
+            <SelectTrigger className="h-7 w-20 text-xs">
               <SelectValue placeholder="全部角色" />
             </SelectTrigger>
             <SelectContent>
@@ -218,13 +218,13 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs text-muted-foreground">状态</Label>
+        <div className="flex flex-col gap-0.5">
+          <Label className="text-[11px] text-muted-foreground">状态</Label>
           <Select
             value={filters.status || 'all'}
             onValueChange={(v) => setters.setStatus(v === 'all' ? '' : v)}
           >
-            <SelectTrigger className="h-8 w-24 text-xs">
+            <SelectTrigger className="h-7 w-20 text-xs">
               <SelectValue placeholder="全部状态" />
             </SelectTrigger>
             <SelectContent>
@@ -237,13 +237,13 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
           </Select>
         </div>
         {capabilities.showBindings && (
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs text-muted-foreground">绩效</Label>
+          <div className="flex flex-col gap-0.5">
+            <Label className="text-[11px] text-muted-foreground">绩效</Label>
             <Select
               value={filters.binding || 'all'}
               onValueChange={(v) => setters.setBinding(v === 'all' ? '' : v)}
             >
-              <SelectTrigger className="h-8 w-24 text-xs">
+              <SelectTrigger className="h-7 w-20 text-xs">
                 <SelectValue placeholder="全部" />
               </SelectTrigger>
               <SelectContent>
@@ -257,25 +257,25 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
           </div>
         )}
         <FilterBarActions>
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground invisible">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[11px] text-muted-foreground invisible">
               占位
             </span>
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8"
+              className="h-7 w-7"
               title="重置筛选"
               onClick={setters.resetFilters}
             >
-              <RefreshCw className="size-4" />
+              <RefreshCw className="size-3.5" />
             </Button>
           </div>
         </FilterBarActions>
         <div className="flex-1" />
         <FilterBarActions>
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground invisible">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[11px] text-muted-foreground invisible">
               占位
             </span>
             <div className="flex items-center gap-2">
@@ -284,11 +284,11 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 px-2"
+                    className="h-7 px-1.5"
                     title="批量绑定"
                     onClick={() => dialogs.openBatchBindDialog(selectedRowKeys)}
                   >
-                    <Link2 className="size-3.5" />
+                    <Link2 className="size-3" />
                     {selectedRowKeys.length}
                   </Button>
                 </CanDo>
@@ -296,11 +296,11 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
               <CanDo resource="employees" action="edit">
                 <Button
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-7 w-7"
                   title="新建员工"
                   onClick={dialogs.openCreateDialog}
                 >
-                  <Plus className="size-4" />
+                  <Plus className="size-3.5" />
                 </Button>
               </CanDo>
             </div>

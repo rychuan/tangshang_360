@@ -39,16 +39,6 @@ function listQuery<T>(rows: T[]) {
   };
 }
 
-function scoreQuery() {
-  // 部门平均分查询链：select().from().innerJoin().where().groupBy()
-  return {
-    from: jest.fn().mockReturnThis(),
-    innerJoin: jest.fn().mockReturnThis(),
-    where: jest.fn().mockReturnThis(),
-    groupBy: jest.fn().mockResolvedValue([]),
-  };
-}
-
 function managedScope(departmentIds: string[]) {
   return {
     kind: 'managed' as const,
@@ -199,12 +189,7 @@ describe('department data scope', () => {
     ]);
     const { service, accessScopeService } = createService({
       scope: managedScope(['dept-1']),
-      db: {
-        select: jest
-          .fn()
-          .mockReturnValueOnce(query)
-          .mockReturnValueOnce(scoreQuery()),
-      },
+      db: { select: jest.fn().mockReturnValue(query) },
     });
 
     const result = await service.list('manager-1');
@@ -255,7 +240,6 @@ describe('department data scope', () => {
         select: jest
           .fn()
           .mockReturnValueOnce(detailQuery)
-          .mockReturnValueOnce(scoreQuery())
           .mockReturnValueOnce(childQuery),
       },
     });

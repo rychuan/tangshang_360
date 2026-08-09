@@ -9,6 +9,7 @@ import type {
   CreateDepartmentRequest,
 } from '@shared/api.interface';
 import { Button } from '@/components/ui/button';
+import { ActionBadge } from '@/components/business-ui/action-badge';
 import { Spinner } from '@/components/ui/spinner';
 import { UserDisplay } from '@/components/business-ui/user-display';
 import { Input } from '@/components/ui/input';
@@ -205,8 +206,6 @@ const DepartmentManagementTab: React.FC = () => {
   ): React.ReactNode => {
     const isOpen = expanded.has(node.id);
     const hasChildren = node.children && node.children.length > 0;
-    const score =
-      typeof node.avgScore === 'number' ? node.avgScore.toFixed(1) : null;
     const hasRowActions = canEdit || canDelete || canCreate;
     return (
       <React.Fragment key={node.id}>
@@ -258,61 +257,6 @@ const DepartmentManagementTab: React.FC = () => {
             )}
           </TableCell>
           <TableCell className="py-2 px-3 text-right">
-            <span
-              className="inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums"
-              title="部门平均分（已完成考核）"
-            >
-              {score ?? '—'}
-            </span>
-            {/* 悬浮菜单：覆盖右侧一半区域 */}
-            {hasRowActions && (
-              <div className="pointer-events-none absolute inset-y-0 right-0 z-20 flex w-1/2 items-center justify-end gap-1 border-l border-border/60 bg-background/95 px-4 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
-                <CanDo {...COMMAND_PERMISSIONS.departmentEdit}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 gap-1 px-2 text-xs"
-                    onClick={() => handleEdit(node)}
-                  >
-                    <Pencil className="size-3.5" />
-                    编辑
-                  </Button>
-                </CanDo>
-                {canCreate && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 gap-1 px-2 text-xs"
-                    onClick={() => {
-                      setEditingDept(null);
-                      setFormData({
-                        name: '',
-                        parentId: node.id,
-                        headId: '',
-                        sortOrder: 0,
-                      });
-                      setDialogOpen(true);
-                    }}
-                  >
-                    <Plus className="size-3.5" />
-                    添加子部门
-                  </Button>
-                )}
-                <CanDo {...COMMAND_PERMISSIONS.departmentDelete}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 gap-1 px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => handleDelete(node)}
-                  >
-                    <Trash2 className="size-3.5" />
-                    删除
-                  </Button>
-                </CanDo>
-              </div>
-            )}
-          </TableCell>
-          <TableCell className="py-2 px-3 text-right">
             {node.headId ? (
               <UserDisplay
                 value={{ user_id: node.headId, name: node.headName }}
@@ -321,6 +265,56 @@ const DepartmentManagementTab: React.FC = () => {
               />
             ) : (
               <span className="text-xs text-muted-foreground">—</span>
+            )}
+            {/* 悬浮菜单：覆盖右侧一半区域（图标徽章） */}
+            {hasRowActions && (
+              <div className="pointer-events-none absolute inset-y-0 right-0 z-20 flex w-1/2 items-center justify-end gap-1 border-l border-border/60 bg-background/95 px-4 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
+                <CanDo {...COMMAND_PERMISSIONS.departmentEdit}>
+                  <span title="编辑" onClick={(e) => e.stopPropagation()}>
+                    <ActionBadge
+                      actionType="edit"
+                      icon={<Pencil className="size-3" />}
+                      label=""
+                      onClick={() => handleEdit(node)}
+                      className="h-6 w-6 p-0"
+                    />
+                  </span>
+                </CanDo>
+                {canCreate && (
+                  <span
+                    title="添加子部门"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ActionBadge
+                      actionType="bind"
+                      icon={<Plus className="size-3" />}
+                      label=""
+                      onClick={() => {
+                        setEditingDept(null);
+                        setFormData({
+                          name: '',
+                          parentId: node.id,
+                          headId: '',
+                          sortOrder: 0,
+                        });
+                        setDialogOpen(true);
+                      }}
+                      className="h-6 w-6 p-0"
+                    />
+                  </span>
+                )}
+                <CanDo {...COMMAND_PERMISSIONS.departmentDelete}>
+                  <span title="删除" onClick={(e) => e.stopPropagation()}>
+                    <ActionBadge
+                      actionType="delete"
+                      icon={<Trash2 className="size-3" />}
+                      label=""
+                      onClick={() => handleDelete(node)}
+                      className="h-6 w-6 p-0"
+                    />
+                  </span>
+                </CanDo>
+              </div>
             )}
           </TableCell>
         </TableRow>
@@ -465,9 +459,6 @@ const DepartmentManagementTab: React.FC = () => {
                     <TableHead className="h-8 px-3 text-xs">部门名称</TableHead>
                     <TableHead className="h-8 px-3 text-xs">上级部门</TableHead>
                     <TableHead className="h-8 px-3 text-xs">成员</TableHead>
-                    <TableHead className="h-8 px-3 text-right text-xs">
-                      当前分数
-                    </TableHead>
                     <TableHead className="h-8 px-3 text-right text-xs">
                       负责人
                     </TableHead>
