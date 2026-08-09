@@ -45,6 +45,8 @@
   --sidebar-accent-foreground: hsl(217 70% 42%);
   --sidebar-border: hsl(220 12% 88%);
   --sidebar-ring: hsl(217 75% 42%);
+  --sidebar-active: hsl(217 78% 92%);
+  --sidebar-active-foreground: hsl(217 70% 42%);
 
   --primary-border: hsl(
     from hsl(217 70% 42%) h s calc(l + var(--opaque-button-border-intensity))
@@ -133,6 +135,8 @@
   --sidebar-accent-foreground: hsl(217 70% 62%);
   --sidebar-border: hsl(220 12% 22%);
   --sidebar-ring: hsl(217 75% 52%);
+  --sidebar-active: hsl(220 60% 24%);
+  --sidebar-active-foreground: hsl(214 90% 82%);
 
   --shadow-2xs: 0 1px 2px 0 rgb(255 255 255 / 0.03);
   --shadow-xs: 0 1px 3px 0 rgb(255 255 255 / 0.04);
@@ -199,6 +203,8 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-active-foreground: var(--sidebar-active-foreground);
 
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);

@@ -55,7 +55,7 @@ export function AppSidebar({
           <span>{formatCurrentCycle(new Date())}</span>
         </div>
       </SidebarHeader>
-      <SidebarContent className="px-2">
+      <SidebarContent className="px-2 py-1">
         {visibleGroups.map((group) => (
           <SidebarGroup key={group.label} className="px-0">
             <SidebarGroupLabel className="px-3 text-[11px]">
@@ -68,7 +68,7 @@ export function AppSidebar({
                     <SidebarMenuButton
                       asChild
                       isActive={isActivePath(pathname, item.path)}
-                      className="h-10 rounded-lg px-3 text-[14px] data-[active=true]:border data-[active=true]:bg-background data-[active=true]:shadow-xs"
+                      className="h-10 rounded-lg px-3 text-[14px] data-[active=true]:bg-sidebar-active data-[active=true]:text-sidebar-active-foreground data-[active=true]:hover:bg-sidebar-active"
                     >
                       <Link to={item.path}>
                         <Icon icon={item.icon} className="size-4" />
