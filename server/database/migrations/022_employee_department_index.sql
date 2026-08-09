@@ -7,6 +7,11 @@
 --   department_id 过滤会走全表扫描，员工量增大后成为瓶颈。
 --
 -- 执行方式：在平台数据库环境手动执行本文件，执行后跑 `npm run gen:db-schema` 同步 schema.ts。
+-- 完整迁移执行清单与依赖顺序见 `server/database/migrations/README.md`。
+--
+-- 执行后验证：
+--   SELECT indexname FROM pg_indexes
+--   WHERE tablename = 'employee' AND indexname = 'idx_employee_department';
 --
 -- 安全说明：
 --   - 幂等（IF NOT EXISTS），可重复执行；
