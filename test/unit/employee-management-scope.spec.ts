@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { sql } from 'drizzle-orm';
+import { EmployeeAuthorizationService } from '../../server/modules/employee-management/employee-authorization.service';
 import { EmployeeManagementService } from '../../server/modules/employee-management/employee-management.service';
 
 describe('employee management access scope', () => {
@@ -48,12 +49,19 @@ describe('employee management access scope', () => {
         subordinateIds: [],
       }),
     };
+    const employeeAuthService = new EmployeeAuthorizationService(
+      db as any,
+      roleManagerService as any,
+      authorizationSyncService as any,
+      accessScopeService as any,
+    );
     const service = new (EmployeeManagementService as any)(
       db,
       roleManagerService,
       bindingService,
       accessScopeService,
       authorizationSyncService,
+      employeeAuthService,
     ) as EmployeeManagementService;
 
     return {
@@ -93,6 +101,7 @@ describe('employee management access scope', () => {
     const db = { select: jest.fn().mockReturnValue(positionQuery) };
     const service = new (EmployeeManagementService as any)(
       db,
+      {},
       {},
       {},
       {},
@@ -161,6 +170,7 @@ describe('employee management access scope', () => {
         roleManagerService,
         {},
         accessScopeService,
+        {},
         {},
       ) as EmployeeManagementService;
 
@@ -296,6 +306,13 @@ describe('employee management access scope', () => {
       roleManagerService,
       {},
       accessScopeService,
+      {},
+      new EmployeeAuthorizationService(
+        db as any,
+        roleManagerService as any,
+        {} as any,
+        accessScopeService as any,
+      ),
     ) as EmployeeManagementService;
 
     const result = await service.detail('employee-1', 'supervisor-1');

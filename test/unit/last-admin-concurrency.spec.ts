@@ -1,4 +1,5 @@
 import { EmployeeManagementService } from '../../server/modules/employee-management/employee-management.service';
+import { EmployeeAuthorizationService } from '../../server/modules/employee-management/employee-authorization.service';
 import { TeamStructureService } from '../../server/modules/team-structure/team-structure.service';
 
 const EXPECTED_LAST_ADMIN_LOCK_KEY = 20_260_717;
@@ -88,12 +89,19 @@ function createEmployeeService(
       version: 1,
     }),
   };
+  const employeeAuthService = new EmployeeAuthorizationService(
+    db as any,
+    roleManagerService as any,
+    authorizationSyncService as any,
+    accessScopeService as any,
+  );
   const service = new (EmployeeManagementService as any)(
     db,
     roleManagerService,
     {},
     accessScopeService,
     authorizationSyncService,
+    employeeAuthService,
   ) as EmployeeManagementService;
   return { service, roleManagerService, authorizationSyncService };
 }
