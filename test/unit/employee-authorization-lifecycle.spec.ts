@@ -176,109 +176,6 @@ describe('employee authorization lifecycle', () => {
     expect(db.select).not.toHaveBeenCalled();
   });
 
-  it('requires permission_management edit for legacy permission changes', async () => {
-    const db = {
-      select: jest.fn(() => {
-        throw new Error('permission target queried');
-      }),
-    };
-    const { service, roleManagerService } = createEmployeeService(db);
-
-    await expect(
-      service.updatePermissions(
-        'employee-2',
-        [{ resource: 'employees', actions: ['edit'] }],
-        'admin-1',
-      ),
-    ).rejects.toThrow('无权修改员工权限');
-
-    expect(roleManagerService.checkUserPermission).toHaveBeenCalledWith(
-      'admin-1',
-      'permission_management',
-      'edit',
-    );
-    expect(db.select).not.toHaveBeenCalled();
-  });
-
-  it('updates legacy permissions without reading admin counts or changing durable authorization state', async () => {
-    const durableEmployee = {
-      employeeId: 'employee-2',
-      name: '管理员旧权限员工',
-      role: 'admin',
-      permissions: [],
-      authorizationRoles: [],
-      authorizationVersion: 7,
-      authorizationStatus: 'synced',
-      status: true,
-      deletedAt: null,
-    };
-    const jobs = [
-      {
-        employeeId: 'employee-2',
-        authorizationVersion: 7,
-        status: 'succeeded',
-      },
-    ];
-    const targetQuery = limitedQuery([durableEmployee]);
-    const updateValues: Record<string, unknown>[] = [];
-    const updateWhere = jest.fn().mockImplementation(async () => {
-      durableEmployee.permissions = updateValues[0]?.permissions;
-    });
-    const tx = {
-      update: jest.fn().mockReturnValue({
-        set: jest.fn((values: Record<string, unknown>) => {
-          updateValues.push(values);
-          return { where: updateWhere };
-        }),
-      }),
-      insert: jest.fn().mockReturnValue({
-        values: jest.fn().mockResolvedValue(undefined),
-      }),
-    };
-    const db = {
-      select: jest
-        .fn()
-        .mockReturnValueOnce(targetQuery)
-        .mockImplementation(() => {
-          throw new Error('legacy admin count read');
-        }),
-      transaction: jest.fn(async (callback: (value: unknown) => unknown) =>
-        callback(tx),
-      ),
-    };
-    const { service, roleManagerService, authorizationSyncService } =
-      createEmployeeService(db);
-    roleManagerService.checkUserPermission.mockResolvedValue(true);
-
-    await service.updatePermissions(
-      'employee-2',
-      [{ resource: 'employees', actions: ['edit'] }],
-      'admin-1',
-    );
-
-    expect(durableEmployee.permissions).toEqual([
-      { resource: 'employees', actions: ['edit'] },
-    ]);
-    expect(durableEmployee.authorizationRoles).toEqual([]);
-    expect(durableEmployee.authorizationVersion).toBe(7);
-    expect(jobs).toEqual([
-      {
-        employeeId: 'employee-2',
-        authorizationVersion: 7,
-        status: 'succeeded',
-      },
-    ]);
-    expect(updateValues).toEqual([
-      { permissions: [{ resource: 'employees', actions: ['edit'] }] },
-    ]);
-    expect(
-      authorizationSyncService.stageAuthorizationChange,
-    ).not.toHaveBeenCalled();
-    expect(
-      authorizationSyncService.processEmployeeAuthorization,
-    ).not.toHaveBeenCalled();
-  });
-
   it('restores a soft-deleted employee through create before staging stored roles', async () => {
     const { tx } = transactionWithAudit();
     const restoreWhere = jest.fn().mockResolvedValue(undefined);
@@ -317,7 +214,7 @@ describe('employee authorization lifecycle', () => {
     expect(tx.insert).toHaveBeenCalled();
     expect(
       authorizationSyncService.stageAuthorizationChange,
-    ).toHaveBeenCalledWith(tx, 'employee-restored', ['supervisor']);
+    ).toHaveBeenCalledWith(tx, 'employee-restored', ['employee', 'supervisor']);
     expect(
       authorizationSyncService.processEmployeeAuthorization,
     ).toHaveBeenCalledWith('employee-restored', 1);
@@ -594,7 +491,7 @@ describe('employee authorization lifecycle', () => {
 
     expect(
       authorizationSyncService.stageAuthorizationChange,
-    ).toHaveBeenCalledWith(tx, 'employee-2', ['supervisor']);
+    ).toHaveBeenCalledWith(tx, 'employee-2', ['employee', 'supervisor']);
     expect(
       authorizationSyncService.processEmployeeAuthorization,
     ).toHaveBeenCalledWith('employee-2', 1);

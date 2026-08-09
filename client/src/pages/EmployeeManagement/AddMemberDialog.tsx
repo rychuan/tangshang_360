@@ -1,6 +1,10 @@
 import React, { useState, useCallback } from 'react';
 import { roleManager } from '@/api';
-import type { SearchResult, MemberMutationData } from '@shared/api.interface';
+import type {
+  SearchResult,
+  MemberMutationData,
+  RoleMemberMutationOutcome,
+} from '@shared/api.interface';
 import {
   Dialog,
   DialogContent,
@@ -17,17 +21,21 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { toast } from 'sonner';
 import { handleApiError } from '@client/src/utils/api-error';
-import { Search, User, Building2, Users } from '@/components/ui/hugeicons';
+import { Search, User } from '@/components/ui/hugeicons';
 import { i18nText } from './role-utils';
+import {
+  collectFailedOutcomes,
+  extractOutcomesFromError,
+} from './role-sync-outcomes';
 
 interface AddMemberDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   bizID: string;
   existingUserIds: string[];
-  existingDeptIds: string[];
-  existingChatIds: string[];
   onAdded: () => void;
+  /** 授权同步存在失败成员时回调（由父级展示 SyncOutcomeDialog） */
+  onSyncOutcomes?: (outcomes: RoleMemberMutationOutcome[]) => void;
 }
 
 const MemberSection: React.FC<{
@@ -94,24 +102,19 @@ const AddMemberDialog: React.FC<AddMemberDialogProps> = ({
   onOpenChange,
   bizID,
   existingUserIds,
-  existingDeptIds,
-  existingChatIds,
   onAdded,
+  onSyncOutcomes,
 }) => {
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [result, setResult] = useState<SearchResult | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
-  const [selectedDepts, setSelectedDepts] = useState<Set<string>>(new Set());
-  const [selectedChats, setSelectedChats] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
 
   const reset = () => {
     setQuery('');
     setResult(null);
     setSelectedUsers(new Set());
-    setSelectedDepts(new Set());
-    setSelectedChats(new Set());
   };
 
   const handleSearch = useCallback(async () => {
@@ -142,8 +145,7 @@ const AddMemberDialog: React.FC<AddMemberDialogProps> = ({
     });
   };
 
-  const totalSelected =
-    selectedUsers.size + selectedDepts.size + selectedChats.size;
+  const totalSelected = selectedUsers.size;
 
   const handleAdd = async () => {
     if (!bizID) return;
@@ -157,22 +159,30 @@ const AddMemberDialog: React.FC<AddMemberDialogProps> = ({
         userID: id,
       }));
     }
-    if (selectedDepts.size > 0) {
-      members.departmentList = Array.from(selectedDepts).map((id) => ({ id }));
-    }
-    if (selectedChats.size > 0) {
-      members.groupChatList = Array.from(selectedChats).map((id) => ({
-        chatID: id,
-      }));
-    }
     setSubmitting(true);
     try {
-      await roleManager.addMembers(bizID, { members });
+      const res = await roleManager.addMembers(bizID, { members });
+      const failed = collectFailedOutcomes(res);
+      if (failed.length > 0) {
+        reset();
+        onAdded();
+        onOpenChange(false);
+        onSyncOutcomes?.(failed);
+        return;
+      }
       toast.success(`已添加 ${totalSelected} 个成员`);
       reset();
       onAdded();
       onOpenChange(false);
     } catch (err) {
+      // 后端对部分失败抛 BadGatewayException，outcomes 在错误响应体里
+      const outcomes = extractOutcomesFromError(err);
+      if (outcomes && outcomes.length > 0) {
+        reset();
+        onOpenChange(false);
+        onSyncOutcomes?.(outcomes);
+        return;
+      }
       handleApiError(err);
     } finally {
       setSubmitting(false);
@@ -180,9 +190,7 @@ const AddMemberDialog: React.FC<AddMemberDialogProps> = ({
   };
 
   const users = result?.userResult?.items ?? [];
-  const depts = result?.departmentResult?.items ?? [];
-  const chats = result?.chatResult?.items ?? [];
-  const hasResult = users.length + depts.length + chats.length > 0;
+  const hasResult = users.length > 0;
 
   return (
     <Dialog
@@ -196,7 +204,7 @@ const AddMemberDialog: React.FC<AddMemberDialogProps> = ({
         <DialogHeader>
           <DialogTitle>添加成员</DialogTitle>
           <DialogDescription>
-            搜索并添加用户、部门或群组到当前角色。
+            搜索并添加用户到当前角色（仅支持显式用户成员）。
           </DialogDescription>
         </DialogHeader>
         <div className="flex gap-2">
@@ -253,54 +261,12 @@ const AddMemberDialog: React.FC<AddMemberDialogProps> = ({
                   })}
                 </MemberSection>
               )}
-              {depts.length > 0 && (
-                <MemberSection
-                  title="部门"
-                  icon={<Building2 className="size-4" />}
-                >
-                  {depts.map((d) => {
-                    const id = String(d.departmentID ?? '');
-                    const already = existingDeptIds.includes(id);
-                    return (
-                      <MemberOption
-                        key={`d-${id}`}
-                        checked={selectedDepts.has(id)}
-                        disabled={already || !id}
-                        label={i18nText(d.name) || id || '未知部门'}
-                        icon={<Building2 className="size-4" />}
-                        tag={already ? '已添加' : undefined}
-                        onToggle={() => toggle(id, setSelectedDepts)}
-                      />
-                    );
-                  })}
-                </MemberSection>
-              )}
-              {chats.length > 0 && (
-                <MemberSection title="群组" icon={<Users className="size-4" />}>
-                  {chats.map((c) => {
-                    const id = String(c.chatID ?? '');
-                    const already = existingChatIds.includes(id);
-                    return (
-                      <MemberOption
-                        key={`c-${id}`}
-                        checked={selectedChats.has(id)}
-                        disabled={already || !id}
-                        label={i18nText(c.name) || id || '未知群组'}
-                        sub={c.userCount != null ? `${c.userCount} 人` : ''}
-                        icon={<Users className="size-4" />}
-                        tag={already ? '已添加' : undefined}
-                        onToggle={() => toggle(id, setSelectedChats)}
-                      />
-                    );
-                  })}
-                </MemberSection>
-              )}
             </div>
           )}
         </div>
         <DialogFooter className="items-center justify-between sm:justify-between">
           <span className="text-sm text-muted-foreground">
-            已选 {totalSelected} 项
+            已选 {totalSelected} 人
           </span>
           <div className="flex gap-2">
             <Button

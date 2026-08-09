@@ -164,6 +164,28 @@ export class AuthorizationSyncService {
   async retryEmployeeAuthorization(
     employeeId: string,
   ): Promise<AuthorizationSyncResult> {
+    // 若当前版本没有可重试的 job（孤儿 job / 017 迁移跳过建 job），
+    // 用 durable 期望角色重新 stage 一个新版本再处理，而不是直接返回 not_processable
+    const employeeRow = await this.loadEmployee(employeeId);
+    if (!employeeRow) {
+      return {
+        status: 'failed',
+        version: 0,
+        error: `Employee ${employeeId} does not exist`,
+      };
+    }
+    const job = await this.loadJob(
+      employeeId,
+      employeeRow.authorizationVersion,
+    );
+    if (!job) {
+      const version = await this.stageAuthorizationChange(
+        this.db,
+        employeeId,
+        employeeRow.authorizationRoles,
+      );
+      return this.processEmployeeAuthorization(employeeId, version);
+    }
     return this.processEmployeeAuthorization(employeeId);
   }
 

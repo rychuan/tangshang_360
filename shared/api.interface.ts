@@ -127,7 +127,11 @@ export interface EmployeeItem {
   name: string;
   position: string;
   title: string;
-  role: 'admin' | 'hrd' | 'dept_head' | 'supervisor' | 'employee';
+  /**
+   * 角色（逗号分隔，来自 durable authorizationRoles，可多角色），
+   * 例："employee,supervisor" / "admin"
+   */
+  role: string;
   // 部门名称（展示用，由 departmentId 关联 department 表联查得到）
   department: string;
   departmentId: string;
@@ -165,7 +169,8 @@ export interface CreateEmployeeRequest {
   position: string;
   positionCode?: string;
   title?: string;
-  role?: 'admin' | 'hrd' | 'dept_head' | 'supervisor' | 'employee';
+  /** 角色（逗号分隔，可多角色，如 "employee,supervisor"） */
+  role?: string;
   // 部门关联 id（department 名称列已废弃，创建员工只需关联 department_id）
   departmentId?: string;
   supervisorId?: string;

@@ -519,7 +519,12 @@ export class TeamStructureService {
         employeeId,
         version,
       );
-    if (result.status !== 'synced') {
+    // superseded/stale_owner 不视为失败（并发变更由新版本/持有方负责最终状态）
+    if (
+      result.status !== 'synced' &&
+      result.status !== 'superseded' &&
+      result.status !== 'stale_owner'
+    ) {
       throw new Error(
         result.error ||
           `Employee ${employeeId} authorization sync finished with ${result.status}`,

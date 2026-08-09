@@ -71,13 +71,15 @@
 
 - employee 表带 `authorizationRoles`（jsonb 期望角色）、`authorizationStatus`（pending/synced/failed）、`authorizationVersion`。
 - 角色变更 → `stageAuthorizationChange`（写期望角色+建任务）→ `AuthorizationSyncService.processEmployeeAuthorization`（SDK 同步+校验）→ `reconcileUserRoles`。
-- 角色判定优先走 AuthorizationSDK（`roles.list({ userID })` 一次调用判定全部角色），仅当 SDK 判定无角色且本地已 synced 时降级回退本地 `role` 列（fails closed）。
+- 角色判定优先走 AuthorizationSDK（`roles.list({ userID })` 一次调用判定全部角色），仅当 SDK 判定无角色且本地已 synced 时降级回退本地 durable 期望角色 `authorizationRoles`（fails closed；不再回退 legacy `role` 列，避免陈旧派生角色被误授）。
+- 员工列表/详情的角色字段与角色筛选均基于 `authorizationRoles`（多角色逗号分隔）；`employee.role` 为兼容旧数据的 legacy 列，仅保留写入。
 
 ## 关键约定
 
 - employee 表 id 为 user_profile 类型，非 UUID 主键，通过 `((id).user_id)` 唯一索引标识
 - 考核流程状态：self_review → supervisor_review → completed（主链）；分离签名流程会经过 pending_sign（本人签名）/ supervisor_sign（上级签名），评分+签名一步到位模式则跳过中间态
 - 员工级指标快照：绑定模板时自动生成，可调整/删除，发布时复制到实例级快照
+- employee 是强制基础角色：`parseManualRoles` 始终并入 `employee`（前端表单必选，API/导入显式指定 admin/hrd/supervisor 时也会自动补上），保证所有员工拥有自评等基础权限
 - 调整指标操作在待发布区域，修改员工级快照，不影响已发布实例
 - shared/api.interface.ts 为前后端共享类型定义；shared/types/ 存放分类类型（permission/assessment/error）
 - server/common/ 包含自定义异常过滤器（BusinessException）、响应码常量、全局 PermissionsGuard、签名会话工具

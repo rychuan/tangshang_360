@@ -182,16 +182,4 @@ export class EmployeeManagementController {
     const { userId } = req.userContext as { userId: string };
     return this.service.delete(id, userId);
   }
-
-  @RequirePermission('employees', 'edit')
-  @NeedLogin()
-  @Put(':id/permissions')
-  async updatePermissions(
-    @Req() req: Request,
-    @Param('id') id: string,
-    @Body() body: { permissions: unknown[] },
-  ) {
-    const { userId } = req.userContext as { userId: string };
-    return this.service.updatePermissions(id, body.permissions, userId);
-  }
 }

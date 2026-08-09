@@ -94,7 +94,25 @@ const EmployeeDetailPage: React.FC = () => {
               { label: '岗位', value: emp.position },
               { label: '职级', value: emp.title || '-' },
               { label: '部门', value: emp.department || '-' },
-              { label: '角色', value: roleLabels[emp.role] || emp.role },
+              {
+                label: '角色',
+                value: (
+                  <div className="flex flex-wrap items-center gap-1">
+                    {(emp.role || 'employee')
+                      .split(',')
+                      .filter(Boolean)
+                      .map((r: string) => (
+                        <Badge
+                          key={r}
+                          variant="secondary"
+                          className="text-xs font-normal"
+                        >
+                          {roleLabels[r.trim()] || r.trim()}
+                        </Badge>
+                      ))}
+                  </div>
+                ),
+              },
               { label: '手机号', value: emp.phone || '-' },
               {
                 label: '入职日期',

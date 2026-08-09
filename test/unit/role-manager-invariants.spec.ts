@@ -35,6 +35,9 @@ import { BUILTIN_ROLE_CODES } from '../../shared/types/permission.types';
 const permissionTypes =
   require('../../shared/types/permission.types') as Record<string, any>;
 
+/** 模拟登录请求上下文（角色变更操作需携带操作者） */
+const REQ = { userContext: { userId: 'admin-1' } } as any;
+
 function createController(
   authzSDK: Record<string, any>,
   roleManagerService: Record<string, any>,
@@ -66,6 +69,7 @@ function createDeleteDb(memberRows: unknown[]) {
   const tx = {
     execute: jest.fn().mockResolvedValue(undefined),
     select: jest.fn(() => limitedQuery(memberRows)),
+  insert: jest.fn(() => ({ values: jest.fn().mockResolvedValue(undefined) })),
     delete: jest.fn(() => ({ where: deleteWhere })),
   };
   const db = {
@@ -149,6 +153,7 @@ class ConcurrentRoleDb {
     return {
       execute: jest.fn().mockResolvedValue(undefined),
       select: jest.fn(() => query),
+      insert: jest.fn(() => ({ values: jest.fn().mockResolvedValue(undefined) })),
     };
   }
 }
@@ -157,6 +162,7 @@ function createBatchDb(rows: unknown[]) {
   let unlockedReadIndex = 0;
   const tx = {
     execute: jest.fn().mockResolvedValue(undefined),
+    insert: jest.fn(() => ({ values: jest.fn().mockResolvedValue(undefined) })),
     select: jest.fn(() => {
       const query = {
         from: jest.fn(),
@@ -213,10 +219,10 @@ describe('role administration invariants', () => {
       };
 
       await expect(
-        controller.addMembers(roleBizId, dto as any),
+        controller.addMembers(roleBizId, dto as any, REQ),
       ).rejects.toMatchObject({ status: 400 });
       await expect(
-        controller.removeMembers(roleBizId, dto as any),
+        controller.removeMembers(roleBizId, dto as any, REQ),
       ).rejects.toMatchObject({ status: 400 });
 
       expect(roleManagerService.mutateCustomRoleMembers).not.toHaveBeenCalled();
@@ -238,7 +244,7 @@ describe('role administration invariants', () => {
       };
       const controller = createController(authzSDK, roleManagerService);
 
-      await expect(controller.deleteRole(roleBizId)).rejects.toMatchObject({
+      await expect(controller.deleteRole(roleBizId, REQ)).rejects.toMatchObject({
         status: 400,
       });
 
@@ -264,7 +270,7 @@ describe('role administration invariants', () => {
     const controller = createController(authzSDK, roleManagerService);
 
     await expect(
-      controller.addMembers('custom-reviewer', { members } as any),
+      controller.addMembers('custom-reviewer', { members } as any, REQ),
     ).rejects.toMatchObject({ status: 400 });
 
     expect(roleManagerService.mutateCustomRoleMembers).not.toHaveBeenCalled();
@@ -288,9 +294,11 @@ describe('role administration invariants', () => {
         { userID: '   ' },
       ]) {
         await expect(
-          (controller[operation] as any)('custom-reviewer', {
-            members: { userList: [entry] },
-          }),
+          (controller[operation] as any)(
+            'custom-reviewer',
+            { members: { userList: [entry] } },
+            REQ,
+          ),
         ).rejects.toMatchObject({ status: 400 });
       }
     },
@@ -312,6 +320,9 @@ describe('role administration invariants', () => {
     async ({ operation, currentRoles, expectedRoles }) => {
       const tx = {
         execute: jest.fn().mockResolvedValue(undefined),
+        insert: jest.fn(() => ({
+          values: jest.fn().mockResolvedValue(undefined),
+        })),
         select: jest.fn(() =>
           limitedQuery([
             {
@@ -346,6 +357,7 @@ describe('role administration invariants', () => {
         ['employee-1'],
         operation,
         authorizationSyncService,
+        "admin-1",
       );
 
       expect(db.transaction).toHaveBeenCalledTimes(1);
@@ -433,7 +445,7 @@ describe('role administration invariants', () => {
     const deleteFromSdk = jest.fn().mockResolvedValue({ success: true });
 
     await expect(
-      (service as any).deleteCustomRole('custom-reviewer', deleteFromSdk),
+      (service as any).deleteCustomRole('custom-reviewer', deleteFromSdk, 'admin-1'),
     ).rejects.toMatchObject({ status: 400 });
 
     expect(deleteFromSdk).not.toHaveBeenCalled();
@@ -455,7 +467,7 @@ describe('role administration invariants', () => {
     };
     const controller = createController(authzSDK, roleManagerService);
 
-    await expect(controller.deleteRole('custom-reviewer')).rejects.toBe(
+    await expect(controller.deleteRole('custom-reviewer', REQ)).rejects.toBe(
       sdkFailure,
     );
 
@@ -471,7 +483,7 @@ describe('role administration invariants', () => {
     const deleteFromSdk = jest.fn().mockResolvedValue({ success: true });
 
     await expect(
-      (service as any).deleteCustomRole('custom-reviewer', deleteFromSdk),
+      (service as any).deleteCustomRole('custom-reviewer', deleteFromSdk, 'admin-1'),
     ).resolves.toEqual({
       success: true,
     });
@@ -503,6 +515,7 @@ describe('role administration invariants', () => {
       (service as any).deleteCustomRole(
         'custom-reviewer',
         jest.fn().mockRejectedValue(sdkNotFound),
+        'admin-1',
       ),
     ).rejects.toBe(sdkNotFound);
 
@@ -528,6 +541,7 @@ describe('role administration invariants', () => {
       (service as any).deleteCustomRole(
         'custom-reviewer',
         jest.fn().mockRejectedValue(arbitraryFailure),
+        'admin-1',
       ),
     ).rejects.toBe(arbitraryFailure);
 
@@ -563,12 +577,14 @@ describe('role administration invariants', () => {
         ['employee-1'],
         'add',
         authorizationSyncService,
+        "admin-1",
       ),
       (service as any).mutateCustomRoleMembers(
         'custom-b',
         ['employee-1'],
         'add',
         authorizationSyncService,
+        "admin-1",
       ),
     ]);
 
@@ -606,6 +622,7 @@ describe('role administration invariants', () => {
         ['employee-1', 'employee-2'],
         'add',
         authorizationSyncService,
+        "admin-1",
       ),
     ).rejects.toMatchObject({ status: 400 });
 
@@ -659,6 +676,7 @@ describe('role administration invariants', () => {
         ['employee-2', 'employee-1'],
         'add',
         authorizationSyncService,
+        "admin-1",
       ),
     ).resolves.toEqual({
       success: false,
@@ -704,7 +722,7 @@ describe('role administration invariants', () => {
         members: {
           userList: [{ userID: 'employee-1' }, { userID: 'employee-2' }],
         },
-      });
+      }, REQ);
     } catch (error) {
       caught = error;
     }
@@ -741,6 +759,7 @@ describe('role administration invariants', () => {
         ['employee-1'],
         'add',
         authorizationSyncService,
+        "admin-1",
       ),
     ).resolves.toEqual({
       success: true,
@@ -781,6 +800,7 @@ describe('role administration invariants', () => {
         ['employee-1'],
         'add',
         authorizationSyncService,
+        "admin-1",
       ),
     ).resolves.toEqual({
       success: true,

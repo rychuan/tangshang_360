@@ -674,8 +674,14 @@ export class DepartmentService {
         }
       }),
     );
+    // superseded/stale_owner 不视为失败（并发变更由新版本/持有方负责最终状态）
     const failures: AuthorizationProcessingFailure[] = outcomes
-      .filter((outcome) => outcome.status !== 'synced')
+      .filter(
+        (outcome) =>
+          outcome.status !== 'synced' &&
+          outcome.status !== 'superseded' &&
+          outcome.status !== 'stale_owner',
+      )
       .map((outcome) => ({
         employeeId: outcome.employeeId,
         version: outcome.version,

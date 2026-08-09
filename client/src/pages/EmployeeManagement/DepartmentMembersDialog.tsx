@@ -114,9 +114,20 @@ const DepartmentMembersDialog: React.FC<DepartmentMembersDialogProps> = ({
                         {emp.position}
                       </TableCell>
                       <TableCell className="py-3 px-4 align-middle whitespace-nowrap">
-                        <Badge variant="secondary" className="text-xs">
-                          {roleLabels[emp.role] || emp.role}
-                        </Badge>
+                        <div className="flex flex-wrap items-center gap-1">
+                          {(emp.role || 'employee')
+                            .split(',')
+                            .filter(Boolean)
+                            .map((r: string) => (
+                              <Badge
+                                key={r}
+                                variant="secondary"
+                                className="text-xs font-normal"
+                              >
+                                {roleLabels[r.trim()] || r.trim()}
+                              </Badge>
+                            ))}
+                        </div>
                       </TableCell>
                       <TableCell className="py-3 px-4 align-middle whitespace-nowrap">
                         {emp.status ? (

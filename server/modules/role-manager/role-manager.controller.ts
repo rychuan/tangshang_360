@@ -52,7 +52,10 @@ export class RoleManagerController {
   @Post('bootstrap')
   async bootstrap(@Req() req: Request) {
     const userId = req.userContext?.userId || '';
-    const status = await this.roleManagerService.bootstrapAdmin(userId);
+    const status = await this.roleManagerService.bootstrapAdmin(
+      userId,
+      this.authorizationSyncService,
+    );
     return { data: { status } };
   }
 
@@ -83,8 +86,12 @@ export class RoleManagerController {
   @RequirePermission('permission_management', 'edit')
   @NeedLogin()
   @Post('roles')
-  async createRole(@Body() dto: CreateRoleRequest) {
-    return this.authzSDK.roles.create(dto);
+  async createRole(
+    @Body() dto: CreateRoleRequest,
+    @Req() req: Request,
+  ) {
+    const operatorId = req.userContext?.userId || '';
+    return this.roleManagerService.createRole(dto, operatorId);
   }
 
   @CanRole(['admin'])
@@ -94,20 +101,28 @@ export class RoleManagerController {
   async updateRole(
     @Param('bizID') bizID: string,
     @Body() dto: UpdateRoleRequest,
+    @Req() req: Request,
   ) {
-    return this.authzSDK.roles.update(bizID, dto);
+    const operatorId = req.userContext?.userId || '';
+    return this.roleManagerService.updateRole(bizID, dto, operatorId);
   }
 
   @CanRole(['admin'])
   @RequirePermission('permission_management', 'edit')
   @NeedLogin()
   @Delete('roles/:bizID')
-  async deleteRole(@Param('bizID') bizID: string) {
+  async deleteRole(
+    @Param('bizID') bizID: string,
+    @Req() req: Request,
+  ) {
     if (isBuiltinRole(bizID)) {
       throw new BadRequestException('内置角色不可删除');
     }
-    return this.roleManagerService.deleteCustomRole(bizID, () =>
-      this.authzSDK.roles.delete(bizID),
+    const operatorId = req.userContext?.userId || '';
+    return this.roleManagerService.deleteCustomRole(
+      bizID,
+      () => this.authzSDK.roles.delete(bizID),
+      operatorId,
     );
   }
 
@@ -141,13 +156,16 @@ export class RoleManagerController {
   async addMembers(
     @Param('bizID') bizID: string,
     @Body() dto: AddMembersRequest,
+    @Req() req: Request,
   ): Promise<RoleMemberMutationResponse> {
+    const operatorId = req.userContext?.userId || '';
     const userIds = this.getExplicitUserIds(bizID, dto);
     const result = await this.roleManagerService.mutateCustomRoleMembers(
       bizID,
       userIds,
       'add',
       this.authorizationSyncService,
+      operatorId,
     );
     return this.requireSuccessfulMutation(result);
   }
@@ -159,13 +177,16 @@ export class RoleManagerController {
   async removeMembers(
     @Param('bizID') bizID: string,
     @Body() dto: RemoveMembersRequest,
+    @Req() req: Request,
   ): Promise<RoleMemberMutationResponse> {
+    const operatorId = req.userContext?.userId || '';
     const userIds = this.getExplicitUserIds(bizID, dto);
     const result = await this.roleManagerService.mutateCustomRoleMembers(
       bizID,
       userIds,
       'remove',
       this.authorizationSyncService,
+      operatorId,
     );
     return this.requireSuccessfulMutation(result);
   }
@@ -203,10 +224,13 @@ export class RoleManagerController {
   async updateRolePermissions(
     @Param('bizID') bizID: string,
     @Body() dto: UpdateRolePermissionsRequest,
+    @Req() req: Request,
   ): Promise<{ success: boolean }> {
+    const operatorId = req.userContext?.userId || '';
     await this.roleManagerService.upsertPermissionConfig(
       bizID,
       dto.permissions,
+      operatorId,
     );
     return { success: true };
   }

@@ -11,13 +11,15 @@ import {
   AuthorizationSDK,
 } from '@lark-apaas/fullstack-nestjs-core';
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
-import { employee, rolePermissionConfig } from '@server/database/schema';
+import { auditLog, employee, rolePermissionConfig } from '@server/database/schema';
 import type {
   RolePermissionConfig,
   PermissionItem,
   RoleMemberMutationOutcome,
   RoleMemberMutationOutcomeStatus,
   RoleMemberMutationResponse,
+  CreateRoleRequest,
+  UpdateRoleRequest,
 } from '@shared/api.interface';
 import {
   DEFAULT_PERMISSIONS,
@@ -96,9 +98,9 @@ export class RoleManagerService {
   }
 
   async getUserRolesStrict(userId: string): Promise<string[]> {
-    const roles = await this.fetchUserRoles(userId, true);
-    this.cacheUserRoles(userId, roles);
-    return roles;
+    // 严格模式仅用于 reconcile 校验（只认显式 userList 成员）。
+    // 不写共享缓存：strict 结果只是显式子集，写缓存会污染非严格判定（含 allEmployees）
+    return this.fetchUserRoles(userId, true);
   }
 
   async reconcileUserRoles(
@@ -126,13 +128,15 @@ export class RoleManagerService {
         });
       }
 
-      let verified = normalizeAuthorizationRoles(
-        await this.getUserRolesStrict(userId),
-      );
+      // 复核：desired 的每个角色被「显式成员」或「企业全员(allEmployees)」任一满足即算匹配。
+      // 平台角色若配置为 allEmployees（全员成员），SDK 不会把它展开进 userList，
+      // 纯 strict 校验会永远不匹配导致对账误报失败（员工 create 直接抛错）。
+      let verified = await this.fetchUserRolesWithDetail(userId);
       let attempt = 0;
-      const isMatched = (): boolean =>
-        verified.length === desired.length &&
-        verified.every((role, index) => role === desired[index]);
+      const isMatched = (): boolean => {
+        const satisfied = new Set([...verified.explicit, ...verified.implicit]);
+        return desired.every((role) => satisfied.has(role));
+      };
       while (!isMatched() && attempt < 3) {
         attempt++;
         this.logger.warn(
@@ -140,9 +144,7 @@ export class RoleManagerService {
         );
         await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
         this.invalidateUserRoleCache(userId);
-        verified = normalizeAuthorizationRoles(
-          await this.getUserRolesStrict(userId),
-        );
+        verified = await this.fetchUserRolesWithDetail(userId);
       }
       this.logger.log(
         `reconcile ${userId}: current=${JSON.stringify(current)} desired=${JSON.stringify(desired)} verified=${JSON.stringify(verified)} toRemove=${JSON.stringify(toRemove)} toAdd=${JSON.stringify(toAdd)} retries=${attempt}`,
@@ -189,6 +191,7 @@ export class RoleManagerService {
   async upsertPermissionConfig(
     roleBizId: string,
     permissions: PermissionItem[],
+    operatorId: string,
   ): Promise<void> {
     const sanitized = sanitizePermissionConfig(permissions);
     let normalizedPermissions: PermissionItem[];
@@ -218,7 +221,47 @@ export class RoleManagerService {
     }
 
     this.invalidatePermissionConfigCache();
+    await this.db.insert(auditLog).values({
+      operatorId,
+      action: 'update_role_permissions',
+      targetType: 'role',
+      targetId: roleBizId,
+      changes: { permissions: normalizedPermissions },
+    });
     this.logger.log(`Permission config updated for role: ${roleBizId}`);
+  }
+
+  /** 创建自定义角色（SDK 透传 + 审计） */
+  async createRole(
+    dto: CreateRoleRequest,
+    operatorId: string,
+  ): Promise<unknown> {
+    const result = await this.authzSDK.roles.create(dto);
+    await this.db.insert(auditLog).values({
+      operatorId,
+      action: 'create_role',
+      targetType: 'role',
+      targetId: dto.role?.bizID ?? '',
+      changes: { role: dto.role },
+    });
+    return result;
+  }
+
+  /** 更新自定义角色（SDK 透传 + 审计） */
+  async updateRole(
+    bizID: string,
+    dto: UpdateRoleRequest,
+    operatorId: string,
+  ): Promise<unknown> {
+    const result = await this.authzSDK.roles.update(bizID, dto);
+    await this.db.insert(auditLog).values({
+      operatorId,
+      action: 'update_role',
+      targetType: 'role',
+      targetId: bizID,
+      changes: { role: dto.role },
+    });
+    return result;
   }
 
   async mutateCustomRoleMembers(
@@ -226,6 +269,7 @@ export class RoleManagerService {
     userIds: string[],
     mutation: CustomRoleMemberMutation,
     authorizationSyncService: AuthorizationSyncGateway,
+    operatorId: string,
   ): Promise<RoleMemberMutationResponse> {
     if (isBuiltinRole(roleBizId)) {
       throw new BadRequestException('内置角色成员只能通过员工或部门管理修改');
@@ -302,6 +346,16 @@ export class RoleManagerService {
         );
         changes.push({ userId: current.employeeId, version });
       }
+      await tx.insert(auditLog).values({
+        operatorId,
+        action:
+          mutation === 'add'
+            ? 'custom_role_add_member'
+            : 'custom_role_remove_member',
+        targetType: 'role',
+        targetId: roleBizId,
+        changes: { memberIds: normalizedUserIds },
+      });
       return changes;
     });
 
@@ -345,9 +399,31 @@ export class RoleManagerService {
   async deleteCustomRole(
     roleBizId: string,
     deleteFromSdk: () => Promise<unknown>,
+    operatorId: string,
   ): Promise<unknown> {
     if (isBuiltinRole(roleBizId)) {
       throw new BadRequestException('内置角色不可删除');
+    }
+
+    // 二次确认：DB durable 成员之外，还可能存在经平台 UI/其他途径直接加入的 SDK 成员；
+    // 先做 SDK 侧检查，避免删除后留下孤儿成员引用（后续 reconcile 会失败）
+    let sdkUserCount = 0;
+    try {
+      const sdkMembers = await this.listAllMembers(roleBizId, 'User');
+      const members = (sdkMembers as { members?: Record<string, unknown> })
+        ?.members ?? {};
+      sdkUserCount = Array.isArray(members.userList)
+        ? members.userList.length
+        : 0;
+    } catch (error) {
+      this.logger.warn(
+        `deleteCustomRole ${roleBizId}: SDK member check skipped (${error instanceof Error ? error.message : String(error)})`,
+      );
+    }
+    if (sdkUserCount > 0) {
+      throw new BadRequestException(
+        `角色在平台侧仍有 ${sdkUserCount} 个成员，请先移除全部成员后再删除`,
+      );
     }
 
     return this.db.transaction(async (tx) => {
@@ -370,6 +446,12 @@ export class RoleManagerService {
       await tx
         .delete(rolePermissionConfig)
         .where(eq(rolePermissionConfig.roleBizId, roleBizId));
+      await tx.insert(auditLog).values({
+        operatorId,
+        action: 'delete_role',
+        targetType: 'role',
+        targetId: roleBizId,
+      });
       this.invalidatePermissionConfigCache();
       return sdkResult;
     });
@@ -498,6 +580,7 @@ export class RoleManagerService {
 
   async bootstrapAdmin(
     userId: string,
+    authorizationSyncService: AuthorizationSyncGateway,
   ): Promise<'already_admin' | 'bootstrapped'> {
     const roles = await this.getUserRoles(userId);
     if (roles.includes('admin')) {
@@ -530,6 +613,66 @@ export class RoleManagerService {
       }
     }
 
+    // 优先走标准同步链路：写 durable 期望角色 + 建 job + reconcile（与员工/部门/角色成员变更一致）。
+    // 避免直接 members.add 绕过持久化——否则 admin 数量保护统计不到该用户，
+    // 且后续任何 reconcile 会用 durable 角色（不含 admin）把 SDK 里的 admin 移除。
+    const rows = await this.db
+      .select({
+        employeeId: sql<string>`(${employee.employeeId}).user_id`,
+        status: employee.status,
+        deletedAt: employee.deletedAt,
+        authorizationRoles: employee.authorizationRoles,
+      })
+      .from(employee)
+      .where(
+        and(
+          sql`(${employee.employeeId}).user_id = ${userId}`,
+          isNull(employee.deletedAt),
+        ),
+      )
+      .limit(1);
+    const employeeRow = rows[0];
+
+    if (
+      employeeRow &&
+      employeeRow.status &&
+      employeeRow.deletedAt == null &&
+      isStringArray(employeeRow.authorizationRoles)
+    ) {
+      const currentRoles = normalizeAuthorizationRoles(
+        employeeRow.authorizationRoles,
+      );
+      if (!currentRoles.includes('admin')) {
+        const desiredRoles = normalizeAuthorizationRoles([
+          ...currentRoles,
+          'admin',
+        ]);
+        const version = await authorizationSyncService.stageAuthorizationChange(
+          this.db,
+          userId,
+          desiredRoles,
+        );
+        const result =
+          await authorizationSyncService.processEmployeeAuthorization(
+            userId,
+            version,
+          );
+        if (result.status !== 'synced') {
+          throw new Error(
+            result.error ||
+              `管理员授权同步失败（${result.status}），请稍后重试`,
+          );
+        }
+      }
+      this.invalidateUserRoleCache(userId);
+      return 'bootstrapped';
+    }
+
+    // 无有效员工档案（引导期用户可能尚未建档）：退化为直接 SDK 加成员，
+    // 后续该用户建档/更新时会按 durable 角色对账
+    this.logger.warn(
+      `bootstrapAdmin ${userId}: no active employee profile, falling back to direct SDK members.add`,
+    );
     await this.authzSDK.members.add('admin', {
       members: { userList: [{ userID: userId }] },
     });
@@ -580,34 +723,16 @@ export class RoleManagerService {
     userId: string,
     strict: boolean,
   ): Promise<string[]> {
-    // roles.list({ userID }) 让平台按用户返回每个角色的成员名单（roleMembers），
-    // 一次外部调用完成全部角色判定，避免对每个角色单独调 members.list 造成 N+1
-    const allRoles = await this.authzSDK.roles.list({
-      needMember: true,
-      userID: userId,
-    });
-    const rolePayload = this.unwrapSdkData(allRoles);
-    const roleList = Array.isArray(rolePayload)
-      ? rolePayload
-      : (rolePayload as any)?.items || (rolePayload as any)?.roles || [];
-
-    const roles: string[] = [];
-    for (const role of roleList) {
-      const bizID = (role as any)?.bizID;
-      if (!bizID) continue;
-      if (
-        this.isUserInRoleMembers(userId, (role as any)?.roleMembers, strict)
-      ) {
-        roles.push(bizID);
-      }
-    }
+    const { explicit, implicit } = await this.fetchUserRolesWithDetail(userId);
+    const roles = strict ? explicit : [...explicit, ...implicit];
 
     if (roles.length === 0 && !strict) {
-      // 降级容错：SDK 判定用户不属于任何角色时，回退读取本地同步源 employee.role。
-      // 仅授权已同步（synced）的有效员工可回退——同步中（pending/failed）不授予，
-      // 避免 SDK 角色回收后本地残留被误授（fails closed）
-      const rows: { role: string | null }[] = await this.db
-        .select({ role: employee.role })
+      // 降级容错：SDK 判定用户不属于任何角色时，回退读取本地 durable 期望角色
+      // authorizationRoles（而非 legacy employee.role 列 —— 后者不随 dept_head 派生、
+      // 自定义角色增删同步，可能授出陈旧角色）。仅授权已同步（synced）的有效员工可回退
+      // ——同步中（pending/failed）不授予，避免 SDK 角色回收后本地残留被误授（fails closed）
+      const rows: { authorizationRoles: unknown }[] = await this.db
+        .select({ authorizationRoles: employee.authorizationRoles })
         .from(employee)
         .where(
           and(
@@ -618,19 +743,53 @@ export class RoleManagerService {
           ),
         )
         .limit(1);
-      if (rows.length > 0 && rows[0].role) {
-        const fallbackRoles = rows[0].role
-          .split(',')
-          .map((r: string) => r.trim())
-          .filter(Boolean);
+      if (rows.length > 0 && isStringArray(rows[0].authorizationRoles)) {
+        const fallbackRoles = normalizeAuthorizationRoles(
+          rows[0].authorizationRoles,
+        );
         this.logger.warn(
-          `User ${userId} has no SDK roles, falling back to local roles: [${fallbackRoles.join(', ')}]`,
+          `User ${userId} has no SDK roles, falling back to durable authorizationRoles: [${fallbackRoles.join(', ')}]`,
         );
         return fallbackRoles;
       }
     }
 
     return roles;
+  }
+
+  /**
+   * 拉取平台角色并区分成员来源：
+   * - explicit：用户在角色显式 userList 中（可被 reconcile 精确增删）
+   * - implicit：角色配置为 allEmployees（企业全员），无需也不应逐用户增删
+   * roles.list({ userID }) 让平台按用户返回每个角色的成员名单（roleMembers），
+   * 一次外部调用完成全部角色判定，避免对每个角色单独调 members.list 造成 N+1
+   */
+  private async fetchUserRolesWithDetail(
+    userId: string,
+  ): Promise<{ explicit: string[]; implicit: string[] }> {
+    const allRoles = await this.authzSDK.roles.list({
+      needMember: true,
+      userID: userId,
+    });
+    const rolePayload = this.unwrapSdkData(allRoles);
+    const roleList = Array.isArray(rolePayload)
+      ? rolePayload
+      : (rolePayload as any)?.items || (rolePayload as any)?.roles || [];
+
+    const explicit: string[] = [];
+    const implicit: string[] = [];
+    for (const role of roleList) {
+      const bizID = (role as any)?.bizID;
+      if (!bizID) continue;
+      const roleMembers = (role as any)?.roleMembers;
+      if (this.isUserInRoleMembers(userId, roleMembers, true)) {
+        explicit.push(bizID);
+      } else if ((roleMembers ?? {})?.allEmployees) {
+        implicit.push(bizID);
+      }
+    }
+
+    return { explicit, implicit };
   }
 
   private isUserInRoleMembers(

@@ -71,14 +71,21 @@ describe('dept_head role reconciliation (方案A: head 指派为唯一入口)', 
     expect(roles).toEqual(['employee']);
   });
 
-  it('parseManualRoles always strips dept_head from manual input', () => {
+  it('parseManualRoles always strips dept_head and keeps employee', () => {
     const { service } = createReconcileService([]);
 
     expect(
       (service as any).parseManualRoles('employee,dept_head,supervisor'),
     ).toEqual(['employee', 'supervisor']);
-    // 显式传 dept_head 不回落 employee（与 parseRoles 语义一致），但被剥离
-    expect((service as any).parseManualRoles('dept_head')).toEqual([]);
+    // 显式传 dept_head（被剥离）后仍强制保留 employee 基础角色
+    expect((service as any).parseManualRoles('dept_head')).toEqual([
+      'employee',
+    ]);
+    // 显式传管理角色（不带 employee）也强制补上 employee
+    expect((service as any).parseManualRoles('admin')).toEqual([
+      'employee',
+      'admin',
+    ]);
     expect((service as any).parseManualRoles(undefined)).toEqual(['employee']);
   });
 

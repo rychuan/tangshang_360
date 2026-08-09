@@ -266,13 +266,16 @@ describe('strict role manager operations', () => {
         },
       };
 
-      await (controller[operation] as any)('custom-reviewer', dto);
+      await (controller[operation] as any)('custom-reviewer', dto, {
+        userContext: { userId: 'admin-1' },
+      });
 
       expect(roleManagerService.mutateCustomRoleMembers).toHaveBeenCalledWith(
         'custom-reviewer',
         ['employee-1', 'employee-2'],
         mutation,
         authorizationSyncService,
+        'admin-1',
       );
       expect(authzSDK.members.add).not.toHaveBeenCalled();
       expect(authzSDK.members.remove).not.toHaveBeenCalled();
@@ -280,7 +283,7 @@ describe('strict role manager operations', () => {
   );
 });
 
-describe('role fallback from local employee.role', () => {
+describe('role fallback from durable authorizationRoles', () => {
   function createEmptyRolesService(employee: FakeEmployeeRow) {
     const db = new QueryBackedDb({ employees: [employee] });
     const authzSDK = {
@@ -289,9 +292,9 @@ describe('role fallback from local employee.role', () => {
     return createRoleManagerService(db, authzSDK);
   }
 
-  it('falls back to local roles only for synced employees', async () => {
+  it('falls back to durable roles only for synced employees', async () => {
     const employee = createEmployeeRow({
-      role: 'admin,hrd',
+      authorizationRoles: ['admin', 'hrd'],
       authorizationStatus: 'synced',
     });
     const service = createEmptyRolesService(employee);
@@ -303,10 +306,10 @@ describe('role fallback from local employee.role', () => {
   });
 
   it.each(['pending', 'failed'] as const)(
-    'keeps fails-closed for %s employees even with local roles',
+    'keeps fails-closed for %s employees even with durable roles',
     async (authorizationStatus) => {
       const employee = createEmployeeRow({
-        role: 'admin',
+        authorizationRoles: ['admin'],
         authorizationStatus,
       });
       const service = createEmptyRolesService(employee);
@@ -319,7 +322,7 @@ describe('role fallback from local employee.role', () => {
 
   it('never falls back on the strict path', async () => {
     const employee = createEmployeeRow({
-      role: 'admin',
+      authorizationRoles: ['admin'],
       authorizationStatus: 'synced',
     });
     const service = createEmptyRolesService(employee);

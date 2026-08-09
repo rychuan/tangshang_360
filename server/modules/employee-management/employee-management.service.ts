@@ -51,6 +51,18 @@ import { RoleManagerService } from '../role-manager/role-manager.service';
 import { AuthorizationSyncService } from '../role-manager/authorization-sync.service';
 import { AccessScopeService } from '@server/common/access/access-scope.service';
 
+/**
+ * durable 期望角色（authorizationRoles，jsonb string[]）序列化为逗号分隔字符串，
+ * 供列表/详情展示与前端表单使用（替代 legacy employee.role 列）。
+ */
+function employeeRoleString(authorizationRoles: unknown): string {
+  if (!Array.isArray(authorizationRoles)) return 'employee';
+  const roles = authorizationRoles.filter(
+    (role): role is string => typeof role === 'string',
+  );
+  return roles.length > 0 ? roles.join(',') : 'employee';
+}
+
 @Injectable()
 export class EmployeeManagementService {
   private readonly logger = new Logger(EmployeeManagementService.name);
@@ -129,7 +141,9 @@ export class EmployeeManagementService {
       conditions.push(eq(employee.title, query.title));
     }
     if (query.role) {
-      conditions.push(eq(employee.role, query.role));
+      // 角色筛选按 durable 期望角色（authorizationRoles）JSONB 包含匹配，
+      // 而非 legacy employee.role 列（不随 dept_head 派生/自定义角色增删同步）
+      conditions.push(sql`${employee.authorizationRoles} ? ${query.role}`);
     }
     if (query.status === 'true' || query.status === 'false') {
       conditions.push(eq(employee.status, query.status === 'true'));
@@ -158,7 +172,7 @@ export class EmployeeManagementService {
           name: employee.name,
           position: employee.position,
           title: employee.title,
-          role: employee.role,
+          authorizationRoles: employee.authorizationRoles,
           departmentId: employee.departmentId,
           // 部门名称由 department_id 关联 department 表联查得到
           department: department.name,
@@ -185,7 +199,7 @@ export class EmployeeManagementService {
       name: item.name,
       position: item.position,
       title: item.title || '',
-      role: (item.role || 'employee') as EmployeeItem['role'],
+      role: employeeRoleString(item.authorizationRoles),
       department: item.department || '',
       departmentId: item.departmentId ? String(item.departmentId) : '',
       supervisorId: item.supervisorId || '',
@@ -364,7 +378,7 @@ export class EmployeeManagementService {
         name: employee.name,
         position: employee.position,
         title: employee.title,
-        role: employee.role,
+        authorizationRoles: employee.authorizationRoles,
         departmentId: employee.departmentId,
         department: department.name,
         supervisorId: employee.supervisorId,
@@ -449,7 +463,7 @@ export class EmployeeManagementService {
       name: emp.name,
       position: emp.position,
       title: emp.title || '',
-      role: (emp.role || 'employee') as EmployeeDetail['role'],
+      role: employeeRoleString(emp.authorizationRoles),
       department: emp.department || '',
       departmentId: emp.departmentId ? String(emp.departmentId) : '',
       supervisorId: emp.supervisorId || '',
@@ -1044,53 +1058,6 @@ export class EmployeeManagementService {
       permissions,
       accessScopeKind: scope.kind,
     };
-  }
-
-  async updatePermissions(
-    employeeId: string,
-    permissions: unknown[],
-    operatorUserId: string,
-  ): Promise<{ success: boolean }> {
-    await this.employeeAuthService.assertEmployeeMutationScope(operatorUserId, employeeId);
-    await this.employeeAuthService.assertRoleMutationPermission(
-      operatorUserId,
-      '只有系统管理员可修改员工权限',
-      '无权修改员工权限',
-    );
-
-    const rows = await this.db
-      .select({
-        id: employee.employeeId,
-        name: employee.name,
-      })
-      .from(employee)
-      .where(
-        and(eq(employee.employeeId, employeeId), isNull(employee.deletedAt)),
-      )
-      .limit(1);
-
-    if (rows.length === 0) {
-      throw new NotFoundException('员工不存在');
-    }
-
-    await this.db.transaction(async (tx) => {
-      await tx
-        .update(employee)
-        .set({ permissions })
-        .where(eq(employee.employeeId, employeeId));
-      await tx.insert(auditLog).values({
-        operatorId: operatorUserId,
-        action: 'update_permissions',
-        targetType: 'employee',
-        targetId: employeeId,
-        changes: { permissions },
-        reason: `更新 ${rows[0].name} 的权限`,
-      });
-    });
-
-    this.logger.log(`Permissions updated for employee ${employeeId}`);
-
-    return { success: true };
   }
 
   async validateAdminsExist(): Promise<number> {

@@ -120,7 +120,7 @@ export const fileAttachmentArray = customType<{
 export const authorizationSyncJob = pgTable("authorization_sync_job", {
   id: uuid("id").primaryKey().defaultRandom(),
   employeeId: userProfile("employee_id").notNull(),
-  authorizationVersion: integer("authorization_version").notNull().unique(),
+  authorizationVersion: integer("authorization_version").notNull(),
   status: varchar("status", { length: 20 }).notNull().default('pending'),
   attemptCount: integer("attempt_count").notNull().default(0),
   errorMessage: text("error_message"),
@@ -138,7 +138,11 @@ export const authorizationSyncJob = pgTable("authorization_sync_job", {
   updatedBy: userProfile("_updated_by").default(sql`CASE
     WHEN (current_setting('app.user_id'::text, true) = ''::text) THEN NULL`),
 }, (table) => [
-  uniqueIndex("authorization_sync_job_employee_version_unique").on(table.authorizationVersion),
+  // 与迁移 016 一致：按 (employee_id, authorization_version) 复合唯一（同一员工同一版本仅一个 job）
+  uniqueIndex("authorization_sync_job_employee_version_unique").on(
+    table.employeeId,
+    table.authorizationVersion,
+  ),
 ]);
 
 export const assessmentSignSession = pgTable("assessment_sign_session", {
@@ -529,6 +533,8 @@ export const employee = pgTable("employee", {
    */
   authorizationRoles: jsonb("authorization_roles").notNull().default('[]'),
   authorizationStatus: varchar("authorization_status", { length: 20 }).notNull().default('pending'),
+  // 注意：authorizationVersion 是每员工独立递增的版本号（非全局唯一），
+  // 迁移 015 建列时无唯一约束；不要加全局 .unique()（多员工会撞号）
   authorizationVersion: integer("authorization_version").notNull().default(1),
   authorizationError: text("authorization_error"),
   authorizationUpdatedAt: customTimestamptz("authorization_updated_at", { precision: 6 }).notNull().default(sql`CURRENT_TIMESTAMP`),

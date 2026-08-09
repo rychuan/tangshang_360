@@ -419,32 +419,6 @@ describe('employee management access scope', () => {
     expect(roleManagerService.syncUserRoles).not.toHaveBeenCalled();
   });
 
-  it('requires the built-in admin identity before legacy employee permissions change', async () => {
-    const {
-      service,
-      db,
-      accessScopeService,
-      roleManagerService,
-      authorizationSyncService,
-    } = createService();
-    createService();
-    accessScopeService.canAccessEmployee.mockResolvedValue(true);
-    db.select.mockImplementation(() => {
-      throw new Error('permissions target loaded before identity check');
-    });
-
-    await expect(
-      (service.updatePermissions as any)(
-        'employee-1',
-        [{ resource: 'employees', actions: ['edit'] }],
-        'employee-1',
-      ),
-    ).rejects.toThrow('只有系统管理员可修改员工权限');
-
-    expect(roleManagerService.getUserRoles).toHaveBeenCalledWith('employee-1');
-    expect(db.select).not.toHaveBeenCalled();
-  });
-
   it('requires global data scope before creating a new employee', async () => {
     const { service, db } = createService();
     db.select.mockImplementation(() => {

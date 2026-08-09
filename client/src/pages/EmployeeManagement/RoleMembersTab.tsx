@@ -5,6 +5,7 @@ import type {
   ForceRoleDTO,
   RoleMemberDTO,
   MemberMutationData,
+  RoleMemberMutationOutcome,
 } from '@shared/api.interface';
 import { CanRole } from '@lark-apaas/client-toolkit/auth';
 import { CanDo } from '@/hooks/usePermissions';
@@ -26,6 +27,11 @@ import { UserPlus, UserX, Building2, Users } from '@/components/ui/hugeicons';
 import { i18nText } from './role-utils';
 import { isBuiltinRole } from '@shared/types/permission.types';
 import AddMemberDialog from './AddMemberDialog';
+import SyncOutcomeDialog from './SyncOutcomeDialog';
+import {
+  collectFailedOutcomes,
+  extractOutcomesFromError,
+} from './role-sync-outcomes';
 
 interface RoleMembersTabProps {
   role: ForceRoleDTO;
@@ -134,6 +140,9 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [addOpen, setAddOpen] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [syncOutcomes, setSyncOutcomes] = useState<
+    RoleMemberMutationOutcome[] | null
+  >(null);
   const builtin = isBuiltinRole(role.bizID ?? '');
 
   const toggleSelect = (key: string) => {
@@ -149,9 +158,15 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
     if (keys.size === 0 || !role.bizID) return;
     setRemoving(true);
     try {
-      await roleManager.removeMembers(role.bizID, {
+      const res = await roleManager.removeMembers(role.bizID, {
         members: buildRemovePayload(keys),
       });
+      const failed = collectFailedOutcomes(res);
+      if (failed.length > 0) {
+        setSelected(new Set());
+        setSyncOutcomes(failed);
+        return;
+      }
       toast.success(`已移除 ${keys.size} 个成员`);
       setSelected(new Set());
       await queryClient.invalidateQueries({
@@ -159,6 +174,13 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
       });
       onMembersChange?.();
     } catch (err) {
+      // 后端对部分失败抛 BadGatewayException，outcomes 在错误响应体里
+      const outcomes = extractOutcomesFromError(err);
+      if (outcomes && outcomes.length > 0) {
+        setSelected(new Set());
+        setSyncOutcomes(outcomes);
+        return;
+      }
       handleApiError(err);
     } finally {
       setRemoving(false);
@@ -281,21 +303,20 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
             )}
             {depts.length > 0 && (
               <MemberGroup
-                title="部门"
+                title="部门（只读，由平台侧管理）"
                 icon={<Building2 className="size-4" />}
                 count={depts.length}
               >
                 {depts.map((d) => {
                   const id = String(d.id ?? '');
-                  const key = memberKey('dept', id);
                   return (
                     <MemberRow
-                      key={key}
-                      selected={selected.has(key)}
-                      onToggle={() => toggleSelect(key)}
-                      onRemove={() => handleRemove(new Set([key]))}
-                      removing={removing}
-                      removable={!builtin}
+                      key={`dept-${id}`}
+                      selected={false}
+                      onToggle={() => {}}
+                      onRemove={() => {}}
+                      removing={false}
+                      removable={false}
                       content={
                         <div className="flex flex-1 items-center gap-2">
                           <Building2 className="size-4 text-muted-foreground" />
@@ -311,21 +332,20 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
             )}
             {chats.length > 0 && (
               <MemberGroup
-                title="群组"
+                title="群组（只读，由平台侧管理）"
                 icon={<Users className="size-4" />}
                 count={chats.length}
               >
                 {chats.map((c) => {
                   const id = String(c.chatID ?? '');
-                  const key = memberKey('chat', id);
                   return (
                     <MemberRow
-                      key={key}
-                      selected={selected.has(key)}
-                      onToggle={() => toggleSelect(key)}
-                      onRemove={() => handleRemove(new Set([key]))}
-                      removing={removing}
-                      removable={!builtin}
+                      key={`chat-${id}`}
+                      selected={false}
+                      onToggle={() => {}}
+                      onRemove={() => {}}
+                      removing={false}
+                      removable={false}
                       content={
                         <div className="flex flex-1 items-center gap-2">
                           <Users className="size-4 text-muted-foreground" />
@@ -348,10 +368,25 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
           open={addOpen}
           onOpenChange={setAddOpen}
           bizID={role.bizID ?? ''}
-        existingUserIds={users.map((u) => u.userID ?? '')}
-        existingDeptIds={depts.map((d) => String(d.id ?? ''))}
-        existingChatIds={chats.map((c) => String(c.chatID ?? ''))}
-        onAdded={() => {
+          existingUserIds={users.map((u) => u.userID ?? '')}
+          onAdded={() => {
+            if (role.bizID)
+              queryClient.invalidateQueries({
+                queryKey: ['roles', 'members', role.bizID],
+              });
+            onMembersChange?.();
+          }}
+          onSyncOutcomes={setSyncOutcomes}
+        />
+      )}
+
+      <SyncOutcomeDialog
+        open={syncOutcomes !== null}
+        onOpenChange={(o) => {
+          if (!o) setSyncOutcomes(null);
+        }}
+        outcomes={syncOutcomes ?? []}
+        onAllResolved={() => {
           if (role.bizID)
             queryClient.invalidateQueries({
               queryKey: ['roles', 'members', role.bizID],
@@ -359,7 +394,6 @@ const RoleMembersTab: React.FC<RoleMembersTabProps> = ({
           onMembersChange?.();
         }}
       />
-      )}
     </div>
   );
 };

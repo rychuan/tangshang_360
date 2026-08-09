@@ -110,12 +110,16 @@ export class EmployeeAuthorizationService {
   }
 
   /**
-   * 解析人工角色：剥离 dept_head。
-   * 方案A：dept_head 是派生角色，唯一入口是部门 head 指派，
-   * 员工表单/导入中手动携带的 dept_head 一律忽略，由对账统一决定。
+   * 解析人工角色：剥离 dept_head，并强制保留 employee。
+   * - dept_head 是派生角色，唯一入口是部门 head 指派，员工表单/导入中手动携带的
+   *   dept_head 一律忽略，由对账统一决定。
+   * - employee 是基础角色（自评 my_assessments 等依赖），所有员工必须保留；
+   *   避免 API 直接指定 admin/hrd/supervisor（不带 employee）时丢失基础角色
+   *   （前端表单 employee 为必选，此兜底主要保护 API/导入路径）。
    */
   parseManualRoles(role: string | null | undefined): string[] {
-    return this.parseRoles(role).filter((item) => item !== 'dept_head');
+    const roles = this.parseRoles(role).filter((item) => item !== 'dept_head');
+    return roles.includes('employee') ? roles : ['employee', ...roles];
   }
 
   /**
@@ -264,7 +268,14 @@ export class EmployeeAuthorizationService {
         employeeId,
         version,
       );
-    if (result.status !== 'synced') {
+    // superseded：该版本已被更新的版本覆盖（并发变更），最终状态由新版本负责，不视为失败；
+    // stale_owner：任务正被其他 worker 处理，最终状态由对方负责，不视为失败。
+    // 仅 failed / not_processable 需要抛错。
+    if (
+      result.status !== 'synced' &&
+      result.status !== 'superseded' &&
+      result.status !== 'stale_owner'
+    ) {
       throw new Error(
         result.error ||
           `Employee ${employeeId} authorization sync finished with ${result.status}`,
