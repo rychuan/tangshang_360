@@ -153,7 +153,8 @@ describe('last active admin concurrency protection', () => {
             },
           ]),
         )
-        .mockReturnValueOnce(countQuery(2)),
+        // resolveReferences 部门存在性校验（新逻辑）→ 有效部门
+        .mockReturnValueOnce(limitedQuery([{ id: 'dept-1' }])),
       transaction: jest.fn(async (callback: (value: unknown) => unknown) =>
         callback(tx),
       ),
@@ -261,7 +262,8 @@ describe('last active admin concurrency protection', () => {
             },
           ]),
         )
-        .mockReturnValueOnce(countQuery(2)),
+        // resolveReferences 部门存在性校验（新逻辑）→ 有效部门
+        .mockReturnValueOnce(limitedQuery([{ id: 'dept-1' }])),
       transaction: jest.fn(async (callback: (value: unknown) => unknown) =>
         callback(tx),
       ),

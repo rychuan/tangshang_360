@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
@@ -37,10 +37,28 @@ export function classifyAccessScope(
 
 @Injectable()
 export class AccessScopeService {
+  private readonly logger = new Logger(AccessScopeService.name);
+  // 角色漂移告警节流：同一用户同一角色 10 分钟内最多告警一次，避免每次请求刷日志
+  private readonly scopeDriftWarnedAt = new Map<string, number>();
+  private readonly SCOPE_DRIFT_WARN_TTL_MS = 10 * 60 * 1000;
+
   constructor(
     @Inject(DRIZZLE_DATABASE) private readonly db: PostgresJsDatabase,
     private readonly roleManagerService: RoleManagerService,
   ) {}
+
+  private logScopeDrift(userId: string, role: 'dept_head' | 'supervisor'): void {
+    const key = `${userId}:${role}`;
+    const now = Date.now();
+    if ((this.scopeDriftWarnedAt.get(key) ?? 0) > now - this.SCOPE_DRIFT_WARN_TTL_MS) {
+      return;
+    }
+    this.scopeDriftWarnedAt.set(key, now);
+    this.logger.warn(
+      `User ${userId} has ${role} role but no matching scope data` +
+        `（${role === 'dept_head' ? '无负责部门' : '无直接下属'}）— 数据范围将为空`,
+    );
+  }
 
   async getScope(userId: string): Promise<AccessScope> {
     const roles = await this.roleManagerService.getUserRoles(userId);
@@ -110,6 +128,14 @@ export class AccessScopeService {
       subordinatePromise,
     ]);
 
+    // 角色存在但无对应数据（角色残留/未分配/同步失败）→ 告警便于排查静默空范围
+    if (isDeptHead && departmentRows.length === 0) {
+      this.logScopeDrift(userId, 'dept_head');
+    }
+    if (isSupervisor && subordinateRows.length === 0) {
+      this.logScopeDrift(userId, 'supervisor');
+    }
+
     const departmentIds = departmentRows.map((row) => row.id);
     const subordinateIds = subordinateRows.map((row) => row.userId);
 
@@ -128,22 +154,29 @@ export class AccessScopeService {
   async buildEmployeeScopeCondition(
     userId: string,
     options: { includeSelf?: boolean } = {},
+    scope?: AccessScope,
   ): Promise<SQL | null> {
-    const scope = await this.getScope(userId);
-    if (scope.kind === 'global') {
+    const s = scope ?? (await this.getScope(userId));
+    if (s.kind === 'global') {
       return null;
     }
 
     const selfCondition = sql`(${employee.employeeId}).user_id = ${userId}`;
-    if (scope.kind === 'self') {
+    if (s.kind === 'self') {
       return options.includeSelf ? selfCondition : sql`FALSE`;
     }
 
-    const supervisorCondition = sql`(${employee.supervisorId}).user_id = ${userId}`;
+    // 直接下属谓词仅在用户具备 supervisor 范围（有实际下属）时生效；
+    // dept_head 仅按部门成员判定，避免跨部门直接汇报人越界进入范围。
+    // 与 canAccessEmployees 的 subordinateSet 语义保持一致。
+    const supervisorCondition =
+      s.subordinateIds.length > 0
+        ? sql`(${employee.supervisorId}).user_id = ${userId}`
+        : sql`FALSE`;
     const departmentCondition =
-      scope.departmentIds.length > 0
+      s.departmentIds.length > 0
         ? sql`${employee.departmentId} IN (${sql.join(
-            scope.departmentIds.map((id) => sql`${id}`),
+            s.departmentIds.map((id) => sql`${id}`),
             sql`, `,
           )})`
         : sql`FALSE`;
@@ -158,7 +191,18 @@ export class AccessScopeService {
     userId: string,
     options: { includeSelf?: boolean } = {},
   ): Promise<string[]> {
-    const condition = await this.buildEmployeeScopeCondition(userId, options);
+    const scope = await this.getScope(userId);
+    // managed 范围但无实际部门/下属数据（dept_head 尚未分配部门、supervisor 无下属等）：
+    // 直接空返回，避免执行 WHERE (FALSE OR FALSE) 的无意义查询
+    if (
+      scope.kind === 'managed' &&
+      scope.departmentIds.length === 0 &&
+      scope.subordinateIds.length === 0
+    ) {
+      return [];
+    }
+
+    const condition = await this.buildEmployeeScopeCondition(userId, options, scope);
     if (condition === null) {
       const conditions = [
         isNull(employee.deletedAt),

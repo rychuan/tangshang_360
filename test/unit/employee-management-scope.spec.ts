@@ -470,7 +470,16 @@ describe('employee management access scope', () => {
       roleManagerService,
       authorizationSyncService,
     } = createService();
-    db.select.mockReturnValue(existingQuery);
+    // 员工 existing 检查 → 空；部门存在性校验（resolveReferences 新逻辑）→ 有效部门
+    const deptQuery = {
+      from: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockResolvedValue([{ id: 'dept-1' }]),
+    };
+    db.select
+      .mockReset()
+      .mockReturnValueOnce(existingQuery)
+      .mockReturnValueOnce(deptQuery);
     db.transaction = jest.fn(
       async (callback: (transaction: unknown) => unknown) => callback(tx),
     );

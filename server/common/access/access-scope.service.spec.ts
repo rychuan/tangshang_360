@@ -154,3 +154,183 @@ describe('AccessScopeService.canAccessEmployees', () => {
     expect(map.get('u_other')).toBe(false);
   });
 });
+
+describe('AccessScopeService.getManagedEmployeeIds（列表路径范围判定）', () => {
+  const callerUserId = 'u_caller';
+
+  /**
+   * 模拟 getManagedEmployeeIds 的调用链：
+   * getScope（调用方存在性 id 查询 / dept_head 的 department 查询 / supervisor 的下属 userId 查询）
+   * → 最终范围 userId 查询（捕获 where 条件以便断言 SQL 谓词）。
+   */
+  function createScopeDbMock(
+    roles: string[],
+    opts: {
+      departmentRows?: { id: string }[];
+      subordinateRows?: { userId: string }[];
+      finalRows?: { userId: string }[];
+    } = {},
+  ) {
+    const finalQueryConditions: unknown[] = [];
+    let userIdQueryCount = 0;
+    const db = {
+      select: jest.fn((fields: Record<string, unknown>) => ({
+        from: jest.fn((table: unknown) => ({
+          where: jest.fn((...args: unknown[]) => {
+            if (table === department) {
+              return Promise.resolve(opts.departmentRows ?? []);
+            }
+            // 调用方存在性查询（select id）
+            if (fields.id) {
+              return { limit: jest.fn(async () => [{}]) };
+            }
+            // userId 查询：getScope 下属查询（仅 supervisor）+ 最终范围查询
+            if (fields.userId) {
+              userIdQueryCount += 1;
+              const isFinal = roles.includes('supervisor')
+                ? userIdQueryCount > 1
+                : userIdQueryCount >= 1;
+              if (isFinal) {
+                finalQueryConditions.push(args[0]);
+                return Promise.resolve(opts.finalRows ?? []);
+              }
+              return Promise.resolve(opts.subordinateRows ?? []);
+            }
+            return Promise.resolve([]);
+          }),
+        })),
+      })),
+    };
+    return { db, finalQueryConditions };
+  }
+
+  function conditionQuery(cond: unknown): string {
+    // drizzle SQL 对象：queryChunks 递归拼接（StringChunk.value 为字符数组）
+    const out: string[] = [];
+    const walk = (node: unknown): void => {
+      if (!node || typeof node !== 'object') return;
+      const n = node as { queryChunks?: unknown; value?: unknown };
+      if (Array.isArray(n.queryChunks)) {
+        for (const ch of n.queryChunks) walk(ch);
+        return;
+      }
+      if (Array.isArray(n.value)) out.push(n.value.join(''));
+      else if (typeof n.value === 'string') out.push(n.value);
+    };
+    walk(cond);
+    return out.join('');
+  }
+
+  test('dept_head：仅部门成员进入范围，跨部门直接汇报人不在范围内', async () => {
+    const { db, finalQueryConditions } = createScopeDbMock(
+      ['dept_head'],
+      {
+        departmentRows: [{ id: 'dept-1' }],
+        finalRows: [{ userId: 'u_dept_member' }],
+      },
+    );
+    const service = new AccessScopeService(
+      db as never,
+      { getUserRoles: jest.fn().mockResolvedValue(['dept_head']) } as never,
+    );
+
+    const ids = await service.getManagedEmployeeIds(callerUserId, {
+      includeSelf: false,
+    });
+
+    expect(ids).toEqual(['u_dept_member']);
+    // 最终范围条件只含部门 IN 谓词，不得包含 supervisor 谓词（跨部门直接汇报人不越界）
+    const cond = conditionQuery(finalQueryConditions[0]);
+    expect(cond).toContain(' IN (');
+    expect(cond).not.toContain('.user_id =');
+  });
+
+  test('supervisor：直接下属（含跨部门）进入范围，且部门谓词为 FALSE', async () => {
+    const { db, finalQueryConditions } = createScopeDbMock(
+      ['supervisor'],
+      {
+        subordinateRows: [{ userId: 'u_sub_cross_dept' }],
+        finalRows: [{ userId: 'u_sub_cross_dept' }],
+      },
+    );
+    const service = new AccessScopeService(
+      db as never,
+      { getUserRoles: jest.fn().mockResolvedValue(['supervisor']) } as never,
+    );
+
+    const ids = await service.getManagedEmployeeIds(callerUserId, {
+      includeSelf: false,
+    });
+
+    expect(ids).toEqual(['u_sub_cross_dept']);
+    const cond = conditionQuery(finalQueryConditions[0]);
+    expect(cond).toContain('.user_id =');
+    expect(cond).toContain('FALSE');
+  });
+
+  test('dept_head + supervisor：部门成员与直接下属取并集', async () => {
+    const { db, finalQueryConditions } = createScopeDbMock(
+      ['dept_head', 'supervisor'],
+      {
+        departmentRows: [{ id: 'dept-1' }],
+        subordinateRows: [{ userId: 'u_sub_cross_dept' }],
+        finalRows: [
+          { userId: 'u_dept_member' },
+          { userId: 'u_sub_cross_dept' },
+        ],
+      },
+    );
+    const service = new AccessScopeService(
+      db as never,
+      {
+        getUserRoles: jest.fn().mockResolvedValue(['dept_head', 'supervisor']),
+      } as never,
+    );
+
+    const ids = await service.getManagedEmployeeIds(callerUserId, {
+      includeSelf: false,
+    });
+
+    expect(ids).toEqual(['u_dept_member', 'u_sub_cross_dept']);
+    const cond = conditionQuery(finalQueryConditions[0]);
+    expect(cond).toContain('.user_id =');
+    expect(cond).toContain(' IN (');
+  });
+
+  test('dept_head 无可负责部门：直接短路为空，不再执行 (FALSE OR FALSE) 查询', async () => {
+    const { db, finalQueryConditions } = createScopeDbMock(['dept_head'], {
+      departmentRows: [],
+      finalRows: [],
+    });
+    const service = new AccessScopeService(
+      db as never,
+      { getUserRoles: jest.fn().mockResolvedValue(['dept_head']) } as never,
+    );
+
+    const ids = await service.getManagedEmployeeIds(callerUserId, {
+      includeSelf: false,
+    });
+
+    expect(ids).toEqual([]);
+    // 短路：不应触发最终员工范围查询
+    expect(finalQueryConditions).toHaveLength(0);
+  });
+
+  test('supervisor 无下属：同样短路为空', async () => {
+    const { db, finalQueryConditions } = createScopeDbMock(['supervisor'], {
+      subordinateRows: [],
+      finalRows: [],
+    });
+    const service = new AccessScopeService(
+      db as never,
+      { getUserRoles: jest.fn().mockResolvedValue(['supervisor']) } as never,
+    );
+
+    const ids = await service.getManagedEmployeeIds(callerUserId, {
+      includeSelf: false,
+    });
+
+    expect(ids).toEqual([]);
+    expect(finalQueryConditions).toHaveLength(0);
+  });
+});

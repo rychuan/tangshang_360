@@ -1072,6 +1072,7 @@ export class EmployeeManagementService {
    * 解析部门关联与岗位编码。
    * 部门仅以 departmentId 关联（department 名称列已废弃）：
    * 显式传入优先，否则保留原值，避免误置空。
+   * 显式部门必须存在且启用，否则员工会落入 dept_head 数据范围盲区。
    */
   private async resolveReferences(
     posName?: string,
@@ -1079,9 +1080,25 @@ export class EmployeeManagementService {
     explicitPositionCode?: string | null,
     preserveDepartmentId?: string | null,
   ) {
-    let departmentId: string | null =
-      explicitDepartmentId ?? preserveDepartmentId ?? null;
+    let departmentId: string | null = preserveDepartmentId ?? null;
     let positionCode: string | null = explicitPositionCode ?? null;
+
+    if (explicitDepartmentId != null) {
+      const deptRows = await this.db
+        .select({ id: department.id })
+        .from(department)
+        .where(
+          and(
+            eq(department.id, explicitDepartmentId),
+            eq(department.isActive, true),
+          ),
+        )
+        .limit(1);
+      if (deptRows.length === 0) {
+        throw new BadRequestException('部门不存在或已停用');
+      }
+      departmentId = explicitDepartmentId;
+    }
 
     if (!positionCode && posName) {
       const dictRow = await this.db
