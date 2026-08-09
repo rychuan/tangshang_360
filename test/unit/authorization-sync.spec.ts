@@ -699,7 +699,10 @@ describe('durable authorization reconciliation', () => {
     const db = new StatefulDb(employeeRow(), [
       jobRow({
         status: 'processing',
-        startedAt: new Date(Date.now() - AUTHORIZATION_JOB_LEASE_MS + 1),
+        // 租约窗口内保留 60s 余量，避免测试执行耗时导致 startedAt 落入过期区间
+        startedAt: new Date(
+          Date.now() - AUTHORIZATION_JOB_LEASE_MS + 60_000,
+        ),
         claimToken: token,
       }),
     ]);
