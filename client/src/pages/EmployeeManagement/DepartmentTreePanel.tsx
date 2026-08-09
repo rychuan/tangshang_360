@@ -246,15 +246,18 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
       const isExpanded = expanded.has(node.id);
       const hasChildren = node.children?.length > 0;
       const directCount = node.memberCount ?? 0;
+      const score =
+        typeof node.avgScore === 'number' ? node.avgScore.toFixed(1) : null;
+      const hasRowActions = canCreate || canEdit || canDelete;
       return (
         <div key={node.id}>
           <div
-            className={`flex items-center gap-1 py-1.5 px-2 rounded cursor-pointer text-sm group ${
+            className={`group relative flex items-center gap-1 rounded px-2 py-1 text-xs cursor-pointer ${
               selectedId === node.id
                 ? 'bg-primary/10 text-primary font-medium'
                 : 'hover:bg-muted/50'
             }`}
-            style={{ paddingLeft: `${8 + depth * 16}px` }}
+            style={{ paddingLeft: `${6 + depth * 14}px` }}
             onClick={() => handleSelect(node.id)}
           >
             {hasChildren ? (
@@ -274,57 +277,73 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
             ) : (
               <span className="w-4 shrink-0" />
             )}
-            <Building2 className="size-3.5 shrink-0 text-muted-foreground" />
+            <Building2 className="size-3 shrink-0 text-muted-foreground" />
             <span className="flex-1 truncate">{node.name}</span>
-            {node.headId && (
+            <span className="shrink-0 text-[10px] text-muted-foreground tabular-nums">
+              {directCount}
+            </span>
+            {score !== null && (
+              <span
+                className="shrink-0 rounded bg-muted px-1 py-px text-[10px] font-medium tabular-nums"
+                title="部门平均分（已完成考核）"
+              >
+                {score}
+              </span>
+            )}
+            {node.headId ? (
               <UserDisplay
                 value={{ user_id: node.headId, name: node.headName }}
                 size="small"
                 showLabel={false}
-                className="shrink-0 ml-1"
+                className="shrink-0"
               />
+            ) : (
+              <span className="size-4 shrink-0" />
             )}
-            <span className="text-xs text-muted-foreground shrink-0 ml-0.5">
-              {directCount}
-            </span>
-            <div className="hidden group-hover:flex items-center gap-0.5 shrink-0 ml-1">
-              {canCreate && (
-                <button
-                  className="size-5 flex items-center justify-center rounded hover:bg-muted"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openCreate(node.id);
-                  }}
-                  title="添加子部门"
-                >
-                  <Plus className="size-3" />
-                </button>
-              )}
-              {canEdit && (
-                <button
-                  className="size-5 flex items-center justify-center rounded hover:bg-muted"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openEdit(node);
-                  }}
-                  title="编辑"
-                >
-                  <Pencil className="size-3" />
-                </button>
-              )}
-              {canDelete && (
-                <button
-                  className="size-5 flex items-center justify-center rounded hover:bg-destructive/10 hover:text-destructive"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(node);
-                  }}
-                  title="删除"
-                >
-                  <Trash2 className="size-3" />
-                </button>
-              )}
-            </div>
+            {/* 悬浮菜单：覆盖右侧区域 */}
+            {hasRowActions && (
+              <div className="pointer-events-none absolute inset-y-0 right-0 z-20 flex w-3/5 items-center justify-end gap-0.5 border-l border-border/60 bg-background/95 pl-1.5 pr-1 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
+                {canEdit && (
+                  <button
+                    className="flex h-6 items-center gap-0.5 rounded px-1 text-[11px] hover:bg-muted"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEdit(node);
+                    }}
+                    title="编辑"
+                  >
+                    <Pencil className="size-3" />
+                    编辑
+                  </button>
+                )}
+                {canCreate && (
+                  <button
+                    className="flex h-6 items-center gap-0.5 rounded px-1 text-[11px] hover:bg-muted"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openCreate(node.id);
+                    }}
+                    title="添加子部门"
+                  >
+                    <Plus className="size-3" />
+                    子部门
+                  </button>
+                )}
+                {canDelete && (
+                  <button
+                    className="flex h-6 items-center gap-0.5 rounded px-1 text-[11px] text-destructive hover:bg-destructive/10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(node);
+                    }}
+                    title="删除"
+                  >
+                    <Trash2 className="size-3" />
+                    删除
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           {hasChildren && isExpanded && (
             <div>{renderTree(node.children, depth + 1)}</div>
@@ -397,14 +416,14 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
           className="h-full overflow-y-auto overscroll-contain px-2 pt-2 pb-20"
         >
         <div
-          className={`flex items-center gap-1 py-1.5 px-2 rounded cursor-pointer text-sm ${
+          className={`flex items-center gap-1 py-1 px-2 rounded cursor-pointer text-xs ${
             selectedId === null
               ? 'bg-primary/10 text-primary font-medium'
               : 'hover:bg-muted/50'
           }`}
           onClick={() => onSelect(null)}
         >
-          <Building2 className="size-3.5 shrink-0 text-muted-foreground" />
+          <Building2 className="size-3 shrink-0 text-muted-foreground" />
           <span>全部部门</span>
         </div>
         {isLoading ? (
