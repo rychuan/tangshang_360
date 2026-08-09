@@ -394,7 +394,7 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
         <div
           ref={tableRef}
           onScroll={handleTreeScroll}
-          className="h-full overflow-y-auto p-2"
+          className="h-full overflow-y-auto px-2 pt-2 pb-20"
         >
         <div
           className={`flex items-center gap-1 py-1.5 px-2 rounded cursor-pointer text-sm ${
