@@ -3,6 +3,7 @@ import {
   type RatingValidationInput,
   type SnapshotValidationInput,
 } from '../../server/modules/assessment-operation/assessment-operation.service';
+import { BONUS_SCORE_LIMIT } from '../../shared/types/assessment.types';
 
 describe('validateRatingsAgainstSnapshots', () => {
   const snapshots: SnapshotValidationInput[] = [
@@ -103,7 +104,7 @@ describe('validateRatingsAgainstSnapshots', () => {
 
     expect(() =>
       validateRatingsAgainstSnapshots(ratings, bonusSnapshots, false),
-    ).toThrow('评分不能为负数或非法数值');
+    ).toThrow('评分不能为负数');
   });
 
   it('does not require bonus snapshots on final submit', () => {
@@ -140,5 +141,29 @@ describe('validateRatingsAgainstSnapshots', () => {
     expect(() =>
       validateRatingsAgainstSnapshots(ratings, bonusSnapshots, false),
     ).toThrow('评分必须为有效数值');
+  });
+
+  it('rejects bonus scores beyond the ±BONUS_SCORE_LIMIT range', () => {
+    const ratings: RatingValidationInput[] = [
+      { indicatorSnapshotId: 'indicator-a', score: 20 },
+      { indicatorSnapshotId: 'indicator-b', score: 30 },
+      { indicatorSnapshotId: 'bonus-1', score: BONUS_SCORE_LIMIT + 1 },
+    ];
+
+    expect(() =>
+      validateRatingsAgainstSnapshots(ratings, bonusSnapshots, false),
+    ).toThrow(`加减分项单次评分绝对值不能超过 ${BONUS_SCORE_LIMIT}`);
+  });
+
+  it('allows bonus scores exactly at the ±BONUS_SCORE_LIMIT boundary', () => {
+    const ratings: RatingValidationInput[] = [
+      { indicatorSnapshotId: 'indicator-a', score: 20 },
+      { indicatorSnapshotId: 'indicator-b', score: 30 },
+      { indicatorSnapshotId: 'bonus-1', score: -BONUS_SCORE_LIMIT },
+    ];
+
+    expect(() =>
+      validateRatingsAgainstSnapshots(ratings, bonusSnapshots, false),
+    ).not.toThrow();
   });
 });

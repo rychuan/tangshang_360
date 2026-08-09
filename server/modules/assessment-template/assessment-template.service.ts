@@ -209,7 +209,8 @@ export class AssessmentTemplateService {
           .values({
             templateId,
             name: dim.name,
-            weight: String(dim.weight),
+            // 加减分维度权重固定 0（不参与权重 100 校验）
+            weight: dim.isBonus ? '0' : String(dim.weight),
             isBonus: dim.isBonus ?? false,
             description: dim.description ?? null,
             sortOrder: i,
@@ -218,17 +219,20 @@ export class AssessmentTemplateService {
 
         const dimensionId: string = dimInserted.id;
 
-        for (let j = 0; j < dim.indicators.length; j++) {
-          const ind = dim.indicators[j];
-          await tx.insert(assessmentIndicator).values({
-            dimensionId,
-            content: ind.content,
-            description: ind.description,
-            algorithm: ind.algorithm,
-            dataSource: ind.dataSource,
-            weight: String(ind.weight),
-            sortOrder: j,
-          });
+        // 加减分维度无指标（validateWeights 已拒绝携带指标的 bonus 维度）
+        if (!dim.isBonus) {
+          for (let j = 0; j < dim.indicators.length; j++) {
+            const ind = dim.indicators[j];
+            await tx.insert(assessmentIndicator).values({
+              dimensionId,
+              content: ind.content,
+              description: ind.description,
+              algorithm: ind.algorithm,
+              dataSource: ind.dataSource,
+              weight: String(ind.weight),
+              sortOrder: j,
+            });
+          }
         }
       }
 
@@ -286,7 +290,8 @@ export class AssessmentTemplateService {
           .values({
             templateId: id,
             name: dim.name,
-            weight: String(dim.weight),
+            // 加减分维度权重固定 0（不参与权重 100 校验）
+            weight: dim.isBonus ? '0' : String(dim.weight),
             isBonus: dim.isBonus ?? false,
             description: dim.description ?? null,
             sortOrder: i,
@@ -295,17 +300,20 @@ export class AssessmentTemplateService {
 
         const dimensionId: string = dimInserted.id;
 
-        for (let j = 0; j < dim.indicators.length; j++) {
-          const ind = dim.indicators[j];
-          await tx.insert(assessmentIndicator).values({
-            dimensionId,
-            content: ind.content,
-            description: ind.description,
-            algorithm: ind.algorithm,
-            dataSource: ind.dataSource,
-            weight: String(ind.weight),
-            sortOrder: j,
-          });
+        // 加减分维度无指标（validateWeights 已拒绝携带指标的 bonus 维度）
+        if (!dim.isBonus) {
+          for (let j = 0; j < dim.indicators.length; j++) {
+            const ind = dim.indicators[j];
+            await tx.insert(assessmentIndicator).values({
+              dimensionId,
+              content: ind.content,
+              description: ind.description,
+              algorithm: ind.algorithm,
+              dataSource: ind.dataSource,
+              weight: String(ind.weight),
+              sortOrder: j,
+            });
+          }
         }
       }
 
@@ -403,6 +411,15 @@ export class AssessmentTemplateService {
       if (Math.abs(indicatorWeightSum - dim.weight) > 0.01) {
         throw new BadRequestException(
           `维度「${dim.name}」的指标权重之和必须等于维度权重 ${dim.weight}，当前为 ${indicatorWeightSum}`,
+        );
+      }
+    }
+
+    // 防御：加减分维度不允许携带指标（前端提交时已过滤，此处兜底防重复快照）
+    for (const dim of dimensions) {
+      if (dim.isBonus && dim.indicators.length > 0) {
+        throw new BadRequestException(
+          `加减分维度「${dim.name}」不能包含指标`,
         );
       }
     }

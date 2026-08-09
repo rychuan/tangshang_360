@@ -159,16 +159,20 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
         type: data.type,
         dimensions: sortedDimensions.map((dim) => ({
           name: dim.name,
-          weight: dim.weight,
+          // 加减分维度不参与权重 100 校验：提交时强制权重 0 并忽略指标。
+          // （表单中保留原指标/权重数据，取消勾选后可直接恢复编辑，不丢数据）
+          weight: dim.isBonus ? 0 : dim.weight,
           isBonus: dim.isBonus ?? false,
           description: dim.description ?? '',
-          indicators: dim.indicators.map((ind) => ({
-            content: ind.content,
-            description: ind.description,
-            algorithm: ind.algorithm,
-            dataSource: ind.dataSource,
-            weight: ind.weight,
-          })),
+          indicators: dim.isBonus
+            ? []
+            : dim.indicators.map((ind) => ({
+                content: ind.content,
+                description: ind.description,
+                algorithm: ind.algorithm,
+                dataSource: ind.dataSource,
+                weight: ind.weight,
+              })),
         })),
       };
       await onSave(payload);
@@ -187,7 +191,11 @@ const TemplateFormDialog: React.FC<TemplateFormDialogProps> = ({
   const watchedType = form.watch('type');
 
   const totalDimWeight: number =
-    watchedDims?.reduce((sum: number, d) => sum + (d?.weight || 0), 0) || 0;
+    watchedDims?.reduce(
+      // 加减分维度不参与权重 100 校验，展示时也不计入
+      (sum: number, d) => sum + (d?.isBonus ? 0 : d?.weight || 0),
+      0,
+    ) || 0;
   const dimWeightValid: boolean = Math.abs(totalDimWeight - 100) < 0.01;
 
   return (

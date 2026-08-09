@@ -121,7 +121,8 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
   const dimensionGroups: DimensionGroup[] = useMemo(() => {
     const groups: Record<string, DimensionGroup> = {};
     indicators.forEach((ind: AdjustIndicatorInput, i: number) => {
-      const key = ind.dimensionName || '未分组';
+      // 加减分行按行索引分组（名称可重复），普通指标按维度名分组
+      const key = ind.isBonus ? `__bonus__${i}` : ind.dimensionName || '未分组';
       if (!groups[key]) {
         groups[key] = {
           dimensionName: ind.dimensionName,

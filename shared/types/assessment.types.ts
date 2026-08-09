@@ -1,3 +1,6 @@
+/** 加减分维度单次评分的绝对值上限（正负通用），超出则前后端校验拒绝 */
+export const BONUS_SCORE_LIMIT = 100;
+
 export interface AssessmentTemplateItem {
   id: string;
   name: string;

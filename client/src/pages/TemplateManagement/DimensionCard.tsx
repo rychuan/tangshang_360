@@ -110,15 +110,13 @@ const DimensionCard: React.FC<DimensionCardProps> = ({
             <Checkbox
               checked={isBonus}
               onCheckedChange={(checked) => {
+                // 仅切换加减分标记，不立即清空指标/权重：避免误勾导致已有指标数据丢失。
+                // 加减分维度在提交时由 TemplateFormDialog 统一置 weight=0、忽略指标；
+                // 取消勾选后原指标与权重仍在表单中，可直接继续编辑。
                 form.setValue(
                   `dimensions.${dimIdx}.isBonus`,
                   checked === true,
                 );
-                if (checked === true) {
-                  // 加减分维度：无指标、权重固定 0（不参与权重 100 校验）
-                  form.setValue(`dimensions.${dimIdx}.weight`, 0);
-                  form.setValue(`dimensions.${dimIdx}.indicators`, []);
-                }
               }}
             />
             加减分项

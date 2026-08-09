@@ -7,6 +7,7 @@ import type {
   AssessmentInstanceDetail,
   ActiveGradeRule,
 } from '@shared/api.interface';
+import { BONUS_SCORE_LIMIT } from '@shared/types/assessment.types';
 import {
   type RatingsState,
   type DimensionGroup,
@@ -137,15 +138,19 @@ export function useAssessmentDetail(
     if (!detail || !Array.isArray(detail.indicators)) return [];
     const groups: Record<string, DimensionGroup> = {};
     for (const ind of detail.indicators) {
-      if (!groups[ind.dimensionName]) {
-        groups[ind.dimensionName] = {
+      // 加减分行按快照 id 分组（名称可重复），普通指标按维度名分组
+      const key = ind.isBonus
+        ? `__bonus__${ind.id}`
+        : ind.dimensionName || '未分组';
+      if (!groups[key]) {
+        groups[key] = {
           dimensionName: ind.dimensionName,
           dimensionWeight: ind.dimensionWeight,
           isBonus: ind.isBonus ?? false,
           indicators: [],
         };
       }
-      groups[ind.dimensionName].indicators.push(ind);
+      groups[key].indicators.push(ind);
     }
     // 加减分维度固定排在所有普通维度之后（后端已按 sortOrder 置底，此处兜底）
     return Object.values(groups).sort(
@@ -244,6 +249,54 @@ export function useAssessmentDetail(
       const suffix = emptyIndicators.length > 3 ? '等' : '';
       toast.warning(
         `以下 ${emptyIndicators.length} 项指标未评分：${names}${suffix}，请填写后提交`,
+      );
+      return;
+    }
+
+    // 提交前校验：普通指标不允许负分（加减分项支持负分）
+    const negativeIndicators: string[] = [];
+    for (const group of groupedIndicators) {
+      if (group.isBonus) continue;
+      for (const ind of group.indicators) {
+        const s = ratings[ind.id]?.score;
+        if (s != null && s < 0) {
+          negativeIndicators.push(
+            ind.content.length > 12
+              ? ind.content.slice(0, 12) + '…'
+              : ind.content,
+          );
+        }
+      }
+    }
+    if (negativeIndicators.length > 0) {
+      const names = negativeIndicators.slice(0, 3).join('、');
+      const suffix = negativeIndicators.length > 3 ? '等' : '';
+      toast.warning(
+        `以下 ${negativeIndicators.length} 项指标评分为负数（普通指标不允许负分）：${names}${suffix}`,
+      );
+      return;
+    }
+
+    // 提交前校验：加减分项评分幅度不超过 ±BONUS_SCORE_LIMIT
+    const overLimitBonus: string[] = [];
+    for (const group of groupedIndicators) {
+      if (!group.isBonus) continue;
+      for (const ind of group.indicators) {
+        const s = ratings[ind.id]?.score;
+        if (s != null && Math.abs(s) > BONUS_SCORE_LIMIT) {
+          overLimitBonus.push(
+            ind.content.length > 12
+              ? ind.content.slice(0, 12) + '…'
+              : ind.content,
+          );
+        }
+      }
+    }
+    if (overLimitBonus.length > 0) {
+      const names = overLimitBonus.slice(0, 3).join('、');
+      const suffix = overLimitBonus.length > 3 ? '等' : '';
+      toast.warning(
+        `以下 ${overLimitBonus.length} 个加减分项评分绝对值不能超过 ${BONUS_SCORE_LIMIT}：${names}${suffix}`,
       );
       return;
     }

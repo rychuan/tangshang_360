@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/empty';
 import { ChevronDown, BarChart3 } from '@/components/ui/hugeicons';
 import type { AssessmentIndicatorDetail } from '@shared/api.interface';
+import { BONUS_SCORE_LIMIT } from '@shared/types/assessment.types';
 import {
   type RatingsState,
   type DimensionGroup,
@@ -100,7 +101,11 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
     );
   };
 
-  /** 加减分维度卡片：维度名称+说明+员工/上级说明（两个长文本）+评分（可为负分） */
+  /**
+   * 加减分维度卡片：维度名称+说明+员工/上级说明（两个长文本）+评分（可为负分）。
+   * 注意：员工说明/上级说明共用同一 comment 状态（与普通指标「备注」单字段一致），
+   * 依赖 self_review / supervisor_review 阶段互斥保证不同时可编辑，不会互相覆盖。
+   */
   const renderBonusCard = (group: DimensionGroup): React.ReactNode => {
     const indicator = group.indicators[0];
     const canEdit = canEditSelf || canEditSupervisor;
@@ -162,14 +167,16 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <p className="text-xs text-muted-foreground shrink-0">
-                评分{canEdit ? '（可为负分）' : ''}
+                评分{canEdit ? `（可为负分，±${BONUS_SCORE_LIMIT} 以内）` : ''}
               </p>
               {indicator && canEdit ? (
                 <Input
                   type="number"
                   step="0.1"
+                  min={-BONUS_SCORE_LIMIT}
+                  max={BONUS_SCORE_LIMIT}
                   placeholder="0"
                   className="w-28 text-center"
                   value={ratings[indicator.id]?.score ?? ''}
@@ -208,7 +215,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   return (
     <div className="flex flex-col @container/indicator">
       {groups.map((group, idx) => (
-        <React.Fragment key={group.dimensionName}>
+        <React.Fragment key={idx}>
           {/* 卡片间连接指示 — 向下箭头表示下方还有维度卡片 */}
           {idx > 0 && (
             <div className="flex justify-center py-1" aria-hidden="true">
