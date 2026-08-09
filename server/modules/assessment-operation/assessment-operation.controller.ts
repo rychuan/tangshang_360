@@ -4,14 +4,16 @@ import { RequirePermission } from '@server/common/decorators/require-permission.
 import type { Request } from 'express';
 import { AssessmentOperationService } from './assessment-operation.service';
 import { SignTokenService } from './sign-token.service';
+import {
+  RatingSubmitDto,
+  RatingSubmitWithSignDto,
+  SignByTokenDto,
+  SignDto,
+  SignTokenRequestDto,
+} from './dto/operation.dto';
 import type {
-  RatingSubmitRequest,
-  RatingSubmitWithSignRequest,
-  SignRequest,
-  SignTokenRequest,
   SignTokenResponse,
   SignSessionResponse,
-  SignByTokenRequest,
   SignStatusResponse,
   SignSubmissionResponse,
 } from '@shared/api.interface';
@@ -39,7 +41,7 @@ export class AssessmentOperationController {
   @Post('sign-session')
   async signByToken(
     @Req() req: Request,
-    @Body() body: SignByTokenRequest,
+    @Body() body: SignByTokenDto,
   ): Promise<SignSubmissionResponse> {
     const { userId, userName } = req.userContext as {
       userId: string;
@@ -85,7 +87,7 @@ export class AssessmentOperationController {
   async submitSelfRating(
     @Req() req: Request,
     @Param('id') id: string,
-    @Body() body: RatingSubmitRequest,
+    @Body() body: RatingSubmitDto,
   ) {
     const { userId } = req.userContext as {
       userId: string;
@@ -99,7 +101,7 @@ export class AssessmentOperationController {
   async submitSelfRatingWithSign(
     @Req() req: Request,
     @Param('id') id: string,
-    @Body() body: RatingSubmitWithSignRequest,
+    @Body() body: RatingSubmitWithSignDto,
   ) {
     const { userId, userName } = req.userContext as {
       userId: string;
@@ -114,7 +116,7 @@ export class AssessmentOperationController {
   async submitSupervisorRating(
     @Req() req: Request,
     @Param('id') id: string,
-    @Body() body: RatingSubmitRequest,
+    @Body() body: RatingSubmitDto,
   ) {
     const { userId } = req.userContext as {
       userId: string;
@@ -128,7 +130,7 @@ export class AssessmentOperationController {
   async submitSupervisorRatingWithSign(
     @Req() req: Request,
     @Param('id') id: string,
-    @Body() body: RatingSubmitWithSignRequest,
+    @Body() body: RatingSubmitWithSignDto,
   ) {
     const { userId, userName } = req.userContext as {
       userId: string;
@@ -148,7 +150,7 @@ export class AssessmentOperationController {
   async sign(
     @Req() req: Request,
     @Param('id') id: string,
-    @Body() body: SignRequest,
+    @Body() body: SignDto,
   ) {
     const { userId, userName } = req.userContext as {
       userId: string;
@@ -163,7 +165,7 @@ export class AssessmentOperationController {
   async generateSignToken(
     @Req() req: Request,
     @Param('id') id: string,
-    @Body() body: SignTokenRequest,
+    @Body() body: SignTokenRequestDto,
   ): Promise<SignTokenResponse> {
     const { userId, userName } = req.userContext as {
       userId: string;
