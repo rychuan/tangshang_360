@@ -434,7 +434,7 @@ export class RoleManagerService {
         })
         .from(employee)
         .where(
-          sql`COALESCE(${employee.authorizationRoles}, '[]'::jsonb) ? ${roleBizId}`,
+          sql`jsonb_exists(COALESCE(${employee.authorizationRoles}, '[]'::jsonb), ${roleBizId})`,
         )
         .limit(1);
       if (durableMembers.length > 0) {

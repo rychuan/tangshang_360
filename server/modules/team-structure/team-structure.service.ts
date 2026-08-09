@@ -503,7 +503,7 @@ export class TeamStructureService {
 
   private effectiveAdminCondition(): SQL {
     return and(
-      sql`COALESCE(${employee.authorizationRoles}, '[]'::jsonb) ? 'admin'`,
+      sql`jsonb_exists(COALESCE(${employee.authorizationRoles}, '[]'::jsonb), 'admin')`,
       eq(employee.status, true),
       eq(employee.authorizationStatus, 'synced'),
       isNull(employee.deletedAt),

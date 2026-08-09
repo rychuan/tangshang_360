@@ -156,7 +156,7 @@ export class EmployeeAuthorizationService {
   }
 
   adminRoleCondition(): SQL {
-    return sql`COALESCE(${employee.authorizationRoles}, '[]'::jsonb) ? 'admin'`;
+    return sql`jsonb_exists(COALESCE(${employee.authorizationRoles}, '[]'::jsonb), 'admin')`;
   }
 
   effectiveAdminCondition(): SQL {

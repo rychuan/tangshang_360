@@ -143,7 +143,7 @@ export class EmployeeManagementService {
     if (query.role) {
       // 角色筛选按 durable 期望角色（authorizationRoles）JSONB 包含匹配，
       // 而非 legacy employee.role 列（不随 dept_head 派生/自定义角色增删同步）
-      conditions.push(sql`${employee.authorizationRoles} ? ${query.role}`);
+      conditions.push(sql`jsonb_exists(${employee.authorizationRoles}, ${query.role})`);
     }
     if (query.status === 'true' || query.status === 'false') {
       conditions.push(eq(employee.status, query.status === 'true'));
