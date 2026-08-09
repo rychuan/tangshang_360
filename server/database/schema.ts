@@ -543,7 +543,6 @@ export const employee = pgTable("employee", {
 }, (table) => [
   // Complex index: CREATE INDEX idx_employee_supervisor ON employee USING btree (((supervisor_id).user_id)),
   // Complex index: CREATE UNIQUE INDEX idx_employee_pk ON employee USING btree (((employee_id).user_id)),
-  index("idx_employee_department").on(table.departmentId),
   uniqueIndex("unq_1869605213955370").on(table.baseRecordId),
 ]);
 
