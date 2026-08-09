@@ -84,7 +84,7 @@ const LayoutContent: React.FC = () => {
           homePath={homePath}
           badges={{}}
         />
-        <SidebarInset className="min-w-0 bg-background md:rounded-lg">
+        <SidebarInset className="min-w-0 bg-background md:rounded-lg md:peer-data-[variant=inset]:m-[8px]">
           <div className="flex flex-1 items-center justify-center">
             <Spinner className="size-8" />
           </div>
@@ -105,7 +105,7 @@ const LayoutContent: React.FC = () => {
         homePath={homePath}
         badges={badges}
       />
-      <SidebarInset className="min-w-0 bg-background md:rounded-lg">
+      <SidebarInset className="min-w-0 bg-background md:rounded-lg md:peer-data-[variant=inset]:m-[8px]">
         {/* 跳转到内容：键盘无障碍 skip-link */}
         <UniversalLink
           to="#main-content"
