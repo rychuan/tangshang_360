@@ -8,7 +8,6 @@ import {
   TrendingUpIcon,
   Eye,
   FileDown,
-  Upload,
 } from '@/components/ui/hugeicons';
 import { logger } from '@lark-apaas/client-toolkit/logger';
 import { toast } from 'sonner';
@@ -62,7 +61,7 @@ import {
   AreaChart,
 } from 'recharts';
 import { exportData } from '@/api/assessment-statistics';
-import { exportPerformanceToBitable } from '@/api/bitable-sync';
+
 import type {
   StatisticsRecordItem,
   ChartsResponse,
@@ -104,24 +103,8 @@ const StatisticsPage: React.FC = () => {
 
   const [exporting, setExporting] = useState(false);
   const [exportingPdfId, setExportingPdfId] = useState<string | null>(null);
-  const [syncingOut, setSyncingOut] = useState(false);
   const navigate = useNavigate();
   const pdfRef = useRef<HTMLDivElement>(null);
-
-  const handleSyncToBitable = async () => {
-    try {
-      setSyncingOut(true);
-      const res = await exportPerformanceToBitable();
-      toast.success(res.message);
-      loadRecords();
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : '同步到多维表格失败';
-      logger.error(`Sync to bitable error: ${msg}`);
-      handleApiError(e);
-    } finally {
-      setSyncingOut(false);
-    }
-  };
 
   const handleSearch = () => setPage(1);
 
@@ -529,22 +512,6 @@ const StatisticsPage: React.FC = () => {
                     <DownloadIcon data-icon="inline-start" />
                   )}
                   导出
-                </Button>
-              </CanDo>
-              <CanDo resource="statistics" action="export">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSyncToBitable}
-                  disabled={syncingOut}
-                  className="shrink-0"
-                >
-                  {syncingOut ? (
-                    <Spinner className="size-4" />
-                  ) : (
-                    <Upload data-icon="inline-start" />
-                  )}
-                  同步
                 </Button>
               </CanDo>
             </FilterBarActions>

@@ -1,24 +1,16 @@
 import type { PermissionItem } from '@shared/api.interface';
 import { hasPermission } from '../../components/permission-policy';
 
-export type EmployeeManagementTab = 'employees' | 'departments' | 'bitable';
+export type EmployeeManagementTab = 'employees' | 'departments';
 
-const TAB_ORDER: EmployeeManagementTab[] = [
-  'employees',
-  'departments',
-  'bitable',
-];
+const TAB_ORDER: EmployeeManagementTab[] = ['employees', 'departments'];
 
 export function getVisibleEmployeeManagementTabs(
   permissions: PermissionItem[],
-  canManageGlobalConnections: boolean,
 ): EmployeeManagementTab[] {
   const visible = new Set<EmployeeManagementTab>();
   if (hasPermission(permissions, 'employees', 'view')) {
     visible.add('employees');
-    if (canManageGlobalConnections) {
-      visible.add('bitable');
-    }
   }
   if (hasPermission(permissions, 'organization', 'view')) {
     visible.add('departments');

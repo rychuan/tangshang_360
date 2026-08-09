@@ -217,7 +217,6 @@ describe('employee management access scope', () => {
         phone: '',
         hireDate: '',
         supervisorName: '',
-        bitableConnectionId: null,
       },
     ]);
 

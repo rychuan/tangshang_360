@@ -56,34 +56,6 @@ describe('frontend final permission boundaries', () => {
     );
   });
 
-  it('uses employees edit for Bitable mutations and employees view for logs', () => {
-    const source = readClient(
-      'pages/EmployeeManagement/BitableConnectionTab.tsx',
-    );
-    const permissionBefore = (needle: string) => {
-      const commandIndex = source.indexOf(needle);
-      expect(commandIndex).toBeGreaterThan(-1);
-      const wrapperIndex = source.lastIndexOf('<CanDo', commandIndex);
-      return source.slice(wrapperIndex, commandIndex);
-    };
-
-    expect(permissionBefore('onClick={() => handleImport(conn)}')).toContain(
-      'COMMAND_PERMISSIONS.employeeSync',
-    );
-    expect(permissionBefore('onClick={() => handleExport(conn)}')).toContain(
-      'COMMAND_PERMISSIONS.employeeSync',
-    );
-    expect(permissionBefore('setEditing(conn)')).toContain(
-      'COMMAND_PERMISSIONS.employeeSync',
-    );
-    expect(permissionBefore('setDeleteTarget(conn)')).toContain(
-      'COMMAND_PERMISSIONS.employeeSync',
-    );
-    expect(permissionBefore('setLogDrawer({')).toContain(
-      'COMMAND_PERMISSIONS.employeeSyncLog',
-    );
-  });
-
   it('guards both top-level and inline department creation by global identity', () => {
     const source = readClient(
       'pages/EmployeeManagement/DepartmentManagementTab.tsx',
@@ -112,14 +84,6 @@ describe('frontend final permission boundaries', () => {
     );
     expect(sidebarSource).toContain('canManageEmployees');
     expect(sidebarSource).not.toContain('canViewEmployees');
-  });
-
-  it('marks both required and create-only required Bitable fields', () => {
-    const source = readClient(
-      'pages/EmployeeManagement/BitableConnectionTab.tsx',
-    );
-
-    expect(source).toContain("required !== '否'");
   });
 
   it('hides the statistics action column when no row action is available', () => {

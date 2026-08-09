@@ -3,11 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { department as departmentApi } from '@/api';
 import type { DepartmentTreeNode } from '@shared/api.interface';
 import { PageHeader } from '@/components/business-ui/page-header';
-import { Button } from '@/components/ui/button';
 import EmployeeListTab from './EmployeeListTab';
 import { DepartmentTreePanel } from './DepartmentTreePanel';
-import BitableConnectionTab from './BitableConnectionTab';
-import { UserCog, Link2 } from '@/components/ui/hugeicons';
+import { UserCog } from '@/components/ui/hugeicons';
 import { usePermissions } from '@/hooks/usePermissions';
 import { hasPermission } from '@/components/permission-policy';
 
@@ -24,14 +22,11 @@ function findDeptName(nodes: DepartmentTreeNode[], id: string): string | null {
 }
 
 const EmployeeManagementPage: React.FC = () => {
-  const { permissions, canManageGlobalConnections } = usePermissions();
+  const { permissions } = usePermissions();
   const canViewEmployees = permissions.some(
     (p) => p.resource === 'employees' && p.actions.includes('view'),
   );
   const showDepartmentTree = hasPermission(permissions, 'organization', 'view');
-  // Bitable 连接管理入口：员工查看权限 + 全局连接能力（与旧 tab 语义一致）
-  const canManageBitable = canViewEmployees && canManageGlobalConnections;
-  const [view, setView] = useState<'employees' | 'bitable'>('employees');
 
   const { data: deptData } = useQuery({
     queryKey: ['departments'],
@@ -69,29 +64,11 @@ const EmployeeManagementPage: React.FC = () => {
       className="flex flex-col gap-4 md:gap-6"
       style={{ height: 'calc(100svh - 4rem - 2.5rem)' }}
     >
-      <PageHeader
-        title="员工管理"
-        icon={UserCog}
-        visuallyHidden
-        actions={
-          canManageBitable ? (
-            <Button
-              variant={view === 'bitable' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() =>
-                setView(view === 'bitable' ? 'employees' : 'bitable')
-              }
-            >
-              <Link2 className="size-3.5" />
-              {view === 'bitable' ? '员工列表' : 'Bitable 连接'}
-            </Button>
-          ) : undefined
-        }
-      />
+      <PageHeader title="员工管理" icon={UserCog} visuallyHidden />
       <div className="flex flex-1 min-h-0 gap-4 overflow-hidden">
-        {/* 左侧部门树（Bitable 视图下隐藏） */}
-        {showDepartmentTree && view === 'employees' && (
-          <aside className="w-[260px] shrink-0 min-h-0 overflow-hidden rounded-lg border bg-card">
+        {/* 左侧部门树 */}
+        {showDepartmentTree && (
+          <aside className="w-[260px] shrink-0 self-stretch overflow-hidden rounded-lg border bg-card">
             <DepartmentTreePanel
               selectedId={selectedDeptId}
               onSelect={handleDeptSelect}
@@ -99,11 +76,9 @@ const EmployeeManagementPage: React.FC = () => {
           </aside>
         )}
 
-        {/* 右侧：员工列表 / Bitable 连接管理（员工列表仅对 employees view 可见） */}
+        {/* 右侧：员工列表 */}
         <section className="flex-1 min-w-0 overflow-y-auto">
-          {view === 'bitable' ? (
-            <BitableConnectionTab />
-          ) : canViewEmployees ? (
+          {canViewEmployees ? (
             <EmployeeListTab departmentName={selectedDeptName} />
           ) : (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">

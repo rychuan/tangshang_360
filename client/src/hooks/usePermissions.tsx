@@ -14,7 +14,6 @@ interface PermissionsContextValue extends CurrentUserAuthorizationContext {
 const PermissionsContext = createContext<PermissionsContextValue>({
   permissions: [],
   accessScopeKind: 'self',
-  canManageGlobalConnections: false,
   loading: true,
 });
 
@@ -27,7 +26,6 @@ export function PermissionsProvider({
     useState<CurrentUserAuthorizationContext>({
       permissions: [],
       accessScopeKind: 'self',
-      canManageGlobalConnections: false,
     });
   const [loading, setLoading] = useState(true);
 
@@ -39,7 +37,6 @@ export function PermissionsProvider({
         setAuthorization({
           permissions: [],
           accessScopeKind: 'self',
-          canManageGlobalConnections: false,
         }),
       )
       .finally(() => setLoading(false));

@@ -163,7 +163,6 @@ export class EmployeeManagementService {
           phone: employee.phone,
           hireDate: employee.hireDate,
           supervisorName: sql`COALESCE((SELECT sup.name FROM employee sup WHERE (sup.employee_id).user_id = (employee.supervisor_id).user_id AND sup.deleted_at IS NULL LIMIT 1), '')`,
-          bitableConnectionId: employee.bitableConnectionId,
         })
         .from(employee)
         .where(whereClause)
@@ -191,7 +190,6 @@ export class EmployeeManagementService {
         item.hireDate instanceof Date
           ? item.hireDate.toISOString()
           : item.hireDate || '',
-      bitableConnectionId: item.bitableConnectionId || null,
     }));
 
     const employeeIds: string[] = mapped.map((m: EmployeeItem) => m.id);
@@ -479,7 +477,6 @@ export class EmployeeManagementService {
     userId: string,
     options: {
       initialStatus?: boolean;
-      bitableConnectionId?: string;
     } = {},
   ): Promise<{ id: string }> {
     await this.assertGlobalEmployeeScope(userId);
@@ -532,7 +529,6 @@ export class EmployeeManagementService {
       hireDate: body.hireDate ? new Date(body.hireDate) : null,
       probationMonths: body.probationMonths ?? 3,
       employeeNo: body.employeeNo || null,
-      bitableConnectionId: options.bitableConnectionId || null,
       status: options.initialStatus ?? true,
     };
 
@@ -984,7 +980,6 @@ export class EmployeeManagementService {
     return {
       permissions,
       accessScopeKind: scope.kind,
-      canManageGlobalConnections: scope.kind === 'global',
     };
   }
 

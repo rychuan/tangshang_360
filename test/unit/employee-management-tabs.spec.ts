@@ -31,13 +31,6 @@ describe('employee management tab permissions', () => {
     ).toEqual(['employees']);
   });
 
-  it('shows Bitable only with employees view and global connection capability', () => {
-    expect(
-      visibleTabs([{ resource: 'employees', actions: ['view'] }], true),
-    ).toEqual(['employees', 'bitable']);
-    expect(visibleTabs([], true)).toEqual([]);
-  });
-
   it('hides every tab when no matching dynamic view permission exists', () => {
     expect(visibleTabs([], false)).toEqual([]);
   });
@@ -51,7 +44,7 @@ describe('employee management tab permissions', () => {
         ],
         true,
       ),
-    ).toEqual(['employees', 'departments', 'bitable']);
+    ).toEqual(['employees', 'departments']);
   });
 
   it('defaults to the first visible tab', () => {

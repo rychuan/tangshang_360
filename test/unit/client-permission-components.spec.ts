@@ -53,13 +53,6 @@ jest.mock(
       React.createElement('div', { 'data-tab': 'departments' }),
   }),
 );
-jest.mock(
-  '../../client/src/pages/EmployeeManagement/BitableConnectionTab',
-  () => ({
-    __esModule: true,
-    default: () => React.createElement('div', { 'data-tab': 'bitable' }),
-  }),
-);
 
 import ProtectedRoute from '../../client/src/components/ProtectedRoute';
 import EmployeeManagementPage from '../../client/src/pages/EmployeeManagement/EmployeeManagementPage';
@@ -166,23 +159,6 @@ describe('client permission component wiring', () => {
 
     expect(html).toContain('data-tab="employees"');
     expect(html).not.toContain('data-tab="departments"');
-    expect(html).not.toContain('data-tab="bitable"');
-  });
-
-  it('mounts employee and department surfaces with the Bitable entry for a global viewer', () => {
-    mockRoles = ['hrd'];
-    mockPermissions = DEFAULT_PERMISSIONS.hrd;
-    mockCanManageGlobalConnections = true;
-
-    const html = renderToStaticMarkup(
-      React.createElement(EmployeeManagementPage),
-    );
-
-    expect(html).toContain('data-tab="employees"');
-    expect(html).toContain('data-tab="departments"');
-    // Bitable 为点击切换视图，静态渲染下只验证入口按钮存在
-    expect(html).toContain('Bitable 连接');
-    expect(html).not.toContain('data-tab="bitable"');
   });
 
   it('mounts only the organization tree when employees view is absent', () => {
@@ -195,20 +171,6 @@ describe('client permission component wiring', () => {
 
     expect(html).not.toContain('data-tab="employees"');
     expect(html).toContain('data-tab="departments"');
-    expect(html).not.toContain('Bitable 连接');
   });
 
-  it('does not mount Bitable for a self-scoped custom employee viewer', () => {
-    mockRoles = [];
-    mockPermissions = [{ resource: 'employees', actions: ['view'] }];
-    mockCanManageGlobalConnections = false;
-
-    const html = renderToStaticMarkup(
-      React.createElement(EmployeeManagementPage),
-    );
-
-    expect(html).toContain('data-tab="employees"');
-    expect(html).not.toContain('data-tab="departments"');
-    expect(html).not.toContain('Bitable 连接');
-  });
 });
