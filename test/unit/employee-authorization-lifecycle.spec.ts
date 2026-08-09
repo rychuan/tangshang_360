@@ -56,6 +56,13 @@ function createEmployeeService(db: Record<string, any>) {
     authorizationSyncService as any,
     accessScopeService as any,
   );
+  // 方案A dept_head 对账（查询 department 表）由部门指派对账专项测试覆盖，
+  // 此处 identity mock 避免影响 admin/生命周期既有断言。
+  (employeeAuthService as any).reconcileDepartmentHeadRole = jest
+    .fn()
+    .mockImplementation(
+      async (_tx: unknown, _employeeId: string, roles: string[]) => roles,
+    );
   const service = new (EmployeeManagementService as any)(
     db,
     roleManagerService,
@@ -1066,6 +1073,11 @@ describe('employee authorization lifecycle', () => {
           },
         ]),
       }),
+      update: jest.fn().mockReturnValue({
+        set: jest.fn().mockReturnValue({
+          where: jest.fn().mockResolvedValue(undefined),
+        }),
+      }),
       insert: jest.fn().mockReturnValue({
         values: batchAuditValues,
       }),
@@ -1216,6 +1228,11 @@ describe('employee authorization lifecycle', () => {
             deletedAt: null,
           },
         ]),
+      }),
+      update: jest.fn().mockReturnValue({
+        set: jest.fn().mockReturnValue({
+          where: jest.fn().mockResolvedValue(undefined),
+        }),
       }),
       insert: jest.fn().mockReturnValue({
         values: jest.fn().mockResolvedValue(undefined),

@@ -33,6 +33,7 @@ import {
   assessmentIndicator,
   assessmentDimension,
   ratingRecord,
+  department,
   auditLog,
 } from '@server/database/schema';
 import { EmployeeSnapshotService } from '../employee-snapshot/employee-snapshot.service';
@@ -101,12 +102,12 @@ export class AssessmentPublishService {
 
   async listEmployees(
     periods: string[],
-    department: string,
+    departmentName: string,
     templateId: string,
     userId: string,
   ): Promise<{ items: PublishEmployeeItem[] }> {
     this.logger.log(
-      `listEmployees periods=${JSON.stringify(periods)} department=${department} templateId=${templateId}`,
+      `listEmployees periods=${JSON.stringify(periods)} departmentName=${departmentName} templateId=${templateId}`,
     );
     if (!periods || periods.length === 0) {
       return { items: [] };
@@ -125,8 +126,18 @@ export class AssessmentPublishService {
             sql`,`,
           )}) )`,
     ];
-    if (department) {
-      conditions.push(eq(employee.department, department));
+    if (departmentName) {
+      // 名称列已废弃：按名称解析到 department_id 后精确匹配
+      const deptRow = await this.db
+        .select({ id: department.id })
+        .from(department)
+        .where(eq(department.name, departmentName))
+        .limit(1);
+      if (deptRow[0]?.id) {
+        conditions.push(eq(employee.departmentId, deptRow[0].id));
+      } else {
+        conditions.push(sql`FALSE`);
+      }
     }
     if (templateId) {
       conditions.push(eq(employeeBinding.templateId, templateId));
@@ -140,12 +151,14 @@ export class AssessmentPublishService {
         employeeId: employee.employeeId,
         employeeName: employee.name,
         position: employee.position,
-        department: employee.department,
+        // 部门名称由 department_id 关联 department 表联查得到
+        department: department.name,
         templateId: assessmentTemplate.id,
         templateName: assessmentTemplate.name,
       })
       .from(employeeBinding)
       .innerJoin(employee, eq(employeeBinding.employeeId, employee.employeeId))
+      .leftJoin(department, eq(employee.departmentId, department.id))
       .innerJoin(
         assessmentTemplate,
         eq(employeeBinding.templateId, assessmentTemplate.id),
@@ -442,7 +455,7 @@ export class AssessmentPublishService {
     page: string,
     pageSize: string,
     status: string,
-    department: string,
+    departmentName: string,
     grade: string,
     userId: string,
   ): Promise<AssessmentInstanceListResponse> {
@@ -467,8 +480,18 @@ export class AssessmentPublishService {
           : inArray(assessmentInstance.status, statuses),
       );
     }
-    if (department) {
-      conditions.push(eq(employee.department, department));
+    if (departmentName) {
+      // 名称列已废弃：按名称解析到 department_id 后精确匹配
+      const deptRow = await this.db
+        .select({ id: department.id })
+        .from(department)
+        .where(eq(department.name, departmentName))
+        .limit(1);
+      if (deptRow[0]?.id) {
+        conditions.push(eq(employee.departmentId, deptRow[0].id));
+      } else {
+        conditions.push(sql`FALSE`);
+      }
     }
     if (grade) {
       conditions.push(eq(assessmentInstance.grade, grade));
@@ -535,7 +558,8 @@ export class AssessmentPublishService {
         period: assessmentInstance.period,
         employeeId: assessmentInstance.employeeId,
         employeeName: employee.name,
-        department: employee.department,
+        // 部门名称由 department_id 关联 department 表联查得到
+        department: department.name,
         position: assessmentInstance.position,
         supervisorId: assessmentInstance.supervisorId,
         status: assessmentInstance.status,
@@ -553,6 +577,7 @@ export class AssessmentPublishService {
         employee,
         eq(assessmentInstance.employeeId, employee.employeeId),
       )
+      .leftJoin(department, eq(employee.departmentId, department.id))
       .where(and(...conditions))
       .orderBy(desc(assessmentInstance.createdAt))
       .limit(limit)
@@ -934,14 +959,14 @@ export class AssessmentPublishService {
   /** 未完成考核提醒（委托 ReminderService） */
   async previewUnfinishedReminders(
     periods: string[],
-    department: string,
+    departmentName: string,
     status: string,
     grade: string,
     userId: string,
   ): Promise<ReminderPreviewResponse> {
     return this.reminderService.previewUnfinishedReminders(
       periods,
-      department,
+      departmentName,
       status,
       grade,
       userId,

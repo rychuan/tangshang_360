@@ -401,7 +401,7 @@ export const assessmentInstance = pgTable("assessment_instance", {
   index("idx_instance_period").on(table.period),
 ]);
 
-// Synced table: data is auto-synced from external source. Do not rename or delete this table.
+// 部门表由 DepartmentModule 提供完整 CRUD（历史 Bitable 同步已下线，非只读同步表）。
 export const department = pgTable("department", {
   id: uuid("id").primaryKey().defaultRandom(),
   // Synced field: auto-synced, do not modify or delete
@@ -508,7 +508,7 @@ export const employee = pgTable("employee", {
   employeeId: userProfile("employee_id").notNull(),
   name: varchar("name", { length: 255 }),
   position: varchar("position", { length: 255 }).notNull(),
-  department: varchar("department", { length: 255 }).notNull(),
+  // department 名称列已废弃删除（历史信息），部门归属统一使用 department_id 关联 department 表
   supervisorId: userProfile("supervisor_id"),
   status: boolean("status").notNull().default(true),
   employeeNo: varchar("employee_no", { length: 50 }),

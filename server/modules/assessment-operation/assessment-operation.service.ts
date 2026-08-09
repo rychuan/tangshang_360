@@ -137,7 +137,6 @@ export class AssessmentOperationService {
     instanceEmployeeId: string,
     instanceSupervisorId: string | null,
     empSupervisorId: string | null,
-    _empDepartment: string,
     userId: string,
   ): Promise<{
     isEmployee: boolean;
@@ -186,7 +185,6 @@ export class AssessmentOperationService {
       .select({
         name: employee.name,
         supervisorId: employee.supervisorId,
-        empDepartment: employee.department,
       })
       .from(employee)
       .where(
@@ -205,7 +203,6 @@ export class AssessmentOperationService {
       instance.employeeId,
       instance.supervisorId,
       empRows[0].supervisorId,
-      empRows[0].empDepartment,
       userId,
     );
 
@@ -586,7 +583,6 @@ export class AssessmentOperationService {
     const empRows = await this.db
       .select({
         supervisorId: employee.supervisorId,
-        empDepartment: employee.department,
         status: employee.status,
       })
       .from(employee)
@@ -610,7 +606,6 @@ export class AssessmentOperationService {
       instance.employeeId,
       instance.supervisorId,
       empRows[0].supervisorId,
-      empRows[0].empDepartment,
       userId,
     );
 
@@ -735,7 +730,6 @@ export class AssessmentOperationService {
     const empRows = await this.db
       .select({
         supervisorId: employee.supervisorId,
-        empDepartment: employee.department,
         status: employee.status,
       })
       .from(employee)
@@ -758,7 +752,6 @@ export class AssessmentOperationService {
       instance.employeeId,
       instance.supervisorId,
       empRows[0].supervisorId,
-      empRows[0].empDepartment,
       userId,
     );
 
@@ -926,7 +919,6 @@ export class AssessmentOperationService {
       const supRows = await this.db
         .select({
           supervisorId: employee.supervisorId,
-          empDepartment: employee.department,
         })
         .from(employee)
         .where(
@@ -946,7 +938,6 @@ export class AssessmentOperationService {
         instance.employeeId,
         instance.supervisorId,
         supRows[0].supervisorId,
-        supRows[0].empDepartment,
         userId,
       );
 
@@ -1125,7 +1116,6 @@ export class AssessmentOperationService {
       const empRows = await this.db
         .select({
           supervisorId: employee.supervisorId,
-          empDepartment: employee.department,
         })
         .from(employee)
         .where(
@@ -1144,7 +1134,6 @@ export class AssessmentOperationService {
         instance.employeeId,
         instance.supervisorId,
         empRows[0].supervisorId,
-        empRows[0].empDepartment,
         userId,
       );
 

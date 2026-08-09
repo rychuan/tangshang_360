@@ -128,7 +128,9 @@ export interface EmployeeItem {
   position: string;
   title: string;
   role: 'admin' | 'hrd' | 'dept_head' | 'supervisor' | 'employee';
+  // 部门名称（展示用，由 departmentId 关联 department 表联查得到）
   department: string;
+  departmentId: string;
   supervisorId: string;
   supervisorName: string;
   status: boolean;
@@ -164,7 +166,7 @@ export interface CreateEmployeeRequest {
   positionCode?: string;
   title?: string;
   role?: 'admin' | 'hrd' | 'dept_head' | 'supervisor' | 'employee';
-  department?: string;
+  // 部门关联 id（department 名称列已废弃，创建员工只需关联 department_id）
   departmentId?: string;
   supervisorId?: string;
   phone?: string;

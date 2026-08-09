@@ -95,6 +95,13 @@ function createEmployeeService(
     authorizationSyncService as any,
     accessScopeService as any,
   );
+  // 方案A dept_head 对账（查询 department 表）由部门指派对账专项测试覆盖，
+  // 此处 identity mock 避免影响 admin 并发既有断言。
+  (employeeAuthService as any).reconcileDepartmentHeadRole = jest
+    .fn()
+    .mockImplementation(
+      async (_tx: unknown, _employeeId: string, roles: string[]) => roles,
+    );
   const service = new (EmployeeManagementService as any)(
     db,
     roleManagerService,

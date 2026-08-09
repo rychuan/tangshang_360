@@ -22,7 +22,7 @@ import {
 
 export interface DepartmentTreeSelectProps {
   value: string;
-  onChange: (name: string) => void;
+  onChange: (name: string, id: string) => void;
   placeholder?: string;
   className?: string;
 }
@@ -122,8 +122,8 @@ const DepartmentTreeSelect: React.FC<DepartmentTreeSelectProps> = ({
     });
   };
 
-  const handleSelect = (name: string): void => {
-    onChange(name);
+  const handleSelect = (name: string, id: string): void => {
+    onChange(name, id);
     setOpen(false);
   };
 
@@ -139,7 +139,7 @@ const DepartmentTreeSelect: React.FC<DepartmentTreeSelectProps> = ({
         <div
           className={`flex items-center gap-1.5 rounded-sm px-2 py-1.5 text-sm hover:bg-muted/60 cursor-pointer ${isSelected ? 'bg-primary/10 text-primary font-medium' : ''}`}
           style={{ paddingLeft: 8 + depth * 16 }}
-          onClick={() => handleSelect(node.name)}
+          onClick={() => handleSelect(node.name, node.id)}
         >
           {hasChildren ? (
             <button
@@ -221,7 +221,7 @@ const DepartmentTreeSelect: React.FC<DepartmentTreeSelectProps> = ({
               {!searchTerm && (
                 <div
                   className={`flex items-center gap-1.5 rounded-sm px-2 py-1.5 text-sm hover:bg-muted/60 cursor-pointer ${!value ? 'bg-primary/10 text-primary font-medium' : ''}`}
-                  onClick={() => handleSelect('')}
+                  onClick={() => handleSelect('', '')}
                 >
                   <span className="w-[18px]" />
                   <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />

@@ -408,10 +408,7 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
               <Label className="text-xs">上级部门</Label>
               <DepartmentTreeSelect
                 value={parentName}
-                onChange={(name) => {
-                  const node = findNodeByName(tree, name);
-                  setForm({ ...form, parentId: node?.id ?? '' });
-                }}
+                onChange={(name, id) => setForm({ ...form, parentId: id })}
                 placeholder="无（顶级部门）"
               />
             </div>

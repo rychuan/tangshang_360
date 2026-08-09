@@ -9,15 +9,17 @@ import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { eq, and, count, isNull, like, type SQL } from 'drizzle-orm';
+import { eq, and, count, isNull, like, inArray, type SQL } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 import {
   employeeBinding,
   employee,
   assessmentTemplate,
   auditLog,
+  department,
 } from '@server/database/schema';
 import { EmployeeBindingService } from '../employee-management/employee-binding.service';
+import { EmployeeManagementService } from '../employee-management/employee-management.service';
 import { RoleManagerService } from '../role-manager/role-manager.service';
 import { AuthorizationSyncService } from '../role-manager/authorization-sync.service';
 import { AccessScopeService } from '@server/common/access/access-scope.service';
@@ -58,6 +60,7 @@ export class TeamStructureService {
     private readonly roleManagerService: RoleManagerService,
     private readonly accessScopeService: AccessScopeService,
     private readonly authorizationSyncService: AuthorizationSyncService,
+    private readonly employeeManagementService: EmployeeManagementService,
   ) {}
 
   /**
@@ -95,7 +98,18 @@ export class TeamStructureService {
       conditions.push(like(employee.name, `%${query.employeeName}%`));
     }
     if (query.department) {
-      conditions.push(like(employee.department, `%${query.department}%`));
+      // 名称列已废弃：按名称模糊匹配 department 表（员工经 department_id 关联）
+      const deptIds = await this.db
+        .select({ id: department.id })
+        .from(department)
+        .where(like(department.name, `%${query.department}%`));
+      if (deptIds.length > 0) {
+        conditions.push(
+          inArray(employee.departmentId, deptIds.map((d) => d.id)),
+        );
+      } else {
+        conditions.push(sql`FALSE`);
+      }
     }
     if (query.position) {
       conditions.push(like(employee.position, `%${query.position}%`));
@@ -114,7 +128,8 @@ export class TeamStructureService {
           employeeId: sql<string>`(${employee.employeeId}).user_id`,
           employeeName: employee.name,
           position: employee.position,
-          department: employee.department,
+          // 部门名称由 department_id 关联 department 表联查得到
+          department: department.name,
           supervisorId: sql<string>`(employee.supervisor_id).user_id`,
           supervisorName: sql<string>`(SELECT sup.name FROM ${employee} sup
             WHERE (sup.employee_id).user_id = (employee.supervisor_id).user_id
@@ -127,6 +142,7 @@ export class TeamStructureService {
           templateName: assessmentTemplate.name,
         })
         .from(employee)
+        .leftJoin(department, eq(employee.departmentId, department.id))
         .leftJoin(employeeBinding, joinOn)
         .leftJoin(
           assessmentTemplate,
@@ -260,11 +276,16 @@ export class TeamStructureService {
       const versions: number[] = [];
       for (const row of deactivatedRows) {
         const eId = row.employeeId;
+        // 停用负责人：解除其部门负责人指派，并剔除派生的 dept_head 角色
+        await tx
+          .update(department)
+          .set({ headId: null })
+          .where(sql`(${department.headId}).user_id = ${eId}`);
         const version =
           await this.authorizationSyncService.stageAuthorizationChange(
             tx,
             eId,
-            getDurableRoles(row),
+            getDurableRoles(row).filter((role) => role !== 'dept_head'),
           );
         versions.push(version);
         await tx.insert(auditLog).values({
@@ -331,7 +352,8 @@ export class TeamStructureService {
         employeeId: sql<string>`(${employee.employeeId}).user_id`,
         name: employee.name,
         position: employee.position,
-        department: employee.department,
+        // 部门名称由 department_id 关联 department 表联查得到
+        department: department.name,
         supervisorId: sql<string>`(employee.supervisor_id).user_id`,
         supervisorName: sql<string>`(SELECT sup.name FROM ${employee} sup
           WHERE (sup.employee_id).user_id = (employee.supervisor_id).user_id
@@ -344,6 +366,7 @@ export class TeamStructureService {
         templateName: assessmentTemplate.name,
       })
       .from(employee)
+      .leftJoin(department, eq(employee.departmentId, department.id))
       .leftJoin(
         employeeBinding,
         sql`(${employeeBinding.employeeId}).user_id = (${employee.employeeId}).user_id AND ${employeeBinding.status} = true`,
@@ -367,7 +390,7 @@ export class TeamStructureService {
       employeeId: row.employeeId,
       name: row.name,
       position: row.position,
-      department: row.department,
+      department: row.department || '',
       supervisorId: row.supervisorId || '',
       supervisorName: row.supervisorName || '',
       status: row.status,
@@ -392,7 +415,7 @@ export class TeamStructureService {
     const fields = [
       'name',
       'position',
-      'department',
+      'departmentId',
       'supervisorId',
       'employeeNo',
       'title',
@@ -405,6 +428,25 @@ export class TeamStructureService {
       if (body[field] !== undefined) {
         updateData[field] = body[field];
       }
+    }
+
+    // 部门变更时联动 departmentId（显式传入优先，否则保留原值，避免误置空）
+    if (updateData.departmentId !== undefined) {
+      const [empRow] = await this.db
+        .select({ departmentId: employee.departmentId })
+        .from(employee)
+        .where(
+          and(
+            sql`(${employee.employeeId}).user_id = ${id}`,
+            isNull(employee.deletedAt),
+          ),
+        )
+        .limit(1);
+      updateData.departmentId =
+        await this.employeeManagementService.resolveDepartmentReference(
+          updateData.departmentId as string | undefined,
+          empRow?.departmentId ?? null,
+        );
     }
 
     if (Object.keys(updateData).length === 0) return { success: true };

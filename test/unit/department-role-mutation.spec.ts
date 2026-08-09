@@ -362,6 +362,10 @@ describe('department head role mutation', () => {
           from: jest.fn().mockReturnThis(),
           where: jest.fn().mockResolvedValue([{ cnt: 0 }]),
         })
+        .mockReturnValueOnce({
+          from: jest.fn().mockReturnThis(),
+          where: jest.fn().mockResolvedValue([{ cnt: 0 }]),
+        })
         .mockReturnValueOnce(
           forUpdateQuery([
             {
@@ -409,6 +413,10 @@ describe('department head role mutation', () => {
         .mockReturnValueOnce(
           forUpdateQuery([{ id: 'dept-1', name: '研发部', headId: 'head-1' }]),
         )
+        .mockReturnValueOnce({
+          from: jest.fn().mockReturnThis(),
+          where: jest.fn().mockResolvedValue([{ cnt: 0 }]),
+        })
         .mockReturnValueOnce({
           from: jest.fn().mockReturnThis(),
           where: jest.fn().mockResolvedValue([{ cnt: 0 }]),

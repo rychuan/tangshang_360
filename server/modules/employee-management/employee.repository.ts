@@ -81,20 +81,23 @@ export class EmployeeRepository {
   }
 
   /**
-   * 按部门统计活跃员工数量。
+   * 按部门（department_id）统计活跃员工数量。
+   * 返回 Map<departmentId, count>（department 名称列已废弃）。
    */
   async getDepartmentMemberCounts(): Promise<Map<string, number>> {
     const rows = await this.db
       .select({
-        dept: employee.department,
+        departmentId: employee.departmentId,
         cnt: count(),
       })
       .from(employee)
-      .where(isNull(employee.deletedAt))
-      .groupBy(employee.department);
+      .where(and(isNull(employee.deletedAt), eq(employee.status, true)))
+      .groupBy(employee.departmentId);
     const map = new Map<string, number>();
     for (const r of rows) {
-      map.set(r.dept, Number(r.cnt));
+      if (r.departmentId) {
+        map.set(String(r.departmentId), Number(r.cnt));
+      }
     }
     return map;
   }

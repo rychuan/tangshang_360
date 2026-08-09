@@ -9,10 +9,11 @@ import {
   type PostgresJsDatabase,
   CapabilityService,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { and, eq, isNull, inArray, desc, type SQL } from 'drizzle-orm';
+import { and, eq, isNull, inArray, desc, sql, type SQL } from 'drizzle-orm';
 import {
   assessmentInstance,
   employee,
+  department,
   auditLog,
 } from '@server/database/schema';
 import { AccessScopeService } from '@server/common/access/access-scope.service';
@@ -56,7 +57,7 @@ export class ReminderService {
 
   private async getUnfinishedReminderTargets(
     periods: string[],
-    department: string | undefined,
+    departmentName: string | undefined,
     status: string | undefined,
     grade: string | undefined,
     userId: string,
@@ -77,8 +78,18 @@ export class ReminderService {
       ]),
       isNull(employee.deletedAt),
     ];
-    if (department) {
-      conditions.push(eq(employee.department, department));
+    if (departmentName) {
+      // 名称列已废弃：按名称解析到 department_id 后精确匹配
+      const deptRow = await this.db
+        .select({ id: department.id })
+        .from(department)
+        .where(eq(department.name, departmentName))
+        .limit(1);
+      if (deptRow[0]?.id) {
+        conditions.push(eq(employee.departmentId, deptRow[0].id));
+      } else {
+        conditions.push(sql`FALSE`);
+      }
     }
     if (status) {
       conditions.push(
@@ -155,14 +166,14 @@ export class ReminderService {
 
   async previewUnfinishedReminders(
     periods: string[],
-    department: string,
+    departmentName: string,
     status: string,
     grade: string,
     userId: string,
   ): Promise<ReminderPreviewResponse> {
     const targets = await this.getUnfinishedReminderTargets(
       periods,
-      department || undefined,
+      departmentName || undefined,
       status || undefined,
       grade || undefined,
       userId,

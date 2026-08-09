@@ -8,6 +8,7 @@ describe('employee management access scope', () => {
   const createService = (items: Record<string, unknown>[] = []) => {
     const itemQuery = {
       from: jest.fn().mockReturnThis(),
+      leftJoin: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
@@ -55,6 +56,13 @@ describe('employee management access scope', () => {
       authorizationSyncService as any,
       accessScopeService as any,
     );
+    // 方案A dept_head 对账（查询 department 表）由部门指派对账专项测试覆盖，
+    // 此处 identity mock 避免影响 scope 既有断言。
+    (employeeAuthService as any).reconcileDepartmentHeadRole = jest
+      .fn()
+      .mockImplementation(
+        async (_tx: unknown, _employeeId: string, roles: string[]) => roles,
+      );
     const service = new (EmployeeManagementService as any)(
       db,
       roleManagerService,
@@ -252,6 +260,7 @@ describe('employee management access scope', () => {
   it('does not query or expose active binding counts in employee detail', async () => {
     const detailQuery = {
       from: jest.fn().mockReturnThis(),
+      leftJoin: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
       limit: jest.fn().mockResolvedValue([
         {

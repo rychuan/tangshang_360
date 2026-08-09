@@ -95,7 +95,7 @@ export class DepartmentService {
       parentName: String(r.parentName || ''),
       headId: r.headId || '',
       headName: String(r.headName || ''),
-      memberCount: memberCountMap.get(r.name) || 0,
+      memberCount: memberCountMap.get(r.id) || 0,
       sortOrder: Number(r.sortOrder),
       isActive: Boolean(r.isActive),
       createdAt:
@@ -143,7 +143,7 @@ export class DepartmentService {
       parentName: String(r.parentName || ''),
       headId: r.headId || '',
       headName: String(r.headName || ''),
-      memberCount: memberCountMap.get(r.name) || 0,
+      memberCount: memberCountMap.get(r.id) || 0,
       sortOrder: Number(r.sortOrder),
       isActive: Boolean(r.isActive),
       createdAt:
@@ -182,7 +182,7 @@ export class DepartmentService {
       parentName: String(c.parentName || ''),
       headId: c.headId || '',
       headName: String(c.headName || ''),
-      memberCount: memberCountMap.get(c.name) || 0,
+      memberCount: memberCountMap.get(c.id) || 0,
       sortOrder: Number(c.sortOrder),
       isActive: Boolean(c.isActive),
       createdAt:
@@ -307,20 +307,22 @@ export class DepartmentService {
         changes: { after: body },
       });
 
+      // 员工归属匹配：部门成员统一以 departmentId 关联（名称列已废弃）
+      const memberCondition = eq(employee.departmentId, id);
+
       if (headChanged && newHeadId) {
-        const deptName = oldDept.name;
         await tx
           .update(employee)
           .set({ supervisorId: newHeadId })
           .where(
             and(
-              eq(employee.department, deptName),
+              memberCondition,
               isNull(employee.deletedAt),
               sql`(((${employee.supervisorId}) IS NULL) OR ((${employee.supervisorId}).user_id = ${oldHeadId}))`,
             ),
           );
         this.logger.log(
-          `Department "${deptName}" head changed, synced employees supervisor to new head`,
+          `Department "${oldDept.name}" head changed, synced employees supervisor to new head`,
         );
       }
 
@@ -344,6 +346,15 @@ export class DepartmentService {
         .where(eq(department.parentId, id));
       if (Number(children[0].cnt) > 0) {
         throw new BadRequestException('该部门下还有子部门，无法删除');
+      }
+      const memberRows = await tx
+        .select({ cnt: count() })
+        .from(employee)
+        .where(
+          and(eq(employee.departmentId, id), isNull(employee.deletedAt)),
+        );
+      if (Number(memberRows[0]?.cnt || 0) > 0) {
+        throw new BadRequestException('该部门下还有员工，无法删除');
       }
       const headId = lockedDepartment.headId || null;
       const lockedEmployees = headId
@@ -408,7 +419,7 @@ export class DepartmentService {
       parentName: String(r.parentName || ''),
       headId: r.headId || '',
       headName: String(r.headName || ''),
-      memberCount: memberCountMap.get(r.name) || 0,
+      memberCount: memberCountMap.get(r.id) || 0,
       sortOrder: Number(r.sortOrder),
       isActive: Boolean(r.isActive),
       createdAt:

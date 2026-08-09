@@ -11,7 +11,7 @@ import {
 } from '@lark-apaas/fullstack-nestjs-core';
 import { CapabilityService } from '@lark-apaas/fullstack-nestjs-core';
 import { eq, and, inArray, sql, count, desc } from 'drizzle-orm';
-import { employee, assessmentInstance } from '../../database/schema';
+import { employee, department, assessmentInstance } from '../../database/schema';
 import { AccessScopeService } from '@server/common/access/access-scope.service';
 import { assertBatchSize } from '@server/common/utils/batch';
 import { buildEmployeeIdInCondition } from './employee-scope-condition';
@@ -171,13 +171,15 @@ export class TeamPerformanceService {
         totalScore: assessmentInstance.totalScore,
         grade: assessmentInstance.grade,
         employeeName: employee.name,
-        department: employee.department,
+        // 部门名称由 department_id 关联 department 表联查得到
+        department: department.name,
       })
       .from(assessmentInstance)
       .leftJoin(
         employee,
         sql`(${employee.employeeId}).user_id = (${assessmentInstance.employeeId}).user_id AND ${employee.deletedAt} IS NULL`,
       )
+      .leftJoin(department, eq(employee.departmentId, department.id))
       .where(and(...whereConditions))
       .orderBy(desc(assessmentInstance.createdAt))
       .limit(pageSize)

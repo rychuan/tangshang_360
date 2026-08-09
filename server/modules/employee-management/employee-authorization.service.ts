@@ -11,10 +11,11 @@ import {
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
 import { eq, and, count, sql, isNull, type SQL } from 'drizzle-orm';
-import { employee } from '@server/database/schema';
+import { employee, department } from '@server/database/schema';
 import { RoleManagerService } from '../role-manager/role-manager.service';
 import { AuthorizationSyncService } from '../role-manager/authorization-sync.service';
 import { AccessScopeService } from '@server/common/access/access-scope.service';
+import { normalizeAuthorizationRoles } from '../role-manager/authorization-state';
 import { LAST_ACTIVE_ADMIN_ADVISORY_LOCK_KEY } from './admin-safety';
 
 export type RoleMutationEntitlement = {
@@ -106,6 +107,48 @@ export class EmployeeAuthorizationService {
       .map((item) => item.trim())
       .filter(Boolean);
     return roles.length > 0 ? roles : ['employee'];
+  }
+
+  /**
+   * 解析人工角色：剥离 dept_head。
+   * 方案A：dept_head 是派生角色，唯一入口是部门 head 指派，
+   * 员工表单/导入中手动携带的 dept_head 一律忽略，由对账统一决定。
+   */
+  parseManualRoles(role: string | null | undefined): string[] {
+    return this.parseRoles(role).filter((item) => item !== 'dept_head');
+  }
+
+  /**
+   * 方案A：部门 head 指派是 dept_head 角色的唯一入口。
+   * 传入人工角色（已剥离 dept_head），按当前 head 指派对账补回/剔除 dept_head。
+   * 供 create/update/sync/activate/deactivate 等员工生命周期路径统一调用。
+   */
+  async reconcileDepartmentHeadRole(
+    tx: PostgresJsDatabase,
+    employeeId: string,
+    roles: string[],
+  ): Promise<string[]> {
+    const isDepartmentHead = await this.hasDepartmentHeadAssignment(
+      tx,
+      employeeId,
+    );
+    return normalizeAuthorizationRoles(
+      isDepartmentHead
+        ? [...roles, 'dept_head']
+        : roles.filter((role) => role !== 'dept_head'),
+    );
+  }
+
+  private async hasDepartmentHeadAssignment(
+    tx: PostgresJsDatabase,
+    employeeId: string,
+  ): Promise<boolean> {
+    const rows = await tx
+      .select({ id: department.id })
+      .from(department)
+      .where(sql`(${department.headId}).user_id = ${employeeId}`)
+      .limit(1);
+    return rows.length > 0;
   }
 
   adminRoleCondition(): SQL {

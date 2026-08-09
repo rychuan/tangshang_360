@@ -51,7 +51,7 @@
 | assessment_sign_session       | 签名一次性会话（token 仅存 hash，5 分钟 TTL）|
 | authorization_sync_job        | 授权同步任务（pending → processing → succeeded/failed）|
 | system_dict                   | 系统字典数据（岗位/职级等下拉）            |
-| bitable_connection/sync_log   | 已废弃（功能已下线，表保留待迁移清理）     |
+| bitable_connection/sync_log   | 已废弃（功能已下线）；清理迁移 `018_drop_bitable_legacy.sql` 已就绪，待平台库执行后跑 `npm run gen:db-schema` 同步 schema.ts |
 
 ## 权限模型
 

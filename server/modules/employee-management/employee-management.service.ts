@@ -20,6 +20,7 @@ import {
   sql,
   inArray,
   isNull,
+  or,
   type SQL,
 } from 'drizzle-orm';
 import {
@@ -95,7 +96,7 @@ export class EmployeeManagementService {
       conditions.push(like(employee.name, `%${query.keyword}%`));
     }
     if (query.department) {
-      // 优先用 departmentId 匹配
+      // 名称列已废弃：按名称解析到 department_id 后精确匹配，无匹配部门则返回空
       const deptRow = await this.db
         .select({ id: department.id })
         .from(department)
@@ -104,7 +105,7 @@ export class EmployeeManagementService {
       if (deptRow[0]?.id) {
         conditions.push(eq(employee.departmentId, deptRow[0].id));
       } else {
-        conditions.push(eq(employee.department, query.department));
+        conditions.push(sql`FALSE`);
       }
     }
     if (query.positions && query.positions.length > 0) {
@@ -158,7 +159,9 @@ export class EmployeeManagementService {
           position: employee.position,
           title: employee.title,
           role: employee.role,
-          department: employee.department,
+          departmentId: employee.departmentId,
+          // 部门名称由 department_id 关联 department 表联查得到
+          department: department.name,
           supervisorId: employee.supervisorId,
           status: employee.status,
           phone: employee.phone,
@@ -166,6 +169,7 @@ export class EmployeeManagementService {
           supervisorName: sql`COALESCE((SELECT sup.name FROM employee sup WHERE (sup.employee_id).user_id = (employee.supervisor_id).user_id AND sup.deleted_at IS NULL LIMIT 1), '')`,
         })
         .from(employee)
+        .leftJoin(department, eq(employee.departmentId, department.id))
         .where(whereClause)
         .orderBy(desc(employee.createdAt))
         .limit(query.pageSize)
@@ -182,7 +186,8 @@ export class EmployeeManagementService {
       position: item.position,
       title: item.title || '',
       role: (item.role || 'employee') as EmployeeItem['role'],
-      department: item.department,
+      department: item.department || '',
+      departmentId: item.departmentId ? String(item.departmentId) : '',
       supervisorId: item.supervisorId || '',
       supervisorName: String(item.supervisorName || ''),
       status: item.status,
@@ -320,7 +325,6 @@ export class EmployeeManagementService {
           before: {
             name: emp.name,
             position: emp.position,
-            department: emp.department,
           },
         },
       });
@@ -361,7 +365,8 @@ export class EmployeeManagementService {
         position: employee.position,
         title: employee.title,
         role: employee.role,
-        department: employee.department,
+        departmentId: employee.departmentId,
+        department: department.name,
         supervisorId: employee.supervisorId,
         status: employee.status,
         phone: employee.phone,
@@ -372,6 +377,7 @@ export class EmployeeManagementService {
         supervisorName: sql<string>`COALESCE((SELECT sup.name FROM employee sup WHERE (sup.employee_id).user_id = (employee.supervisor_id).user_id AND sup.deleted_at IS NULL LIMIT 1), '')`,
       })
       .from(employee)
+      .leftJoin(department, eq(employee.departmentId, department.id))
       .where(and(eq(employee.employeeId, id), isNull(employee.deletedAt)))
       .limit(1);
 
@@ -444,7 +450,8 @@ export class EmployeeManagementService {
       position: emp.position,
       title: emp.title || '',
       role: (emp.role || 'employee') as EmployeeDetail['role'],
-      department: emp.department,
+      department: emp.department || '',
+      departmentId: emp.departmentId ? String(emp.departmentId) : '',
       supervisorId: emp.supervisorId || '',
       supervisorName: emp.supervisorName || '',
       status: emp.status,
@@ -496,6 +503,7 @@ export class EmployeeManagementService {
       .select({
         id: employee.employeeId,
         deletedAt: employee.deletedAt,
+        departmentId: employee.departmentId,
       })
       .from(employee)
       .where(eq(employee.employeeId, body.id))
@@ -505,12 +513,12 @@ export class EmployeeManagementService {
       throw new ConflictException('该用户已绑定员工档案');
     }
 
-    // 自动解析 departmentId / positionCode
+    // 解析 positionCode；部门仅按 departmentId 关联（名称列已废弃）
     const { departmentId, positionCode } = await this.resolveReferences(
-      body.department,
       body.position,
       body.departmentId,
       body.positionCode,
+      existing[0]?.departmentId ?? null,
     );
 
     const profileValues = {
@@ -520,11 +528,10 @@ export class EmployeeManagementService {
       title: body.title || null,
       // TODO: legacy `role` 列，后续迁移统一使用 `authorizationRoles`
       role: body.role || 'employee',
-      department: body.department || '',
       departmentId,
       supervisorId: await this.resolveSupervisor(
         body.supervisorId,
-        body.department,
+        departmentId,
       ),
       phone: body.phone || null,
       hireDate: body.hireDate ? new Date(body.hireDate) : null,
@@ -560,11 +567,18 @@ export class EmployeeManagementService {
         targetId: String(row.id),
         changes: { after: profileValues },
       });
+      // 方案A：dept_head 由 head 指派派生，员工表单/导入携带的 dept_head 一律忽略，按指派对账
+      const desiredRoles =
+        await this.employeeAuthService.reconcileDepartmentHeadRole(
+          tx,
+          body.id,
+          this.employeeAuthService.parseManualRoles(body.role),
+        );
       const version =
         await this.authorizationSyncService.stageAuthorizationChange(
           tx,
           body.id,
-          this.employeeAuthService.parseRoles(body.role),
+          desiredRoles,
         );
       return { row, version };
     });
@@ -592,6 +606,7 @@ export class EmployeeManagementService {
         authorizationRoles: employee.authorizationRoles,
         authorizationStatus: employee.authorizationStatus,
         deletedAt: employee.deletedAt,
+        departmentId: employee.departmentId,
       })
       .from(employee)
       .where(and(eq(employee.employeeId, id), isNull(employee.deletedAt)))
@@ -601,13 +616,22 @@ export class EmployeeManagementService {
     }
 
     const currentRoles = this.employeeAuthService.getDurableRolesForComparison(rows[0]);
+    // 方案A：dept_head 是派生角色，预检比较时剥离，避免 head 员工被误判角色变更
+    const currentManualRoles = currentRoles.filter(
+      (role) => role !== 'dept_head',
+    );
     const desiredRoles =
-      body.role !== undefined ? this.employeeAuthService.parseRoles(body.role) : currentRoles;
+      body.role !== undefined
+        ? this.employeeAuthService.parseManualRoles(body.role)
+        : currentManualRoles;
     const roleMutationEntitlement =
       body.role !== undefined
         ? await this.employeeAuthService.getRoleMutationEntitlement(userId)
         : { isAdmin: true, canEdit: true };
-    const roleChanged = !this.employeeAuthService.sameRoles(currentRoles, desiredRoles);
+    const roleChanged = !this.employeeAuthService.sameRoles(
+      currentManualRoles,
+      desiredRoles,
+    );
     if (roleChanged) {
       this.employeeAuthService.requireRoleMutationEntitlement(
         roleMutationEntitlement,
@@ -616,11 +640,12 @@ export class EmployeeManagementService {
       );
     }
 
+    // 自动解析 departmentId / positionCode（解析失败时保留原部门归属）
     const { departmentId, positionCode } = await this.resolveReferences(
-      body.department,
       body.position,
       body.departmentId,
       body.positionCode,
+      rows[0].departmentId ?? null,
     );
     const values = {
       name: body.name,
@@ -631,11 +656,10 @@ export class EmployeeManagementService {
         body.role !== undefined
           ? body.role
           : String(rows[0].role || 'employee'),
-      department: body.department || '',
       departmentId,
       supervisorId: await this.resolveSupervisor(
         body.supervisorId,
-        body.department,
+        departmentId,
       ),
       phone: body.phone || null,
       hireDate: body.hireDate ? new Date(body.hireDate) : null,
@@ -649,8 +673,14 @@ export class EmployeeManagementService {
       const current = await this.employeeAuthService.loadEmployeeForLifecycle(tx, id);
       const currentEmployee = current || rows[0];
       const currentRoles = this.employeeAuthService.getDurableRoles(currentEmployee);
-      const transactionDesiredRoles =
-        body.role !== undefined ? this.employeeAuthService.parseRoles(body.role) : currentRoles;
+      // 方案A：人工角色剥离 dept_head，再按 head 指派对账补回/剔除
+      const transactionDesiredRoles = await this.employeeAuthService.reconcileDepartmentHeadRole(
+        tx,
+        id,
+        body.role !== undefined
+          ? this.employeeAuthService.parseManualRoles(body.role)
+          : currentRoles.filter((role) => role !== 'dept_head'),
+      );
       if (!this.employeeAuthService.sameRoles(currentRoles, transactionDesiredRoles)) {
         this.employeeAuthService.requireRoleMutationEntitlement(
           roleMutationEntitlement,
@@ -733,6 +763,7 @@ export class EmployeeManagementService {
         authorizationRoles: employee.authorizationRoles,
         authorizationStatus: employee.authorizationStatus,
         deletedAt: employee.deletedAt,
+        departmentId: employee.departmentId,
       })
       .from(employee)
       .where(and(eq(employee.employeeId, id), isNull(employee.deletedAt)))
@@ -743,13 +774,22 @@ export class EmployeeManagementService {
     }
 
     const currentRoles = this.employeeAuthService.getDurableRolesForComparison(rows[0]);
+    // 方案A：dept_head 是派生角色，预检比较时剥离，避免 head 员工被误判角色变更
+    const currentManualRoles = currentRoles.filter(
+      (role) => role !== 'dept_head',
+    );
     const desiredRoles =
-      body.role !== undefined ? this.employeeAuthService.parseRoles(body.role) : currentRoles;
+      body.role !== undefined
+        ? this.employeeAuthService.parseManualRoles(body.role)
+        : currentManualRoles;
     const roleMutationEntitlement =
       body.role !== undefined
         ? await this.employeeAuthService.getRoleMutationEntitlement(userId)
         : { isAdmin: true, canEdit: true };
-    const roleChanged = !this.employeeAuthService.sameRoles(currentRoles, desiredRoles);
+    const roleChanged = !this.employeeAuthService.sameRoles(
+      currentManualRoles,
+      desiredRoles,
+    );
     if (roleChanged) {
       this.employeeAuthService.requireRoleMutationEntitlement(
         roleMutationEntitlement,
@@ -758,12 +798,12 @@ export class EmployeeManagementService {
       );
     }
 
-    // 自动解析 departmentId / positionCode
+    // 自动解析 departmentId / positionCode（解析失败时保留原部门归属）
     const { departmentId, positionCode } = await this.resolveReferences(
-      body.department,
       body.position,
       body.departmentId,
       body.positionCode,
+      rows[0].departmentId ?? null,
     );
 
     const values = {
@@ -775,11 +815,10 @@ export class EmployeeManagementService {
         body.role !== undefined
           ? body.role
           : String(rows[0].role || 'employee'),
-      department: body.department || '',
       departmentId,
       supervisorId: await this.resolveSupervisor(
         body.supervisorId,
-        body.department,
+        departmentId,
       ),
       phone: body.phone || null,
       hireDate: body.hireDate ? new Date(body.hireDate) : null,
@@ -794,10 +833,14 @@ export class EmployeeManagementService {
       const current = await this.employeeAuthService.loadEmployeeForLifecycle(tx, id);
       const currentEmployee = current || rows[0];
       const transactionCurrentRoles = this.employeeAuthService.getDurableRoles(currentEmployee);
-      const transactionDesiredRoles =
+      // 方案A：人工角色剥离 dept_head，再按 head 指派对账补回/剔除
+      const transactionDesiredRoles = await this.employeeAuthService.reconcileDepartmentHeadRole(
+        tx,
+        id,
         body.role !== undefined
-          ? this.employeeAuthService.parseRoles(body.role)
-          : transactionCurrentRoles;
+          ? this.employeeAuthService.parseManualRoles(body.role)
+          : transactionCurrentRoles.filter((role) => role !== 'dept_head'),
+      );
       if (!this.employeeAuthService.sameRoles(transactionCurrentRoles, transactionDesiredRoles)) {
         this.employeeAuthService.requireRoleMutationEntitlement(
           roleMutationEntitlement,
@@ -887,10 +930,16 @@ export class EmployeeManagementService {
       });
       const current = await this.employeeAuthService.loadEmployeeForLifecycle(tx, id);
       const currentEmployee = current || rows[0];
-      return this.authorizationSyncService.stageAuthorizationChange(
+      // 方案A：激活时按当前 head 指派对账 dept_head（停用期间指派可能已变更）
+      const desiredRoles = await this.employeeAuthService.reconcileDepartmentHeadRole(
         tx,
         id,
         this.employeeAuthService.getDurableRoles(currentEmployee),
+      );
+      return this.authorizationSyncService.stageAuthorizationChange(
+        tx,
+        id,
+        desiredRoles,
       );
     });
 
@@ -942,6 +991,11 @@ export class EmployeeManagementService {
             eq(employeeBinding.status, true),
           ),
         );
+      // 停用部门负责人：解除其全部部门负责人指派，并剔除派生的 dept_head 角色
+      await tx
+        .update(department)
+        .set({ headId: null })
+        .where(sql`(${department.headId}).user_id = ${id}`);
       await tx
         .update(employee)
         .set({ status: false })
@@ -955,11 +1009,18 @@ export class EmployeeManagementService {
           before: { status: true },
           after: { status: false },
         },
+        reason: '停用员工，并解除其部门负责人指派',
       });
-      return this.authorizationSyncService.stageAuthorizationChange(
+      // 方案A：停用时已解除 head 指派，按指派对账后自然剔除 dept_head
+      const durableRoles = await this.employeeAuthService.reconcileDepartmentHeadRole(
         tx,
         id,
         this.employeeAuthService.getDurableRoles(currentEmployee),
+      );
+      return this.authorizationSyncService.stageAuthorizationChange(
+        tx,
+        id,
+        durableRoles,
       );
     });
 
@@ -1040,25 +1101,20 @@ export class EmployeeManagementService {
   }
 
   /**
-   * 解析上级：优先使用指定的 supervisorId，否则根据部门查找部门负责人
+   * 解析部门关联与岗位编码。
+   * 部门仅以 departmentId 关联（department 名称列已废弃）：
+   * 显式传入优先，否则保留原值，避免误置空。
    */
   private async resolveReferences(
-    deptName?: string,
     posName?: string,
     explicitDepartmentId?: string | null,
     explicitPositionCode?: string | null,
+    preserveDepartmentId?: string | null,
   ) {
-    let departmentId: string | null = explicitDepartmentId ?? null;
+    let departmentId: string | null =
+      explicitDepartmentId ?? preserveDepartmentId ?? null;
     let positionCode: string | null = explicitPositionCode ?? null;
 
-    if (!departmentId && deptName) {
-      const deptRow = await this.db
-        .select({ id: department.id })
-        .from(department)
-        .where(eq(department.name, deptName))
-        .limit(1);
-      departmentId = deptRow[0]?.id ?? null;
-    }
     if (!positionCode && posName) {
       const dictRow = await this.db
         .select({ code: systemDict.code })
@@ -1076,27 +1132,58 @@ export class EmployeeManagementService {
     return { departmentId, positionCode };
   }
 
+  /**
+   * 公开的部门引用解析：供 TeamStructure 等模块在更新员工时联动 departmentId。
+   * 显式传入优先，否则保留现有值，避免误置空。
+   */
+  async resolveDepartmentReference(
+    explicitDepartmentId: string | null | undefined,
+    preserveDepartmentId: string | null | undefined,
+  ): Promise<string | null> {
+    const { departmentId } = await this.resolveReferences(
+      undefined,
+      explicitDepartmentId ?? null,
+      undefined,
+      preserveDepartmentId ?? null,
+    );
+    return departmentId;
+  }
+
   private async resolveSupervisor(
     supervisorId?: string,
-    departmentName?: string,
+    departmentId?: string | null,
   ): Promise<string | null> {
     if (supervisorId) return supervisorId;
-    if (departmentName) {
+    if (departmentId) {
       const deptRows = await this.db
         .select({ headId: department.headId })
         .from(department)
         .where(
           and(
-            eq(department.name, departmentName),
+            eq(department.id, departmentId),
             eq(department.isActive, true),
           ),
         )
         .limit(1);
       if (deptRows.length > 0 && deptRows[0].headId) {
-        this.logger.log(
-          `Auto-resolved supervisor from department "${departmentName}" head`,
-        );
-        return deptRows[0].headId;
+        // 仅当负责人仍为在职（启用）员工时才自动指派为上级，避免指到已停用负责人
+        const headRows = await this.db
+          .select({ id: employee.employeeId })
+          .from(employee)
+          .where(
+            and(
+              eq(employee.employeeId, deptRows[0].headId),
+              eq(employee.status, true),
+              isNull(employee.deletedAt),
+            ),
+          )
+          .limit(1);
+        if (headRows.length > 0) {
+          this.logger.log(
+            `Auto-resolved supervisor from department ${departmentId} head`,
+          );
+          return deptRows[0].headId;
+        }
       }
     }
     return null;

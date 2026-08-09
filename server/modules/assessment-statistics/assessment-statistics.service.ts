@@ -3,8 +3,8 @@ import {
   DRIZZLE_DATABASE,
   type PostgresJsDatabase,
 } from '@lark-apaas/fullstack-nestjs-core';
-import { assessmentInstance, employee } from '@server/database/schema';
-import { and, or, desc, count, avg, sql, isNull, inArray } from 'drizzle-orm';
+import { assessmentInstance, employee, department } from '@server/database/schema';
+import { and, or, desc, count, avg, sql, isNull, inArray, eq } from 'drizzle-orm';
 import { AccessScopeService } from '@server/common/access/access-scope.service';
 import type {
   StatisticsRecordsResponse,
@@ -76,7 +76,8 @@ export class AssessmentStatisticsService {
         status: assessmentInstance.status,
         completedAt: assessmentInstance.completedAt,
         employeeName: employee.name,
-        department: employee.department,
+        // 部门名称由 department_id 关联 department 表联查得到
+        department: department.name,
         supervisorName: sql<string>`COALESCE(${supAlias}.name, '')`,
       })
       .from(assessmentInstance)
@@ -84,6 +85,7 @@ export class AssessmentStatisticsService {
         employee,
         sql`(${assessmentInstance.employeeId}).user_id = (${employee.employeeId}).user_id AND ${employee.deletedAt} IS NULL`,
       )
+      .leftJoin(department, eq(employee.departmentId, department.id))
       .leftJoin(
         sql`employee ${supAlias}`,
         sql`(${supAlias}.employee_id).user_id = (${assessmentInstance.supervisorId}).user_id AND ${supAlias}.deleted_at IS NULL`,
@@ -141,7 +143,8 @@ export class AssessmentStatisticsService {
     // 部门平均分
     const deptRows = await this.db
       .select({
-        department: employee.department,
+        // 部门名称由 department_id 关联 department 表联查得到
+        department: department.name,
         avgVal: avg(assessmentInstance.totalScore),
       })
       .from(assessmentInstance)
@@ -149,8 +152,9 @@ export class AssessmentStatisticsService {
         employee,
         sql`(${assessmentInstance.employeeId}).user_id = (${employee.employeeId}).user_id`,
       )
+      .leftJoin(department, eq(employee.departmentId, department.id))
       .where(and(baseWhere || sql`TRUE`, isNull(employee.deletedAt)))
-      .groupBy(employee.department);
+      .groupBy(employee.departmentId);
 
     const departmentAvg: ChartsResponse['departmentAvg'] = deptRows.map(
       (r) => ({
@@ -229,7 +233,8 @@ export class AssessmentStatisticsService {
         status: assessmentInstance.status,
         completedAt: assessmentInstance.completedAt,
         employeeName: employee.name,
-        department: employee.department,
+        // 部门名称由 department_id 关联 department 表联查得到
+        department: department.name,
         supervisorName: sql<string>`COALESCE(${supAlias}.name, '')`,
       })
       .from(assessmentInstance)
@@ -237,6 +242,7 @@ export class AssessmentStatisticsService {
         employee,
         sql`(${assessmentInstance.employeeId}).user_id = (${employee.employeeId}).user_id`,
       )
+      .leftJoin(department, eq(employee.departmentId, department.id))
       .leftJoin(
         sql`employee ${supAlias}`,
         sql`(${supAlias}.employee_id).user_id = (${assessmentInstance.supervisorId}).user_id AND ${supAlias}.deleted_at IS NULL`,
@@ -282,7 +288,18 @@ export class AssessmentStatisticsService {
       conditions.push(inArray(assessmentInstance.period, query.periods));
     }
     if (query.departments && query.departments.length > 0) {
-      conditions.push(inArray(employee.department, query.departments));
+      // 名称列已废弃：名称数组解析为 department_id 后精确匹配
+      const deptRows = await this.db
+        .select({ id: department.id })
+        .from(department)
+        .where(inArray(department.name, query.departments));
+      if (deptRows.length > 0) {
+        conditions.push(
+          inArray(employee.departmentId, deptRows.map((d) => d.id)),
+        );
+      } else {
+        conditions.push(sql`FALSE`);
+      }
     }
     if (query.positions && query.positions.length > 0) {
       conditions.push(

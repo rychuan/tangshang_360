@@ -470,7 +470,8 @@ export interface TeamEmployeeDetail {
 export interface TeamUpdateEmployeeRequest {
   name?: string;
   position?: string;
-  department?: string;
+  // 部门关联 id（department 名称列已废弃）
+  departmentId?: string;
   supervisorId?: string;
   employeeNo?: string;
   title?: string;

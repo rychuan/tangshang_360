@@ -79,7 +79,6 @@ export function formToCreateRequest(
     employeeNo: data.employeeNo || undefined,
     title: data.title || undefined,
     role: data.role.join(',') as CreateEmployeeRequest['role'],
-    department: data.department || undefined,
     departmentId: data.departmentId || undefined,
     positionCode: data.positionCode || undefined,
     supervisorId: data.supervisorId || undefined,
@@ -233,7 +232,7 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
                     >
                       <Checkbox
                         checked={formData.role.includes(r)}
-                        disabled={r === 'employee'}
+                        disabled={r === 'employee' || r === 'dept_head'}
                         onCheckedChange={(checked) => {
                           if (checked) {
                             setFormData({
@@ -262,6 +261,11 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
                           （必选）
                         </span>
                       )}
+                      {r === 'dept_head' && (
+                        <span className="text-xs text-muted-foreground">
+                          （由部门负责人指派自动授予）
+                        </span>
+                      )}
                     </label>
                   ))}
                 </div>
@@ -271,8 +275,8 @@ const EmployeeFormDialog: React.FC<EmployeeFormDialogProps> = ({
               <Label className="text-xs text-muted-foreground">部门</Label>
               <DepartmentTreeSelect
                 value={formData.department}
-                onChange={(name) =>
-                  setFormData({ ...formData, department: name })
+                onChange={(name, id) =>
+                  setFormData({ ...formData, department: name, departmentId: id })
                 }
                 placeholder="选择部门"
               />
