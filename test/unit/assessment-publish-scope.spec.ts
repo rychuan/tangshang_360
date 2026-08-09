@@ -52,12 +52,18 @@ describe('assessment publish access scope', () => {
       batchUnlock: jest.fn(),
       getUnlockHistory: jest.fn(),
     };
+    const reminderService = {
+      previewUnfinishedReminders: jest.fn(),
+      remindUnfinishedAssessments: jest.fn(),
+      sendNotificationMessages: jest.fn(),
+    };
     const service = new (AssessmentPublishService as any)(
       db,
       {},
       snapshotService,
       accessScopeService,
       unlockService,
+      reminderService,
     ) as AssessmentPublishService;
 
     return {
@@ -66,6 +72,7 @@ describe('assessment publish access scope', () => {
       snapshotService,
       accessScopeService,
       unlockService,
+      reminderService,
     };
   };
 

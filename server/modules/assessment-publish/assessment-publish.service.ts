@@ -37,8 +37,10 @@ import {
 } from '@server/database/schema';
 import { EmployeeSnapshotService } from '../employee-snapshot/employee-snapshot.service';
 import { UnlockService } from './unlock.service';
+import { ReminderService } from './reminder.service';
+import { getPublishedAssessmentStatuses } from './status';
 import { AccessScopeService } from '@server/common/access/access-scope.service';
-import { assertBatchSize } from '@server/common/utils/batch';
+import { assertBatchSize, runWithConcurrency } from '@server/common/utils/batch';
 import { validateUUID } from '@server/common/utils/validation';
 import type {
   PublishEmployeeItem,
@@ -67,14 +69,7 @@ import {
   type AssessmentNotificationMessage,
 } from '@server/common/assessment/notification';
 
-const PUBLISHED_ASSESSMENT_STATUS_GROUPS: Record<string, string[]> = {
-  employee_processing: ['self_review', 'pending_sign'],
-  supervisor_processing: ['supervisor_review', 'supervisor_sign'],
-};
-
-export function getPublishedAssessmentStatuses(status: string): string[] {
-  return PUBLISHED_ASSESSMENT_STATUS_GROUPS[status] ?? [status];
-}
+export { getPublishedAssessmentStatuses } from './status';
 
 export function normalizePublishExportIds(instanceIds: string[]): string[] {
   const uniqueIds = Array.from(new Set(instanceIds || []));
@@ -82,19 +77,6 @@ export function normalizePublishExportIds(instanceIds: string[]): string[] {
     throw new BadRequestException('单次最多导出 1000 条绩效记录');
   }
   return uniqueIds;
-}
-
-async function runWithConcurrency<T, R>(
-  items: T[],
-  concurrency: number,
-  worker: (item: T) => Promise<R>,
-): Promise<R[]> {
-  const results: R[] = [];
-  for (let index = 0; index < items.length; index += concurrency) {
-    const batch = items.slice(index, index + concurrency);
-    results.push(...(await Promise.all(batch.map(worker))));
-  }
-  return results;
 }
 
 @Injectable()
@@ -108,6 +90,7 @@ export class AssessmentPublishService {
     private readonly employeeSnapshotService: EmployeeSnapshotService,
     private readonly accessScopeService: AccessScopeService,
     private readonly unlockService: UnlockService,
+    private readonly reminderService: ReminderService,
   ) {}
 
   private async buildPublishEmployeeScope(userId: string): Promise<SQL | null> {
@@ -293,11 +276,13 @@ export class AssessmentPublishService {
           appBaseUrl,
         }),
       );
-      void this.sendNotificationMessages(messages).then((result) => {
-        this.logger.log(
-          `Published notifications completed: sent=${result.sentCount}, failed=${result.failedCount}`,
-        );
-      });
+      void this.reminderService.sendNotificationMessages(messages).then(
+        (result) => {
+          this.logger.log(
+            `Published notifications completed: sent=${result.sentCount}, failed=${result.failedCount}`,
+          );
+        },
+      );
     }
 
     return { success: true, publishedCount };
@@ -946,111 +931,7 @@ export class AssessmentPublishService {
     };
   }
 
-  private async getUnfinishedReminderTargets(
-    periods: string[],
-    department: string | undefined,
-    status: string | undefined,
-    grade: string | undefined,
-    userId: string,
-  ): Promise<
-    Array<{
-      instanceId: string;
-      period: string;
-      employeeId: string;
-      employeeName: string;
-      supervisorId?: string;
-      status: string;
-    }>
-  > {
-    if (!periods || periods.length === 0) {
-      throw new BadRequestException('绩效周期不能为空');
-    }
-
-    const conditions: SQL[] = [
-      periods.length === 1
-        ? eq(assessmentInstance.period, periods[0])
-        : inArray(assessmentInstance.period, periods),
-      inArray(assessmentInstance.status, [
-        'self_review',
-        'pending_sign',
-        'supervisor_review',
-        'supervisor_sign',
-      ]),
-      isNull(employee.deletedAt),
-    ];
-    if (department) {
-      conditions.push(eq(employee.department, department));
-    }
-    if (status) {
-      conditions.push(
-        inArray(
-          assessmentInstance.status,
-          getPublishedAssessmentStatuses(status),
-        ),
-      );
-    }
-    if (grade) {
-      conditions.push(eq(assessmentInstance.grade, grade));
-    }
-    const scopeCondition = await this.buildPublishEmployeeScope(userId);
-    if (scopeCondition) {
-      conditions.push(scopeCondition);
-    }
-
-    const rows = await this.db
-      .select({
-        instanceId: assessmentInstance.id,
-        period: assessmentInstance.period,
-        employeeId: assessmentInstance.employeeId,
-        employeeName: employee.name,
-        supervisorId: assessmentInstance.supervisorId,
-        status: assessmentInstance.status,
-      })
-      .from(assessmentInstance)
-      .innerJoin(
-        employee,
-        eq(assessmentInstance.employeeId, employee.employeeId),
-      )
-      .where(and(...conditions))
-      .orderBy(desc(assessmentInstance.createdAt));
-
-    return rows.map((row) => ({
-      instanceId: row.instanceId,
-      period: row.period,
-      employeeId: row.employeeId,
-      employeeName: row.employeeName ?? '未命名员工',
-      supervisorId: row.supervisorId ?? undefined,
-      status: row.status,
-    }));
-  }
-
-  private async sendNotificationMessages(
-    messages: AssessmentNotificationMessage[],
-  ): Promise<{ sentCount: number; failedCount: number }> {
-    const results = await runWithConcurrency(messages, 5, async (message) => {
-      try {
-        await this.capabilityService
-          .load('assessment_reminder_feishu_send_1')
-          .call('send_feishu_message', {
-            receiverUserList: [message.receiverId],
-            cardContentMarkdown: message.markdown,
-          });
-        return true;
-      } catch (err) {
-        this.logger.warn(
-          `Failed to send ${message.title} to ${message.receiverId}: ${err}`,
-        );
-        return false;
-      }
-    });
-
-    const sentCount = results.filter(Boolean).length;
-    return {
-      sentCount,
-      failedCount: results.length - sentCount,
-    };
-  }
-
+  /** 未完成考核提醒（委托 ReminderService） */
   async previewUnfinishedReminders(
     periods: string[],
     department: string,
@@ -1058,83 +939,22 @@ export class AssessmentPublishService {
     grade: string,
     userId: string,
   ): Promise<ReminderPreviewResponse> {
-    const targets = await this.getUnfinishedReminderTargets(
+    return this.reminderService.previewUnfinishedReminders(
       periods,
-      department || undefined,
-      status || undefined,
-      grade || undefined,
+      department,
+      status,
+      grade,
       userId,
     );
-    return summarizeReminderTargets(targets);
   }
 
   async remindUnfinishedAssessments(
     body: UnfinishedReminderRequest,
     userId: string,
   ): Promise<UnfinishedReminderResponse> {
-    const appBaseUrl = normalizeAppBaseUrl(body.appBaseUrl);
-    const periodList = body.periods?.length
-      ? body.periods
-      : body.period
-        ? [body.period]
-        : [];
-    const targets = await this.getUnfinishedReminderTargets(
-      periodList,
-      body.department,
-      body.status,
-      body.grade,
-      userId,
-    );
-    const preview = summarizeReminderTargets(targets);
-
-    const outcomes = await runWithConcurrency(targets, 5, async (target) => {
-      const messages = buildReminderNotificationMessages({
-        ...target,
-        appBaseUrl,
-      });
-      const delivery = await this.sendNotificationMessages(messages);
-
-      try {
-        await this.db.insert(auditLog).values({
-          operatorId: userId,
-          action: 'remind',
-          targetType: 'assessment_instance',
-          targetId: target.instanceId,
-          changes: {
-            status: target.status,
-            recipients: messages.map((message) => ({
-              userId: message.receiverId,
-              role: message.recipientRole,
-            })),
-            sentCount: delivery.sentCount,
-            failedCount: delivery.failedCount,
-          },
-        });
-      } catch (err) {
-        this.logger.warn(
-          `Failed to write reminder audit for ${target.instanceId}: ${err}`,
-        );
-      }
-
-      return delivery;
-    });
-
-    const sentCount = outcomes.reduce(
-      (total, outcome) => total + outcome.sentCount,
-      0,
-    );
-    const failedCount = outcomes.reduce(
-      (total, outcome) => total + outcome.failedCount,
-      0,
-    );
-
-    return {
-      ...preview,
-      success: failedCount === 0,
-      sentCount,
-      failedCount,
-    };
+    return this.reminderService.remindUnfinishedAssessments(body, userId);
   }
+
 
   private async getEmployeeIdsForPeriod(
     period: string,
