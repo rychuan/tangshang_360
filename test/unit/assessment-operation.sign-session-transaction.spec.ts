@@ -1,4 +1,4 @@
-import { AssessmentOperationService } from '../../server/modules/assessment-operation/assessment-operation.service';
+import { SignSessionService } from '../../server/modules/assessment-operation/sign-session.service';
 
 describe('AssessmentOperationService sign session transaction', () => {
   it('writes the authenticated signer, instance state, audit, and session success together', async () => {
@@ -57,9 +57,8 @@ describe('AssessmentOperationService sign session transaction', () => {
         callback(tx),
       ),
     };
-    const service = new AssessmentOperationService(
+    const service = new SignSessionService(
       db as any,
-      {} as any,
       {
         getScope: jest.fn().mockResolvedValue({
           kind: 'self',
