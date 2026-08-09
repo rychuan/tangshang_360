@@ -138,10 +138,10 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
   return (
     <div className="flex flex-col gap-4 min-h-full">
       {/* 筛选条件（参考模板管理布局：每项控件带 Label，无标题文字） */}
-      <FilterBar data-ai-section-type="card-list">
+      <FilterBar data-ai-section-type="card-list" className="gap-2">
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">搜索</Label>
-          <InputGroup className="w-40">
+          <InputGroup className="w-28">
             <InputGroupAddon>
               <Search className="size-3.5" />
             </InputGroupAddon>
@@ -159,7 +159,7 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
             value={filters.department || 'all'}
             onValueChange={(v) => setters.setDepartment(v === 'all' ? '' : v)}
           >
-            <SelectTrigger className="h-8 w-32 text-xs">
+            <SelectTrigger className="h-8 w-28 text-xs">
               <SelectValue placeholder="全部部门" />
             </SelectTrigger>
             <SelectContent>
@@ -182,7 +182,7 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
               setters.setPositions(v === 'all' ? [] : [v])
             }
           >
-            <SelectTrigger className="h-8 w-32 text-xs">
+            <SelectTrigger className="h-8 w-28 text-xs">
               <SelectValue placeholder="全部岗位" />
             </SelectTrigger>
             <SelectContent>
@@ -261,9 +261,14 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
             <span className="text-xs text-muted-foreground invisible">
               占位
             </span>
-            <Button variant="outline" size="sm" onClick={setters.resetFilters}>
-              <RotateCcw data-icon="inline-start" />
-              重置
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              title="重置筛选"
+              onClick={setters.resetFilters}
+            >
+              <RotateCcw className="size-4" />
             </Button>
           </div>
         </FilterBarActions>
@@ -279,17 +284,23 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
                   <Button
                     variant="outline"
                     size="sm"
+                    className="h-8 px-2"
+                    title="批量绑定"
                     onClick={() => dialogs.openBatchBindDialog(selectedRowKeys)}
                   >
-                    <Link2 data-icon="inline-start" />
-                    批量绑定({selectedRowKeys.length})
+                    <Link2 className="size-3.5" />
+                    {selectedRowKeys.length}
                   </Button>
                 </CanDo>
               )}
               <CanDo resource="employees" action="edit">
-                <Button size="sm" onClick={dialogs.openCreateDialog}>
-                  <Plus data-icon="inline-start" />
-                  新建员工
+                <Button
+                  size="icon"
+                  className="h-8 w-8"
+                  title="新建员工"
+                  onClick={dialogs.openCreateDialog}
+                >
+                  <Plus className="size-4" />
                 </Button>
               </CanDo>
             </div>
