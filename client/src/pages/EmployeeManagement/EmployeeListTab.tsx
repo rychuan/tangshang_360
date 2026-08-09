@@ -333,19 +333,19 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
           />
         </CardContent>
         {/* 分页：固定在卡片底部，左文右器 */}
-        <div className="shrink-0 border-t px-4 py-3 flex items-center justify-between">
-          <span className="text-sm text-muted-foreground whitespace-nowrap">
+        <div className="shrink-0 border-t px-4 py-1.5 flex items-center justify-between">
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
             第 {filters.page} / {totalPages} 页，共 {total} 条
           </span>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="whitespace-nowrap">每页</span>
               <Select
                 value={String(filters.pageSize)}
                 onValueChange={(value) => setters.setPageSize(Number(value))}
               >
                 <SelectTrigger
-                  className="h-8 w-20 shrink-0 text-xs"
+                  className="h-7 w-20 shrink-0 text-xs"
                   aria-label="每页条数"
                 >
                   <SelectValue />
@@ -374,7 +374,7 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
                           setters.setPage(filters.page - 1);
                         }
                       }}
-                      className={`h-8 text-xs ${isFirstPage ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
+                      className={`h-7 text-xs ${isFirstPage ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
                     />
                   </PaginationItem>
                   {visiblePages.map((page) => (
@@ -385,7 +385,7 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
                           event.preventDefault();
                           setters.setPage(page);
                         }}
-                        className="h-8 w-8 cursor-pointer text-xs"
+                        className="h-7 w-7 cursor-pointer text-xs"
                       >
                         {page}
                       </PaginationLink>
@@ -401,7 +401,7 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
                           setters.setPage(filters.page + 1);
                         }
                       }}
-                      className={`h-8 text-xs ${isLastPage ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
+                      className={`h-7 text-xs ${isLastPage ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
                     />
                   </PaginationItem>
                 </PaginationContent>
