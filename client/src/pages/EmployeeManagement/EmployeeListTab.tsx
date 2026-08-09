@@ -3,6 +3,8 @@ import type { EmployeeItem } from '@shared/api.interface';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
+import { Label } from '@/components/ui/label';
+import { FilterBar, FilterBarActions } from '@/components/business-ui/filter-bar';
 import {
   InputGroup,
   InputGroupAddon,
@@ -28,7 +30,7 @@ import EmployeeTable from './EmployeeTable';
 import EmployeeFormDialog from './EmployeeFormDialog';
 import { BindDialog, UnbindDialog, HistoryDialog } from './EmployeeDialogs';
 import { department as departmentApi } from '@/api';
-import { Plus, Search, Link2 } from '@/components/ui/hugeicons';
+import { Plus, Search, Link2, RotateCcw } from '@/components/ui/hugeicons';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -135,111 +137,140 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
 
   return (
     <div className="flex flex-col gap-4 min-h-full">
-      {/* 筛选条件 + 操作按钮 */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
-          筛选条件
-        </span>
-        <InputGroup className="w-40">
-          <InputGroupAddon>
-            <Search className="size-3.5" />
-          </InputGroupAddon>
-          <InputGroupInput
-            className="h-8 text-xs"
-            placeholder="姓名/编号"
-            value={filters.keyword}
-            onChange={(e) => setters.setKeyword(e.target.value)}
-          />
-        </InputGroup>
-        <Select
-          value={filters.department || 'all'}
-          onValueChange={(v) => setters.setDepartment(v === 'all' ? '' : v)}
-        >
-          <SelectTrigger className="h-8 w-32 text-xs">
-            <SelectValue placeholder="部门" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value="all">全部部门</SelectItem>
-              {departments.map((dept) => (
-                <SelectItem key={dept} value={dept}>
-                  {dept}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        <Select
-          value={filters.positions[0] || 'all'}
-          onValueChange={(v) =>
-            setters.setPositions(v === 'all' ? [] : [v])
-          }
-        >
-          <SelectTrigger className="h-8 w-32 text-xs">
-            <SelectValue placeholder="岗位" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value="all">全部岗位</SelectItem>
-              {positions.map((pos) => (
-                <SelectItem key={pos} value={pos}>
-                  {pos}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        <Select
-          value={filters.role || 'all'}
-          onValueChange={(v) => setters.setRole(v === 'all' ? '' : v)}
-        >
-          <SelectTrigger className="h-8 w-24 text-xs">
-            <SelectValue placeholder="角色" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value="all">全部角色</SelectItem>
-              <SelectItem value="admin">管理员</SelectItem>
-              <SelectItem value="hrd">HRD</SelectItem>
-              <SelectItem value="dept_head">部门负责人</SelectItem>
-              <SelectItem value="supervisor">上级</SelectItem>
-              <SelectItem value="employee">员工</SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        <Select
-          value={filters.status || 'all'}
-          onValueChange={(v) => setters.setStatus(v === 'all' ? '' : v)}
-        >
-          <SelectTrigger className="h-8 w-24 text-xs">
-            <SelectValue placeholder="状态" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value="all">全部状态</SelectItem>
-              <SelectItem value="true">已启用</SelectItem>
-              <SelectItem value="false">已禁用</SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        {capabilities.showBindings && (
+      {/* 筛选条件（参考模板管理布局：每项控件带 Label，无标题文字） */}
+      <FilterBar data-ai-section-type="card-list">
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs text-muted-foreground">搜索</Label>
+          <InputGroup className="w-40">
+            <InputGroupAddon>
+              <Search className="size-3.5" />
+            </InputGroupAddon>
+            <InputGroupInput
+              className="h-8 text-xs"
+              placeholder="姓名/编号"
+              value={filters.keyword}
+              onChange={(e) => setters.setKeyword(e.target.value)}
+            />
+          </InputGroup>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs text-muted-foreground">部门</Label>
           <Select
-            value={filters.binding || 'all'}
-            onValueChange={(v) => setters.setBinding(v === 'all' ? '' : v)}
+            value={filters.department || 'all'}
+            onValueChange={(v) => setters.setDepartment(v === 'all' ? '' : v)}
           >
-            <SelectTrigger className="h-8 w-24 text-xs">
-              <SelectValue placeholder="绩效" />
+            <SelectTrigger className="h-8 w-32 text-xs">
+              <SelectValue placeholder="全部部门" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value="all">全部</SelectItem>
-                <SelectItem value="bound">已参与</SelectItem>
-                <SelectItem value="unbound">未参与</SelectItem>
+                <SelectItem value="all">全部部门</SelectItem>
+                {departments.map((dept) => (
+                  <SelectItem key={dept} value={dept}>
+                    {dept}
+                  </SelectItem>
+                ))}
               </SelectGroup>
             </SelectContent>
           </Select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs text-muted-foreground">岗位</Label>
+          <Select
+            value={filters.positions[0] || 'all'}
+            onValueChange={(v) =>
+              setters.setPositions(v === 'all' ? [] : [v])
+            }
+          >
+            <SelectTrigger className="h-8 w-32 text-xs">
+              <SelectValue placeholder="全部岗位" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="all">全部岗位</SelectItem>
+                {positions.map((pos) => (
+                  <SelectItem key={pos} value={pos}>
+                    {pos}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs text-muted-foreground">角色</Label>
+          <Select
+            value={filters.role || 'all'}
+            onValueChange={(v) => setters.setRole(v === 'all' ? '' : v)}
+          >
+            <SelectTrigger className="h-8 w-24 text-xs">
+              <SelectValue placeholder="全部角色" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="all">全部角色</SelectItem>
+                <SelectItem value="admin">管理员</SelectItem>
+                <SelectItem value="hrd">HRD</SelectItem>
+                <SelectItem value="dept_head">部门负责人</SelectItem>
+                <SelectItem value="supervisor">上级</SelectItem>
+                <SelectItem value="employee">员工</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs text-muted-foreground">状态</Label>
+          <Select
+            value={filters.status || 'all'}
+            onValueChange={(v) => setters.setStatus(v === 'all' ? '' : v)}
+          >
+            <SelectTrigger className="h-8 w-24 text-xs">
+              <SelectValue placeholder="全部状态" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="all">全部状态</SelectItem>
+                <SelectItem value="true">已启用</SelectItem>
+                <SelectItem value="false">已禁用</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+        {capabilities.showBindings && (
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-muted-foreground">绩效</Label>
+            <Select
+              value={filters.binding || 'all'}
+              onValueChange={(v) => setters.setBinding(v === 'all' ? '' : v)}
+            >
+              <SelectTrigger className="h-8 w-24 text-xs">
+                <SelectValue placeholder="全部" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">全部</SelectItem>
+                  <SelectItem value="bound">已参与</SelectItem>
+                  <SelectItem value="unbound">未参与</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
         )}
-        <div className="flex-1" />
+        <FilterBarActions>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground invisible">
+              占位
+            </span>
+            <Button variant="outline" size="sm" onClick={setters.resetFilters}>
+              <RotateCcw data-icon="inline-start" />
+              重置
+            </Button>
+          </div>
+        </FilterBarActions>
+      </FilterBar>
+
+      {/* 操作按钮 */}
+      <div className="flex items-center gap-2 justify-end">
         {selectedRowKeys.length > 0 && (
           <CanDo {...COMMAND_PERMISSIONS.employeeBindingEdit}>
             <Button
