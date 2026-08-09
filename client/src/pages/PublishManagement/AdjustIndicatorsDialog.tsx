@@ -816,40 +816,52 @@ const AdjustIndicatorsDialog: React.FC<AdjustIndicatorsDialogProps> = ({
                       ? renderPreviewGroup(group, groupIdx)
                       : renderEditGroup(group, groupIdx),
                 )}
-
-                {!previewMode && (
-                  <Button
-                    variant="outline"
-                    className="w-full border-dashed"
-                    onClick={handleAddDimension}
-                  >
-                    <FolderPlus className="size-4 mr-2" />
-                    添加维度
-                  </Button>
-                )}
               </>
             )}
 
-            <div className="flex justify-end gap-3 pt-2">
-              <Button
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={loading}
-              >
-                取消
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={
-                  loading ||
-                  previewMode ||
-                  !dimensionWeightValidation.isValid ||
-                  !indicatorWeightValidation.isValid
-                }
-              >
-                {loading && <Spinner className="mr-2 size-4" />}
-                确认调整
-              </Button>
+            <div className="flex items-center justify-between pt-2 border-t">
+              <div className="flex items-center gap-3">
+                {!previewMode && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleAddDimension}
+                  >
+                    <Plus className="size-3 mr-1" />
+                    添加维度
+                  </Button>
+                )}
+                {!previewMode && (
+                  <span
+                    className={`text-sm font-medium ${dimensionWeightValidation.isValid ? 'text-success' : 'text-destructive'}`}
+                  >
+                    权重分总和：{dimensionWeightValidation.totalWeight} / 100
+                    {!dimensionWeightValidation.isValid && ' （必须等于100）'}
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  disabled={loading}
+                >
+                  取消
+                </Button>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={
+                    loading ||
+                    previewMode ||
+                    !dimensionWeightValidation.isValid ||
+                    !indicatorWeightValidation.isValid
+                  }
+                >
+                  {loading && <Spinner className="mr-2 size-4" />}
+                  确认调整
+                </Button>
+              </div>
             </div>
           </div>
         )}
