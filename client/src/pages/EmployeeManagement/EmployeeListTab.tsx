@@ -267,29 +267,35 @@ const EmployeeListTab: React.FC<EmployeeListTabProps> = ({
             </Button>
           </div>
         </FilterBarActions>
+        <div className="flex-1" />
+        <FilterBarActions>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground invisible">
+              占位
+            </span>
+            <div className="flex items-center gap-2">
+              {selectedRowKeys.length > 0 && (
+                <CanDo {...COMMAND_PERMISSIONS.employeeBindingEdit}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => dialogs.openBatchBindDialog(selectedRowKeys)}
+                  >
+                    <Link2 data-icon="inline-start" />
+                    批量绑定({selectedRowKeys.length})
+                  </Button>
+                </CanDo>
+              )}
+              <CanDo resource="employees" action="edit">
+                <Button size="sm" onClick={dialogs.openCreateDialog}>
+                  <Plus data-icon="inline-start" />
+                  新建员工
+                </Button>
+              </CanDo>
+            </div>
+          </div>
+        </FilterBarActions>
       </FilterBar>
-
-      {/* 操作按钮 */}
-      <div className="flex items-center gap-2 justify-end">
-        {selectedRowKeys.length > 0 && (
-          <CanDo {...COMMAND_PERMISSIONS.employeeBindingEdit}>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => dialogs.openBatchBindDialog(selectedRowKeys)}
-            >
-              <Link2 data-icon="inline-start" />
-              批量绑定({selectedRowKeys.length})
-            </Button>
-          </CanDo>
-        )}
-        <CanDo resource="employees" action="edit">
-          <Button size="sm" onClick={dialogs.openCreateDialog}>
-            <Plus data-icon="inline-start" />
-            新建员工
-          </Button>
-        </CanDo>
-      </div>
 
       {/* 员工表格 + 分页 */}
       <Card
