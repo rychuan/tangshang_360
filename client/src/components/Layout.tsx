@@ -127,7 +127,7 @@ const LayoutContent: React.FC = () => {
             id="main-content"
             ref={contentRef}
             tabIndex={-1}
-            className="mx-auto w-full max-w-7xl outline-none flex-1 min-h-0 flex flex-col"
+            className="mx-auto w-full max-w-7xl 2xl:max-w-[1600px] min-[2560px]:max-w-[1920px] outline-none flex-1 min-h-0 flex flex-col"
           >
             <Suspense
               fallback={

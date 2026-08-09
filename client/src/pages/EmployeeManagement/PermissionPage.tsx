@@ -103,8 +103,11 @@ const PermissionPage: React.FC = () => {
           />
         </div>
       }
+      /* 窄屏纵向堆叠：角色列表在上（限高内滚），配置区在下占满剩余高度；
+         lg 及以上恢复左右并排 */
+      contentClassName="flex-col lg:flex-row"
     >
-      <aside className="w-[30%] min-w-[260px] overflow-hidden rounded-lg border">
+      <aside className="h-[240px] w-full shrink-0 overflow-hidden rounded-lg border lg:h-auto lg:w-[30%] lg:min-w-[260px]">
         <RoleListPanel
           roles={roles}
           loading={rolesLoading}
@@ -117,7 +120,7 @@ const PermissionPage: React.FC = () => {
         />
       </aside>
 
-      <section className="min-w-0 flex-1 overflow-hidden rounded-lg border">
+      <section className="min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg border">
         {selectedRole ? (
             <Tabs
               value={activeTab}

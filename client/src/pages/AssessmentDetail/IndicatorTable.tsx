@@ -116,7 +116,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col @container/indicator">
       {groups.map((group, idx) => (
         <React.Fragment key={group.dimensionName}>
           {/* 卡片间连接指示 — 向下箭头表示下方还有维度卡片 */}
@@ -141,7 +141,7 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col gap-3.5 md:hidden">
+              <div className="flex flex-col gap-3.5 @2xl:hidden">
                 {group.indicators.map((indicator) => (
                   <div
                     key={indicator.id}
@@ -243,48 +243,50 @@ const IndicatorTable: React.FC<IndicatorTableProps> = ({
                 ))}
               </div>
 
-              <div className="hidden overflow-x-auto md:block">
+              {/* 容器宽度 ≥ 42rem(672px) 才展示表格，避免窄屏挤压；
+                  说明/算法/数据来源等次要列在 ≥ 56rem(896px) 时再展开 */}
+              <div className="hidden overflow-x-auto @2xl:block">
                 <Table className="table-fixed w-full">
                   <TableHeader>
                     <TableRow className="bg-muted/30">
-                      <TableHead className="w-[10%] text-xs">指标</TableHead>
-                      <TableHead className="w-[12%] text-xs hidden md:table-cell">
+                      <TableHead className="w-[16%] text-xs @4xl:w-[10%]">指标</TableHead>
+                      <TableHead className="w-[12%] text-xs hidden @4xl:table-cell">
                         说明
                       </TableHead>
-                      <TableHead className="w-[20%] text-xs hidden lg:table-cell">
+                      <TableHead className="w-[20%] text-xs hidden @4xl:table-cell">
                         算法/描述
                       </TableHead>
-                      <TableHead className="w-[8%] text-xs hidden lg:table-cell">
+                      <TableHead className="w-[8%] text-xs hidden @4xl:table-cell">
                         数据来源
                       </TableHead>
-                      <TableHead className="w-[15%] text-xs">
+                      <TableHead className="w-[26%] text-xs @4xl:w-[15%]">
                         完成情况
                       </TableHead>
                       <TableHead className="text-center w-[5%] text-xs">
                         权重分
                       </TableHead>
-                      <TableHead className="text-center w-[10%] text-xs">
+                      <TableHead className="text-center w-[14%] text-xs @4xl:w-[10%]">
                         自评
                       </TableHead>
-                      <TableHead className="text-center w-[10%] text-xs">
+                      <TableHead className="text-center w-[14%] text-xs @4xl:w-[10%]">
                         上级评分
                       </TableHead>
-                      <TableHead className="w-[10%] text-xs">备注</TableHead>
+                      <TableHead className="w-[17%] text-xs @4xl:w-[10%]">备注</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {group.indicators.map((indicator) => (
                       <TableRow key={indicator.id}>
-                        <TableCell className="font-medium whitespace-pre-wrap break-words w-[140px]">
+                        <TableCell className="font-medium whitespace-pre-wrap break-words">
                           {indicator.content}
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-xs leading-4 whitespace-pre-wrap break-words w-[160px] hidden md:table-cell">
+                        <TableCell className="text-muted-foreground text-xs leading-4 whitespace-pre-wrap break-words hidden @4xl:table-cell">
                           {indicator.description || '-'}
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-xs whitespace-pre-wrap break-words max-w-[140px] hidden lg:table-cell">
+                        <TableCell className="text-muted-foreground text-xs whitespace-pre-wrap break-words hidden @4xl:table-cell">
                           {indicator.algorithm || '-'}
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-xs whitespace-pre-wrap break-words max-w-[100px] hidden lg:table-cell">
+                        <TableCell className="text-muted-foreground text-xs whitespace-pre-wrap break-words hidden @4xl:table-cell">
                           {indicator.dataSource || '-'}
                         </TableCell>
                         <TableCell className="align-top">
