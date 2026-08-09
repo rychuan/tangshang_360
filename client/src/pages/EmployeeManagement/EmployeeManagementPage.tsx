@@ -54,9 +54,9 @@ const EmployeeManagementPage: React.FC = () => {
       contentClassName="overflow-hidden"
       className="h-full overflow-hidden"
     >
-      {/* 左侧部门树（与员工列表容器等高，内部滚动） */}
+      {/* 左侧部门树（高度与员工列表一致：内容自适应 + 树区域同高计算） */}
       {showDepartmentTree && (
-        <aside className="w-[260px] shrink-0 self-stretch overflow-hidden rounded-lg border bg-card flex flex-col">
+        <aside className="w-[260px] shrink-0 self-start overflow-hidden rounded-lg border bg-card flex flex-col">
           <DepartmentTreePanel
             selectedId={selectedDeptId}
             onSelect={handleDeptSelect}

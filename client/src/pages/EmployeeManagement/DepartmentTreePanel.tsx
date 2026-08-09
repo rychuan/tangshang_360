@@ -33,6 +33,7 @@ import { UserSelect } from '@/components/business-ui/user-select';
 import { UserDisplay } from '@/components/business-ui/user-display';
 import { toast } from 'sonner';
 import { handleApiError, isApiNotFound } from '@client/src/utils/api-error';
+import { useTableScrollHeight } from '@/hooks/useTableScrollHeight';
 import {
   Plus,
   Pencil,
@@ -57,7 +58,8 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
   const queryClient = useQueryClient();
   const { permissions } = usePermissions();
   const { ability } = useAuth();
-  const treeScrollRef = React.useRef<HTMLDivElement>(null);
+  // 部门树滚动区域与员工列表表格使用同一高度计算（底部对齐）
+  const { tableRef, tableMaxHeight } = useTableScrollHeight();
   const identityRoles = useMemo(
     () =>
       ability
@@ -149,10 +151,10 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
 
   // 树数据加载后检查初始是否可继续滚动
   React.useEffect(() => {
-    const el = treeScrollRef.current;
+    const el = tableRef.current;
     if (!el) return;
     setShowMoreHint(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
-  }, [tree.length, search]);
+  }, [tableMaxHeight, tree.length, search]);
 
   /** 选中部门时自动展开子级 */
   const handleSelect = (id: string) => {
@@ -333,7 +335,7 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
   };
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div className="flex flex-col min-h-0">
       {/* 搜索栏 + 展开/折叠/新建部门（同一行） */}
       <div className="shrink-0 p-3 border-b">
         <div className="relative mb-2">
@@ -387,10 +389,10 @@ export const DepartmentTreePanel: React.FC<DepartmentTreePanelProps> = ({
         </div>
       </div>
 
-      {/* 部门树（容器内自适应滚动；底部渐变提示可继续滚动） */}
-      <div className="relative flex-1 min-h-0">
+      {/* 部门树（高度与员工列表表格一致；底部渐变提示可继续滚动） */}
+      <div className="relative" style={{ height: tableMaxHeight }}>
         <div
-          ref={treeScrollRef}
+          ref={tableRef}
           onScroll={handleTreeScroll}
           className="h-full overflow-y-auto overscroll-contain px-2 pt-2 pb-20"
         >
